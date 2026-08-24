@@ -6,6 +6,7 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
+    "infra:dev": "alchemy dev infra/alchemy.run.ts",
     "lint": "turbo run lint"
   },
   "keywords": [],
@@ -19,13 +20,14 @@
     }
   },
   "devDependencies": {
+    "@biomejs/biome": "2.5.10",
+    "alchemy": "2.0.0-beta.74",
     "turbo": "2.10.4"
   },
   "type": "module",
   "dependencies": {
     "@effect/platform-bun": "4.0.0-rc.111",
     "@effect/platform-node": "4.0.0-rc.111",
-    "alchemy": "2.0.0-beta.74",
     "effect": "4.0.0-beta.107"
   }
 }
