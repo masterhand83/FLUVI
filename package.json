@@ -21,5 +21,11 @@
   "devDependencies": {
     "turbo": "2.10.4"
   },
-  "type": "module"
+  "type": "module",
+  "dependencies": {
+    "@effect/platform-bun": "4.0.0-rc.111",
+    "@effect/platform-node": "4.0.0-rc.111",
+    "alchemy": "2.0.0-beta.74",
+    "effect": "4.0.0-beta.107"
+  }
 }
