@@ -9,11 +9,15 @@ export default Alchemy.Stack(
 		state: Cloudflare.state(),
 	},
 	Effect.gen(function* () {
-		const page = yield* Cloudflare.Website.Vite("FLUVI", {
+		const v1Page = yield* Cloudflare.Website.Vite("FLUVI", {
 			rootDir: "./apps/v1",
 		});
+		const v2Page = yield* Cloudflare.Website.Vite("FLUVI-2", {
+			rootDir: "./apps/v2",
+		});
 		return {
-			page: page.url,
+			page: v1Page.url,
+			page2: v2Page.url,
 		};
 	}),
 );
