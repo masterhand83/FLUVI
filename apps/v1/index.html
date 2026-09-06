@@ -88,7 +88,7 @@
   </div>
 
   <!-- Botón flotante para mostrar sidebar (visible solo cuando sidebar está oculto) -->
-  <button class="sidebar-toggle-float" id="sidebarToggleFloat" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="Mostrar panel de control" style="display: none;">
+  <button type="button" class="sidebar-toggle-float" id="sidebarToggleFloat" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="Mostrar panel de control" style="display: none;">
     <span>☰</span>
   </button>
 
@@ -99,8 +99,8 @@
   <!-- Sidebar Panel -->
   <div class="sidebar" id="sidebar">
     <!-- Toggle button dentro del panel (esquina superior derecha) -->
-    <button class="sidebar-toggle-inner" id="sidebarToggle" data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="Ocultar panel de control">
-      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <button type="button" class="sidebar-toggle-inner" id="sidebarToggle" data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="Ocultar panel de control">
+      <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
         <line x1="3" y1="12" x2="15" y2="12"></line>
         <polyline points="10 5 3 12 10 19"></polyline>
         <line x1="21" y1="4" x2="21" y2="20"></line>
@@ -126,10 +126,10 @@
             📖 Instrucciones
           </button>
         </h2>
-        <div id="collapseInstrucciones" class="accordion-collapse collapse show" aria-labelledby="headingInstrucciones" data-bs-parent="#controlPanelAccordion">
+        <div id="collapseInstrucciones" class="accordion-collapse collapse show" data-bs-parent="#controlPanelAccordion">
           <div class="accordion-body">
             <p class="text-muted small mb-3">Aprende a usar el simulador de tráfico</p>
-            <button class="btn btn-info w-100" data-bs-toggle="modal" data-bs-target="#instructionsModal" data-bs-title="Abrir la guía completa del simulador con instrucciones detalladas">
+            <button type="button" class="btn btn-info w-100" data-bs-toggle="modal" data-bs-target="#instructionsModal" data-bs-title="Abrir la guía completa del simulador con instrucciones detalladas">
               📚 Ver Guía Completa
             </button>
           </div>
@@ -143,7 +143,7 @@
             ⚙️ Configuración de Calles
           </button>
         </h2>
-        <div id="collapseConfig" class="accordion-collapse collapse" aria-labelledby="headingConfig" data-bs-parent="#controlPanelAccordion">
+        <div id="collapseConfig" class="accordion-collapse collapse" data-bs-parent="#controlPanelAccordion">
           <div class="accordion-body">
 
             <!-- Selector de Calle -->
@@ -159,7 +159,7 @@
                 <label for="inputProbabilidadGeneracion" class="form-label">
                   Probabilidad de Generación (%)
                   <span class="info-icon" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="Controla la frecuencia con la que se generan nuevos vehículos en esta calle. 0% = sin vehículos, 100% = generación máxima continua. Solo disponible para calles de tipo GENERADOR.">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle" viewBox="0 0 16 16">
+                    <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle" viewBox="0 0 16 16">
                       <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/>
                       <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533z"/>
                       <circle cx="8" cy="4.5" r="1"/>
@@ -177,7 +177,7 @@
                 <label for="inputProbabilidadSalto" class="form-label">
                   Probabilidad de Cambio de Carril (%)
                   <span class="info-icon" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="Define la probabilidad de que un vehículo cambie de carril cuando es posible. Valores bajos (0-5%) simulan tráfico ordenado, valores altos (>20%) generan más cambios de carril.">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle" viewBox="0 0 16 16">
+                    <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle" viewBox="0 0 16 16">
                       <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/>
                       <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533z"/>
                       <circle cx="8" cy="4.5" r="1"/>
@@ -193,7 +193,7 @@
 
             <!-- Botón aplicar cambios -->
             <div id="calleApplyButton">
-              <button id="btnActualizarCalle" class="btn btn-primary w-100" data-bs-toggle="tooltip" data-bs-title="Aplicar las probabilidades configuradas a la calle seleccionada">✓ Aplicar Cambios</button>
+              <button type="button" id="btnActualizarCalle" class="btn btn-primary w-100" data-bs-toggle="tooltip" data-bs-title="Aplicar las probabilidades configuradas a la calle seleccionada">✓ Aplicar Cambios</button>
             </div>
 
             <div class="alert alert-info p-2 small mt-3 mb-0">
@@ -211,7 +211,7 @@
             🎬 Configuración de Escenarios
           </button>
         </h2>
-        <div id="collapseEscenarios" class="accordion-collapse collapse" aria-labelledby="headingEscenarios" data-bs-parent="#controlPanelAccordion">
+        <div id="collapseEscenarios" class="accordion-collapse collapse" data-bs-parent="#controlPanelAccordion">
           <div class="accordion-body">
             <p class="text-muted small mb-3">Configura situaciones especiales de tráfico en el simulador.</p>
 
@@ -307,7 +307,7 @@
               <h6 class="mb-3 d-flex align-items-center">
                 🎯 Escenarios Base
                 <span class="info-icon ms-2" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="Escenarios predeterminados de ejemplo que demuestran diferentes situaciones de tráfico.">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle" viewBox="0 0 16 16">
+                  <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle" viewBox="0 0 16 16">
                     <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/>
                     <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533z"/>
                     <circle cx="8" cy="4.5" r="1"/>
@@ -347,7 +347,7 @@
               <h6 class="mb-3 d-flex align-items-center">
                 💾 Gestión de Escenarios
                 <span class="info-icon ms-2" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="Guarda y carga configuraciones completas de obstáculos, inundaciones y bloqueos.">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle" viewBox="0 0 16 16">
+                  <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle" viewBox="0 0 16 16">
                     <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/>
                     <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533z"/>
                     <circle cx="8" cy="4.5" r="1"/>
@@ -418,19 +418,19 @@
             🏗️ Constructor de Mapas
           </button>
         </h2>
-        <div id="collapseConstructor" class="accordion-collapse collapse" aria-labelledby="headingConstructor" data-bs-parent="#controlPanelAccordion">
+        <div id="collapseConstructor" class="accordion-collapse collapse" data-bs-parent="#controlPanelAccordion">
           <div class="accordion-body">
             <h6 class="mb-3">🗺️ Gestión de Simulación</h6>
 
             <!-- Botones de gestión de archivo -->
             <div class="d-grid gap-2 mb-3">
-              <button id="btnNuevaSimulacion" class="btn btn-success btn-sm" data-bs-toggle="tooltip" data-bs-title="Crear una nueva simulación desde cero, borrando todo el contenido actual">
+              <button type="button" id="btnNuevaSimulacion" class="btn btn-success btn-sm" data-bs-toggle="tooltip" data-bs-title="Crear una nueva simulación desde cero, borrando todo el contenido actual">
                 ➕ Nueva Simulación
               </button>
-              <button id="btnGuardarSimulacion" class="btn btn-primary btn-sm" data-bs-toggle="tooltip" data-bs-title="Guardar la simulación actual como archivo JSON">
+              <button type="button" id="btnGuardarSimulacion" class="btn btn-primary btn-sm" data-bs-toggle="tooltip" data-bs-title="Guardar la simulación actual como archivo JSON">
                 💾 Guardar Simulación
               </button>
-              <button id="btnCargarSimulacion" class="btn btn-info btn-sm" data-bs-toggle="tooltip" data-bs-title="Cargar una simulación desde un archivo JSON guardado previamente">
+              <button type="button" id="btnCargarSimulacion" class="btn btn-info btn-sm" data-bs-toggle="tooltip" data-bs-title="Cargar una simulación desde un archivo JSON guardado previamente">
                 📂 Cargar Simulación
               </button>
               <input type="file" id="inputCargarSimulacion" accept=".json" style="display: none;">
@@ -465,17 +465,17 @@
             </div>
 
             <!-- Botón de modo edición -->
-            <button id="btnModoEdicion" class="btn btn-warning w-100 mb-2" disabled data-bs-toggle="tooltip" data-bs-title="Activar modo edición para mover y rotar el objeto seleccionado visualmente">
+            <button type="button" id="btnModoEdicion" class="btn btn-warning w-100 mb-2" disabled data-bs-toggle="tooltip" data-bs-title="Activar modo edición para mover y rotar el objeto seleccionado visualmente">
               ✏️ Modo Edición
             </button>
 
             <!-- Botones de guardar/cancelar (solo visibles en modo edición) -->
             <div id="editActionButtons" style="display: none;">
               <div class="d-flex gap-2 mb-2">
-                <button id="btnGuardarEdicion" class="btn btn-success flex-fill" data-bs-toggle="tooltip" data-bs-title="Guardar los cambios realizados en el modo edición">
+                <button type="button" id="btnGuardarEdicion" class="btn btn-success flex-fill" data-bs-toggle="tooltip" data-bs-title="Guardar los cambios realizados en el modo edición">
                   💾 Guardar
                 </button>
-                <button id="btnCancelarEdicion" class="btn btn-secondary flex-fill" data-bs-toggle="tooltip" data-bs-title="Cancelar los cambios y restaurar la posición original">
+                <button type="button" id="btnCancelarEdicion" class="btn btn-secondary flex-fill" data-bs-toggle="tooltip" data-bs-title="Cancelar los cambios y restaurar la posición original">
                   ❌ Cancelar
                 </button>
               </div>
@@ -524,7 +524,7 @@
                       <span>carriles</span>
                     </div>
 
-                    <button id="btnAplicarDimensiones" class="btn btn-sm btn-warning mt-2 w-100" data-bs-toggle="tooltip" data-bs-title="Aplicar cambios de tamaño y número de carriles (elimina vehículos)">
+                    <button type="button" id="btnAplicarDimensiones" class="btn btn-sm btn-warning mt-2 w-100" data-bs-toggle="tooltip" data-bs-title="Aplicar cambios de tamaño y número de carriles (elimina vehículos)">
                       📏 Aplicar Dimensiones
                     </button>
 
@@ -533,7 +533,7 @@
                     </div>
                   </div>
 
-                  <button id="btnAplicarPosicion" class="btn btn-sm btn-success mt-2 w-100" data-bs-toggle="tooltip" data-bs-title="Aplicar la posición (X, Y) y ángulo de rotación ingresados manualmente">
+                  <button type="button" id="btnAplicarPosicion" class="btn btn-sm btn-success mt-2 w-100" data-bs-toggle="tooltip" data-bs-title="Aplicar la posición (X, Y) y ángulo de rotación ingresados manualmente">
                     ✓ Aplicar Posición
                   </button>
 
@@ -568,19 +568,19 @@
 
             <!-- Botones de agregar -->
             <div class="d-grid gap-2 mb-3">
-              <button id="btnAgregarCalle" class="btn btn-outline-primary btn-sm" data-bs-toggle="tooltip" data-bs-title="Abrir formulario para crear una nueva calle en el mapa">
+              <button type="button" id="btnAgregarCalle" class="btn btn-outline-primary btn-sm" data-bs-toggle="tooltip" data-bs-title="Abrir formulario para crear una nueva calle en el mapa">
                 ➕ Agregar Calle
               </button>
-              <button id="btnAgregarEdificio" class="btn btn-outline-success btn-sm" data-bs-toggle="tooltip" data-bs-title="Abrir formulario para crear un nuevo edificio en el mapa">
+              <button type="button" id="btnAgregarEdificio" class="btn btn-outline-success btn-sm" data-bs-toggle="tooltip" data-bs-title="Abrir formulario para crear un nuevo edificio en el mapa">
                 🏢 Agregar Edificio
               </button>
-              <button id="btnEditarEdificio" class="btn btn-outline-warning btn-sm" style="display: none;" data-bs-toggle="tooltip" data-bs-title="Editar configuración del edificio seleccionado (Ctrl+Click para seleccionar)">
+              <button type="button" id="btnEditarEdificio" class="btn btn-outline-warning btn-sm" style="display: none;" data-bs-toggle="tooltip" data-bs-title="Editar configuración del edificio seleccionado (Ctrl+Click para seleccionar)">
                 ✏️ Editar Edificio
               </button>
-              <button id="btnAgregarConexion" class="btn btn-outline-secondary btn-sm" data-bs-toggle="tooltip" data-bs-title="Crear una conexión entre dos calles para flujo de tráfico">
+              <button type="button" id="btnAgregarConexion" class="btn btn-outline-secondary btn-sm" data-bs-toggle="tooltip" data-bs-title="Crear una conexión entre dos calles para flujo de tráfico">
                 🔗 Agregar Conexión
               </button>
-              <button id="btnEliminarObjeto" class="btn btn-outline-danger btn-sm" data-bs-toggle="tooltip" data-bs-title="Eliminar permanentemente la calle o edificio seleccionado">
+              <button type="button" id="btnEliminarObjeto" class="btn btn-outline-danger btn-sm" data-bs-toggle="tooltip" data-bs-title="Eliminar permanentemente la calle o edificio seleccionado">
                 🗑️ Eliminar Objeto Seleccionado
               </button>
             </div>
@@ -590,7 +590,7 @@
             <h6 class="mb-3">🔗 Gestión de Conexiones</h6>
 
             <!-- Botón para mostrar lista de conexiones -->
-            <button id="btnMostrarListaConexiones" class="btn btn-outline-info w-100 mb-2" data-bs-toggle="tooltip" data-bs-title="Mostrar/ocultar lista de todas las conexiones entre calles creadas">
+            <button type="button" id="btnMostrarListaConexiones" class="btn btn-outline-info w-100 mb-2" data-bs-toggle="tooltip" data-bs-title="Mostrar/ocultar lista de todas las conexiones entre calles creadas">
               📋 Ver Conexiones Existentes
             </button>
 
@@ -626,7 +626,7 @@
             📈 Métricas de la Simulación
           </button>
         </h2>
-        <div id="collapseMetrics" class="accordion-collapse collapse" aria-labelledby="headingMetrics" data-bs-parent="#controlPanelAccordion">
+        <div id="collapseMetrics" class="accordion-collapse collapse" data-bs-parent="#controlPanelAccordion">
           <div class="accordion-body p-2">
             <!-- Panel de Interpretación de Métricas -->
             <div id="statusPanel" class="status-panel status-moderado mb-3">
@@ -697,7 +697,7 @@
             <!-- Mapa de Calor -->
             <div class="mb-3">
               <h6 class="mb-2">🌡️ Visualización</h6>
-              <button id="btnMapaCalor" class="btn btn-outline-primary btn-sm w-100" data-bs-toggle="tooltip" data-bs-title="Muestra un mapa de calor sobre las calles indicando densidad de tráfico">
+              <button type="button" id="btnMapaCalor" class="btn btn-outline-primary btn-sm w-100" data-bs-toggle="tooltip" data-bs-title="Muestra un mapa de calor sobre las calles indicando densidad de tráfico">
                 <span id="iconMapaCalor">🔲</span> Activar Mapa de Calor
               </button>
             </div>
@@ -706,10 +706,10 @@
 
             <h6 class="mb-3">⚙️ Configuración de Métricas</h6>
             <div class="d-grid gap-2 mb-3">
-              <button id="btnConfigCallesMetricas" class="btn btn-outline-secondary btn-sm" data-bs-toggle="tooltip" data-bs-title="Abre el modal para seleccionar qué calles incluir en el cálculo de métricas">
+              <button type="button" id="btnConfigCallesMetricas" class="btn btn-outline-secondary btn-sm" data-bs-toggle="tooltip" data-bs-title="Abre el modal para seleccionar qué calles incluir en el cálculo de métricas">
                 📋 Seleccionar Calles (Modal)
               </button>
-              <button id="btnModoSeleccionCalles" class="btn btn-outline-primary btn-sm" data-bs-toggle="tooltip" data-bs-title="Activa el modo de selección. Las calles se resaltarán con bordes de color: VERDE = incluida, ROJO = excluida. Haz clic en una calle para cambiar su estado.">
+              <button type="button" id="btnModoSeleccionCalles" class="btn btn-outline-primary btn-sm" data-bs-toggle="tooltip" data-bs-title="Activa el modo de selección. Las calles se resaltarán con bordes de color: VERDE = incluida, ROJO = excluida. Haz clic en una calle para cambiar su estado.">
                 🎯 Seleccionar desde Mapa
               </button>
             </div>
@@ -718,16 +718,16 @@
 
             <h6 class="mb-3">💾 Exportar Métricas</h6>
             <div class="d-grid gap-2">
-              <button id="btnDescargarCSV" class="btn btn-success btn-sm" data-bs-toggle="tooltip" data-bs-title="Exportar todas las métricas recolectadas en formato CSV">
+              <button type="button" id="btnDescargarCSV" class="btn btn-success btn-sm" data-bs-toggle="tooltip" data-bs-title="Exportar todas las métricas recolectadas en formato CSV">
                 Descargar CSV
               </button>
-              <button id="btnDescargarJSON" class="btn btn-info btn-sm" data-bs-toggle="tooltip" data-bs-title="Exportar todas las métricas recolectadas en formato JSON">
+              <button type="button" id="btnDescargarJSON" class="btn btn-info btn-sm" data-bs-toggle="tooltip" data-bs-title="Exportar todas las métricas recolectadas en formato JSON">
                 Descargar JSON
               </button>
-              <button id="btnLimpiarMetricas" class="btn btn-danger btn-sm" data-bs-toggle="tooltip" data-bs-title="Borrar todos los datos de métricas recolectados y reiniciar gráficas">
+              <button type="button" id="btnLimpiarMetricas" class="btn btn-danger btn-sm" data-bs-toggle="tooltip" data-bs-title="Borrar todos los datos de métricas recolectados y reiniciar gráficas">
                 Limpiar Métricas
               </button>
-              <button id="btnAnalizarMetricas" class="btn btn-primary btn-sm" data-bs-toggle="tooltip" data-bs-title="Analizar métricas desde archivo CSV con Python">
+              <button type="button" id="btnAnalizarMetricas" class="btn btn-primary btn-sm" data-bs-toggle="tooltip" data-bs-title="Analizar métricas desde archivo CSV con Python">
                 Analizar Métricas
               </button>
             </div>
@@ -742,13 +742,13 @@
             ℹ️ Acerca de FLUVI
           </button>
         </h2>
-        <div id="collapseAbout" class="accordion-collapse collapse" aria-labelledby="headingAbout" data-bs-parent="#controlPanelAccordion">
+        <div id="collapseAbout" class="accordion-collapse collapse" data-bs-parent="#controlPanelAccordion">
           <div class="accordion-body">
             <h6 class="mb-3">Simulador de Sistema de Gestión del Flujo Vehicular en Vialidades Cercanas a Áreas Académicas de IPN - ESCOM</h6>
 
             <p class="text-muted small mb-3">Sistema de simulación basado en autómatas celulares para el análisis de tráfico vehicular.</p>
 
-            <button class="btn btn-info w-100" data-bs-toggle="modal" data-bs-target="#aboutModal" data-bs-title="Ver información completa sobre el proyecto FLUVI">
+            <button type="button" class="btn btn-info w-100" data-bs-toggle="modal" data-bs-target="#aboutModal" data-bs-title="Ver información completa sobre el proyecto FLUVI">
               📖 Ver Información Completa
             </button>
 
@@ -811,7 +811,7 @@
                   data-bs-placement="right"
                   title="Muestra el número de celda en el hover sobre calles. Al activarlo se muestra 'NOMBRE_CALLE : NUMERO_CELDA'. Desactívalo para mejorar el rendimiento (solo mostrará el nombre de la calle)."
                   style="cursor: help;">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle" viewBox="0 0 16 16">
+              <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle" viewBox="0 0 16 16">
                 <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"></path>
                 <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533z"></path>
                 <circle cx="8" cy="4.5" r="1"></circle>
@@ -825,7 +825,7 @@
   <!-- FIN sidebar -->
 
   <!-- Modal de Instrucciones -->
-  <div class="modal fade" id="instructionsModal" tabindex="-1" aria-labelledby="instructionsModalLabel" aria-hidden="true">
+  <div class="modal fade" id="instructionsModal" role="dialog" tabindex="-1" aria-labelledby="instructionsModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
       <div class="modal-content">
         <div class="modal-header bg-primary text-white">
@@ -1191,7 +1191,7 @@
   </div>
 
   <!-- Modal Nueva Calle -->
-  <div class="modal fade" id="modalNuevaCalle" tabindex="-1" aria-labelledby="modalNuevaCalleLabel" aria-hidden="true">
+  <div class="modal fade" id="modalNuevaCalle" role="dialog" tabindex="-1" aria-labelledby="modalNuevaCalleLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
         <div class="modal-header bg-primary text-white">
@@ -1258,7 +1258,7 @@
             <label for="inputProbGenCalle" class="form-label">
               Probabilidad de Generación (%)
               <span class="info-icon" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="Controla la frecuencia con la que se generan nuevos vehículos. 0% = sin vehículos, 100% = generación máxima continua. Solo disponible para calles de tipo GENERADOR.">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle" viewBox="0 0 16 16">
+                <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle" viewBox="0 0 16 16">
                   <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/>
                   <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533z"/>
                   <circle cx="8" cy="4.5" r="1"/>
@@ -1275,7 +1275,7 @@
             <label for="inputProbSaltoCalle" class="form-label">
               Probabilidad de Cambio de Carril (%)
               <span class="info-icon" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="Define la probabilidad de que un vehículo cambie de carril cuando es posible. Valores bajos (0-5%) simulan tráfico ordenado, valores altos (>20%) generan más cambios de carril.">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle" viewBox="0 0 16 16">
+                <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle" viewBox="0 0 16 16">
                   <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/>
                   <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533z"/>
                   <circle cx="8" cy="4.5" r="1"/>
@@ -1298,7 +1298,7 @@
   </div>
 
   <!-- Modal Nuevo Edificio -->
-  <div class="modal fade" id="modalNuevoEdificio" tabindex="-1" aria-labelledby="modalNuevoEdificioLabel" aria-hidden="true" data-bs-theme="auto">
+  <div class="modal fade" id="modalNuevoEdificio" role="dialog" tabindex="-1" aria-labelledby="modalNuevoEdificioLabel" aria-hidden="true" data-bs-theme="auto">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
       <div class="modal-content">
         <div class="modal-header bg-primary text-white">
@@ -1357,7 +1357,7 @@
 
             <!-- Conexiones -->
             <div class="mb-3">
-              <label class="form-label fw-semibold">Conexiones (Entradas/Salidas):</label>
+              <span class="form-label fw-semibold">Conexiones (Entradas/Salidas):</span>
               <div class="alert alert-info small mb-2" role="alert">
                 <strong>⚠️ Importante:</strong> Las conexiones deben venir en pares (1 entrada → 1 salida). Máximo 10 pares.
                 <br><small class="text-muted">La entrada y salida NO pueden estar en la misma celda del mismo carril.</small>
@@ -1372,12 +1372,12 @@
 
             <!-- Probabilidades por hora -->
             <div class="mb-3">
-              <label class="form-label fw-semibold">Probabilidades de Entrada/Salida por Hora:</label>
+              <span class="form-label fw-semibold">Probabilidades de Entrada/Salida por Hora:</span>
               <div class="alert alert-warning small mb-2" role="alert">
                 <strong>⏰ Configuración:</strong> Ajusta las probabilidades para cada hora del día (0-23). Los valores van de 0% a 100%.
               </div>
 
-              <div class="btn-group btn-group-sm mb-3 d-flex" role="group">
+              <div class="btn-group btn-group-sm mb-3 d-flex">
                 <button type="button" class="btn btn-outline-primary flex-fill" onclick="aplicarPerfilHorario('normal')">Normal</button>
                 <button type="button" class="btn btn-outline-primary flex-fill" onclick="aplicarPerfilHorario('oficina')">Oficina</button>
                 <button type="button" class="btn btn-outline-primary flex-fill" onclick="aplicarPerfilHorario('centro')">Centro Comercial</button>
@@ -1385,11 +1385,11 @@
 
               <div class="row g-3">
                 <div class="col-md-6">
-                  <label class="form-label small fw-semibold text-success">🟢 Entrada (%)</label>
+                  <span class="form-label small fw-semibold text-success">🟢 Entrada (%)</span>
                   <div id="slidersProbEntrada" class="border rounded p-2" style="max-height: 200px; overflow-y: auto; background-color: var(--bs-light-bg-subtle);"></div>
                 </div>
                 <div class="col-md-6">
-                  <label class="form-label small fw-semibold text-primary">🔵 Salida (%)</label>
+                  <span class="form-label small fw-semibold text-primary">🔵 Salida (%)</span>
                   <div id="slidersProbSalida" class="border rounded p-2" style="max-height: 200px; overflow-y: auto; background-color: var(--bs-light-bg-subtle);"></div>
                 </div>
               </div>
@@ -1405,7 +1405,7 @@
   </div>
 
   <!-- Modal Nueva Conexión -->
-  <div class="modal fade" id="modalNuevaConexion" tabindex="-1" aria-labelledby="modalNuevaConexionLabel" aria-hidden="true">
+  <div class="modal fade" id="modalNuevaConexion" role="dialog" tabindex="-1" aria-labelledby="modalNuevaConexionLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
         <div class="modal-header bg-secondary text-white">
@@ -1483,7 +1483,7 @@
   </div>
 
   <!-- Modal Editar Conexión -->
-  <div class="modal fade" id="modalEditarConexion" tabindex="-1" aria-labelledby="modalEditarConexionLabel" aria-hidden="true">
+  <div class="modal fade" id="modalEditarConexion" role="dialog" tabindex="-1" aria-labelledby="modalEditarConexionLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
         <div class="modal-header bg-warning text-dark">
@@ -1549,7 +1549,7 @@
   </div>
 
   <!-- Modal Acerca de FLUVI -->
-  <div class="modal fade" id="aboutModal" tabindex="-1" aria-labelledby="aboutModalLabel" aria-hidden="true">
+  <div class="modal fade" id="aboutModal" role="dialog" tabindex="-1" aria-labelledby="aboutModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
       <div class="modal-content">
         <div class="modal-header bg-primary text-white">
@@ -1919,7 +1919,7 @@
   </div>
 
   <!-- Modal de Configuración de Fecha y Hora del Simulador -->
-  <div class="modal fade" id="modalTiempoSimulador" tabindex="-1" aria-labelledby="modalTiempoSimuladorLabel" aria-hidden="true">
+  <div class="modal fade" id="modalTiempoSimulador" role="dialog" tabindex="-1" aria-labelledby="modalTiempoSimuladorLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
         <div class="modal-header">
@@ -1981,7 +1981,7 @@
   </div>
 
   <!-- Modal de Configuración de Multiplicadores por Hora -->
-  <div class="modal fade" id="modalMultiplicadores" tabindex="-1" aria-labelledby="modalMultiplicadoresLabel" aria-hidden="true">
+  <div class="modal fade" id="modalMultiplicadores" role="dialog" tabindex="-1" aria-labelledby="modalMultiplicadoresLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
       <div class="modal-content">
         <div class="modal-header bg-success text-white">
@@ -2073,7 +2073,7 @@
   </div>
 
   <!-- Modal de Mapa de Calor -->
-  <div class="modal fade" id="modalMapaCalor" tabindex="-1" aria-labelledby="modalMapaCalorLabel" data-bs-backdrop="static">
+  <div class="modal fade" id="modalMapaCalor" role="dialog" tabindex="-1" aria-labelledby="modalMapaCalorLabel" data-bs-backdrop="static">
     <div class="modal-dialog modal-fullscreen">
       <div class="modal-content heatmap-modal">
         <!-- Header elegante con gradiente -->
@@ -2241,23 +2241,23 @@
       <div id="canvasControlBar">
         <div id="controlBar" class="align-items-center">
           <!-- Grupo de controles de simulación -->
-          <div class="btn-group" role="group">
-            <button id="btnPauseResume" class="btn btn-secondary btn-sm" data-bs-toggle="tooltip" data-bs-title="Pausar o reanudar la simulación de tráfico">⏸</button>
-            <button id="btnPaso" class="btn btn-success btn-sm" disabled data-bs-toggle="tooltip" data-bs-title="Avanzar un paso de la simulación (solo disponible cuando está en pausa)">⏭</button>
+          <div class="btn-group">
+            <button type="button" id="btnPauseResume" class="btn btn-secondary btn-sm" data-bs-toggle="tooltip" data-bs-title="Pausar o reanudar la simulación de tráfico">⏸</button>
+            <button type="button" id="btnPaso" class="btn btn-success btn-sm" disabled data-bs-toggle="tooltip" data-bs-title="Avanzar un paso de la simulación (solo disponible cuando está en pausa)">⏭</button>
           </div>
 
           <!-- Grupo de controles de visualización -->
-          <div class="btn-group" role="group">
-            <button id="btnConexiones" class="btn btn-info btn-sm" data-bs-toggle="tooltip" data-bs-title="Mostrar/ocultar las conexiones entre calles en el canvas">🔗</button>
-            <button id="btnVertices" class="btn btn-info btn-sm" data-bs-toggle="tooltip" data-bs-title="Mostrar/ocultar los vértices de las calles para edición">📍</button>
-            <button id="btnEtiquetas" class="btn btn-info btn-sm" data-bs-toggle="tooltip" data-bs-title="Mostrar/ocultar las etiquetas con nombres de calles y edificios">🏷️</button>
-            <button id="btnContadores" class="btn btn-info btn-sm" data-bs-toggle="tooltip" data-bs-title="Mostrar/ocultar contadores de ocupación de estacionamientos">🔢</button>
+          <div class="btn-group">
+            <button type="button" id="btnConexiones" class="btn btn-info btn-sm" data-bs-toggle="tooltip" data-bs-title="Mostrar/ocultar las conexiones entre calles en el canvas">🔗</button>
+            <button type="button" id="btnVertices" class="btn btn-info btn-sm" data-bs-toggle="tooltip" data-bs-title="Mostrar/ocultar los vértices de las calles para edición">📍</button>
+            <button type="button" id="btnEtiquetas" class="btn btn-info btn-sm" data-bs-toggle="tooltip" data-bs-title="Mostrar/ocultar las etiquetas con nombres de calles y edificios">🏷️</button>
+            <button type="button" id="btnContadores" class="btn btn-info btn-sm" data-bs-toggle="tooltip" data-bs-title="Mostrar/ocultar contadores de ocupación de estacionamientos">🔢</button>
           </div>
 
           <!-- Grupo de acciones -->
-          <div class="btn-group" role="group">
-            <button id="btnRandom" class="btn btn-warning btn-sm" data-bs-toggle="tooltip" data-bs-title="Llenar las calles con vehículos aleatorios">🎲</button>
-            <button id="btnBorrar" class="btn btn-danger btn-sm" data-bs-toggle="tooltip" data-bs-title="Borrar todos los vehículos de todas las calles">🗑️</button>
+          <div class="btn-group">
+            <button type="button" id="btnRandom" class="btn btn-warning btn-sm" data-bs-toggle="tooltip" data-bs-title="Llenar las calles con vehículos aleatorios">🎲</button>
+            <button type="button" id="btnBorrar" class="btn btn-danger btn-sm" data-bs-toggle="tooltip" data-bs-title="Borrar todos los vehículos de todas las calles">🗑️</button>
           </div>
 
           <!-- Controles de velocidad -->
@@ -2380,7 +2380,7 @@
   </div>
 
   <!-- Modal: Configuración de Calles en Métricas -->
-  <div class="modal fade" id="modalConfigCallesMetricas" tabindex="-1" aria-labelledby="modalConfigCallesMetricasLabel" aria-hidden="true">
+  <div class="modal fade" id="modalConfigCallesMetricas" role="dialog" tabindex="-1" aria-labelledby="modalConfigCallesMetricasLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-scrollable">
       <div class="modal-content">
         <div class="modal-header bg-primary text-white">
@@ -2439,7 +2439,7 @@
   </div>
 
   <!-- Modal: Guardar Escenario -->
-  <div class="modal fade" id="modalGuardarEscenario" tabindex="-1" aria-labelledby="modalGuardarEscenarioLabel" aria-hidden="true">
+  <div class="modal fade" id="modalGuardarEscenario" role="dialog" tabindex="-1" aria-labelledby="modalGuardarEscenarioLabel" aria-hidden="true">
     <div class="modal-dialog">
       <div class="modal-content">
         <div class="modal-header bg-success text-white">
@@ -2478,7 +2478,7 @@
   </div>
 
   <!-- Modal: Cargar Escenario -->
-  <div class="modal fade" id="modalCargarEscenario" tabindex="-1" aria-labelledby="modalCargarEscenarioLabel" aria-hidden="true">
+  <div class="modal fade" id="modalCargarEscenario" role="dialog" tabindex="-1" aria-labelledby="modalCargarEscenarioLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
       <div class="modal-content">
         <div class="modal-header bg-primary text-white">
@@ -2491,7 +2491,7 @@
           <!-- Botón para cargar desde archivo JSON -->
           <div class="mb-3">
             <label for="inputCargarJSON" class="btn btn-outline-success w-100">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-upload me-2" viewBox="0 0 16 16">
+              <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-upload me-2" viewBox="0 0 16 16">
                 <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5"/>
                 <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708z"/>
               </svg>
@@ -2524,7 +2524,7 @@
   </div>
 
   <!-- Modal: Analizador de Métricas -->
-  <div class="modal fade" id="modalAnalizadorMetricas" tabindex="-1" aria-labelledby="modalAnalizadorMetricasLabel" aria-hidden="true">
+  <div class="modal fade" id="modalAnalizadorMetricas" role="dialog" tabindex="-1" aria-labelledby="modalAnalizadorMetricasLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl">
       <div class="modal-content">
         <div class="modal-header bg-primary text-white">
@@ -2537,7 +2537,7 @@
           <!-- Sección de carga de archivo -->
           <div class="mb-4">
             <label for="inputCSVAnalizador" class="btn btn-outline-success w-100">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-earmark-arrow-up me-2" viewBox="0 0 16 16">
+              <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-earmark-arrow-up me-2" viewBox="0 0 16 16">
                 <path d="M8.5 11.5a.5.5 0 0 1-1 0V7.707L6.354 8.854a.5.5 0 1 1-.708-.708l2-2a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 7.707z"/>
                 <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2M9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5z"/>
               </svg>
@@ -2567,7 +2567,7 @@
             <h6 class="mb-3">📈 Resultados del Análisis</h6>
 
             <!-- Tabs para las 3 imágenes -->
-            <ul class="nav nav-tabs" id="tabsImagenes" role="tablist">
+            <div class="nav nav-tabs" id="tabsImagenes" role="tablist">
               <li class="nav-item" role="presentation">
                 <button class="nav-link active" id="tab-temporal" data-bs-toggle="tab" data-bs-target="#img-temporal" type="button" role="tab">
                   Análisis Temporal
@@ -2583,7 +2583,7 @@
                   Distribuciones
                 </button>
               </li>
-            </ul>
+            </div>
 
             <div class="tab-content mt-3" id="tabsImagenesContent">
               <div class="tab-pane fade show active" id="img-temporal" role="tabpanel">
@@ -2599,10 +2599,10 @@
 
             <!-- Botones de descarga -->
             <div class="d-grid gap-2 mt-3">
-              <button id="btnDescargarImagenActual" class="btn btn-success btn-sm">
+              <button type="button" id="btnDescargarImagenActual" class="btn btn-success btn-sm">
                 💾 Descargar Imagen Actual
               </button>
-              <button id="btnDescargarTodasImagenes" class="btn btn-info btn-sm">
+              <button type="button" id="btnDescargarTodasImagenes" class="btn btn-info btn-sm">
                 📦 Descargar Todas las Imágenes (ZIP)
               </button>
             </div>
