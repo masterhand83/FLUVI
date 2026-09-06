@@ -1287,10 +1287,10 @@ class EditorCalles {
         }
 
         // Calcular posiciones ideales de los handles (donde "quieren" estar)
-        let idealMoveX = centroX - handleRadius;
-        let idealMoveY = centroY - handleRadius;
-        let idealRotX = rotX - handleRadius;
-        let idealRotY = rotY - handleRadius;
+        const idealMoveX = centroX - handleRadius;
+        const idealMoveY = centroY - handleRadius;
+        const idealRotX = rotX - handleRadius;
+        const idealRotY = rotY - handleRadius;
 
         // Inicializar posiciones finales con las ideales
         let finalMoveX = idealMoveX;

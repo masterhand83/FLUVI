@@ -27,7 +27,7 @@ const completeMetricsHistory = {
 
 // Variables auxiliares para el cálculo de flujo vehicular
 let previousCarCount = 0;
-let flowMeasureInterval = 1000;
+const flowMeasureInterval = 1000;
 let lastFlowMeasure = null; // Inicializar como null, se establecerá en primera medición
 let lastFlowValue = 0; // Almacena el último flujo calculado para evitar parpadeos
 
@@ -122,7 +122,7 @@ function interpretarMetricas(metrics) {
     const netGeneration = parseFloat(metrics.netGeneration);
 
     // Determinar el estado del tráfico
-    let estado = {
+    const estado = {
         nivel: '',
         emoji: '',
         color: '',
@@ -634,10 +634,8 @@ function initializeCharts() {
                         titleFont: { size: 13, weight: 'bold' },
                         bodyFont: { size: 11 },
                         callbacks: {
-                            title: function(context) {
-                                return 'Densidad de Tráfico';
-                            },
-                            label: function(context) {
+                            title: (context) => 'Densidad de Tráfico',
+                            label: (context) => {
                                 const value = context.parsed.y;
                                 return [
                                     `${value.toFixed(1)}% de ocupación`,
@@ -659,9 +657,7 @@ function initializeCharts() {
                         max: 100,
                         ticks: {
                             ...commonOptions.scales.y.ticks,
-                            callback: function(value) {
-                                return value + '%';
-                            }
+                            callback: (value) => value + '%'
                         }
                     }
                 }
@@ -699,10 +695,8 @@ function initializeCharts() {
                         titleFont: { size: 13, weight: 'bold' },
                         bodyFont: { size: 11 },
                         callbacks: {
-                            title: function(context) {
-                                return 'Flujo vehicular';
-                            },
-                            label: function(context) {
+                            title: (context) => 'Flujo vehicular',
+                            label: (context) => {
                                 const value = context.parsed.y;
                                 return [
                                     `${value.toFixed(1)} vehículos/seg`,
@@ -760,10 +754,8 @@ function initializeCharts() {
                         titleFont: { size: 13, weight: 'bold' },
                         bodyFont: { size: 11 },
                         callbacks: {
-                            title: function(context) {
-                                return 'Tasa de Cambio';
-                            },
-                            label: function(context) {
+                            title: (context) => 'Tasa de Cambio',
+                            label: (context) => {
                                 const value = context.parsed.y;
                                 return [
                                     `${value.toFixed(1)} vehículos/seg`,
@@ -820,10 +812,8 @@ function initializeCharts() {
                         titleFont: { size: 13, weight: 'bold' },
                         bodyFont: { size: 11 },
                         callbacks: {
-                            title: function(context) {
-                                return 'Velocidad Promedio';
-                            },
-                            label: function(context) {
+                            title: (context) => 'Velocidad Promedio',
+                            label: (context) => {
                                 const value = context.parsed.y;
                                 return [
                                     `${value.toFixed(1)}% en movimiento`,
@@ -845,9 +835,7 @@ function initializeCharts() {
                         max: 100,
                         ticks: {
                             ...commonOptions.scales.y.ticks,
-                            callback: function(value) {
-                                return value + '%';
-                            }
+                            callback: (value) => value + '%'
                         }
                     }
                 }
@@ -885,10 +873,8 @@ function initializeCharts() {
                         titleFont: { size: 13, weight: 'bold' },
                         bodyFont: { size: 11 },
                         callbacks: {
-                            title: function(context) {
-                                return 'Entropía de Shannon (AC)';
-                            },
-                            label: function(context) {
+                            title: (context) => 'Entropía de Shannon (AC)',
+                            label: (context) => {
                                 const value = context.parsed.y;
                                 return [
                                     `${value.toFixed(3)} bits`,
@@ -919,9 +905,7 @@ function initializeCharts() {
                         max: 3.0,
                         ticks: {
                             ...commonOptions.scales.y.ticks,
-                            callback: function(value) {
-                                return value.toFixed(1) + ' bits';
-                            }
+                            callback: (value) => value.toFixed(1) + ' bits'
                         }
                     }
                 }

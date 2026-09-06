@@ -103,7 +103,7 @@ async function cargarArchivoParaAnalisis(event) {
   try {
     // Leer el contenido del archivo
     const reader = new FileReader();
-    reader.onload = async function(e) {
+    reader.onload = async (e) => {
       currentFileContent = e.target.result;
 
       // Ejecutar análisis automáticamente
@@ -223,7 +223,7 @@ async function ejecutarAnalisisCSV() {
 function mostrarImagenes(imagenes) {
   // Convertir el Map de Python a objeto JavaScript
   const imagenesObj = {};
-  for (let [key, value] of imagenes.entries()) {
+  for (const [key, value] of imagenes.entries()) {
     imagenesObj[key] = value;
   }
 
@@ -293,7 +293,7 @@ async function descargarTodasImagenes() {
 
     // Convertir las imágenes base64 a blobs
     const imagenesObj = {};
-    for (let [key, value] of currentImagenes.entries()) {
+    for (const [key, value] of currentImagenes.entries()) {
       imagenesObj[key] = value;
     }
 

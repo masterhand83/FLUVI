@@ -1,5 +1,5 @@
 // ========== SISTEMA DE CARGA ==========
-(function() {
+(() => {
   const loadingScreen = document.getElementById('loadingScreen');
   const progressFill = document.getElementById('progressFill');
   const loadingStatus = document.getElementById('loadingStatus');
@@ -38,12 +38,12 @@
   }, 200);
 
   // Función para actualizar el estado de carga
-  window.updateLoadingStatus = function(message) {
+  window.updateLoadingStatus = (message) => {
     loadingStatus.textContent = message;
   };
 
   // Función para ocultar la pantalla de carga
-  window.hideLoadingScreen = function() {
+  window.hideLoadingScreen = () => {
     clearInterval(progressInterval);
     progressFill.style.width = '100%';
     loadingStatus.textContent = 'Listo!';

@@ -117,7 +117,7 @@ function mostrarInfo(titulo, mensaje, duracion) {
  */
 window.alertOriginal = window.alert;
 
-window.alert = function(mensaje) {
+window.alert = (mensaje) => {
     // Determinar el tipo de notificación basado en el mensaje
     let tipo = 'info';
     let titulo = 'Notificación';

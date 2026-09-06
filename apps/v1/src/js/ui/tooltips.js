@@ -1,6 +1,6 @@
 // ========== SISTEMA DE TOOLTIPS (Bootstrap) ==========
 // Inicializar todos los tooltips cuando el DOM esté listo
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', () => {
   // Obtener todos los elementos con data-bs-toggle="tooltip"
   const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
 

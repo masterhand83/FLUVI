@@ -1,5 +1,5 @@
 // ========== SISTEMA DE TOGGLE PARA SIDEBAR RESPONSIVE ==========
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', () => {
   const sidebar = document.getElementById('sidebar');
   const mainContent = document.querySelector('.main-content');
   const toggleBtnInner = document.getElementById('sidebarToggle');
@@ -113,7 +113,7 @@ document.addEventListener('DOMContentLoaded', function() {
   toggleBtnFloat.addEventListener('click', toggleSidebar);
 
   // Atajo de teclado: Ctrl + B para toggle
-  document.addEventListener('keydown', function(e) {
+  document.addEventListener('keydown', (e) => {
     if (e.ctrlKey && e.key === 'b') {
       e.preventDefault();
       toggleSidebar();
@@ -121,7 +121,7 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   // Cerrar sidebar al hacer clic en el backdrop (solo en móviles)
-  document.addEventListener('click', function(e) {
+  document.addEventListener('click', (e) => {
     const isMobile = window.innerWidth <= 1024;
 
     if (isMobile && sidebarVisible && document.body.classList.contains('sidebar-open')) {
@@ -137,7 +137,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Manejar resize de ventana para ajustar comportamiento
   let resizeTimeout;
-  window.addEventListener('resize', function() {
+  window.addEventListener('resize', () => {
     clearTimeout(resizeTimeout);
     resizeTimeout = setTimeout(() => {
       const isMobile = window.innerWidth <= 1024;

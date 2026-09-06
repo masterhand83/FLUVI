@@ -288,11 +288,11 @@ function confirmarActualizacionMultiplicadores() {
 
 // ========== EVENT LISTENERS ==========
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', () => {
   // Generar sliders cuando se abre el modal
   const modalMultiplicadores = document.getElementById('modalMultiplicadores');
   if (modalMultiplicadores) {
-    modalMultiplicadores.addEventListener('show.bs.modal', function() {
+    modalMultiplicadores.addEventListener('show.bs.modal', () => {
       // Inicializar con el día actual de la simulación o Lunes por defecto
       if (window.configuracionTiempo) {
         diaSeleccionado = window.configuracionTiempo.diaActual;

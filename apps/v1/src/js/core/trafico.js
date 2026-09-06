@@ -29,8 +29,8 @@ console.log(`ℹ️ USE_PIXI = ${window.USE_PIXI} (isMobile: ${isMobile})`);
 let mostrarConexiones = false; // Variable para controlar visualización de conexiones
 let mostrarVertices = false; // Variable para controlar visualización de vértices
 let mostrarEtiquetas = isMobile ? false : false; // Desactivado en móviles por defecto
-let mostrarContadores = isMobile ? false : false; // Desactivado en móviles por defecto
-let colorFondoCanvas = "#c6cbcd"; // Color de fondo del canvas (almacenado para detección automática)
+const mostrarContadores = isMobile ? false : false; // Desactivado en móviles por defecto
+const colorFondoCanvas = "#c6cbcd"; // Color de fondo del canvas (almacenado para detección automática)
 
 // Exponer variables globales para PixiJS
 window.mostrarConexiones = mostrarConexiones;
@@ -201,7 +201,7 @@ const maxIntervalo = 250;  // 250ms = 4 veces más rápido que antes (era 1000ms
 const minIntervalo = 0;    // 0ms = velocidad máxima (1 frame sin delay)
 
 // Configuración
-let calles = [];
+const calles = [];
 let conexiones = [];
 const celda_tamano = 5;
 let escala = 1;
@@ -692,7 +692,7 @@ selectCalle.addEventListener("change", () => {
 
 // Función para crear una calle con posición, ángulo y tamaño
 function crearCalle(nombre, tamano, tipo, x, y, angulo, probabilidadGeneracion, carriles = 1, probabilidadSaltoDeCarril = 0.05) {
-    let calle = {
+    const calle = {
         id: nombre, // ID único basado en el nombre
         nombre: nombre,
         tamano: tamano,
@@ -950,7 +950,7 @@ function obtenerCoordenadasGlobalesCelda(calle, carril, indice) {
 
 // Calcula la distancia euclidiana entre dos puntos.
 function distancia(p1, p2) {
-  return Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
+  return Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2);
 }
 
 
@@ -996,7 +996,7 @@ function generarCelulas(calle) {
 }
 
 function actualizarCalle(calle, calleIndex) {
-    let nuevaCalle = [];
+    const nuevaCalle = [];
     for (let c = 0; c < calle.carriles; c++) {
         nuevaCalle.push([...calle.arreglo[c]]);
     }
@@ -1108,7 +1108,7 @@ function actualizarCalle(calle, calleIndex) {
             // Obtener valores de celdas vecinas
             let izq = i > 0 ? calle.arreglo[c][i - 1] : 0;
             const centro = calle.arreglo[c][i];
-            let der = i < calle.tamano - 1 ? calle.arreglo[c][i + 1] : 0;
+            const der = i < calle.tamano - 1 ? calle.arreglo[c][i + 1] : 0;
 
             // IMPORTANTE: Si la celda izquierda está esperando, tratarla como vacía
             // para evitar que se "copie" el vehículo a la celda actual
@@ -3996,7 +3996,7 @@ function iniciarSimulacion() {
     conexiones = conexionesCA;
 
     calles.forEach(calle => {
-        let option = document.createElement("option");
+        const option = document.createElement("option");
         option.value = calles.indexOf(calle);
         option.textContent = calle.nombre;
         selectCalle.appendChild(option);
@@ -4417,7 +4417,7 @@ canvas.addEventListener("wheel", event => {
     const worldY_before = (mouseY - offsetY) / escala;
 
     const escala_anterior = escala;
-    escala = escala_anterior * Math.pow(zoomIntensity, direction);
+    escala = escala_anterior * zoomIntensity ** direction;
 
     const minEscala = 0.5;
     const maxEscala = 20.0;
@@ -4827,7 +4827,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Función auxiliar: calcular distancia entre dos puntos
 function calcularDistancia(x1, y1, x2, y2) {
-    return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+    return Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
 }
 
 canvas.addEventListener("touchstart", event => {

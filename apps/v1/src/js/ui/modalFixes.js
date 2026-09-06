@@ -1,11 +1,11 @@
 // ========== FIX PARA WARNING DE ARIA-HIDDEN EN MODALES ==========
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', () => {
   // Obtener todos los modales
   const modals = document.querySelectorAll('.modal');
 
   modals.forEach(modal => {
     // Antes de que el modal se oculte, remover el foco de cualquier elemento dentro del modal
-    modal.addEventListener('hide.bs.modal', function(event) {
+    modal.addEventListener('hide.bs.modal', (event) => {
       // Buscar el elemento que tiene el foco actualmente en todo el documento
       const activeElement = document.activeElement;
 
@@ -27,13 +27,13 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Cuando el modal se cierra completamente, restaurar el tabindex
-    modal.addEventListener('hidden.bs.modal', function(event) {
+    modal.addEventListener('hidden.bs.modal', (event) => {
       // Restaurar el tabindex después de que el modal se haya cerrado completamente
       modal.setAttribute('tabindex', '-1');
     });
 
     // Opcional: Cuando el modal se muestre, enfocar el botón de cerrar o el primer input
-    modal.addEventListener('shown.bs.modal', function(event) {
+    modal.addEventListener('shown.bs.modal', (event) => {
       // Buscar el primer input o textarea que no esté deshabilitado
       const firstInput = modal.querySelector('input:not([disabled]):not([readonly]), textarea:not([disabled]):not([readonly])');
 

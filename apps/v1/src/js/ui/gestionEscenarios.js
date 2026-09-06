@@ -459,7 +459,7 @@ function cargarDesdeArchivoJSON(event) {
 
     const reader = new FileReader();
 
-    reader.onload = function(e) {
+    reader.onload = (e) => {
         try {
             // Parsear JSON
             const escenario = JSON.parse(e.target.result);
@@ -500,7 +500,7 @@ function cargarDesdeArchivoJSON(event) {
         }
     };
 
-    reader.onerror = function() {
+    reader.onerror = () => {
         mostrarNotificacion('error', 'Error de Lectura', 'No se pudo leer el archivo.');
         event.target.value = ''; // Limpiar input
     };

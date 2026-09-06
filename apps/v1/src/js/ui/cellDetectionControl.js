@@ -7,7 +7,7 @@
 window.cellDetectionEnabled = localStorage.getItem('cellDetectionEnabled') === 'true';
 
 // Configurar el switch cuando el DOM esté listo
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', () => {
   const switchCellDetection = document.getElementById('switchCellDetection');
   const labelCellDetection = document.getElementById('labelCellDetection');
 
@@ -50,9 +50,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // Inicializar tooltips de Bootstrap si están disponibles
   if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
     const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    tooltipTriggerList.map(function (tooltipTriggerEl) {
-      return new bootstrap.Tooltip(tooltipTriggerEl);
-    });
+    tooltipTriggerList.map((tooltipTriggerEl) => new bootstrap.Tooltip(tooltipTriggerEl));
   }
 });
 

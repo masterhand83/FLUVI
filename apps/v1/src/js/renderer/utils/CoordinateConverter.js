@@ -60,7 +60,7 @@ class CoordinateConverter {
      * @returns {{minX, minY, maxX, maxY}}
      */
     static getRotatedBounds(x, y, width, height, angle) {
-        const rad = this.degreesToRadians(angle);
+        const rad = CoordinateConverter.degreesToRadians(angle);
         const cos = Math.cos(rad);
         const sin = Math.sin(rad);
 

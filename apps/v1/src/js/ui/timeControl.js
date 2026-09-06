@@ -1,5 +1,5 @@
 // ========== CONTROL DE FECHA Y HORA DEL SIMULADOR ==========
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', () => {
   // Elementos del modal
   const selectDiaSemanaModal = document.getElementById('selectDiaSemanaModal');
   const inputHoraModal = document.getElementById('inputHoraModal');
@@ -73,7 +73,7 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   // Botón para confirmar y aplicar los cambios de fecha y hora
-  btnConfirmarTiempo.addEventListener('click', function() {
+  btnConfirmarTiempo.addEventListener('click', () => {
     const dia = parseInt(selectDiaSemanaModal.value);
     const { hora, minutos } = validarEntrada();
 
@@ -128,13 +128,13 @@ document.addEventListener('DOMContentLoaded', function() {
   inputMinutosModal.addEventListener('input', validarEntrada);
 
   // Permitir aplicar con Enter en los campos de texto
-  inputHoraModal.addEventListener('keypress', function(e) {
+  inputHoraModal.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {
       btnConfirmarTiempo.click();
     }
   });
 
-  inputMinutosModal.addEventListener('keypress', function(e) {
+  inputMinutosModal.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {
       btnConfirmarTiempo.click();
     }
@@ -143,7 +143,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // Actualizar inputs del modal cuando se abre
   const modalElement = document.getElementById('modalTiempoSimulador');
   if (modalElement) {
-    modalElement.addEventListener('show.bs.modal', function() {
+    modalElement.addEventListener('show.bs.modal', () => {
       actualizarInputsDesdeSimulador();
     });
   }

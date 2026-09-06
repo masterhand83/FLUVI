@@ -2,7 +2,7 @@
 // Sistema para crear, editar, guardar y cargar simulaciones personalizadas
 
 // Variables globales del constructor
-let modoConstructor = false;
+const modoConstructor = false;
 let simulacionActual = {
     nombre: "Nueva Simulación",
     calles: [],
@@ -137,7 +137,7 @@ function mostrarDialogoNuevaCalle() {
 
     // Configurar evento del botón confirmar (solo una vez)
     const btnConfirmar = document.getElementById('btnConfirmarNuevaCalle');
-    const nuevoHandler = function() {
+    const nuevoHandler = () => {
         // Obtener referencias a los inputs
         const inputNombre = document.getElementById('inputNombreCalle');
         const inputTamano = document.getElementById('inputTamanoCalle');
@@ -163,7 +163,7 @@ function mostrarDialogoNuevaCalle() {
         let isValid = true;
 
         // Validar nombre (solo letras, números, espacios, guiones y puntos)
-        const nombreRegex = /^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s\-\.]+$/;
+        const nombreRegex = /^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s\-.]+$/;
         if (!nombre || nombre === '') {
             inputNombre.classList.add('is-invalid');
             mostrarNotificacion('error', 'Error de Validación', 'El nombre de la calle es obligatorio.');
@@ -302,7 +302,7 @@ function mostrarDialogoNuevaCalle() {
 
     // Validar nombre en tiempo real
     const inputNombre = document.getElementById('inputNombreCalle');
-    const nombreRegex = /^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s\-\.]+$/;
+    const nombreRegex = /^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s\-.]+$/;
     inputNombre.addEventListener('input', function() {
         const valor = this.value.trim();
         if (valor === '' || !nombreRegex.test(valor)) {
@@ -757,7 +757,7 @@ function mostrarDialogoNuevaConexion() {
     });
 
     // Detectar cambio en calle destino para regenerar formularios/selectores
-    selectDestino.addEventListener('change', function() {
+    selectDestino.addEventListener('change', () => {
         const tipo = selectTipoConexion.value;
         if (tipo === 'PROBABILISTICA') {
             generarFormulariosDistribucion();
@@ -767,7 +767,7 @@ function mostrarDialogoNuevaConexion() {
     });
 
     // Detectar cambio en calle origen para poblar selector de carril origen
-    selectOrigen.addEventListener('change', function() {
+    selectOrigen.addEventListener('change', () => {
         if (selectTipoConexion.value === 'PROBABILISTICA') {
             poblarSelectorCarrilOrigen();
         }
@@ -1002,7 +1002,7 @@ function mostrarDialogoNuevaConexion() {
     }
 
     // Crear nuevo handler
-    handlerNuevaConexion = function() {
+    handlerNuevaConexion = () => {
         const origenIdx = parseInt(selectOrigen.value);
         const destinoIdx = parseInt(selectDestino.value);
         const tipo = selectTipoConexion.value;
@@ -1390,7 +1390,7 @@ function mostrarDialogoNuevoEdificio() {
         console.log('✅ Modal mostrado');
 
         // Configurar evento del botón confirmar
-        const nuevoHandler = function() {
+        const nuevoHandler = () => {
             const label = document.getElementById('inputNombreEdificio').value;
             const x = parseFloat(document.getElementById('inputXEdificio').value);
             const y = parseFloat(document.getElementById('inputYEdificio').value);
@@ -2006,7 +2006,7 @@ function cargarSimulacion(event) {
 
     const reader = new FileReader();
 
-    reader.onload = function(e) {
+    reader.onload = (e) => {
         try {
             const datosSimulacion = JSON.parse(e.target.result);
 
@@ -2398,7 +2398,7 @@ function poblarEdicionProbabilistica(conexion) {
     // Generar formulario SOLO para esta conexión individual
     const contenedor = document.getElementById('editContenedorDistribucionesProbabilisticas');
 
-    let html = `
+    const html = `
         <div class="alert alert-info small mb-3">
             <strong>📝 Editando conexión individual:</strong> Carril ${conexion.carrilOrigen + 1} → Carril ${conexion.carrilDestino + 1}
         </div>
@@ -2543,7 +2543,7 @@ function editarConexion(index) {
     }
 
     // Crear y guardar el nuevo handler
-    handlerConfirmarEdicion = function() {
+    handlerConfirmarEdicion = () => {
         guardarCambiosConexion(index);
     };
 

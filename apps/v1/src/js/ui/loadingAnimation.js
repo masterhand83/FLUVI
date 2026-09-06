@@ -29,7 +29,7 @@ const darkModeColors = {
 /**
  * Inicializa la animación de carga
  */
-window.initLoadingAnimation = function() {
+window.initLoadingAnimation = () => {
     console.log('🎨 Inicializando animación de gradientes...');
 
     // Crear canvas
@@ -178,7 +178,7 @@ function onResize() {
 /**
  * Destruye la animación y libera recursos
  */
-window.destroyLoadingAnimation = function() {
+window.destroyLoadingAnimation = () => {
     console.log('🧹 Destruyendo animación de gradientes...');
 
     // Cancelar frame de animación
@@ -208,7 +208,7 @@ console.log('✓ loadingAnimation.js (gradientes) cargado');
 if (document.readyState !== 'loading') {
     console.log('🚀 DOM listo, auto-inicializando animación...');
     // Pequeño delay para asegurar que el contenedor exista
-    setTimeout(function() {
+    setTimeout(() => {
         if (document.getElementById('loadingAnimationCanvas')) {
             window.initLoadingAnimation();
         } else {
@@ -216,9 +216,9 @@ if (document.readyState !== 'loading') {
         }
     }, 10);
 } else {
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', () => {
         console.log('🚀 DOMContentLoaded, auto-inicializando animación...');
-        setTimeout(function() {
+        setTimeout(() => {
             if (document.getElementById('loadingAnimationCanvas')) {
                 window.initLoadingAnimation();
             } else {

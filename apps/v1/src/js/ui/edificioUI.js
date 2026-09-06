@@ -5,7 +5,7 @@
 console.log('🏢 edificioUI.js cargando...');
 
 // Variables globales para tracking
-let edificioEnEdicion = null;
+const edificioEnEdicion = null;
 
 // Exponer contadorPares en window para que sea accesible globalmente
 if (!window.contadorPares) {

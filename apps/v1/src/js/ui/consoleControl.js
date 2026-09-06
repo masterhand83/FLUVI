@@ -15,7 +15,7 @@ const originalConsole = {
 
 // Filtrar mensajes de Tracking Prevention del navegador
 const filterTrackingPrevention = (method) => {
-  return function(...args) {
+  return (...args) => {
     const message = args[0]?.toString() || '';
     // Silenciar advertencias de Tracking Prevention (Edge/Safari)
     if (message.includes('Tracking Prevention blocked access to storage')) {
@@ -32,16 +32,16 @@ console.warn = filterTrackingPrevention('warn');
 
 // Función para deshabilitar logs de consola
 function disableConsoleLogs() {
-  console.log = function() {};
-  console.warn = function() {};
-  console.error = function() {};
-  console.info = function() {};
-  console.debug = function() {};
-  console.trace = function() {};
-  console.table = function() {};
-  console.group = function() {};
-  console.groupEnd = function() {};
-  console.groupCollapsed = function() {};
+  console.log = () => {};
+  console.warn = () => {};
+  console.error = () => {};
+  console.info = () => {};
+  console.debug = () => {};
+  console.trace = () => {};
+  console.table = () => {};
+  console.group = () => {};
+  console.groupEnd = () => {};
+  console.groupCollapsed = () => {};
 }
 
 // Función para habilitar logs de consola
@@ -65,7 +65,7 @@ if (!consoleLogsEnabled) {
 }
 
 // Configurar el switch cuando el DOM esté listo
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', () => {
   const switchConsoleLogs = document.getElementById('switchConsoleLogs');
   const labelConsoleLogs = document.getElementById('labelConsoleLogs');
 

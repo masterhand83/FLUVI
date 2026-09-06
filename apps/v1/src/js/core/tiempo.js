@@ -10,7 +10,7 @@
 // Usamos 2.0 segundos por paso para que el tiempo avance perceptiblemente
 const SEGUNDOS_POR_PASO = 2.0;
 
-let configuracionTiempo = {
+const configuracionTiempo = {
     activo: true,                    // Si el sistema de tiempo está activo
     diaActual: 1,                    // 0=Domingo, 1=Lunes, ..., 6=Sábado
     horaActual: 7,                   // 0-23
@@ -20,7 +20,7 @@ let configuracionTiempo = {
 };
 
 // Cache para el multiplicador actual (optimización)
-let multiplicadorCache = {
+const multiplicadorCache = {
     valor: 1.0,
     ultimaHora: -1,
     ultimoDia: -1
@@ -36,7 +36,7 @@ let multiplicadorCache = {
  * CONFIGURACIÓN POR DEFECTO (editable):
  * 0 = Domingo, 1 = Lunes, 2 = Martes, 3 = Miércoles, 4 = Jueves, 5 = Viernes, 6 = Sábado
  */
-let MULTIPLICADORES_POR_DIA_HORA = {
+const MULTIPLICADORES_POR_DIA_HORA = {
     // 0 - Domingo (tráfico bajo)
     0: [
         0.0, 0.0, 0.1, 0.2, 0.2, 0.2,  // 00-05: Madrugada

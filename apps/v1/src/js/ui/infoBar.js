@@ -1,5 +1,5 @@
 // ========== SISTEMA DE INFORMACIÓN EN TIEMPO REAL (estilo Golly) ==========
-(function() {
+(() => {
   // Tiempo simulado (usado para compatibilidad con sistema anterior)
   let simulatedStartDate = new Date();
   let simulatedCurrentDate = new Date(simulatedStartDate);
@@ -213,12 +213,12 @@
 
   // Exponer tiempo simulado para el ciclo día/noche
   Object.defineProperty(window, 'simulatedCurrentDate', {
-    get: function() { return simulatedCurrentDate; },
+    get: () => simulatedCurrentDate,
     enumerable: true
   });
 
   // Inicializar con tiempo virtual
-  document.addEventListener('DOMContentLoaded', function() {
+  document.addEventListener('DOMContentLoaded', () => {
     // Inicializar referencias al DOM
     initDOMReferences();
 
@@ -247,11 +247,11 @@
 })();
 
 // ========== DETECCIÓN DE TECLA Z PARA EDICIÓN DE VÉRTICES (MODO TOGGLE) ==========
-(function() {
+(() => {
   window.vertexEditMode = false; // Modo toggle: activar/desactivar con Z
   let zKeyDown = false; // Para detectar presiones repetidas
 
-  document.addEventListener('keydown', function(e) {
+  document.addEventListener('keydown', (e) => {
     if (e.key === 'z' || e.key === 'Z') {
       // Evitar repeticiones si la tecla está siendo mantenida presionada
       if (zKeyDown) return;
@@ -296,14 +296,14 @@
     }
   });
 
-  document.addEventListener('keyup', function(e) {
+  document.addEventListener('keyup', (e) => {
     if (e.key === 'z' || e.key === 'Z') {
       zKeyDown = false; // Permitir nueva presión
     }
   });
 
   // Resetear estado si la ventana pierde el foco o se sale del modo edición
-  window.addEventListener('blur', function() {
+  window.addEventListener('blur', () => {
     window.vertexEditMode = false;
     zKeyDown = false;
     showVertexEditBadge(false);

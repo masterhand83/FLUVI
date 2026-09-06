@@ -8,8 +8,8 @@
 // - Arrastre y actualización de vértices
 
 // Variables globales para el control de vértices
-let verticeSeleccionado = null;
-let controlandoVertice = false;
+const verticeSeleccionado = null;
+const controlandoVertice = false;
 
 // Inicializar vértices en una calle
 function inicializarVertices(calle) {
@@ -229,8 +229,8 @@ function detectarVerticeEnPosicion(worldX, worldY) {
         const pos = calcularPosicionVertice(calleSeleccionada, vertice);
 
         const dist = Math.sqrt(
-            Math.pow(worldX - pos.x, 2) +
-            Math.pow(worldY - pos.y, 2)
+            (worldX - pos.x) ** 2 +
+            (worldY - pos.y) ** 2
         );
 
         if (dist < umbralDistancia) {
