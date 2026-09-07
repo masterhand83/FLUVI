@@ -6,6 +6,10 @@
     },
     "lint:fix": {
       "cache": false
+    },
+    "test": {
+      "outputs": [],
+      "env": ["CHROME_PATH"]
     }
   }
 }

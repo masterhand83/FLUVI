@@ -147,3 +147,6 @@ vite.config.ts.timestamp-*
 
 metadata.sqlite*
 version-check.json
+
+# Smoke evidence screenshots (generated)
+apps/v1/tests/smoke/evidence/
