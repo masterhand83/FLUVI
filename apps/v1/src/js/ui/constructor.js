@@ -12,6 +12,7 @@ let simulacionActual = {
 
 // Variables para manejar event handlers y evitar duplicados
 let handlerNuevaConexion = null;
+let handlerNuevoEdificio = null;
 
 // ==================== INICIALIZACIÓN ====================
 
@@ -1374,6 +1375,11 @@ function mostrarDialogoNuevoEdificio() {
         const modalTitle = modalElement.querySelector('#modalNuevoEdificioLabel');
         const btnConfirmar = document.getElementById('btnConfirmarNuevoEdificio');
 
+        // Un diálogo cancelado conserva su listener: quitarlo antes de abrir otro.
+        if (handlerNuevoEdificio) {
+            btnConfirmar.removeEventListener('click', handlerNuevoEdificio);
+        }
+
         if (modalTitle) modalTitle.textContent = '🏢 Agregar Nuevo Edificio';
         if (btnConfirmar) btnConfirmar.textContent = '✓ Crear Edificio';
 
@@ -1390,7 +1396,7 @@ function mostrarDialogoNuevoEdificio() {
         console.log('✅ Modal mostrado');
 
         // Configurar evento del botón confirmar
-        const nuevoHandler = () => {
+        handlerNuevoEdificio = () => {
             const label = document.getElementById('inputNombreEdificio').value;
             const x = parseFloat(document.getElementById('inputXEdificio').value);
             const y = parseFloat(document.getElementById('inputYEdificio').value);
@@ -1445,11 +1451,11 @@ function mostrarDialogoNuevoEdificio() {
             modal.hide();
 
             // Remover listener
-            btnConfirmar.removeEventListener('click', nuevoHandler);
+            btnConfirmar.removeEventListener('click', handlerNuevoEdificio);
+            handlerNuevoEdificio = null;
         };
 
-        btnConfirmar.removeEventListener('click', nuevoHandler);
-        btnConfirmar.addEventListener('click', nuevoHandler);
+        btnConfirmar.addEventListener('click', handlerNuevoEdificio);
 
     } catch (error) {
         console.error('❌ Error en mostrarDialogoNuevoEdificio:', error);
