@@ -58,9 +58,13 @@ class ReferenceImageEditor {
 
     sync() {
         const image = window.referenceImage;
+        if (!image || this.locked || !this.selected) {
+            this.frame.style.display = 'none';
+            return;
+        }
         const m = this.metrics();
-        this.frame.style.display = image && this.selected && !this.locked && m ? 'block' : 'none';
-        if (!image || !m || this.locked) return;
+        if (!m) return;
+        this.frame.style.display = 'block';
         this.frame.style.left = `${m.x + image.x * m.scaleX}px`;
         this.frame.style.top = `${m.y + image.y * m.scaleY}px`;
         this.frame.style.width = `${image.width * m.scaleX}px`;
@@ -111,7 +115,9 @@ class ReferenceImageEditor {
             image.x = d.x + ((addedWidth * Math.cos(angle) - addedHeight * Math.sin(angle)) - addedWidth) / 2;
             image.y = d.y + ((addedWidth * Math.sin(angle) + addedHeight * Math.cos(angle)) - addedHeight) / 2;
         } else if (d.kind === 'rotate') {
-            image.rotation = d.rotation + (Math.atan2(event.clientY - d.centerY, event.clientX - d.centerX) - d.pointerAngle) * 180 / Math.PI;
+            const pointerAngle = Math.atan2(event.clientY - d.centerY, event.clientX - d.centerX);
+            const delta = Math.atan2(Math.sin(pointerAngle - d.pointerAngle), Math.cos(pointerAngle - d.pointerAngle));
+            image.rotation = d.rotation + delta * 180 / Math.PI;
         }
         this.sync();
         if (window.USE_PIXI && window.pixiApp?.sceneManager) {
