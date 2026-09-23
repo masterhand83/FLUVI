@@ -10,6 +10,7 @@ El Constructor de Mapas es una herramienta integrada en el Simulador de Tráfico
 - **Nueva Simulación**: Crea una simulación en blanco
 - **Guardar Simulación**: Exporta tu mapa como archivo JSON
 - **Cargar Simulación**: Importa mapas guardados anteriormente
+- **Imagen de referencia**: Usa una imagen local como guía, reemplázala o quítala; queda incluida en el JSON guardado
 
 ### ✅ Construcción de Mapas
 - **Agregar Calles**: Crea calles personalizadas con todos sus parámetros
@@ -102,6 +103,13 @@ El Constructor de Mapas es una herramienta integrada en el Simulador de Tráfico
    - Curvas y vértices restaurados
    - Edificios restaurados
 
+### 8. Usar una imagen de referencia
+
+1. En «🖼️ Imagen de referencia», selecciona **Cargar o reemplazar imagen** y elige un archivo de imagen de tu equipo.
+2. La primera imagen se centra en la vista y se ajusta proporcionalmente. Al reemplazarla se conserva su centro y se ajusta dentro del espacio anterior sin deformarse.
+3. Pulsa **Quitar imagen** para retirarla del mapa.
+4. Al guardar la simulación, los datos de la imagen se incrustan en el JSON; al cargarlo se restaura sin necesitar el archivo original. «Nueva Simulación» quita también la imagen.
+
 ## 📝 Formato del Archivo JSON
 
 ```json
@@ -132,7 +140,14 @@ El Constructor de Mapas es una herramienta integrada en el Simulador de Tráfico
       "detalles": [...]
     }
   ],
-  "edificios": [...]
+  "edificios": [...],
+  "imagenReferencia": {
+    "dataUrl": "data:image/png;base64,...",
+    "x": 100,
+    "y": 100,
+    "width": 800,
+    "height": 600
+  }
 }
 ```
 

@@ -1841,6 +1841,7 @@ function dibujarConexionesDetectadas() {
 function renderizarCanvas() {
     // Si PixiJS está inicializado Y habilitado, usar el motor gráfico
     if (window.USE_PIXI && pixiInitialized && window.pixiApp && window.pixiApp.sceneManager) {
+        window.pixiApp.sceneManager.refreshReferenceImage();
         // Solo renderizar la escena completa la primera vez
         // Después, el ticker de PixiJS maneja todo automáticamente
         if (!pixiFirstRender) {
@@ -1885,6 +1886,7 @@ function renderizarCanvas() {
 
     ctx.setTransform(escala, 0, 0, escala, offsetX, offsetY);
 
+    dibujarImagenReferencia();
     dibujarEdificios();
     dibujarCalles();
     dibujarCarros();
@@ -1892,6 +1894,16 @@ function renderizarCanvas() {
     dibujarVertices();
     dibujarEtiquetasCalles();
     dibujarMinimapa();
+}
+
+// La imagen de referencia vive en coordenadas del mundo; este transform
+// mantiene su posición alineada al hacer pan y zoom.
+function dibujarImagenReferencia() {
+    const referencia = window.referenceImage;
+    if (!referencia || !referencia.image || !referencia.image.complete || !referencia.image.naturalWidth) return;
+    ctx.save();
+    ctx.drawImage(referencia.image, referencia.x, referencia.y, referencia.width, referencia.height);
+    ctx.restore();
 }
 
 

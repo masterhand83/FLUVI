@@ -10,6 +10,64 @@ let simulacionActual = {
     edificios: []
 };
 
+window.referenceImage = null;
+
+function redrawReferenceImage() {
+    if (window.USE_PIXI && window.pixiApp?.sceneManager) {
+        window.pixiApp.sceneManager.renderAll();
+    }
+    if (window.renderizarCanvas) window.renderizarCanvas();
+}
+
+window.setReferenceImage = async function (data) {
+    if (data == null) {
+        window.referenceImage = null;
+        redrawReferenceImage();
+        return;
+    }
+
+    const dataUrl = typeof data === 'string' ? data : data.dataUrl;
+    if (!dataUrl) throw new Error('La imagen de referencia no contiene datos.');
+    const image = new Image();
+    await new Promise((resolve, reject) => {
+        image.onload = resolve;
+        image.onerror = () => reject(new Error('No se pudo cargar la imagen de referencia.'));
+        image.src = dataUrl;
+    });
+
+    const savedPlacement = typeof data === 'object' && data !== null &&
+        Number.isFinite(data.x) && Number.isFinite(data.y) &&
+        Number.isFinite(data.width) && Number.isFinite(data.height);
+    const previous = savedPlacement ? data : window.referenceImage;
+    if (previous && Number.isFinite(previous.x) && Number.isFinite(previous.y) &&
+        Number.isFinite(previous.width) && Number.isFinite(previous.height)) {
+        // A saved map keeps its exact geometry. A new upload retains the old
+        // center and fits inside its bounds without distorting another aspect ratio.
+        const fit = savedPlacement ? 1 : Math.min(previous.width / image.naturalWidth, previous.height / image.naturalHeight);
+        const width = savedPlacement ? previous.width : image.naturalWidth * fit;
+        const height = savedPlacement ? previous.height : image.naturalHeight * fit;
+        window.referenceImage = {
+            dataUrl, x: previous.x + (previous.width - width) / 2,
+            y: previous.y + (previous.height - height) / 2, width, height, image
+        };
+    } else {
+        const canvas = document.getElementById('simuladorCanvas');
+        const scale = Number(window.escala) || 1;
+        const visibleWidth = (canvas?.clientWidth || window.innerWidth) / scale;
+        const visibleHeight = (canvas?.clientHeight || window.innerHeight) / scale;
+        const fit = Math.min(visibleWidth * 0.8 / image.naturalWidth, visibleHeight * 0.8 / image.naturalHeight);
+        const width = image.naturalWidth * fit;
+        const height = image.naturalHeight * fit;
+        const offsetX = Number(window.offsetX) || 0;
+        const offsetY = Number(window.offsetY) || 0;
+        window.referenceImage = {
+            dataUrl, x: (-offsetX / scale) + (visibleWidth - width) / 2,
+            y: (-offsetY / scale) + (visibleHeight - height) / 2, width, height, image
+        };
+    }
+    redrawReferenceImage();
+};
+
 // Variables para manejar event handlers y evitar duplicados
 let handlerNuevaConexion = null;
 let handlerNuevoEdificio = null;
@@ -38,6 +96,24 @@ function inicializarConstructor() {
 // ==================== CONFIGURACIÓN DE EVENTOS ====================
 
 function configurarEventosConstructor() {
+    document.getElementById('inputImagenReferencia')?.addEventListener('change', async event => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        try {
+            const dataUrl = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = () => reject(new Error('No se pudo leer el archivo.'));
+                reader.readAsDataURL(file);
+            });
+            await window.setReferenceImage({ dataUrl });
+        } catch (error) {
+            alert(`No se pudo cargar la imagen: ${error.message}`);
+        } finally {
+            event.target.value = '';
+        }
+    });
+    document.getElementById('btnEliminarImagenReferencia')?.addEventListener('click', () => window.setReferenceImage(null));
     // Botón Agregar Calle
     const btnAgregarCalle = document.getElementById('btnAgregarCalle');
     if (btnAgregarCalle) {
@@ -1982,6 +2058,13 @@ function guardarSimulacion() {
             };
         }) : [],
         edificios: window.edificios || [],
+        imagenReferencia: window.referenceImage ? {
+            dataUrl: window.referenceImage.dataUrl,
+            x: window.referenceImage.x,
+            y: window.referenceImage.y,
+            width: window.referenceImage.width,
+            height: window.referenceImage.height
+        } : null,
         // Guardar configuración de tiempo virtual si está disponible
         configuracionTiempo: window.tiempoToJSON ? window.tiempoToJSON() : null
     };
@@ -2012,7 +2095,7 @@ function cargarSimulacion(event) {
 
     const reader = new FileReader();
 
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
         try {
             const datosSimulacion = JSON.parse(e.target.result);
 
@@ -2027,6 +2110,9 @@ function cargarSimulacion(event) {
 
             // Limpiar simulación actual
             limpiarSimulacionActual();
+            if (datosSimulacion.imagenReferencia) {
+                await window.setReferenceImage(datosSimulacion.imagenReferencia);
+            }
 
             // Cargar calles (silenciosamente, sin alertas individuales)
             let callesExitosas = 0;
@@ -2234,6 +2320,7 @@ function nuevaSimulacion() {
 // ==================== LIMPIAR SIMULACIÓN ====================
 
 function limpiarSimulacionActual() {
+    window.referenceImage = null;
     // Limpiar calles
     if (window.calles) {
         window.calles.length = 0;
@@ -2269,6 +2356,7 @@ function limpiarSimulacionActual() {
     }
 
     // Renderizar Canvas 2D si existe
+    redrawReferenceImage();
     if (window.renderizarCanvas) {
         window.renderizarCanvas();
     }

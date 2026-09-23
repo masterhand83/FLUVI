@@ -26,6 +26,7 @@ class SceneManager {
         // Crear capas en orden de renderizado
         this.layers = {
             background: this.createLayer(0),    // Fondo
+            referenceImage: this.createLayer(5), // Imagen de referencia sobre el fondo
             buildings: this.createLayer(10),    // Edificios (detrás de calles)
             streets: this.createLayer(15),      // Calles (encima de edificios)
             connections: this.createLayer(20),  // Conexiones
@@ -48,6 +49,8 @@ class SceneManager {
         this.verticesRendered = false;
         this.conexionesRendered = false;
         this.backgroundRendered = false; // Flag para background (solo renderizar UNA VEZ)
+        this.referenceImageSource = null;
+        this.referenceImageSprite = null;
 
         // Inicializar renderers especializados (se crearán después)
         this.calleRenderer = null;
@@ -89,6 +92,8 @@ class SceneManager {
     }
 
     update(delta) {
+        this.refreshReferenceImage();
+
         // 📱 OPTIMIZACIÓN MÓVIL: Obtener estado del dispositivo
         const isMobile = window.pixiApp && window.pixiApp.isMobile;
 
@@ -201,6 +206,7 @@ class SceneManager {
 
     renderAll() {
         console.log('🎨 SceneManager.renderAll() llamado');
+        this.refreshReferenceImage();
 
         // OPTIMIZACIÓN CRÍTICA: Renderizar áreas de fondo SOLO UNA VEZ
         // El fondo es completamente estático, nunca cambia
@@ -266,6 +272,40 @@ class SceneManager {
         }
 
         console.log('✅ SceneManager.renderAll() completado');
+    }
+
+    // Synchronize the Pixi sprite from the public model. Checking during the
+    // normal ticker update also handles replacement and removal immediately.
+    refreshReferenceImage() {
+        const reference = window.referenceImage;
+        const image = reference && reference.image;
+        const layer = this.getLayer('referenceImage');
+
+        if (!reference || !image) {
+            if (this.referenceImageSprite) {
+                layer.removeChild(this.referenceImageSprite);
+                this.referenceImageSprite.destroy({ texture: false, baseTexture: false });
+                this.referenceImageSprite = null;
+                this.referenceImageSource = null;
+            }
+            return;
+        }
+
+        if (this.referenceImageSource !== image) {
+            if (this.referenceImageSprite) {
+                layer.removeChild(this.referenceImageSprite);
+                this.referenceImageSprite.destroy({ texture: false, baseTexture: false });
+            }
+            this.referenceImageSprite = PIXI.Sprite.from(image);
+            this.referenceImageSprite.anchor.set(0);
+            this.referenceImageSprite.eventMode = 'none';
+            layer.addChild(this.referenceImageSprite);
+            this.referenceImageSource = image;
+        }
+
+        this.referenceImageSprite.position.set(reference.x, reference.y);
+        this.referenceImageSprite.width = reference.width;
+        this.referenceImageSprite.height = reference.height;
     }
 
     renderContadores() {
@@ -396,11 +436,20 @@ class SceneManager {
             this.clearLayer(name);
         });
 
+        // clearLayer removes the sprite from its layer; let the next refresh
+        // recreate it from the current simulation state.
+        if (this.referenceImageSprite) {
+            this.referenceImageSprite.destroy({ texture: false, baseTexture: false });
+            this.referenceImageSprite = null;
+            this.referenceImageSource = null;
+        }
+
         this.calleSprites.clear();
         this.carroSprites.clear();
         this.edificioSprites.clear();
         this.conexionGraphics.clear();
         this.verticeSprites.clear();
+        this.refreshReferenceImage();
 
         console.log('🗑️ Escena limpiada');
     }

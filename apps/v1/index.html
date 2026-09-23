@@ -437,6 +437,16 @@
             </div>
 
             <hr class="my-3">
+            <h6 class="mb-2">🖼️ Imagen de referencia</h6>
+            <p class="small text-muted">Añade una imagen local como guía del mapa. Se ajusta inicialmente a la vista y queda alineada al mover o ampliar el mapa.</p>
+            <div class="d-grid gap-2 mb-3">
+              <label for="inputImagenReferencia" class="btn btn-outline-primary btn-sm mb-0">📷 Cargar o reemplazar imagen</label>
+              <input type="file" id="inputImagenReferencia" accept="image/*" class="form-control form-control-sm">
+              <button type="button" id="btnEliminarImagenReferencia" class="btn btn-outline-danger btn-sm">🗑️ Quitar imagen</button>
+            </div>
+            <p class="small text-muted">La imagen se incluye en el JSON al guardar la simulación.</p>
+
+            <hr class="my-3">
 
             <h6 class="mb-3">🛠️ Modo Edición Visual</h6>
 
@@ -961,6 +971,7 @@
                     <li><strong>Agregar objetos:</strong> Usa los botones para crear calles y edificios</li>
                     <li><strong>Modo edición:</strong> Arrastra y rota objetos visualmente</li>
                     <li><strong>Conexiones:</strong> Conecta calles para crear flujo de tráfico</li>
+                    <li><strong>Imagen de referencia:</strong> Carga una imagen local; puedes reemplazarla o quitarla. Se guarda incrustada en el JSON.</li>
                     <li><strong>Guardar/Cargar:</strong> Exporta e importa simulaciones como JSON</li>
                   </ul>
                 </div>
