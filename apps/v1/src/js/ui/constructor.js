@@ -22,6 +22,7 @@ function redrawReferenceImage() {
 window.setReferenceImage = async function (data) {
     if (data == null) {
         window.referenceImage = null;
+        window.referenceImageEditor?.sync();
         redrawReferenceImage();
         return;
     }
@@ -48,7 +49,8 @@ window.setReferenceImage = async function (data) {
         const height = savedPlacement ? previous.height : image.naturalHeight * fit;
         window.referenceImage = {
             dataUrl, x: previous.x + (previous.width - width) / 2,
-            y: previous.y + (previous.height - height) / 2, width, height, image
+            y: previous.y + (previous.height - height) / 2, width, height, image,
+            rotation: Number.isFinite(previous.rotation) ? previous.rotation : 0
         };
     } else {
         const canvas = document.getElementById('simuladorCanvas');
@@ -62,9 +64,11 @@ window.setReferenceImage = async function (data) {
         const offsetY = Number(window.offsetY) || 0;
         window.referenceImage = {
             dataUrl, x: (-offsetX / scale) + (visibleWidth - width) / 2,
-            y: (-offsetY / scale) + (visibleHeight - height) / 2, width, height, image
+            y: (-offsetY / scale) + (visibleHeight - height) / 2, width, height, image,
+            rotation: 0
         };
     }
+    window.referenceImageEditor?.select();
     redrawReferenceImage();
 };
 
@@ -2063,7 +2067,8 @@ function guardarSimulacion() {
             x: window.referenceImage.x,
             y: window.referenceImage.y,
             width: window.referenceImage.width,
-            height: window.referenceImage.height
+            height: window.referenceImage.height,
+            rotation: window.referenceImage.rotation || 0
         } : null,
         // Guardar configuración de tiempo virtual si está disponible
         configuracionTiempo: window.tiempoToJSON ? window.tiempoToJSON() : null
@@ -2321,6 +2326,7 @@ function nuevaSimulacion() {
 
 function limpiarSimulacionActual() {
     window.referenceImage = null;
+    window.referenceImageEditor?.sync();
     // Limpiar calles
     if (window.calles) {
         window.calles.length = 0;

@@ -26,6 +26,7 @@
 
   <link rel="stylesheet" href="src/css/estilos.css">
   <link rel="stylesheet" href="src/css/minimapa.css">
+  <link rel="stylesheet" href="src/css/reference-image-editor.css">
 
   <!-- Script para aplicar modo oscuro ANTES de renderizar -->
   <script src="src/js/ui/darkMode.js"></script>
@@ -444,7 +445,8 @@
               <input type="file" id="inputImagenReferencia" accept="image/*" class="form-control form-control-sm">
               <button type="button" id="btnEliminarImagenReferencia" class="btn btn-outline-danger btn-sm">🗑️ Quitar imagen</button>
             </div>
-            <p class="small text-muted">La imagen se incluye en el JSON al guardar la simulación.</p>
+            <button type="button" id="btnBloquearImagenReferencia" class="btn btn-outline-secondary btn-sm mb-2" aria-pressed="false">🔓 Bloquear imagen para editar el mapa</button>
+            <p class="small text-muted">Arrastra la imagen para moverla, la esquina para cambiar su tamaño y el círculo para girarla. Bloquéala para seleccionar objetos bajo ella. La alineación se incluye en el JSON.</p>
 
             <hr class="my-3">
 
@@ -2338,6 +2340,7 @@
   <script src="src/js/ui/editor.js"></script>
   <script src="src/js/ui/edificioUI.js"></script>
   <script src="src/js/ui/constructor.js"></script>
+  <script src="src/js/ui/referenceImageEditor.js"></script>
 
   <!-- Bootstrap JS local (incluye Popper) -->
   <script src="./src/bootstrap-5.0.2-dist/js/bootstrap.bundle.min.js"></script>

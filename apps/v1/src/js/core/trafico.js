@@ -1901,7 +1901,9 @@ function dibujarImagenReferencia() {
     const referencia = window.referenceImage;
     if (!referencia || !referencia.image || !referencia.image.complete || !referencia.image.naturalWidth) return;
     ctx.save();
-    ctx.drawImage(referencia.image, referencia.x, referencia.y, referencia.width, referencia.height);
+    ctx.translate(referencia.x + referencia.width / 2, referencia.y + referencia.height / 2);
+    ctx.rotate((referencia.rotation || 0) * Math.PI / 180);
+    ctx.drawImage(referencia.image, -referencia.width / 2, -referencia.height / 2, referencia.width, referencia.height);
     ctx.restore();
 }
 

@@ -23,9 +23,11 @@ class ReferenceImageRenderer {
             this.source = image;
         }
 
-        this.sprite.position.set(reference.x, reference.y);
+        this.sprite.anchor.set(0.5);
+        this.sprite.position.set(reference.x + reference.width / 2, reference.y + reference.height / 2);
         this.sprite.width = reference.width;
         this.sprite.height = reference.height;
+        this.sprite.rotation = (reference.rotation || 0) * Math.PI / 180;
     }
 
     clear() {

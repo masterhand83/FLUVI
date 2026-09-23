@@ -1,0 +1,45 @@
+.reference-image-frame {
+    position: fixed;
+    z-index: 100;
+    box-sizing: border-box;
+    border: 2px dashed #134cb9;
+    background: rgba(44, 116, 240, .08);
+    outline: 1px solid white;
+    cursor: move;
+    touch-action: none;
+    transform-origin: center;
+    display: none;
+}
+
+.reference-image-handle {
+    position: absolute;
+    width: 22px;
+    height: 22px;
+    border: 2px solid white;
+    background: #134cb9;
+    box-shadow: 0 1px 5px #182a48;
+    touch-action: none;
+}
+
+.reference-image-resize {
+    right: -11px;
+    bottom: -11px;
+    border-radius: 4px;
+    cursor: nwse-resize;
+}
+
+.reference-image-rotate {
+    left: calc(50% - 11px);
+    top: -46px;
+    border-radius: 50%;
+    cursor: grab;
+}
+
+.reference-image-rotate-stem {
+    position: absolute;
+    left: 50%;
+    top: -27px;
+    height: 26px;
+    border-left: 2px solid #134cb9;
+    pointer-events: none;
+}
