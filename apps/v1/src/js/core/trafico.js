@@ -1899,8 +1899,9 @@ function renderizarCanvas() {
 // mantiene su posición alineada al hacer pan y zoom.
 function dibujarImagenReferencia() {
     const referencia = window.referenceImage;
-    if (!referencia || !referencia.image || !referencia.image.complete || !referencia.image.naturalWidth) return;
+    if (!referencia || referencia.visible === false || !referencia.image || !referencia.image.complete || !referencia.image.naturalWidth) return;
     ctx.save();
+    ctx.globalAlpha = referencia.opacity ?? 1;
     ctx.translate(referencia.x + referencia.width / 2, referencia.y + referencia.height / 2);
     ctx.rotate((referencia.rotation || 0) * Math.PI / 180);
     ctx.drawImage(referencia.image, -referencia.width / 2, -referencia.height / 2, referencia.width, referencia.height);

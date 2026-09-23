@@ -55,24 +55,23 @@ describe.each([
 				fittedInView: reference.width <= visibleWidth * 0.8 + 2 && reference.height <= visibleHeight * 0.8 + 2,
 			}
 		}, referenceDataUrl)
-		const visiblePixels = await sim.page.evaluate(() => {
+		const display = await sim.page.evaluate(() => {
 			window.renderizarCanvas()
-			let pixels
 			if (window.USE_PIXI) {
-				const app = window.pixiApp.app
-				app.renderer.render(app.stage)
-				pixels = app.renderer.extract.pixels(app.stage)
-			} else {
-				const canvas = document.getElementById("simuladorCanvas")
-				pixels = canvas.getContext("2d").getImageData(0, 0, canvas.width, canvas.height).data
+				const sprite = window.pixiApp.sceneManager.referenceImageRenderer.sprite
+				return { alpha: sprite.alpha, visible: sprite.visible, textureValid: sprite.texture.valid }
 			}
+			const canvas = document.getElementById("simuladorCanvas")
+			const pixels = canvas.getContext("2d").getImageData(0, 0, canvas.width, canvas.height).data
 			let magenta = 0
 			for (let i = 0; i < pixels.length; i += 4) {
-				if (pixels[i] > 220 && pixels[i + 1] < 60 && pixels[i + 2] > 220 && pixels[i + 3] > 200) magenta++
+				// The default reference is translucent, so its magenta blends with the map background.
+				if (pixels[i] > pixels[i + 1] + 50 && pixels[i + 2] > pixels[i + 1] + 50 && pixels[i + 3] > 200) magenta++
 			}
-			return magenta
+			return { magenta }
 		})
-		expect(visiblePixels).toBeGreaterThan(100)
+		if (usePixi) expect(display).toMatchObject({ alpha: 0.7, visible: true, textureValid: true })
+		else expect(display.magenta).toBeGreaterThan(100)
 		const json = await sim.page.evaluate(async () => {
 			window.prompt = () => "Reference image round trip"
 			window.alert = () => {}

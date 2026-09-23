@@ -28,6 +28,8 @@ class ReferenceImageRenderer {
         this.sprite.width = reference.width;
         this.sprite.height = reference.height;
         this.sprite.rotation = (reference.rotation || 0) * Math.PI / 180;
+        this.sprite.visible = reference.visible !== false;
+        this.sprite.alpha = reference.opacity ?? 1;
     }
 
     clear() {

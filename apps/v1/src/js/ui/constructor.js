@@ -40,6 +40,11 @@ window.setReferenceImage = async function (data) {
         Number.isFinite(data.x) && Number.isFinite(data.y) &&
         Number.isFinite(data.width) && Number.isFinite(data.height);
     const previous = savedPlacement ? data : window.referenceImage;
+    const display = {
+        visible: previous?.visible !== false,
+        opacity: Number.isFinite(previous?.opacity) ? Math.max(0, Math.min(1, previous.opacity)) : (savedPlacement ? 1 : 0.7),
+        locked: previous?.locked === true
+    };
     if (previous && Number.isFinite(previous.x) && Number.isFinite(previous.y) &&
         Number.isFinite(previous.width) && Number.isFinite(previous.height)) {
         // A saved map keeps its exact geometry. A new upload retains the old
@@ -50,7 +55,7 @@ window.setReferenceImage = async function (data) {
         window.referenceImage = {
             dataUrl, x: previous.x + (previous.width - width) / 2,
             y: previous.y + (previous.height - height) / 2, width, height, image,
-            rotation: Number.isFinite(previous.rotation) ? previous.rotation : 0
+            rotation: Number.isFinite(previous.rotation) ? previous.rotation : 0, ...display
         };
     } else {
         const canvas = document.getElementById('simuladorCanvas');
@@ -65,7 +70,7 @@ window.setReferenceImage = async function (data) {
         window.referenceImage = {
             dataUrl, x: (-offsetX / scale) + (visibleWidth - width) / 2,
             y: (-offsetY / scale) + (visibleHeight - height) / 2, width, height, image,
-            rotation: 0
+            rotation: 0, ...display
         };
     }
     window.referenceImageEditor?.select();
@@ -2068,7 +2073,10 @@ function guardarSimulacion() {
             y: window.referenceImage.y,
             width: window.referenceImage.width,
             height: window.referenceImage.height,
-            rotation: window.referenceImage.rotation || 0
+            rotation: window.referenceImage.rotation || 0,
+            visible: window.referenceImage.visible,
+            opacity: window.referenceImage.opacity,
+            locked: window.referenceImage.locked
         } : null,
         // Guardar configuración de tiempo virtual si está disponible
         configuracionTiempo: window.tiempoToJSON ? window.tiempoToJSON() : null

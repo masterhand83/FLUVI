@@ -446,7 +446,13 @@
               <button type="button" id="btnEliminarImagenReferencia" class="btn btn-outline-danger btn-sm">🗑️ Quitar imagen</button>
             </div>
             <button type="button" id="btnBloquearImagenReferencia" class="btn btn-outline-secondary btn-sm mb-2" aria-pressed="false">🔓 Bloquear imagen para editar el mapa</button>
-            <p class="small text-muted">Arrastra la imagen para moverla, la esquina para cambiar su tamaño y el círculo para girarla. Bloquéala para seleccionar objetos bajo ella. La alineación se incluye en el JSON.</p>
+            <div class="form-check mb-2">
+              <input class="form-check-input" type="checkbox" id="mostrarImagenReferencia" checked>
+              <label class="form-check-label" for="mostrarImagenReferencia">Mostrar imagen de referencia</label>
+            </div>
+            <label for="opacidadImagenReferencia" class="form-label">Opacidad: <output id="valorOpacidadImagenReferencia" for="opacidadImagenReferencia">70%</output></label>
+            <input type="range" id="opacidadImagenReferencia" class="form-range mb-2" min="0" max="100" value="70">
+            <p class="small text-muted">Arrastra la imagen para moverla, la esquina para cambiar su tamaño y el círculo para girarla. Bloquéala para seleccionar objetos bajo ella. La imagen y sus ajustes se incluyen en el JSON.</p>
 
             <hr class="my-3">
 

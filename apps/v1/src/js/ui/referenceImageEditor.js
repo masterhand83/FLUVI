@@ -2,7 +2,6 @@
 class ReferenceImageEditor {
     constructor() {
         this.selected = false;
-        this.locked = false;
         this.drag = null;
         this.frame = document.createElement('div');
         this.frame.className = 'reference-image-frame';
@@ -12,10 +11,26 @@ class ReferenceImageEditor {
 
         this.button = document.getElementById('btnBloquearImagenReferencia');
         this.button?.addEventListener('click', () => {
-            this.locked = !this.locked;
-            this.button.setAttribute('aria-pressed', String(this.locked));
-            this.button.textContent = this.locked ? '🔒 Desbloquear imagen para alinearla' : '🔓 Bloquear imagen para editar el mapa';
+            const image = window.referenceImage;
+            if (!image) return;
+            image.locked = !image.locked;
+            if (!image.locked) this.selected = true;
             this.sync();
+        });
+        this.visibility = document.getElementById('mostrarImagenReferencia');
+        this.visibility?.addEventListener('change', () => {
+            if (!window.referenceImage) return;
+            window.referenceImage.visible = this.visibility.checked;
+            this.sync();
+            this.redraw();
+        });
+        this.opacity = document.getElementById('opacidadImagenReferencia');
+        this.opacityLabel = document.getElementById('valorOpacidadImagenReferencia');
+        this.opacity?.addEventListener('input', () => {
+            if (!window.referenceImage) return;
+            window.referenceImage.opacity = Number(this.opacity.value) / 100;
+            this.sync();
+            this.redraw();
         });
         this.frame.addEventListener('pointerdown', event => this.start(event));
         this.frame.addEventListener('pointermove', event => this.move(event));
@@ -58,7 +73,22 @@ class ReferenceImageEditor {
 
     sync() {
         const image = window.referenceImage;
-        if (!image || this.locked || !this.selected) {
+        if (this.button) {
+            this.button.disabled = !image;
+            this.button.setAttribute('aria-pressed', String(image?.locked === true));
+            this.button.textContent = image?.locked ? '🔒 Desbloquear imagen para alinearla' : '🔓 Bloquear imagen para editar el mapa';
+        }
+        if (this.visibility) {
+            this.visibility.disabled = !image;
+            this.visibility.checked = image?.visible !== false;
+        }
+        if (this.opacity) {
+            this.opacity.disabled = !image;
+            this.opacity.value = Math.round((image?.opacity ?? 0.7) * 100);
+            this.opacityLabel.textContent = `${this.opacity.value}%`;
+        }
+        if (!image || image.locked || image.visible === false || !this.selected) {
+            this.cancelDrag();
             this.frame.style.display = 'none';
             return;
         }
@@ -73,7 +103,7 @@ class ReferenceImageEditor {
     }
 
     start(event) {
-        if (event.button !== 0 || !window.referenceImage || this.locked) return;
+        if (event.button !== 0 || !window.referenceImage || window.referenceImage.locked || window.referenceImage.visible === false) return;
         event.preventDefault();
         event.stopPropagation();
         const image = window.referenceImage;
@@ -93,7 +123,7 @@ class ReferenceImageEditor {
 
     move(event) {
         const d = this.drag;
-        if (!d || d.pointerId !== event.pointerId || !window.referenceImage) return;
+        if (!d || d.pointerId !== event.pointerId || !window.referenceImage || window.referenceImage.locked || window.referenceImage.visible === false) return;
         event.preventDefault();
         const image = window.referenceImage;
         const dx = (event.clientX - d.startX) / d.scaleX;
@@ -120,6 +150,10 @@ class ReferenceImageEditor {
             image.rotation = d.rotation + delta * 180 / Math.PI;
         }
         this.sync();
+        this.redraw();
+    }
+
+    redraw() {
         if (window.USE_PIXI && window.pixiApp?.sceneManager) {
             window.pixiApp.sceneManager.referenceImageRenderer.render();
         } else {
@@ -127,10 +161,16 @@ class ReferenceImageEditor {
         }
     }
 
+    cancelDrag() {
+        if (!this.drag) return;
+        const pointerId = this.drag.pointerId;
+        this.drag = null;
+        if (this.frame.hasPointerCapture(pointerId)) this.frame.releasePointerCapture(pointerId);
+    }
+
     end(event) {
         if (this.drag?.pointerId !== event.pointerId) return;
-        this.drag = null;
-        if (this.frame.hasPointerCapture(event.pointerId)) this.frame.releasePointerCapture(event.pointerId);
+        this.cancelDrag();
     }
 }
 
