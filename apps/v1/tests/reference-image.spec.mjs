@@ -35,6 +35,12 @@ describe.each([
 			await window.setReferenceImage(dataUrl)
 			const reference = window.referenceImage
 			const bounds = window.calcularLimitesMapa()
+			const view = window.USE_PIXI ? window.pixiApp.app.view : document.getElementById("simuladorCanvas")
+			const scale = window.escala
+			const visibleWidth = view.width / scale
+			const visibleHeight = view.height / scale
+			const left = -window.offsetX / scale
+			const top = -window.offsetY / scale
 			const visibleInMap =
 				reference.x < bounds.maxX && reference.x + reference.width > bounds.minX &&
 				reference.y < bounds.maxY && reference.y + reference.height > bounds.minY
@@ -44,6 +50,9 @@ describe.each([
 				imageLoaded: reference.image instanceof HTMLImageElement && reference.image.complete,
 				visibleInMap,
 				proportionsPreserved: Math.abs(reference.width / reference.height - 2) < 0.01,
+				centeredInView: Math.abs(reference.x + reference.width / 2 - left - visibleWidth / 2) < 2 &&
+					Math.abs(reference.y + reference.height / 2 - top - visibleHeight / 2) < 2,
+				fittedInView: reference.width <= visibleWidth * 0.8 + 2 && reference.height <= visibleHeight * 0.8 + 2,
 			}
 		}, referenceDataUrl)
 		const visiblePixels = await sim.page.evaluate(() => {
@@ -97,7 +106,7 @@ describe.each([
 			return { dataUrl, x, y, width, height, imageLoaded: image instanceof HTMLImageElement && image.complete }
 		})
 
-		expect(placed).toMatchObject({ dataUrl: referenceDataUrl, imageLoaded: true, visibleInMap: true, proportionsPreserved: true })
+		expect(placed).toMatchObject({ dataUrl: referenceDataUrl, imageLoaded: true, visibleInMap: true, proportionsPreserved: true, centeredInView: true, fittedInView: true })
 		expect(placed.width).toBeGreaterThan(0)
 		expect(placed.height).toBeGreaterThan(0)
 		expect(saved.imagenReferencia).toMatchObject({ dataUrl: referenceDataUrl, x: placed.x, y: placed.y, width: placed.width, height: placed.height })

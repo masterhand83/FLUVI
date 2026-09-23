@@ -4,10 +4,10 @@ Counted on 2026-09-23. Scope: hand-authored code and markup under `apps/v1/` (`.
 
 | Rank | File (relative to `apps/v1/`) | Nonblank lines | Physical lines |
 | ---: | --- | ---: | ---: |
-| 1 | `src/js/core/trafico.js` | 4,677 | 5,422 |
-| 2 | `src/css/estilos.css` | 2,417 | 2,893 |
-| 3 | `index.html` | 2,387 | 2,620 |
-| 4 | `src/js/ui/constructor.js` | 2,331 | 2,812 |
+| 1 | `src/js/core/trafico.js` | 4,687 | 5,433 |
+| 2 | `src/js/ui/constructor.js` | 2,419 | 2,906 |
+| 3 | `src/css/estilos.css` | 2,417 | 2,893 |
+| 4 | `index.html` | 2,398 | 2,632 |
 | 5 | `src/js/core/graficas.js` | 1,501 | 1,662 |
 | 6 | `src/js/ui/editor.js` | 1,284 | 1,546 |
 | 7 | `src/js/renderer/renderers/CalleRenderer.js` | 1,078 | 1,317 |
@@ -20,7 +20,7 @@ Counted on 2026-09-23. Scope: hand-authored code and markup under `apps/v1/` (`.
 | 14 | `src/js/renderer/renderers/EdificioRenderer.js` | 429 | 522 |
 | 15 | `src/js/renderer/renderers/UIRenderer.js` | 378 | 458 |
 | 16 | `src/js/ui/infoBar.js` | 363 | 421 |
-| 17 | `src/js/renderer/SceneManager.js` | 345 | 410 |
+| 17 | `src/js/renderer/SceneManager.js` | 351 | 418 |
 | 18 | `tests/smoke/smoke.mjs` | 310 | 333 |
 | 19 | `src/js/ui/analizadorMetricas.js` | 308 | 371 |
 | 20 | `src/js/ui/multiplicadoresUI.js` | 285 | 327 |

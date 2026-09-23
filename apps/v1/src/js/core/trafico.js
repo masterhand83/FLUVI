@@ -1841,7 +1841,6 @@ function dibujarConexionesDetectadas() {
 function renderizarCanvas() {
     // Si PixiJS está inicializado Y habilitado, usar el motor gráfico
     if (window.USE_PIXI && pixiInitialized && window.pixiApp && window.pixiApp.sceneManager) {
-        window.pixiApp.sceneManager.refreshReferenceImage();
         // Solo renderizar la escena completa la primera vez
         // Después, el ticker de PixiJS maneja todo automáticamente
         if (!pixiFirstRender) {
