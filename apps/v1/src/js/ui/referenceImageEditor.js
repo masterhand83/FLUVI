@@ -8,6 +8,10 @@ class ReferenceImageEditor {
         this.frame.setAttribute('aria-label', 'Imagen de referencia seleccionada; arrastra para mover');
         this.frame.innerHTML = '<span class="reference-image-rotate-stem"></span><span class="reference-image-handle reference-image-rotate" data-reference-image-handle="rotate" title="Girar imagen" aria-label="Girar imagen"></span><span class="reference-image-handle reference-image-resize" data-reference-image-handle="resize" title="Cambiar tamaño proporcionalmente" aria-label="Cambiar tamaño proporcionalmente"></span>';
         document.body.appendChild(this.frame);
+        this.unavailable = document.createElement('div');
+        this.unavailable.className = 'reference-image-unavailable';
+        this.unavailable.textContent = 'Image unavailable';
+        document.body.appendChild(this.unavailable);
 
         this.button = document.getElementById('btnBloquearImagenReferencia');
         this.button?.addEventListener('click', () => {
@@ -73,6 +77,13 @@ class ReferenceImageEditor {
 
     sync() {
         const image = window.referenceImage;
+        const m = image ? this.metrics() : null;
+        const broken = image?.unavailable && image.visible !== false && m;
+        this.unavailable.style.display = broken ? 'block' : 'none';
+        if (broken) {
+            this.unavailable.style.left = `${m.x + (image.x + image.width / 2) * m.scaleX}px`;
+            this.unavailable.style.top = `${m.y + (image.y + image.height / 2) * m.scaleY}px`;
+        }
         if (this.button) {
             this.button.disabled = !image;
             this.button.setAttribute('aria-pressed', String(image?.locked === true));
@@ -87,12 +98,11 @@ class ReferenceImageEditor {
             this.opacity.value = Math.round((image?.opacity ?? 0.7) * 100);
             this.opacityLabel.textContent = `${this.opacity.value}%`;
         }
-        if (!image || image.locked || image.visible === false || !this.selected) {
+        if (!image || image.unavailable || image.locked || image.visible === false || !this.selected) {
             this.cancelDrag();
             this.frame.style.display = 'none';
             return;
         }
-        const m = this.metrics();
         if (!m) return;
         this.frame.style.display = 'block';
         this.frame.style.left = `${m.x + image.x * m.scaleX}px`;

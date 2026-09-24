@@ -11,6 +11,7 @@ let simulacionActual = {
 };
 
 window.referenceImage = null;
+let referenceImageRequest = 0;
 
 function redrawReferenceImage() {
     if (window.USE_PIXI && window.pixiApp?.sceneManager) {
@@ -19,24 +20,70 @@ function redrawReferenceImage() {
     if (window.renderizarCanvas) window.renderizarCanvas();
 }
 
-window.setReferenceImage = async function (data) {
-    if (data == null) {
-        window.referenceImage = null;
-        window.referenceImageEditor?.sync();
-        redrawReferenceImage();
-        return;
+function referenceViewport() {
+    const canvas = document.getElementById('simuladorCanvas');
+    const scale = Number(window.escala) || 1;
+    return {
+        scale,
+        width: (canvas?.clientWidth || window.innerWidth) / scale,
+        height: (canvas?.clientHeight || window.innerHeight) / scale,
+        offsetX: Number(window.offsetX) || 0,
+        offsetY: Number(window.offsetY) || 0
+    };
+}
+
+function pendingLinkedReference(url, previous, display) {
+    const view = referenceViewport();
+    return {
+        url, x: previous?.x ?? -view.offsetX / view.scale + (view.width - 160) / 2,
+        y: previous?.y ?? -view.offsetY / view.scale + (view.height - 90) / 2,
+        width: previous?.width ?? 160, height: previous?.height ?? 90,
+        rotation: Number.isFinite(previous?.rotation) ? previous.rotation : 0,
+        ...display, unavailable: true
+    };
+}
+
+function placedReference(source, image, previous, savedPlacement, display) {
+    if (previous && Number.isFinite(previous.x) && Number.isFinite(previous.y) &&
+        Number.isFinite(previous.width) && Number.isFinite(previous.height)) {
+        // Saved maps keep exact geometry. Replacements fit inside the old bounds;
+        // a broken link retains its bounds because its intrinsic size is unknown.
+        const retainBounds = savedPlacement || previous.unavailable;
+        const fit = Math.min(previous.width / image.naturalWidth, previous.height / image.naturalHeight);
+        const width = retainBounds ? previous.width : image.naturalWidth * fit;
+        const height = retainBounds ? previous.height : image.naturalHeight * fit;
+        return {
+            ...source, x: previous.x + (previous.width - width) / 2,
+            y: previous.y + (previous.height - height) / 2, width, height, image,
+            rotation: Number.isFinite(previous.rotation) ? previous.rotation : 0, ...display
+        };
     }
+    const view = referenceViewport();
+    const fit = Math.min(view.width * 0.8 / image.naturalWidth, view.height * 0.8 / image.naturalHeight);
+    const width = image.naturalWidth * fit;
+    const height = image.naturalHeight * fit;
+    return {
+        ...source, x: -view.offsetX / view.scale + (view.width - width) / 2,
+        y: -view.offsetY / view.scale + (view.height - height) / 2, width, height, image,
+        rotation: 0, ...display
+    };
+}
 
-    const dataUrl = typeof data === 'string' ? data : data.dataUrl;
-    if (!dataUrl) throw new Error('La imagen de referencia no contiene datos.');
+function loadReferenceImage(source) {
     const image = new Image();
-    await new Promise((resolve, reject) => {
-        image.onload = resolve;
+    return new Promise((resolve, reject) => {
+        image.onload = () => resolve(image);
         image.onerror = () => reject(new Error('No se pudo cargar la imagen de referencia.'));
-        image.src = dataUrl;
+        image.src = source;
     });
+}
 
-    const savedPlacement = typeof data === 'object' && data !== null &&
+function referenceInput(data) {
+    const dataUrl = typeof data === 'string' ? data : data.dataUrl;
+    const url = typeof data === 'object' ? data.url : null;
+    if (!dataUrl && !url) throw new Error('La imagen de referencia no contiene datos ni URL.');
+    if (url && !/^https?:\/\//i.test(url)) throw new Error('Introduce una URL HTTP o HTTPS de imagen.');
+    const savedPlacement = typeof data === 'object' &&
         Number.isFinite(data.x) && Number.isFinite(data.y) &&
         Number.isFinite(data.width) && Number.isFinite(data.height);
     const previous = savedPlacement ? data : window.referenceImage;
@@ -45,34 +92,35 @@ window.setReferenceImage = async function (data) {
         opacity: Number.isFinite(previous?.opacity) ? Math.max(0, Math.min(1, previous.opacity)) : (savedPlacement ? 1 : 0.7),
         locked: previous?.locked === true
     };
-    if (previous && Number.isFinite(previous.x) && Number.isFinite(previous.y) &&
-        Number.isFinite(previous.width) && Number.isFinite(previous.height)) {
-        // A saved map keeps its exact geometry. A new upload retains the old
-        // center and fits inside its bounds without distorting another aspect ratio.
-        const fit = savedPlacement ? 1 : Math.min(previous.width / image.naturalWidth, previous.height / image.naturalHeight);
-        const width = savedPlacement ? previous.width : image.naturalWidth * fit;
-        const height = savedPlacement ? previous.height : image.naturalHeight * fit;
-        window.referenceImage = {
-            dataUrl, x: previous.x + (previous.width - width) / 2,
-            y: previous.y + (previous.height - height) / 2, width, height, image,
-            rotation: Number.isFinite(previous.rotation) ? previous.rotation : 0, ...display
-        };
-    } else {
-        const canvas = document.getElementById('simuladorCanvas');
-        const scale = Number(window.escala) || 1;
-        const visibleWidth = (canvas?.clientWidth || window.innerWidth) / scale;
-        const visibleHeight = (canvas?.clientHeight || window.innerHeight) / scale;
-        const fit = Math.min(visibleWidth * 0.8 / image.naturalWidth, visibleHeight * 0.8 / image.naturalHeight);
-        const width = image.naturalWidth * fit;
-        const height = image.naturalHeight * fit;
-        const offsetX = Number(window.offsetX) || 0;
-        const offsetY = Number(window.offsetY) || 0;
-        window.referenceImage = {
-            dataUrl, x: (-offsetX / scale) + (visibleWidth - width) / 2,
-            y: (-offsetY / scale) + (visibleHeight - height) / 2, width, height, image,
-            rotation: 0, ...display
-        };
+    return { dataUrl, url, savedPlacement, previous, display };
+}
+
+window.setReferenceImage = async function (data) {
+    const request = ++referenceImageRequest;
+    if (data == null) {
+        window.referenceImage = null;
+        window.referenceImageEditor?.sync();
+        redrawReferenceImage();
+        return;
     }
+
+    const { dataUrl, url, savedPlacement, previous, display } = referenceInput(data);
+    // Publish the link before loading it: a failed request must still have a
+    // map-space location and remain serializable/replacable.
+    if (url) {
+        window.referenceImage = pendingLinkedReference(url, previous, display);
+        window.referenceImageEditor?.select();
+        redrawReferenceImage();
+    }
+    let image;
+    try {
+        image = await loadReferenceImage(url || dataUrl);
+    } catch (error) {
+        if (!url) throw error;
+        return; // The linked reference and its marker remain at the saved position.
+    }
+    if (request !== referenceImageRequest) return; // A newer selection won the race.
+    window.referenceImage = placedReference(url ? { url } : { dataUrl }, image, previous, savedPlacement, display);
     window.referenceImageEditor?.select();
     redrawReferenceImage();
 };
@@ -120,6 +168,15 @@ function configurarEventosConstructor() {
             alert(`No se pudo cargar la imagen: ${error.message}`);
         } finally {
             event.target.value = '';
+        }
+    });
+    document.getElementById('btnAgregarUrlImagenReferencia')?.addEventListener('click', async () => {
+        const input = document.getElementById('inputUrlImagenReferencia');
+        const url = input.value.trim();
+        try {
+            await window.setReferenceImage({ url });
+        } catch (error) {
+            alert(`No se pudo enlazar la imagen: ${error.message}`);
         }
     });
     document.getElementById('btnEliminarImagenReferencia')?.addEventListener('click', () => window.setReferenceImage(null));
@@ -2068,7 +2125,7 @@ function guardarSimulacion() {
         }) : [],
         edificios: window.edificios || [],
         imagenReferencia: window.referenceImage ? {
-            dataUrl: window.referenceImage.dataUrl,
+            ...(window.referenceImage.url ? { url: window.referenceImage.url } : { dataUrl: window.referenceImage.dataUrl }),
             x: window.referenceImage.x,
             y: window.referenceImage.y,
             width: window.referenceImage.width,
@@ -2333,6 +2390,7 @@ function nuevaSimulacion() {
 // ==================== LIMPIAR SIMULACIÓN ====================
 
 function limpiarSimulacionActual() {
+    referenceImageRequest++;
     window.referenceImage = null;
     window.referenceImageEditor?.sync();
     // Limpiar calles

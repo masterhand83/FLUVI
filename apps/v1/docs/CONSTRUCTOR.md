@@ -10,7 +10,7 @@ El Constructor de Mapas es una herramienta integrada en el Simulador de Tráfico
 - **Nueva Simulación**: Crea una simulación en blanco
 - **Guardar Simulación**: Exporta tu mapa como archivo JSON
 - **Cargar Simulación**: Importa mapas guardados anteriormente
-- **Imagen de referencia**: Usa una imagen local como guía, reemplázala o quítala; queda incluida en el JSON guardado
+- **Imagen de referencia**: Usa una imagen local o enlaza su URL como guía, reemplázala o quítala
 
 ### ✅ Construcción de Mapas
 - **Agregar Calles**: Crea calles personalizadas con todos sus parámetros
@@ -105,12 +105,12 @@ El Constructor de Mapas es una herramienta integrada en el Simulador de Tráfico
 
 ### 8. Usar una imagen de referencia
 
-1. En «🖼️ Imagen de referencia», selecciona **Cargar o reemplazar imagen** y elige un archivo de imagen de tu equipo.
+1. En «🖼️ Imagen de referencia», selecciona **Cargar o reemplazar imagen** y elige un archivo de tu equipo, o introduce una URL y pulsa **Enlazar o reemplazar imagen**.
 2. La primera imagen se centra en la vista y se ajusta proporcionalmente. Al reemplazarla se conserva su centro y se ajusta dentro del espacio anterior sin deformarse.
 3. Ajusta **Opacidad** (la imagen nueva empieza al 70 %) o desmarca **Mostrar imagen de referencia** para ocultarla sin perder su posición.
 4. Pulsa **Bloquear imagen para editar el mapa** para ocultar sus controles de alineación y poder seleccionar y arrastrar calles y edificios bajo ella. Desbloquéala desde el mismo botón para volver a moverla, girarla o cambiar su tamaño.
 5. Pulsa **Quitar imagen** para retirarla del mapa.
-6. Al guardar la simulación, la imagen, su posición, visibilidad, opacidad y bloqueo se incrustan en el JSON; al cargarlo se restauran sin necesitar el archivo original. «Nueva Simulación» quita también la imagen.
+6. Al guardar, la imagen local y sus ajustes se incrustan en el JSON. Una imagen enlazada guarda solo la URL y sus ajustes: depende de que la fuente siga disponible al cargar la simulación. Si no carga, aparece «Image unavailable» en su ubicación; puedes sustituir la URL sin perder la alineación. «Nueva Simulación» quita también la imagen.
 
 ## 📝 Formato del Archivo JSON
 
@@ -156,6 +156,8 @@ El Constructor de Mapas es una herramienta integrada en el Simulador de Tráfico
   }
 }
 ```
+
+Para una imagen enlazada, `imagenReferencia` contiene `"url": "https://ejemplo.org/mapa.png"` en lugar de `dataUrl`, junto con los mismos ajustes de posición y visualización.
 
 ## 💡 Consejos y Mejores Prácticas
 
