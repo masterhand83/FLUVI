@@ -398,7 +398,7 @@ class EditorCalles {
                 return;
             }
 
-            const confirmar = confirm(`⚠️ Cambiar las dimensiones eliminará todos los vehículos de la calle.\n\n¿Continuar?\n\nTamaño: ${window.calleSeleccionada.tamano} → ${nuevoTamano} celdas\nCarriles: ${window.calleSeleccionada.carriles} → ${nuevosCarriles} carriles`);
+            const confirmar = confirm(`⚠️ Cambiar las dimensiones eliminará los vehículos fuera de los nuevos límites.\n\n¿Continuar?\n\nTamaño: ${window.calleSeleccionada.tamano} → ${nuevoTamano} celdas\nCarriles: ${window.calleSeleccionada.carriles} → ${nuevosCarriles} carriles`);
 
             if (confirmar) {
                 this.aplicarNuevasDimensiones(window.calleSeleccionada, nuevoTamano, nuevosCarriles);
@@ -743,55 +743,48 @@ class EditorCalles {
             carriles: calle.carriles
         };
 
-        // Actualizar dimensiones
+        // Preserve the existing lane/cell state wherever it still fits.
+        const arregloAnterior = calle.arreglo || [];
+        const esperandoAnterior = calle.celulasEsperando || [];
+        const verticesAnteriores = calle.vertices || [];
         calle.tamano = nuevoTamano;
         calle.carriles = nuevosCarriles;
-
-        // Crear nuevo arreglo bidimensional vacío
-        calle.arreglo = [];
-        for (let carril = 0; carril < nuevosCarriles; carril++) {
-            calle.arreglo[carril] = [];
-            for (let celda = 0; celda < nuevoTamano; celda++) {
-                calle.arreglo[carril][celda] = 0; // Vacío
-            }
-        }
-
-        // Reinicializar células esperando
+        calle.conexionesSalida = Array.from({ length: nuevosCarriles }, (_, carril) => calle.conexionesSalida?.[carril] || []);
+        calle.arreglo = Array.from({ length: nuevosCarriles }, (_, carril) =>
+            Array.from({ length: nuevoTamano }, (_, celda) => arregloAnterior[carril]?.[celda] ?? 0)
+        );
         if (calle.celulasEsperando) {
-            calle.celulasEsperando = [];
-            for (let carril = 0; carril < nuevosCarriles; carril++) {
-                calle.celulasEsperando[carril] = [];
-                for (let celda = 0; celda < nuevoTamano; celda++) {
-                    calle.celulasEsperando[carril][celda] = false;
-                }
-            }
+            calle.celulasEsperando = Array.from({ length: nuevosCarriles }, (_, carril) =>
+                Array.from({ length: nuevoTamano }, (_, celda) => esperandoAnterior[carril]?.[celda] ?? false)
+            );
         }
-
-        // Reinicializar vértices si existen
-        if (calle.vertices && calle.vertices.length > 0) {
-            // Reemplazar todos los vértices con nuevos valores por defecto
-            calle.vertices = [];
-            for (let i = 0; i < nuevoTamano; i++) {
-                calle.vertices.push({ indice: i, angulo: 0 });
-            }
+        if (verticesAnteriores.length) {
+            calle.vertices = Array.from({ length: nuevoTamano }, (_, indice) =>
+                verticesAnteriores[indice] ? { ...verticesAnteriores[indice], indice } : { indice, angulo: 0 }
+            );
         }
 
         // Limpiar conexiones que ahora son inválidas
         if (window.conexiones) {
+            const conexionesAnteriores = [...window.conexiones];
             const conexionesValidas = [];
             for (const conexion of window.conexiones) {
                 let esValida = true;
 
                 // Verificar si las conexiones están dentro de los nuevos límites
-                if (conexion.calleOrigen === calle) {
-                    if (conexion.carrilOrigen >= nuevosCarriles || conexion.posOrigen >= nuevoTamano) {
+                if (conexion.origen === calle) {
+                    if (!Number.isInteger(conexion.carrilOrigen) || !Number.isInteger(conexion.posOrigen) ||
+                        conexion.carrilOrigen < 0 || conexion.posOrigen < -1 ||
+                        conexion.carrilOrigen >= nuevosCarriles || conexion.posOrigen >= nuevoTamano) {
                         esValida = false;
                         console.log(`🗑️ Conexión eliminada: carril/posición fuera de límites en calle origen`);
                     }
                 }
 
-                if (conexion.calleDestino === calle) {
-                    if (conexion.carrilDestino >= nuevosCarriles || conexion.posDestino >= nuevoTamano) {
+                if (conexion.destino === calle) {
+                    if (!Number.isInteger(conexion.carrilDestino) || !Number.isInteger(conexion.posDestino) ||
+                        conexion.carrilDestino < 0 || conexion.posDestino < 0 ||
+                        conexion.carrilDestino >= nuevosCarriles || conexion.posDestino >= nuevoTamano) {
                         esValida = false;
                         console.log(`🗑️ Conexión eliminada: carril/posición fuera de límites en calle destino`);
                     }
@@ -802,7 +795,65 @@ class EditorCalles {
                 }
             }
 
-            window.conexiones = conexionesValidas;
+            // Mutate in place so the core script's shared binding remains current.
+            window.conexiones.splice(0, window.conexiones.length, ...conexionesValidas);
+            for (const otraCalle of window.calles) {
+                otraCalle.conexionesSalida = Array.from({ length: otraCalle.carriles }, (_, carril) =>
+                    window.conexiones.filter(c => c.origen === otraCalle && c.carrilOrigen === carril));
+            }
+            for (const conexion of conexionesAnteriores) {
+                if (conexionesValidas.includes(conexion)) continue;
+                const origen = conexion.origen;
+                const posicion = conexion.posOrigen === -1 ? origen.tamano - 1 : conexion.posOrigen;
+                if (origen.celulasEsperando?.[conexion.carrilOrigen]?.[posicion] !== undefined &&
+                    !origen.conexionesSalida[conexion.carrilOrigen].some(c =>
+                        (c.posOrigen === -1 ? origen.tamano - 1 : c.posOrigen) === posicion)) {
+                    origen.celulasEsperando[conexion.carrilOrigen][posicion] = false;
+                }
+            }
+        }
+
+        // Prune scenario marks that no longer address a cell on this street.
+        const marcasEscenario = window.estadoEscenarios?.celdasBloqueadas;
+        if (marcasEscenario instanceof Map) {
+            for (const clave of marcasEscenario.keys()) {
+                const [calleId, carril, indice] = clave.split(':');
+                if ((calleId === String(calle.id) || calleId === String(calle.nombre)) &&
+                    (!Number.isInteger(Number(carril)) || !Number.isInteger(Number(indice)) ||
+                     Number(carril) < 0 || Number(indice) < 0 || Number(carril) >= nuevosCarriles || Number(indice) >= nuevoTamano)) {
+                    marcasEscenario.delete(clave);
+                }
+            }
+        }
+
+        // Rebuild parking lookup maps from the surviving paired connections.
+        for (const otraCalle of (window.calles || [])) {
+            if (otraCalle.conexionesEstacionamiento instanceof Map) otraCalle.conexionesEstacionamiento.clear();
+        }
+        for (const edificio of (window.edificios || [])) {
+            if (!Array.isArray(edificio.conexiones)) continue;
+            const entradas = edificio.conexiones.filter(c => c.tipo === 'entrada');
+            const salidas = edificio.conexiones.filter(c => c.tipo === 'salida');
+            const longitud = Math.min(entradas.length, salidas.length);
+            const paresValidos = [];
+            for (let i = 0; i < longitud; i++) {
+                const par = [entradas[i], salidas[i]];
+                const valido = par.every(c => {
+                    const vinculada = (window.calles || []).find(x => x.id === c.calleId || x.nombre === c.calleId);
+                    return vinculada && Number.isInteger(c.carril) && Number.isInteger(c.indice) &&
+                        c.carril >= 0 && c.carril < vinculada.carriles && c.indice >= 0 && c.indice < vinculada.tamano;
+                });
+                if (valido) paresValidos.push(...par);
+            }
+            edificio.conexiones = paresValidos;
+            for (const conexion of paresValidos) {
+                const vinculada = (window.calles || []).find(x => x.id === conexion.calleId || x.nombre === conexion.calleId);
+                if (!vinculada.conexionesEstacionamiento) vinculada.conexionesEstacionamiento = new Map();
+                vinculada.conexionesEstacionamiento.set(`${conexion.carril}-${conexion.indice}`, {
+                    tipo: conexion.tipo, edificioId: edificio.id, edificio,
+                    carril: conexion.carril, indice: conexion.indice
+                });
+            }
         }
 
         // Actualizar inputs con los nuevos valores

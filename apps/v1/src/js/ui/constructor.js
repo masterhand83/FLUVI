@@ -2009,13 +2009,91 @@ function eliminarObjetoSeleccionado() {
         const confirmacion = confirm(`¿Eliminar la calle "${calle.nombre}"?`);
         if (!confirmacion) return;
 
-        const index = window.calles.findIndex(c => c.nombre === calle.nombre);
+        const index = window.calles.indexOf(calle);
         if (index !== -1) {
+            const deletedStreet = window.calles[index];
+            const refersToDeletedStreet = connection =>
+                connection?.origen === deletedStreet || connection?.destino === deletedStreet;
+
+            // Remove live links first, then rebuild the per-lane outgoing indexes
+            // used by the traffic step. Filtering by object identity keeps streets
+            // with duplicate or similar names untouched.
+            if (Array.isArray(window.conexiones)) {
+                const removedConnections = window.conexiones.filter(refersToDeletedStreet);
+                const remainingConnections = window.conexiones.filter(connection => !refersToDeletedStreet(connection));
+                window.conexiones.splice(0, window.conexiones.length, ...remainingConnections);
+                (window.calles || []).forEach(street => {
+                    (street.conexionesSalida || []).forEach((laneConnections, lane) => {
+                        street.conexionesSalida[lane] = (laneConnections || [])
+                            .filter(candidate => !refersToDeletedStreet(candidate));
+                    });
+                });
+                removedConnections.forEach(connection => {
+                    const origin = connection.origen;
+                    if (origin === deletedStreet) return;
+                    const position = connection.posOrigen === -1 ? origin.tamano - 1 : connection.posOrigen;
+                    if (origin.celulasEsperando?.[connection.carrilOrigen]?.[position] !== undefined &&
+                        !origin.conexionesSalida[connection.carrilOrigen].some(candidate =>
+                            (candidate.posOrigen === -1 ? origin.tamano - 1 : candidate.posOrigen) === position)) {
+                        origin.celulasEsperando[connection.carrilOrigen][position] = false;
+                    }
+                });
+            }
+
+            // Remove both endpoints of each parking pair that touches this street,
+            // and clear the corresponding marks on every surviving street.
+            (window.edificios || []).forEach(edificio => {
+                const parkingConnections = edificio.conexiones || [];
+                const pairIndexByConnection = new Map();
+                const pairCounts = { entrada: 0, salida: 0 };
+                parkingConnections.forEach(connection => {
+                    const type = connection.tipo;
+                    pairIndexByConnection.set(connection, pairCounts[type]);
+                    pairCounts[type]++;
+                });
+                const deletedPairIndexes = new Set(parkingConnections
+                    .filter(connection => connection.calleId === deletedStreet.id || connection.calleId === deletedStreet.nombre)
+                    .map(connection => pairIndexByConnection.get(connection)));
+                if (!deletedPairIndexes.size) return;
+
+                const removedConnections = parkingConnections.filter(connection => deletedPairIndexes.has(pairIndexByConnection.get(connection)));
+                edificio.conexiones = parkingConnections.filter(connection => !deletedPairIndexes.has(pairIndexByConnection.get(connection)));
+                (window.calles || []).forEach(street => {
+                    if (!street.conexionesEstacionamiento) return;
+                    removedConnections.forEach(connection => {
+                        if (connection.calleId !== (street.id ?? street.nombre)) return;
+                        street.conexionesEstacionamiento.delete(`${connection.carril}-${connection.indice}`);
+                    });
+                });
+                if (edificio.esEstacionamiento && edificio.conexiones.length === 0) {
+                    edificio.esEstacionamiento = false;
+                }
+            });
+
+            for (const key of estadoEscenarios.celdasBloqueadas.keys()) {
+                if (key.startsWith(`${deletedStreet.id}:`) || key.startsWith(`${deletedStreet.nombre}:`)) {
+                    estadoEscenarios.celdasBloqueadas.delete(key);
+                }
+            }
+
             // Eliminar calle
             window.calles.splice(index, 1);
 
             // Eliminar de simulación actual
-            simulacionActual.calles = simulacionActual.calles.filter(c => c.nombre !== calle.nombre);
+            if (simulacionActual.calles[index]?.nombre === calle.nombre) {
+                simulacionActual.calles.splice(index, 1);
+            } else if (simulacionActual.calles.filter(c => c.nombre === calle.nombre).length === 1) {
+                simulacionActual.calles = simulacionActual.calles.filter(c => c.nombre !== calle.nombre);
+            }
+            if (Array.isArray(simulacionActual.conexiones)) {
+                simulacionActual.conexiones = simulacionActual.conexiones
+                    .filter(connection => connection.origenIdx !== index && connection.destinoIdx !== index)
+                    .map(connection => ({
+                        ...connection,
+                        origenIdx: connection.origenIdx > index ? connection.origenIdx - 1 : connection.origenIdx,
+                        destinoIdx: connection.destinoIdx > index ? connection.destinoIdx - 1 : connection.destinoIdx
+                    }));
+            }
 
             // Limpiar selección
             window.calleSeleccionada = null;
