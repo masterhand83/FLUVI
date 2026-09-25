@@ -49,6 +49,9 @@ class CameraController {
 
         // Pan con arrastre - USAR CAPTURE PHASE para interceptar antes que PixiJS
         this.mouseDownHandler = (e) => {
+            // Drawing gestures own empty-map pointer input while the tool is active.
+            if (window.drawStreetTool && window.drawStreetTool.isActive()) return;
+
             // No capturar si se está arrastrando un objeto en modo edición
             if (window.editorHandles && (window.editorHandles.isDraggingMove || window.editorHandles.isDraggingRotate)) {
                 return;

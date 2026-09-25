@@ -2259,6 +2259,18 @@
       <canvas id="simuladorCanvas"></canvas>
       <canvas id="minimapa"></canvas>
 
+      <aside id="streetInspector" class="street-inspector" aria-live="polite" hidden>
+        <div class="street-inspector-heading">
+          <strong id="streetInspectorName">Calle</strong>
+          <button type="button" id="streetInspectorClose" class="btn-close" aria-label="Cerrar"></button>
+        </div>
+        <dl class="street-inspector-details">
+          <div><dt>Celdas</dt><dd id="streetInspectorCells">—</dd></div>
+          <div><dt>Carriles</dt><dd id="streetInspectorLanes">—</dd></div>
+          <div><dt>Tipo</dt><dd id="streetInspectorType">—</dd></div>
+        </dl>
+      </aside>
+
       <!-- Control Bar -->
       <div id="canvasControlBar">
         <div id="controlBar" class="align-items-center">
@@ -2275,6 +2287,8 @@
             <button type="button" id="btnEtiquetas" class="btn btn-info btn-sm" data-bs-toggle="tooltip" data-bs-title="Mostrar/ocultar las etiquetas con nombres de calles y edificios">🏷️</button>
             <button type="button" id="btnContadores" class="btn btn-info btn-sm" data-bs-toggle="tooltip" data-bs-title="Mostrar/ocultar contadores de ocupación de estacionamientos">🔢</button>
           </div>
+
+          <button type="button" id="drawStreetButton" class="btn btn-outline-primary btn-sm" data-bs-toggle="tooltip" data-bs-title="Dibujar una calle">✏️ Calle</button>
 
           <!-- Grupo de acciones -->
           <div class="btn-group">
@@ -2349,6 +2363,8 @@
   <script src="src/js/ui/editor.js"></script>
   <script src="src/js/ui/edificioUI.js"></script>
   <script src="src/js/ui/constructor.js"></script>
+  <script src="src/js/ui/drawStreet.js"></script>
+  <script src="src/js/ui/streetInspector.js"></script>
   <script src="src/js/ui/referenceImageEditor.js"></script>
 
   <!-- Bootstrap JS local (incluye Popper) -->
