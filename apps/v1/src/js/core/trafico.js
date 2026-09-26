@@ -691,6 +691,8 @@ selectCalle.addEventListener("change", () => {
 });
 
 // Función para crear una calle con posición, ángulo y tamaño
+// Preserve the historical seeded campus map; streets added by a user start empty.
+let buildingInitialMap = true;
 function crearCalle(nombre, tamano, tipo, x, y, angulo, probabilidadGeneracion, carriles = 1, probabilidadSaltoDeCarril = 0.05) {
     const calle = {
         id: nombre, // ID único basado en el nombre
@@ -718,8 +720,8 @@ function crearCalle(nombre, tamano, tipo, x, y, angulo, probabilidadGeneracion, 
         calle.conexionesSalida.push([]);
     }
 
-    // Inicialización SOLO si es GENERADOR
-    if (tipo === TIPOS.GENERADOR) {
+    // Only the built-in scenario retains its historical seeded starting traffic.
+    if (buildingInitialMap && tipo === TIPOS.GENERADOR) {
         for (let i = 0; i < carriles; i++) {
             for (let j = 0; j < tamano; j++) {
                 calle.arreglo[i][j] = Math.random() < 0.1 ? 1 : 0;
@@ -4008,6 +4010,7 @@ function iniciarSimulacion() {
 
     registrarConexiones(conexionesCA);
     conexiones = conexionesCA;
+    buildingInitialMap = false;
 
     calles.forEach(calle => {
         const option = document.createElement("option");
@@ -4212,9 +4215,19 @@ function iniciarSimulacion() {
 
     animationId = requestAnimationFrame(animate);
 
+    window.streetEditPause = () => {
+        if (!isPaused) btnPauseResume?.click();
+    };
+
     if (btnPauseResume) {
         btnPauseResume.addEventListener('click', () => {
+            if (isPaused) {
+                window.drawStreetTool?.finishGesture?.();
+                window.streetGeometryEditor?.finishGesture?.();
+                window.streetInspector?.finishFocusedEdit?.();
+            }
             isPaused = !isPaused;
+            window.isPaused = isPaused;
             if (isPaused) {
                 // No cancelar animationFrame - dejar que siga corriendo pero sin ejecutar paso()
                 btnPauseResume.textContent = '▶️';
@@ -4328,7 +4341,10 @@ function iniciarSimulacion() {
 
     if (btnPaso) {
         btnPaso.addEventListener('click', () => {
-            paso();
+            // A deliberate single step advances the virtual clock even while paused.
+            const pausedBeforeStep = window.isPaused;
+            window.isPaused = false;
+            try { paso(); } finally { window.isPaused = pausedBeforeStep; }
         });
     }
 

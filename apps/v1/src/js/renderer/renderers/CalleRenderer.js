@@ -227,6 +227,11 @@ class CalleRenderer {
         container.x = calle.x;
         container.y = calle.y;
         container.rotation = CoordinateConverter.degreesToRadians(calle.angulo);
+        const road = container.children.find(child => child instanceof PIXI.TilingSprite);
+        if (road) {
+            road.width = calle.tamano * this.celda_tamano;
+            road.height = calle.carriles * this.celda_tamano;
+        }
 
         // Actualizar borde de selección
         this.updateSelectionBorder(container, calle);

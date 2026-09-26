@@ -94,10 +94,10 @@ for (const usePixi of [false, true]) {
 		assert.equal(result.defaults.seeded, false)
 		await page.waitForFunction(() => !document.getElementById("streetInspector")?.hidden, { timeout: 5000 })
 		const inspector = await page.evaluate(() => ({
-			name: document.getElementById("streetInspectorName").textContent,
-			cells: document.getElementById("streetInspectorCells").textContent,
-			lanes: document.getElementById("streetInspectorLanes").textContent,
-			type: document.getElementById("streetInspectorType").textContent,
+			name: document.getElementById("streetInspectorName").value,
+			cells: document.getElementById("streetInspectorCells").value,
+			lanes: document.getElementById("streetInspectorLanes").value,
+			type: document.getElementById("streetInspectorType").value,
 		}))
 		assert.equal(inspector.name, "Street 1", "inspector displays the created street")
 		assert.equal(Number(inspector.cells), result.geometry.tamano, "inspector shows its cell count")
@@ -118,8 +118,8 @@ for (const usePixi of [false, true]) {
 			selector.dispatchEvent(new Event('change', { bubbles: true }))
 			return { name: calle.nombre, cells: calle.arreglo[0].length, wasPaused }
 		})
-		assert.equal(await page.$eval('#streetInspectorName', el => el.textContent), existing.name, 'existing street selection updates inspector')
-		assert.equal(Number(await page.$eval('#streetInspectorCells', el => el.textContent)), existing.cells)
+		assert.equal(await page.$eval('#streetInspectorName', el => el.value), existing.name, 'existing street selection updates inspector')
+		assert.equal(Number(await page.$eval('#streetInspectorCells', el => el.value)), existing.cells)
 		assert.equal(await page.evaluate(() => window.isPaused), existing.wasPaused, 'selection does not pause traffic')
 		await page.evaluate(() => {
 			window.calleSeleccionada = null

@@ -492,10 +492,17 @@ body {
 
 .street-inspector-details {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
   margin: 0;
 }
+
+.street-inspector-field { display: grid; gap: 2px; color: #6c757d; font-size: 0.7rem; font-weight: 600; }
+.street-inspector input, .street-inspector select { width: 100%; min-width: 0; padding: 2px 4px; border: 1px solid #ced4da; border-radius: 4px; color: inherit; background: transparent; font-size: 0.82rem; }
+.street-inspector-error { margin-top: 6px; color: #b02a37; font-size: 0.75rem; }
+.street-inspector-error:empty { display: none; }
+.street-inspector [aria-invalid="true"] { border-color: #b02a37; }
+.street-inspector [hidden] { display: none; }
 
 .street-inspector-details dt {
   color: #6c757d;

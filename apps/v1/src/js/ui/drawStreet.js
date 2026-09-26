@@ -7,6 +7,8 @@
     let preview = null;
     let cueTimer = null;
     let originalCursor = '';
+    let lastPointerEvent = null;
+    let suppressClick = false;
     const cellSize = () => window.celda_tamano || 5;
 
     function inside(event) {
@@ -30,6 +32,7 @@
         if (pointerId !== null && view.hasPointerCapture?.(pointerId)) view.releasePointerCapture(pointerId);
         start = null;
         pointerId = null;
+        lastPointerEvent = null;
         if (preview) preview.hidden = true;
     }
 
@@ -87,16 +90,23 @@
         event.stopPropagation();
         start = { ...point, clientX: event.clientX, clientY: event.clientY };
         pointerId = event.pointerId;
+        lastPointerEvent = event;
         view.setPointerCapture?.(pointerId);
         showPreview(event);
     }
 
     function onMove(event) {
-        if (start && event.pointerId === pointerId) showPreview(event);
+        if (start && event.pointerId === pointerId) {
+            lastPointerEvent = event;
+            showPreview(event);
+        }
     }
 
     function onUp(event) {
         if (!start || event.pointerId !== pointerId) return;
+        suppressClick = true;
+        window.setTimeout(() => { suppressClick = false; }, 0);
+        event.stopImmediatePropagation();
         const origin = start;
         const validRelease = inside(event);
         const end = worldPoint(event);
@@ -122,10 +132,18 @@
         }
     }
 
+    function onClick(event) {
+        if (!suppressClick) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        suppressClick = false;
+    }
+
     function activate() {
         if (active) return;
         view = document.getElementById('simuladorCanvas');
         if (!view) return;
+        window.streetEditPause?.();
         active = true;
         originalCursor = view.style.cursor;
         view.style.cursor = 'crosshair';
@@ -142,6 +160,7 @@
         view.addEventListener('pointerdown', onDown, true);
         view.addEventListener('pointermove', onMove, true);
         view.addEventListener('pointerup', onUp, true);
+        view.addEventListener('click', onClick, true);
         view.addEventListener('pointercancel', clearGesture, true);
         document.addEventListener('keydown', onKey);
     }
@@ -155,6 +174,8 @@
         view.removeEventListener('pointermove', onMove, true);
         view.removeEventListener('pointerup', onUp, true);
         view.removeEventListener('pointercancel', clearGesture, true);
+        // The click synthesized after pointerup still belongs to this drawing gesture.
+        window.setTimeout(() => view.removeEventListener('click', onClick, true), 0);
         document.removeEventListener('keydown', onKey);
         preview?.ownerSVGElement?.remove();
         preview = null;
@@ -162,5 +183,8 @@
         document.getElementById('drawStreetButton')?.classList.remove('active');
     }
 
-    window.drawStreetTool = { activate, deactivate, isActive: () => active };
+    window.drawStreetTool = {
+        activate, deactivate, isActive: () => active,
+        finishGesture: () => { if (start && lastPointerEvent) onUp(lastPointerEvent); }
+    };
 })();
