@@ -107,7 +107,8 @@
         const distance = Math.hypot(dx, dy);
         if (distance < cellSize()) { retryCue(); return; }
         const cells = Math.max(1, Math.round(distance / cellSize()));
-        const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+        // Calle geometry uses clockwise-negative angles in screen coordinates.
+        const angle = -Math.atan2(dy, dx) * 180 / Math.PI;
         const calle = window.crearCalle(nextName(), cells, window.TIPOS.CONEXION,
             origin.x, origin.y, angle, 0, 1, 0.02);
         selectStreet(calle);
