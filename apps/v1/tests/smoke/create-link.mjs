@@ -116,6 +116,13 @@ for (const usePixi of [false, true]) {
 		assert.ok(await page.$(`${TEST_IDS.rows} [data-testid="link-unmatched-lane"]`), "the unmatched source lane is visible")
 		const visibleReview = await page.$eval(TEST_IDS.rows, (el) => getComputedStyle(el).display !== "none" && el.getBoundingClientRect().height > 0)
 		assert.ok(visibleReview, "mapping rows are visibly reviewable")
+		const panelBounds = await page.$eval(TEST_IDS.panel, (el) => ({
+			top: el.getBoundingClientRect().top,
+			bottom: el.getBoundingClientRect().bottom,
+			viewportHeight: window.innerHeight,
+		}))
+		assert.ok(panelBounds.top >= 0 && panelBounds.bottom <= panelBounds.viewportHeight,
+			`link instructions and Save/Cancel must fit in the viewport: ${JSON.stringify(panelBounds)}`)
 
 		// Correct both street choices, then reverse direction. Escape discards only
 		// this draft; it must not mutate existing links.
@@ -187,6 +194,25 @@ for (const usePixi of [false, true]) {
 		await page.click(TEST_IDS.save)
 		assert.equal(await page.evaluate(() => window.conexiones.length), crossTypeCount, "effective last-cell duplicate is rejected across types")
 		assert.ok(await page.$eval(TEST_IDS.panel, (el) => el.getAttribute("aria-invalid") === "true" || el.querySelector("[role=alert]")?.textContent.trim()), "cross-type duplicate has visible feedback")
+		await page.click(TEST_IDS.cancel)
+
+		// A long review at a shorter viewport must remain readable and scroll to
+		// Save/Cancel rather than extend below the application window.
+		const longReview = await page.evaluate(() => ["Long link source", "Long link destination"].map((name, index) => {
+			const street = window.crearCalle(name, 16, window.TIPOS.CONEXION, 300 + index * 100, 300, 0, 0, 10, 0)
+			return street.id
+		}))
+		await page.click(TEST_IDS.start)
+		await page.select("#linkSourceStreet", longReview[0])
+		await page.select("#linkDestinationStreet", longReview[1])
+		await page.setViewport({ width: 900, height: 600 })
+		const compactLayout = await page.$eval(TEST_IDS.panel, (el) => {
+			const rect = el.getBoundingClientRect()
+			return { top: rect.top, bottom: rect.bottom, height: window.innerHeight, scrollable: el.scrollHeight > el.clientHeight }
+		})
+		assert.ok(compactLayout.top >= 0 && compactLayout.bottom <= compactLayout.height && compactLayout.scrollable,
+			`long review remains within viewport and scrollable: ${JSON.stringify(compactLayout)}`)
+		await page.click(TEST_IDS.cancel)
 
 		console.log(`✅ directed Lineal link creation, review, correction, cancellation and validation (${usePixi ? "Pixi" : "Canvas"})`)
 	} finally {

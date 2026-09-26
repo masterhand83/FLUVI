@@ -1,6 +1,6 @@
 .create-link-anchor { position: relative; }
 .create-link-panel { border: 1px solid var(--bs-border-color, #ced4da); border-radius: .375rem; padding: .75rem; margin-top: .5rem; }
-.create-link-anchor .create-link-panel { position: absolute; top: 100%; left: 0; z-index: 1200; width: min(30rem, 90vw); background: var(--bs-body-bg, #fff); box-shadow: 0 .25rem .75rem #0002; }
+.create-link-anchor .create-link-panel { position: absolute; bottom: 100%; left: 0; z-index: 1200; width: min(30rem, 90vw); max-height: min(70vh, calc(100dvh - 2rem)); overflow-y: auto; background: var(--bs-body-bg, #fff); box-shadow: 0 .25rem .75rem #0002; }
 .create-link-panel[hidden] { display: none; }
 .create-link-rows { display: grid; gap: .5rem; }
 .link-mapping-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .25rem; align-items: end; }
