@@ -37,7 +37,7 @@ class CalleRenderer {
 
         // Renderizar vértices para TODAS las calles (la función decidirá si mostrarlos o no)
         calles.forEach(calle => {
-            if (calle.vertices && calle.vertices.length > 0) {
+            if (!calle.bezierGeometry && calle.vertices && calle.vertices.length > 0) {
                 this.renderVertices(calle);
             }
         });
@@ -46,11 +46,13 @@ class CalleRenderer {
     renderCalleRecta(calle) {
         // Si ya existe, actualizar
         if (this.scene.calleSprites.has(calle)) {
-            return this.updateCalleSprite(calle);
+            if (this.scene.calleSprites.get(calle)._geometryKind === 'curved') this.removeCalleSprite(calle);
+            else return this.updateCalleSprite(calle);
         }
 
         // Crear contenedor para la calle
         const container = new PIXI.Container();
+        container._geometryKind = 'straight';
         container.x = calle.x;
         container.y = calle.y;
         container.rotation = CoordinateConverter.degreesToRadians(calle.angulo);
@@ -105,10 +107,13 @@ class CalleRenderer {
     renderCalleCurva(calle) {
         // Para calles curvas, crear múltiples sprites siguiendo vértices
         if (this.scene.calleSprites.has(calle)) {
-            return this.updateCalleCurvaSprite(calle);
+            const existing = this.scene.calleSprites.get(calle);
+            if (existing._geometryKind !== 'curved') this.removeCalleSprite(calle);
+            else return this.updateCalleCurvaSprite(calle);
         }
 
         const container = new PIXI.Container();
+        container._geometryKind = 'curved';
         // El container se posiciona en (0,0) del mundo, los sprites usan coordenadas globales
         container.x = 0;
         container.y = 0;
@@ -402,6 +407,7 @@ class CalleRenderer {
     removeCalleSprite(calle) {
         const container = this.scene.calleSprites.get(calle);
         if (container) {
+            if (container.parent) container.parent.removeChild(container);
             container.destroy({ children: true });
             this.scene.calleSprites.delete(calle);
         }

@@ -75,6 +75,8 @@ El Constructor de Mapas es una herramienta integrada en el Simulador de Tráfico
 
 ### 5. Eliminar Calles
 
+Para curvar una calle seleccionada, pulsa **+ Añadir control** en el inspector. Arrastra el control exterior en el mapa o selecciona un control para introducir sus coordenadas X/Y exactas. Puedes añadir varios controles y eliminar solo el seleccionado con **Eliminar control** o la tecla Supr. Los extremos se pueden arrastrar; X/Y y ángulo mueven o giran toda la curva, y el número de celdas escala su forma desde el inicio. La longitud del arco determina el número de celdas (redondeado a la celda más cercana). Una previsualización inválida se señala y recupera la geometría anterior al soltar. Cruzar otra calle no crea una conexión de tráfico automáticamente. Reanuda la simulación explícitamente tras editar.
+
 1. Selecciona la calle que deseas eliminar
 2. Haz clic en "🗑️ Eliminar Calle Seleccionada"
 3. Confirma la eliminación
@@ -88,7 +90,7 @@ El Constructor de Mapas es una herramienta integrada en el Simulador de Tráfico
 **El archivo JSON incluye:**
 - Todas las calles con sus parámetros
 - Todas las conexiones
-- Vértices de curvas (si existen)
+- Vértices de curvas heredadas o extremos y controles Bézier (si existen)
 - Edificios (si existen)
 - Metadata (versión, fecha, nombre)
 

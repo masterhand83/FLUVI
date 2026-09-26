@@ -476,6 +476,7 @@ body {
 }
 
 .street-endpoint-handle:hover, .street-endpoint-handle:active { cursor: grabbing; }
+.street-endpoint-handle.selected { background: #ffc107; box-shadow: 0 0 0 3px #b58100, 0 2px 5px rgba(0, 0, 0, 0.4); }
 .street-endpoint-handle[hidden] { display: none; }
 
 #drawStreetButton.draw-street-retry {
@@ -521,6 +522,15 @@ body {
 .street-inspector-error:empty { display: none; }
 .street-inspector [aria-invalid="true"] { border-color: #b02a37; }
 .street-inspector [hidden] { display: none; }
+.street-inspector-controls { grid-column: 1 / -1; display: grid; gap: 5px; }
+.street-inspector-control { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 4px; }
+.street-inspector-control span { font-size: .72rem; color: #6c757d; }
+.street-inspector-control [aria-pressed="true"] { border-color: #0d6efd; background: #cfe2ff; color: #084298; }
+.street-inspector-selected-control { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 6px; }
+.street-inspector-selected-control label { display: grid; gap: 2px; color: #6c757d; font-size: .7rem; }
+.street-inspector-selected-control button { grid-column: 1 / -1; }
+.street-inspector-selected-control[hidden] { display: none; }
+#simuladorCanvas.street-geometry-invalid { outline: 3px solid #dc3545; outline-offset: -3px; }
 
 .street-inspector-details dt {
   color: #6c757d;

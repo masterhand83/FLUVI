@@ -2161,7 +2161,13 @@ function guardarSimulacion() {
             probabilidadSaltoDeCarril: calle.probabilidadSaltoDeCarril,
             // Guardar vértices si existen
             vertices: calle.vertices || [],
-            esCurva: calle.esCurva || false
+            esCurva: calle.esCurva || false,
+            ...(calle.bezierGeometry ? {
+                bezierGeometry: true,
+                endX: calle.endX,
+                endY: calle.endY,
+                bezierControls: calle.bezierControls.map(control => ({ x: control.x, y: control.y }))
+            } : {})
         })) : [],
         conexiones: window.conexiones ? window.conexiones.map(c => {
             // Encontrar los índices de las calles origen y destino
@@ -2262,14 +2268,19 @@ function cargarSimulacion(event) {
 
                 if (exito) {
                     callesExitosas++;
-                    // Restaurar vértices si existen
-                    if (calleData.vertices && calleData.vertices.length > 0) {
-                        const calleCreada = window.calles[window.calles.length - 1];
-                        if (calleCreada) {
-                            calleCreada.vertices = calleData.vertices;
-                            calleCreada.esCurva = calleData.esCurva || false;
-                            console.log(`✅ Vértices y curva restaurados para calle "${calleData.nombre}": ${calleData.vertices.length} vértices, esCurva: ${calleCreada.esCurva}`);
+                    const calleCreada = window.calles[window.calles.length - 1];
+                    if (calleCreada && calleData.bezierGeometry && Array.isArray(calleData.bezierControls)) {
+                        const proposed = { ...calleCreada, esCurva: true, bezierGeometry: true,
+                            endX: calleData.endX, endY: calleData.endY,
+                            bezierControls: calleData.bezierControls.map(control => ({ x: control.x, y: control.y })) };
+                        const geometry = window.streetBezier?.validate(proposed);
+                        if (geometry?.valid && geometry.cells === calleCreada.tamano) {
+                            Object.assign(calleCreada, proposed);
+                            calleCreada.vertices = [];
                         }
+                    } else if (calleCreada && calleData.vertices?.length > 0) {
+                        calleCreada.vertices = calleData.vertices;
+                        calleCreada.esCurva = calleData.esCurva || false;
                     }
                 } else {
                     callesFallidas++;

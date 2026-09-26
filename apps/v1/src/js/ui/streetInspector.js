@@ -1,161 +1,617 @@
 (() => {
-    const button = document.getElementById('drawStreetButton');
-    const inspector = document.getElementById('streetInspector');
-    const closeButton = document.getElementById('streetInspectorClose');
-    const fields = {
-        name: document.getElementById('streetInspectorName'),
-        x: document.getElementById('streetInspectorX'),
-        y: document.getElementById('streetInspectorY'),
-        angle: document.getElementById('streetInspectorAngle'),
-        cells: document.getElementById('streetInspectorCells'),
-        lanes: document.getElementById('streetInspectorLanes'),
-        type: document.getElementById('streetInspectorType'),
-        generation: document.getElementById('streetInspectorGeneration'),
-        laneChange: document.getElementById('streetInspectorLaneChange')
-    };
-    const generationRow = document.getElementById('streetInspectorGenerationRow');
-    const error = document.getElementById('streetInspectorError');
-    const canvas = document.getElementById('simuladorCanvas');
-    if (!button || !inspector) return;
+	const button = document.getElementById("drawStreetButton");
+	const inspector = document.getElementById("streetInspector");
+	const closeButton = document.getElementById("streetInspectorClose");
+	const fields = {
+		name: document.getElementById("streetInspectorName"),
+		x: document.getElementById("streetInspectorX"),
+		y: document.getElementById("streetInspectorY"),
+		endX: document.getElementById("streetInspectorEndX"),
+		endY: document.getElementById("streetInspectorEndY"),
+		angle: document.getElementById("streetInspectorAngle"),
+		cells: document.getElementById("streetInspectorCells"),
+		lanes: document.getElementById("streetInspectorLanes"),
+		type: document.getElementById("streetInspectorType"),
+		generation: document.getElementById("streetInspectorGeneration"),
+		laneChange: document.getElementById("streetInspectorLaneChange"),
+	};
+	const generationRow = document.getElementById("streetInspectorGenerationRow");
+	const endXRow = document.getElementById("streetInspectorEndXRow");
+	const endYRow = document.getElementById("streetInspectorEndYRow");
+	const controlsHost = document.getElementById("streetInspectorBezierControls");
+	const addControlButton = document.getElementById("streetInspectorAddControl");
+	const controlFields = {
+		x: document.getElementById("streetInspectorControlX"),
+		y: document.getElementById("streetInspectorControlY"),
+	};
+	const selectedControlPanel = document.getElementById(
+		"streetInspectorSelectedControl",
+	);
+	const deleteControlButton = document.getElementById(
+		"streetInspectorDeleteControl",
+	);
+	const error = document.getElementById("streetInspectorError");
+	const canvas = document.getElementById("simuladorCanvas");
+	if (!button || !inspector) return;
 
-    let selected = null;
-    let focusedField = null;
-    let committing = false;
-    const editable = Object.values(fields);
-    const readModel = (calle) => {
-        fields.name.value = calle.nombre || '';
-        fields.x.value = calle.x ?? '';
-        fields.y.value = calle.y ?? '';
-        fields.angle.value = calle.angulo ?? '';
-        fields.cells.value = calle.tamano ?? calle.arreglo?.[0]?.length ?? '';
-        fields.lanes.value = calle.carriles ?? calle.arreglo?.length ?? '';
-        fields.type.value = calle.tipo || 'conexion';
-        fields.generation.value = Number(calle.probabilidadGeneracion || 0) * 100;
-        fields.laneChange.value = Number(calle.probabilidadSaltoDeCarril || 0) * 100;
-        generationRow.hidden = calle.tipo !== 'generador';
-    };
-    function show(calle) {
-        if (selected !== calle) for (const field of editable) {
-            field.setCustomValidity('');
-            field.removeAttribute('aria-invalid');
-        }
-        selected = calle || null;
-        if (!selected) { inspector.hidden = true; return; }
-        readModel(selected);
-        inspector.hidden = false;
-        error.textContent = '';
-    }
-    function fail(field, message) {
-        error.textContent = message;
-        field.setAttribute('aria-invalid', 'true');
-        field.setCustomValidity(message);
-        return false;
-    }
-    function refresh() {
-        window.renderizarCanvas?.();
-        if (window.USE_PIXI && window.pixiApp?.sceneManager) window.pixiApp.sceneManager.renderAll();
-    }
-    function uniqueName(value) {
-        return !(window.calles || []).some(calle => calle !== selected && calle.nombre.trim().toLocaleLowerCase() === value.toLocaleLowerCase());
-    }
-    // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Validation is intentionally centralized so commits share one atomic model-update path.
-    function commit(field) {
-        if (!selected || committing || !field) return true;
-        committing = true;
-        field.setCustomValidity('');
-        field.removeAttribute('aria-invalid');
-        error.textContent = '';
-        const value = field.value.trim();
-        const numeric = Number(value);
-        try {
-            if (field === fields.name) {
-                if (!value) return fail(field, 'El nombre no puede estar vacío.');
-                if (!uniqueName(value)) return fail(field, 'Ya existe una calle con ese nombre.');
-                selected.nombre = value;
-                selected.id = value;
-                for (const id of ['selectCalle', 'selectCalleEditor']) {
-                    const selector = document.getElementById(id);
-                    const index = (window.calles || []).indexOf(selected);
-                    const option = selector?.querySelector(`option[value="${index}"]`);
-                    if (option) option.textContent = value;
-                }
-            } else if (field === fields.x || field === fields.y || field === fields.angle) {
-                if (value === '' || !Number.isFinite(numeric)) return fail(field, 'Introduce un número válido.');
-                if (numeric !== selected[field === fields.angle ? 'angulo' : field === fields.x ? 'x' : 'y']) window.streetEditPause?.();
-                if (field === fields.x) selected.x = numeric;
-                else if (field === fields.y) selected.y = numeric;
-                else selected.angulo = numeric;
-            } else if (field === fields.cells || field === fields.lanes) {
-                if (!value || !Number.isInteger(numeric) || numeric < 1 || (field === fields.cells && numeric > 2500)) return fail(field, 'Introduce un número entero entre 1 y 2500.');
-                const cells = field === fields.cells ? numeric : Number(selected.tamano);
-                const lanes = field === fields.lanes ? numeric : Number(selected.carriles);
-                if (field === fields.lanes && numeric > 10) return fail(field, 'El número máximo de carriles es 10.');
-                if (window.editorCalles?.aplicarNuevasDimensiones) {
-                    if (cells !== selected.tamano || lanes !== selected.carriles) window.streetEditPause?.();
-                    window.editorCalles.aplicarNuevasDimensiones(selected, cells, lanes);
-                } else {
-                    selected.tamano = cells; selected.carriles = lanes;
-                    selected.arreglo = Array.from({ length: lanes }, (_, i) => Array.from({ length: cells }, (_, j) => selected.arreglo?.[i]?.[j] ?? 0));
-                    selected.celulasEsperando = Array.from({ length: lanes }, (_, i) => Array.from({ length: cells }, (_, j) => selected.celulasEsperando?.[i]?.[j] ?? false));
-                }
-            } else if (field === fields.type) {
-                if (!['generador', 'conexion', 'devorador'].includes(value)) return fail(field, 'Selecciona un tipo de calle válido.');
-                if (value !== selected.tipo) window.streetEditPause?.();
-                if (value === 'generador' && selected.tipo !== 'generador') selected.probabilidadGeneracion = 0.5;
-                if (value !== 'generador') selected.probabilidadGeneracion = 0;
-                selected.tipo = value;
-                generationRow.hidden = value !== 'generador';
-            } else {
-                if (value === '' || !Number.isFinite(numeric) || numeric < 0 || numeric > 100) return fail(field, 'La probabilidad debe estar entre 0 y 100 %.');
-                if (field === fields.generation) selected.probabilidadGeneracion = numeric / 100;
-                else selected.probabilidadSaltoDeCarril = numeric / 100;
-            }
-            refresh();
-            readModel(selected);
-            return true;
-        } finally { committing = false; }
-    }
-    editable.forEach((field) => {
-        field.addEventListener('focus', () => { focusedField = field; });
-        field.addEventListener('keydown', event => {
-            if (event.key === 'Enter') { event.preventDefault(); if (commit(field)) field.blur(); }
-            if (event.key === 'Escape') { readModel(selected); field.blur(); error.textContent = ''; }
-        });
-        field.addEventListener('blur', () => { commit(field); if (focusedField === field) focusedField = null; });
-        field.addEventListener('input', () => { field.setCustomValidity(''); field.removeAttribute('aria-invalid'); error.textContent = ''; });
-    });
-    fields.type.addEventListener('change', () => commit(fields.type));
-    window.streetInspector = {
-        finishFocusedEdit() { if (focusedField) return commit(focusedField); return true; },
-        refresh() { if (selected && !focusedField) readModel(selected); }
-    };
+	let selected = null;
+	let focusedField = null;
+	let committing = false;
+	let selectedControlIndex = null;
+	const isBezier = (street) =>
+		Boolean(
+			street &&
+				(street.bezierGeometry === true ||
+					!(
+						street.esCurva &&
+						Array.isArray(street.vertices) &&
+						street.vertices.length > 0
+					)) &&
+				Array.isArray(street.bezierControls) &&
+				Number.isFinite(street.endX) &&
+				Number.isFinite(street.endY),
+		);
+	const editable = Object.values(fields);
+	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Rebuilds inspector rows and values from one selected street snapshot.
+	const readModel = (calle) => {
+		fields.name.value = calle.nombre || "";
+		fields.x.value = calle.x ?? "";
+		fields.y.value = calle.y ?? "";
+		fields.endX.value = calle.endX ?? "";
+		fields.endY.value = calle.endY ?? "";
+		endXRow.hidden = endYRow.hidden = !isBezier(calle);
+		fields.angle.value = calle.angulo ?? "";
+		fields.cells.value = calle.tamano ?? calle.arreglo?.[0]?.length ?? "";
+		fields.lanes.value = calle.carriles ?? calle.arreglo?.length ?? "";
+		fields.type.value = calle.tipo || "conexion";
+		fields.generation.value = Number(calle.probabilidadGeneracion || 0) * 100;
+		fields.laneChange.value =
+			Number(calle.probabilidadSaltoDeCarril || 0) * 100;
+		generationRow.hidden = calle.tipo !== "generador";
+		addControlButton.hidden = calle.esCurva && !isBezier(calle);
+		if (controlsHost) {
+			controlsHost.replaceChildren();
+			controlsHost.hidden = !isBezier(calle);
+			const controls = isBezier(calle) ? calle.bezierControls : [];
+			const count = document.createElement("strong");
+			count.textContent = `Controles (${controls.length})`;
+			controlsHost.append(count);
+			controls.forEach((point, index) => {
+				const row = document.createElement("div");
+				row.className = "street-inspector-control";
+				const label = document.createElement("span");
+				label.textContent = `Control ${index + 1}`;
+				const select = document.createElement("button");
+				select.type = "button";
+				select.className = "btn btn-sm btn-outline-secondary";
+				select.textContent = `${index + 1}: (${Number(point.x).toFixed(1)}, ${Number(point.y).toFixed(1)})`;
+				select.setAttribute(
+					"aria-pressed",
+					String(selectedControlIndex === index),
+				);
+				select.addEventListener("click", () => selectControl(index));
+				const remove = document.createElement("button");
+				remove.type = "button";
+				remove.className = "btn btn-sm btn-outline-danger";
+				remove.textContent = "−";
+				remove.setAttribute("aria-label", `Eliminar control ${index + 1}`);
+				remove.addEventListener("click", () => {
+					selectControl(index);
+					deleteSelectedControl();
+				});
+				row.append(label, select, remove);
+				controlsHost.append(row);
+			});
+		}
+		selectedControlPanel.hidden =
+			!isBezier(calle) ||
+			selectedControlIndex == null ||
+			!calle.bezierControls[selectedControlIndex];
+		if (!selectedControlPanel.hidden) {
+			controlFields.x.value = calle.bezierControls[selectedControlIndex].x;
+			controlFields.y.value = calle.bezierControls[selectedControlIndex].y;
+		}
+	};
+	function show(calle) {
+		if (selected !== calle) {
+			selectedControlIndex = null;
+			for (const field of editable) {
+				field.setCustomValidity("");
+				field.removeAttribute("aria-invalid");
+			}
+		}
+		selected = calle || null;
+		if (!selected) {
+			inspector.hidden = true;
+			return;
+		}
+		readModel(selected);
+		inspector.hidden = false;
+		error.textContent = "";
+	}
+	function fail(field, message) {
+		error.textContent = message;
+		field.setAttribute("aria-invalid", "true");
+		field.setCustomValidity(message);
+		return false;
+	}
+	function refresh() {
+		window.renderizarCanvas?.();
+		if (window.USE_PIXI && window.pixiApp?.sceneManager)
+			window.pixiApp.sceneManager.renderAll();
+	}
+	function uniqueName(value) {
+		return !(window.calles || []).some(
+			(calle) =>
+				calle !== selected &&
+				calle.nombre.trim().toLocaleLowerCase() === value.toLocaleLowerCase(),
+		);
+	}
+	function scaleCurve(street, factor) {
+		const x = street.x,
+			y = street.y;
+		return {
+			...street,
+			endX: x + (street.endX - x) * factor,
+			endY: y + (street.endY - y) * factor,
+			bezierControls: street.bezierControls.map((p) => ({
+				x: x + (p.x - x) * factor,
+				y: y + (p.y - y) * factor,
+			})),
+		};
+	}
+	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Validation is intentionally centralized so commits share one atomic model-update path.
+	function commit(field) {
+		if (!selected || committing || !field) return true;
+		committing = true;
+		field.setCustomValidity("");
+		field.removeAttribute("aria-invalid");
+		error.textContent = "";
+		const value = field.value.trim();
+		const numeric = Number(value);
+		try {
+			if (field === fields.name) {
+				if (!value) return fail(field, "El nombre no puede estar vacío.");
+				if (!uniqueName(value))
+					return fail(field, "Ya existe una calle con ese nombre.");
+				selected.nombre = value;
+				selected.id = value;
+				for (const id of ["selectCalle", "selectCalleEditor"]) {
+					const selector = document.getElementById(id);
+					const index = (window.calles || []).indexOf(selected);
+					const option = selector?.querySelector(`option[value="${index}"]`);
+					if (option) option.textContent = value;
+				}
+			} else if (
+				field === fields.x ||
+				field === fields.y ||
+				field === fields.angle ||
+				field === fields.endX ||
+				field === fields.endY
+			) {
+				if (value === "" || !Number.isFinite(numeric))
+					return fail(field, "Introduce un número válido.");
+				const prop =
+					field === fields.angle
+						? "angulo"
+						: field === fields.x
+							? "x"
+							: field === fields.y
+								? "y"
+								: field === fields.endX
+									? "endX"
+									: "endY";
+				if (numeric !== selected[prop]) window.streetEditPause?.();
+				if (isBezier(selected) && numeric !== selected[prop]) {
+					let candidate = {
+						...selected,
+						bezierControls: selected.bezierControls.map((p) => ({ ...p })),
+					};
+					if (prop === "x" || prop === "y") {
+						const dx = prop === "x" ? numeric - selected.x : 0,
+							dy = prop === "y" ? numeric - selected.y : 0;
+						candidate.x += dx;
+						candidate.y += dy;
+						candidate.endX += dx;
+						candidate.endY += dy;
+						candidate.bezierControls = candidate.bezierControls.map((p) => ({
+							x: p.x + dx,
+							y: p.y + dy,
+						}));
+					} else if (prop === "angulo") {
+						const a =
+								((Number(selected.angulo || 0) - numeric) * Math.PI) / 180,
+							ox = selected.x,
+							oy = selected.y;
+						const rotate = (p) => ({
+							x: ox + (p.x - ox) * Math.cos(a) - (p.y - oy) * Math.sin(a),
+							y: oy + (p.x - ox) * Math.sin(a) + (p.y - oy) * Math.cos(a),
+						});
+						const end = rotate({ x: selected.endX, y: selected.endY });
+						candidate.endX = end.x;
+						candidate.endY = end.y;
+						candidate.angulo = numeric;
+						candidate.bezierControls = candidate.bezierControls.map(rotate);
+					} else {
+						const oldEnd = { x: selected.endX, y: selected.endY },
+							newEnd = {
+								x: prop === "endX" ? numeric : selected.endX,
+								y: prop === "endY" ? numeric : selected.endY,
+							};
+						const sx =
+								Math.abs(oldEnd.x - selected.x) > 1e-8
+									? (newEnd.x - selected.x) / (oldEnd.x - selected.x)
+									: 1,
+							sy =
+								Math.abs(oldEnd.y - selected.y) > 1e-8
+									? (newEnd.y - selected.y) / (oldEnd.y - selected.y)
+									: 1;
+						candidate.endX = newEnd.x;
+						candidate.endY = newEnd.y;
+						candidate.bezierControls = candidate.bezierControls.map((p) => ({
+							x: selected.x + (p.x - selected.x) * sx,
+							y: selected.y + (p.y - selected.y) * sy,
+						}));
+					}
+					if (!applyCurve(candidate))
+						return fail(field, "La geometría de la curva no es válida.");
+					return true;
+				}
+				const old = selected[prop];
+				selected[prop] = numeric;
+				if (
+					selected.esCurva &&
+					window.streetBezier?.validate &&
+					!window.streetBezier.validate(selected).valid
+				) {
+					selected[prop] = old;
+					return fail(field, "La geometría de la curva no es válida.");
+				}
+			} else if (field === fields.cells || field === fields.lanes) {
+				if (
+					!value ||
+					!Number.isInteger(numeric) ||
+					numeric < 1 ||
+					(field === fields.cells && numeric > 2500)
+				)
+					return fail(field, "Introduce un número entero entre 1 y 2500.");
+				const cells =
+					field === fields.cells ? numeric : Number(selected.tamano);
+				const lanes =
+					field === fields.lanes ? numeric : Number(selected.carriles);
+				if (field === fields.lanes && numeric > 10)
+					return fail(field, "El número máximo de carriles es 10.");
+				if (field === fields.cells && isBezier(selected)) {
+					const currentGeometry = window.streetBezier.validate(selected);
+					if (!currentGeometry.valid || !currentGeometry.cells)
+						return fail(field, "La geometría de la curva no es válida.");
+					const candidate = scaleCurve(
+						selected,
+						numeric / currentGeometry.cells,
+					);
+					candidate.tamano = numeric;
+					if (!applyCurve(candidate))
+						return fail(field, "La geometría no admite ese número de celdas.");
+					return true;
+				}
+				if (field === fields.lanes && isBezier(selected)) {
+					const proposed = { ...selected, carriles: lanes };
+					const result = window.streetBezier.validate(proposed);
+					if (!result.valid)
+						return fail(field, "La geometría de la curva no es válida.");
+					window.streetEditPause?.();
+					if (result.cells !== selected.tamano || lanes !== selected.carriles) {
+						if (window.editorCalles?.aplicarNuevasDimensiones) {
+							window.editorCalles.aplicarNuevasDimensiones(
+								selected,
+								result.cells,
+								lanes,
+							);
+						} else {
+							selected.arreglo = Array.from({ length: lanes }, (_, lane) =>
+								Array.from(
+									{ length: result.cells },
+									(_, index) => selected.arreglo?.[lane]?.[index] ?? 0,
+								),
+							);
+							selected.celulasEsperando = Array.from(
+								{ length: lanes },
+								(_, lane) =>
+									Array.from(
+										{ length: result.cells },
+										(_, index) =>
+											selected.celulasEsperando?.[lane]?.[index] ?? false,
+									),
+							);
+						}
+					}
+					selected.tamano = result.cells;
+					selected.carriles = lanes;
+					refresh();
+					readModel(selected);
+					return true;
+				}
+				if (window.editorCalles?.aplicarNuevasDimensiones) {
+					if (cells !== selected.tamano || lanes !== selected.carriles)
+						window.streetEditPause?.();
+					window.editorCalles.aplicarNuevasDimensiones(selected, cells, lanes);
+				} else {
+					selected.tamano = cells;
+					selected.carriles = lanes;
+					selected.arreglo = Array.from({ length: lanes }, (_, i) =>
+						Array.from(
+							{ length: cells },
+							(_, j) => selected.arreglo?.[i]?.[j] ?? 0,
+						),
+					);
+					selected.celulasEsperando = Array.from({ length: lanes }, (_, i) =>
+						Array.from(
+							{ length: cells },
+							(_, j) => selected.celulasEsperando?.[i]?.[j] ?? false,
+						),
+					);
+				}
+			} else if (field === fields.type) {
+				if (!["generador", "conexion", "devorador"].includes(value))
+					return fail(field, "Selecciona un tipo de calle válido.");
+				if (value !== selected.tipo) window.streetEditPause?.();
+				if (value === "generador" && selected.tipo !== "generador")
+					selected.probabilidadGeneracion = 0.5;
+				if (value !== "generador") selected.probabilidadGeneracion = 0;
+				selected.tipo = value;
+				generationRow.hidden = value !== "generador";
+			} else {
+				if (
+					value === "" ||
+					!Number.isFinite(numeric) ||
+					numeric < 0 ||
+					numeric > 100
+				)
+					return fail(field, "La probabilidad debe estar entre 0 y 100 %.");
+				if (field === fields.generation)
+					selected.probabilidadGeneracion = numeric / 100;
+				else selected.probabilidadSaltoDeCarril = numeric / 100;
+			}
+			refresh();
+			readModel(selected);
+			return true;
+		} finally {
+			committing = false;
+		}
+	}
+	editable.forEach((field) => {
+		field.addEventListener("focus", () => {
+			focusedField = field;
+		});
+		field.addEventListener("keydown", (event) => {
+			if (event.key === "Enter") {
+				event.preventDefault();
+				if (commit(field)) field.blur();
+			}
+			if (event.key === "Escape") {
+				readModel(selected);
+				field.blur();
+				error.textContent = "";
+			}
+		});
+		field.addEventListener("blur", () => {
+			commit(field);
+			if (focusedField === field) focusedField = null;
+		});
+		field.addEventListener("input", () => {
+			field.setCustomValidity("");
+			field.removeAttribute("aria-invalid");
+			error.textContent = "";
+		});
+	});
+	fields.type.addEventListener("change", () => commit(fields.type));
+	window.streetInspector = {
+		finishFocusedEdit() {
+			if (focusedField) return commit(focusedField);
+			return true;
+		},
+		refresh() {
+			if (selected && !focusedField) readModel(selected);
+		},
+		getSelected() {
+			return selected;
+		},
+		selectControl(index) {
+			selectControl(index);
+		},
+		getSelectedControlIndex() {
+			return selectedControlIndex;
+		},
+		setGeometryError(message) {
+			error.textContent = message || "";
+		},
+	};
+	function selectControl(index) {
+		if (!isBezier(selected) || !selected.bezierControls[index]) return;
+		selectedControlIndex = index;
+		readModel(selected);
+	}
+	function applyCurve(candidate, before = selected) {
+		const result = window.streetBezier?.validate?.(candidate);
+		if (!result?.valid || !Number.isInteger(result.cells) || result.cells < 1) {
+			return false;
+		}
+		candidate.tamano = result.cells;
+		window.streetEditPause?.();
+		if (candidate.tamano !== before.tamano)
+			window.editorCalles?.aplicarNuevasDimensiones?.(
+				before,
+				candidate.tamano,
+				before.carriles,
+			);
+		for (const key of [
+			"esCurva",
+			"bezierGeometry",
+			"x",
+			"y",
+			"angulo",
+			"tamano",
+			"endX",
+			"endY",
+			"bezierControls",
+		])
+			before[key] = candidate[key];
+		// Once converted, legacy angle-offset vertices must not overlay or intercept
+		// the independently editable exterior Bezier controls.
+		if (candidate.bezierGeometry) before.vertices = [];
+		window.streetGeometryEditor?.setInvalidPreview?.(false);
+		window.streetGeometryEditor?.refresh?.();
+		refresh();
+		readModel(before);
+		return true;
+	}
+	function updateSelectedControl() {
+		if (!isBezier(selected) || selectedControlIndex == null) return;
+		if (controlFields.x.value === "" || controlFields.y.value === "") {
+			readModel(selected);
+			error.textContent = "Introduce coordenadas numéricas válidas.";
+			return;
+		}
+		const x = Number(controlFields.x.value),
+			y = Number(controlFields.y.value);
+		if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+		const candidate = {
+			...selected,
+			bezierControls: selected.bezierControls.map((p) => ({ ...p })),
+		};
+		candidate.bezierControls[selectedControlIndex] = { x, y };
+		if (!applyCurve(candidate)) {
+			readModel(selected);
+			error.textContent = "La geometría de la curva no es válida.";
+		}
+	}
+	controlFields.x.addEventListener("change", updateSelectedControl);
+	controlFields.y.addEventListener("change", updateSelectedControl);
+	function deleteSelectedControl() {
+		if (!isBezier(selected) || selectedControlIndex == null) return;
+		const candidate = {
+			...selected,
+			bezierControls: selected.bezierControls.map((p) => ({ ...p })),
+		};
+		candidate.bezierControls.splice(selectedControlIndex, 1);
+		if (applyCurve(candidate)) {
+			selectedControlIndex = candidate.bezierControls.length
+				? Math.min(selectedControlIndex, candidate.bezierControls.length - 1)
+				: null;
+			readModel(selected);
+		} else
+			error.textContent =
+				"No se puede eliminar el control: la curva resultante no es válida.";
+	}
+	deleteControlButton?.addEventListener("click", deleteSelectedControl);
+	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Degree elevation inserts a control while preserving the complete current curve.
+	addControlButton?.addEventListener("click", () => {
+		if (!selected || (selected.esCurva && !isBezier(selected))) return;
+		const before = selected;
+		const straightEndX =
+			before.x +
+			before.tamano *
+				(Number(window.celda_tamano) || 5) *
+				Math.cos(((before.angulo || 0) * Math.PI) / 180);
+		const straightEndY =
+			before.y -
+			before.tamano *
+				(Number(window.celda_tamano) || 5) *
+				Math.sin(((before.angulo || 0) * Math.PI) / 180);
+		const candidate = {
+			...before,
+			endX: before.endX ?? straightEndX,
+			endY: before.endY ?? straightEndY,
+			bezierControls: isBezier(before)
+				? before.bezierControls.map((p) => ({ ...p }))
+				: [],
+		};
+		const points = [
+			{ x: candidate.x, y: candidate.y },
+			...candidate.bezierControls,
+			{ x: candidate.endX, y: candidate.endY },
+		];
+		const degree = points.length - 1;
+		const elevated = [];
+		for (let i = 1; i <= degree; i++) {
+			const t = i / (degree + 1),
+				a = points[i - 1],
+				b = points[i];
+			elevated.push({ x: t * a.x + (1 - t) * b.x, y: t * a.y + (1 - t) * b.y });
+		}
+		candidate.esCurva = true;
+		candidate.bezierGeometry = true;
+		candidate.bezierControls = elevated;
+		if (applyCurve(candidate)) {
+			selectedControlIndex = elevated.length - 1;
+			readModel(selected);
+			window.streetGeometryEditor?.refresh?.();
+		}
+	});
+	document.addEventListener(
+		"keydown",
+		(event) => {
+			if (
+				event.key !== "Delete" ||
+				selectedControlIndex == null ||
+				!isBezier(selected)
+			)
+				return;
+			if (
+				event.target.matches?.("input,textarea,select") &&
+				event.target !== controlFields.x &&
+				event.target !== controlFields.y
+			)
+				return;
+			event.preventDefault();
+			event.stopImmediatePropagation();
+			deleteSelectedControl();
+		},
+		true,
+	);
 
-    function updateDrawButton() {
-        const active = Boolean(window.drawStreetTool?.isActive?.());
-        button.setAttribute('aria-pressed', String(active)); button.classList.toggle('active', active);
-    }
-    button.addEventListener('click', () => {
-        const tool = window.drawStreetTool;
-        if (!tool) return;
-        if (tool.isActive()) tool.deactivate(); else tool.activate();
-        updateDrawButton();
-    });
-    closeButton?.addEventListener('click', () => {
-        for (const id of ['selectCalleEditor', 'selectCalle']) {
-            const selector = document.getElementById(id);
-            if (selector) { selector.value = ''; selector.dispatchEvent(new Event('change', { bubbles: true })); }
-        }
-        window.calleSeleccionada = null; show(null);
-    });
-    document.addEventListener('street-drawn', event => show(event.detail?.calle));
-    document.getElementById('selectCalle')?.addEventListener('change', () => show(window.calleSeleccionada));
-    document.getElementById('selectCalleEditor')?.addEventListener('change', () => window.setTimeout(() => show(window.calleSeleccionada), 0));
-    const syncSelection = event => {
-        if (inspector.contains(event.target)) return;
-        window.setTimeout(() => show(window.calleSeleccionada), 0);
-    };
-    document.addEventListener('pointerup', syncSelection, true);
-    canvas?.addEventListener('click', syncSelection, true);
-    document.addEventListener('click', event => { if (event.target !== canvas) updateDrawButton(); });
-    updateDrawButton();
+	function updateDrawButton() {
+		const active = Boolean(window.drawStreetTool?.isActive?.());
+		button.setAttribute("aria-pressed", String(active));
+		button.classList.toggle("active", active);
+	}
+	button.addEventListener("click", () => {
+		const tool = window.drawStreetTool;
+		if (!tool) return;
+		if (tool.isActive()) tool.deactivate();
+		else tool.activate();
+		updateDrawButton();
+	});
+	closeButton?.addEventListener("click", () => {
+		for (const id of ["selectCalleEditor", "selectCalle"]) {
+			const selector = document.getElementById(id);
+			if (selector) {
+				selector.value = "";
+				selector.dispatchEvent(new Event("change", { bubbles: true }));
+			}
+		}
+		window.calleSeleccionada = null;
+		show(null);
+	});
+	document.addEventListener("street-drawn", (event) =>
+		show(event.detail?.calle),
+	);
+	document
+		.getElementById("selectCalle")
+		?.addEventListener("change", () => show(window.calleSeleccionada));
+	document
+		.getElementById("selectCalleEditor")
+		?.addEventListener("change", () =>
+			window.setTimeout(() => show(window.calleSeleccionada), 0),
+		);
+	const syncSelection = (event) => {
+		if (inspector.contains(event.target)) return;
+		window.setTimeout(() => show(window.calleSeleccionada), 0);
+	};
+	document.addEventListener("pointerup", syncSelection, true);
+	canvas?.addEventListener("click", syncSelection, true);
+	document.addEventListener("click", (event) => {
+		if (event.target !== canvas) updateDrawButton();
+	});
+	updateDrawButton();
 })();

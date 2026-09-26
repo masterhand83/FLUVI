@@ -1484,7 +1484,7 @@ function dibujarCalles() {
         ctx.save();
         
         // Si la calle tiene curva activa, dibujar con curvas
-        if (calle.esCurva && calle.vertices.length >= 2) {
+        if (calle.esCurva && (calle.bezierControls || (calle.vertices && calle.vertices.length >= 2))) {
             dibujarCalleConCurva(calle);
         } else {
             // Dibujo tradicional (rectilíneo)
@@ -1624,6 +1624,8 @@ function dibujarVertices() {
     ctx.save();
 
     calles.forEach(calle => {
+        // Bezier geometry has no editable legacy vertex overlay.
+        if (calle.bezierControls) return;
         if (calle.tipo !== TIPOS.CONEXION || !calle.vertices || calle.vertices.length === 0) return;
 
         calle.vertices.forEach((vertice, index) => {

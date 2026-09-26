@@ -243,6 +243,9 @@ function detectarVerticeEnPosicion(worldX, worldY) {
 
 // Función para calcular coordenadas de una celda con curvas
 function obtenerCoordenadasGlobalesCeldaConCurva(calle, carril, indice) {
+    if (calle.bezierControls && window.streetBezier) {
+        return window.streetBezier.coordinates(calle, carril, indice);
+    }
     if (!calle.esCurva || !calle.vertices || calle.vertices.length < 2) {
         return obtenerCoordenadasGlobalesCelda(calle, carril, indice);
     }

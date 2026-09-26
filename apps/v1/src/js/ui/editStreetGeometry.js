@@ -1,186 +1,416 @@
-/* Drag editing for the selected straight street. Load after trafico.js and Pixi. */
+/* Selected-street map gestures for straight and Bezier streets. */
 (() => {
-    let canvas = document.getElementById('simuladorCanvas');
-    if (!canvas) return;
-
-    const editor = { gesture: null };
-    const cellSize = () => Number(window.celda_tamano) || 5;
-    const isStraightSelected = () => {
-        const street = window.calleSeleccionada;
-        return street && !street.esCurva && window.calles?.includes(street) ? street : null;
-    };
-    const worldAt = event => {
-        const rect = canvas.getBoundingClientRect();
-        if (window.USE_PIXI && window.pixiApp?.cameraController) {
-            const screen = window.pixiApp.app?.screen;
-            return window.pixiApp.cameraController.screenToWorld(
-                (event.clientX - rect.left) * (screen?.width || rect.width) / rect.width,
-                (event.clientY - rect.top) * (screen?.height || rect.height) / rect.height);
-        }
-        const sx = (event.clientX - rect.left) * canvas.width / rect.width;
-        const sy = (event.clientY - rect.top) * canvas.height / rect.height;
-        const scale = Number(window.escala) || 1;
-        return { x: (sx - (Number(window.offsetX) || 0)) / scale,
-            y: (sy - (Number(window.offsetY) || 0)) / scale };
-    };
-    const geometry = street => ({ x: street.x, y: street.y, angulo: street.angulo, tamano: street.tamano });
-    const endpoints = street => {
-        const length = street.tamano * cellSize();
-        const angle = street.angulo * Math.PI / 180;
-        return [{ x: street.x, y: street.y },
-            { x: street.x + length * Math.cos(angle), y: street.y - length * Math.sin(angle) }];
-    };
-    const distanceToSegment = (point, a, b) => {
-        const dx = b.x - a.x, dy = b.y - a.y;
-        const t = Math.max(0, Math.min(1, ((point.x - a.x) * dx + (point.y - a.y) * dy) / (dx * dx + dy * dy || 1)));
-        return Math.hypot(point.x - (a.x + t * dx), point.y - (a.y + t * dy));
-    };
-    const handles = Object.fromEntries(['start', 'end'].map(end => {
-        const handle = document.createElement('button');
-        handle.type = 'button';
-        handle.className = 'street-endpoint-handle';
-        handle.dataset.end = end;
-        handle.setAttribute('aria-label', end === 'start' ? 'Mover inicio de calle' : 'Mover fin de calle');
-        handle.hidden = true;
-        canvas.parentElement.append(handle);
-        return [end, handle];
-    }));
-
-    function placeHandle(handle, point) {
-        const rect = canvas.getBoundingClientRect();
-        const parentRect = canvas.parentElement.getBoundingClientRect();
-        const camera = window.USE_PIXI && window.pixiApp?.cameraController;
-        const screen = camera ? camera.worldToScreen(point.x, point.y) : {
-            x: point.x * (Number(window.escala) || 1) + (Number(window.offsetX) || 0),
-            y: point.y * (Number(window.escala) || 1) + (Number(window.offsetY) || 0)
-        };
-        const width = camera ? (window.pixiApp.app?.screen?.width || rect.width) : canvas.width;
-        const height = camera ? (window.pixiApp.app?.screen?.height || rect.height) : canvas.height;
-        handle.style.left = `${rect.left - parentRect.left + screen.x * rect.width / width}px`;
-        handle.style.top = `${rect.top - parentRect.top + screen.y * rect.height / height}px`;
-    }
-    function syncHandles() {
-        const current = document.getElementById('simuladorCanvas');
-        if (current) canvas = current; // Pixi replaces the original canvas during initialization.
-        const street = isStraightSelected();
-        const visible = street && !window.drawStreetTool?.isActive?.();
-        const points = visible ? endpoints(street) : [];
-        for (const [index, end] of ['start', 'end'].entries()) {
-            const handle = handles[end];
-            if (handle.parentElement !== canvas.parentElement) canvas.parentElement.append(handle);
-            handle.hidden = !visible;
-            if (visible) placeHandle(handle, points[index]);
-        }
-    }
-    // Selection and both camera implementations change without a common event; follow their
-    // current state so handles also survive Pixi's asynchronous canvas replacement.
-    function followCamera() {
-        syncHandles();
-        requestAnimationFrame(followCamera);
-    }
-    requestAnimationFrame(followCamera);
-
-    function renderStreet(street) {
-        if (window.USE_PIXI) {
-            const renderer = window.pixiApp?.sceneManager?.calleRenderer;
-            renderer?.renderCalleRecta(street);
-            window.pixiApp?.sceneManager?.refreshEtiquetas?.();
-        } else window.renderizarCanvas?.();
-        syncHandles();
-    }
-    function finishGesture(commit) {
-        const gesture = editor.gesture;
-        if (!gesture) return;
-        const { street, before, proposed } = gesture;
-        // The dimension helper must see the original size so it can preserve indexed cells
-        // and vehicles, and prune only references that no longer fit the committed length.
-        Object.assign(street, before);
-        if (commit && valid(proposed)) {
-            if (proposed.tamano !== before.tamano) window.editorCalles?.aplicarNuevasDimensiones(street, proposed.tamano, street.carriles);
-            Object.assign(street, proposed);
-            window.streetInspector?.refresh?.();
-        }
-        renderStreet(street);
-        // Cars, connections and parking links also depend on the committed geometry.
-        if (window.USE_PIXI) window.pixiApp?.sceneManager?.renderAll();
-        canvas.style.cursor = '';
-        editor.gesture = null;
-    }
-    function valid(street) {
-        return [street.x, street.y, street.angulo, street.tamano].every(Number.isFinite) &&
-            Number.isInteger(street.tamano) && street.tamano >= 1;
-    }
-    editor.finishGesture = () => finishGesture(true);
-    window.streetGeometryEditor = editor;
-
-    function hitKind(point, street) {
-        const [start, end] = endpoints(street);
-        const scale = Number(window.escala) || 1;
-        const radius = 12 / scale;
-        if (Math.hypot(point.x - start.x, point.y - start.y) <= radius) return 'start';
-        if (Math.hypot(point.x - end.x, point.y - end.y) <= radius) return 'end';
-        if (distanceToSegment(point, start, end) <= (street.carriles * cellSize() / 2 + 5 / scale)) return 'body';
-        return null;
-    }
-
-    function resizePreview(gesture, point) {
-        const { before, proposed: street } = gesture;
-        const fixed = gesture.kind === 'start' ? endpoints(before)[1] : { x: before.x, y: before.y };
-        const dx = gesture.kind === 'start' ? fixed.x - point.x : point.x - fixed.x;
-        const dy = gesture.kind === 'start' ? fixed.y - point.y : point.y - fixed.y;
-        const length = Math.hypot(dx, dy);
-        if (!Number.isFinite(length) || length < cellSize()) return;
-        street.tamano = Math.max(1, Math.round(length / cellSize()));
-        street.angulo = Math.atan2(-dy, dx) * 180 / Math.PI;
-        if (gesture.kind === 'start') {
-            street.x = fixed.x - Math.cos(street.angulo * Math.PI / 180) * street.tamano * cellSize();
-            street.y = fixed.y + Math.sin(street.angulo * Math.PI / 180) * street.tamano * cellSize();
-        } else { street.x = fixed.x; street.y = fixed.y; }
-    }
-
-    document.addEventListener('pointerdown', event => {
-        canvas = document.getElementById('simuladorCanvas');
-        const end = event.target.closest?.('.street-endpoint-handle')?.dataset.end;
-        if (editor.gesture || event.button !== 0 || (event.target !== canvas && !handles[end]?.isSameNode(event.target)) || window.drawStreetTool?.isActive?.()) return;
-        const street = isStraightSelected();
-        if (!street) return;
-        const point = worldAt(event), kind = end || hitKind(point, street);
-        if (!kind) return;
-
-        // Structural-edit mode must pause even when this gesture is later cancelled.
-        window.streetEditPause?.();
-        editor.gesture = { street, kind, before: geometry(street), proposed: geometry(street), pointerId: event.pointerId, origin: point };
-        event.target.setPointerCapture?.(event.pointerId);
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        canvas.style.cursor = kind === 'body' ? 'grabbing' : 'crosshair';
-    }, true);
-
-    document.addEventListener('pointermove', event => {
-        const g = editor.gesture;
-        if (!g || event.pointerId !== g.pointerId) return;
-        const point = worldAt(event), street = g.proposed, before = g.before;
-        if (g.kind === 'body') {
-            street.x = before.x + point.x - g.origin.x;
-            street.y = before.y + point.y - g.origin.y;
-        } else resizePreview(g, point);
-        Object.assign(g.street, street);
-        renderStreet(g.street);
-        event.preventDefault();
-        event.stopImmediatePropagation();
-    }, true);
-
-    document.addEventListener('pointerup', event => {
-        if (!editor.gesture || event.pointerId !== editor.gesture.pointerId) return;
-        event.preventDefault(); event.stopImmediatePropagation();
-        const rect = canvas.getBoundingClientRect();
-        finishGesture(event.clientX >= rect.left && event.clientX < rect.right && event.clientY >= rect.top && event.clientY < rect.bottom);
-    }, true);
-    document.addEventListener('pointercancel', event => {
-        if (!editor.gesture || event.pointerId !== editor.gesture.pointerId) return;
-        finishGesture(false);
-    }, true);
-    window.addEventListener('keydown', event => {
-        if (event.key === 'Escape' && editor.gesture) { event.preventDefault(); finishGesture(false); }
-    }, true);
+	let canvas = document.getElementById("simuladorCanvas");
+	if (!canvas) return;
+	const editor = { gesture: null, handles: [] };
+	const cellSize = () => Number(window.celda_tamano) || 5;
+	const selected = () => {
+		const s = window.calleSeleccionada;
+		return s && window.calles?.includes(s) && (!s.esCurva || isBezier(s))
+			? s
+			: null;
+	};
+	const isBezier = (s) =>
+		Boolean(
+			s &&
+				(s.bezierGeometry === true ||
+					!(s.esCurva && Array.isArray(s.vertices) && s.vertices.length > 0)) &&
+				Array.isArray(s.bezierControls) &&
+				Number.isFinite(s.endX) &&
+				Number.isFinite(s.endY),
+		);
+	const clone = (s) => ({
+		...s,
+		bezierControls: (s.bezierControls || []).map((p) => ({ ...p })),
+	});
+	const worldAt = (e) => {
+		const r = canvas.getBoundingClientRect();
+		if (window.USE_PIXI && window.pixiApp?.cameraController) {
+			const z = window.pixiApp.app?.screen;
+			return window.pixiApp.cameraController.screenToWorld(
+				((e.clientX - r.left) * (z?.width || r.width)) / r.width,
+				((e.clientY - r.top) * (z?.height || r.height)) / r.height,
+			);
+		}
+		const scale = Number(window.escala) || 1;
+		return {
+			x:
+				(((e.clientX - r.left) * canvas.width) / r.width -
+					(Number(window.offsetX) || 0)) /
+				scale,
+			y:
+				(((e.clientY - r.top) * canvas.height) / r.height -
+					(Number(window.offsetY) || 0)) /
+				scale,
+		};
+	};
+	const endpoint = (s, end) =>
+		end && isBezier(s)
+			? { x: Number(s.endX), y: Number(s.endY) }
+			: { x: Number(s.x), y: Number(s.y) };
+	const straightEnd = (s) => {
+		const a = (s.angulo * Math.PI) / 180,
+			d = s.tamano * cellSize();
+		return { x: s.x + d * Math.cos(a), y: s.y - d * Math.sin(a) };
+	};
+	const endpoints = (s) => [
+		endpoint(s, false),
+		isBezier(s) ? endpoint(s, true) : straightEnd(s),
+	];
+	const curvePoint = (s, t) =>
+		window.streetBezier?.point?.(s, t) || {
+			x: s.x + (s.endX - s.x) * t,
+			y: s.y + (s.endY - s.y) * t,
+		};
+	function render(s) {
+		if (window.USE_PIXI) {
+			const r = window.pixiApp?.sceneManager?.calleRenderer;
+			if (s.esCurva) r?.renderCalleCurva?.(s);
+			else r?.renderCalleRecta?.(s);
+			window.pixiApp?.sceneManager?.refreshEtiquetas?.();
+		} else window.renderizarCanvas?.();
+		sync();
+	}
+	function place(h, p) {
+		const r = canvas.getBoundingClientRect(),
+			pr = canvas.parentElement.getBoundingClientRect(),
+			cam = window.USE_PIXI && window.pixiApp?.cameraController;
+		const q = cam
+			? cam.worldToScreen(p.x, p.y)
+			: {
+					x: p.x * (Number(window.escala) || 1) + (Number(window.offsetX) || 0),
+					y: p.y * (Number(window.escala) || 1) + (Number(window.offsetY) || 0),
+				};
+		const z = cam ? window.pixiApp.app?.screen : null;
+		h.style.left = `${r.left - pr.left + (q.x * r.width) / (z?.width || canvas.width)}px`;
+		h.style.top = `${r.top - pr.top + (q.y * r.height) / (z?.height || canvas.height)}px`;
+	}
+	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Handle synchronization deliberately keeps DOM and camera updates together.
+	function sync() {
+		canvas = document.getElementById("simuladorCanvas") || canvas;
+		const s = selected();
+		const items =
+			s && !window.drawStreetTool?.isActive?.()
+				? [
+						...endpoints(s).map((p, i) => ({ kind: i ? "end" : "start", p })),
+						...(isBezier(s)
+							? (s.bezierControls || []).map((p, i) => ({
+									kind: `control:${i}`,
+									p,
+								}))
+							: []),
+					]
+				: [];
+		while (editor.handles.length < items.length) {
+			const h = document.createElement("button");
+			h.type = "button";
+			h.className = "street-endpoint-handle";
+			canvas.parentElement.append(h);
+			editor.handles.push(h);
+		}
+		// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Applies independent visibility and placement state per handle.
+		editor.handles.forEach((h, i) => {
+			const item = items[i];
+			h.hidden = !item;
+			if (item) {
+				h.dataset.kind = item.kind;
+				if (item.kind === "start" || item.kind === "end") h.dataset.end = item.kind;
+				else delete h.dataset.end;
+				h.classList.toggle(
+					"selected",
+					item.kind ===
+						`control:${window.streetInspector?.getSelectedControlIndex?.()}`,
+				);
+				h.setAttribute(
+					"aria-label",
+					item.kind.startsWith("control")
+						? `Mover ${item.kind}`
+						: `Mover ${item.kind === "start" ? "inicio" : "fin"} de calle`,
+				);
+				if (h.parentElement !== canvas.parentElement)
+					canvas.parentElement.append(h);
+				place(h, item.p);
+			}
+		});
+	}
+	const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Hit testing checks endpoint, control, then shape priority.
+	function hit(p, s) {
+		const ends = endpoints(s),
+			r = 14 / (Number(window.escala) || 1);
+		if (dist(p, ends[0]) < r) return "start";
+		if (dist(p, ends[1]) < r) return "end";
+		for (let i = 0; i < (s.bezierControls || []).length; i++)
+			if (dist(p, s.bezierControls[i]) < r) return `control:${i}`;
+		if (isBezier(s)) {
+			for (let i = 0; i < 30; i++)
+				if (
+					dist(p, curvePoint(s, i / 30)) <
+					Math.max(
+						12 / (Number(window.escala) || 1),
+						(s.carriles * cellSize()) / 2,
+					)
+				)
+					return "body";
+		} else {
+			const d = ends[1],
+				dx = d.x - ends[0].x,
+				dy = d.y - ends[0].y,
+				t = Math.max(
+					0,
+					Math.min(
+						1,
+						((p.x - ends[0].x) * dx + (p.y - ends[0].y) * dy) /
+							(dx * dx + dy * dy || 1),
+					),
+				);
+			if (
+				dist(p, { x: ends[0].x + t * dx, y: ends[0].y + t * dy }) <
+				(s.carriles * cellSize()) / 2 + 8
+			)
+				return "body";
+		}
+		return null;
+	}
+	function validate(s) {
+		const result = isBezier(s) ? window.streetBezier?.validate?.(s) : null;
+		return (
+			result || {
+				valid:
+					[s.x, s.y, s.angulo, s.tamano].every(Number.isFinite) &&
+					Number.isInteger(s.tamano) &&
+					s.tamano >= 1,
+				cells: s.tamano,
+			}
+		);
+	}
+	function setInvalidPreview(invalid, reason) {
+		canvas.classList.toggle("street-geometry-invalid", invalid);
+		window.streetInspector?.setGeometryError?.(
+			invalid
+				? `Geometría inválida${reason ? `: ${reason}` : ""}. Se revertirá al soltar.`
+				: "",
+		);
+	}
+	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Gesture finalization restores before applying a single validated commit.
+	function finish(commit) {
+		const g = editor.gesture;
+		if (!g) return;
+		Object.assign(g.street, g.before);
+		const result = validate(g.proposed);
+		if (commit && result.valid) {
+			g.proposed.tamano = result.cells;
+			if (g.proposed.tamano !== g.before.tamano)
+				window.editorCalles?.aplicarNuevasDimensiones?.(
+					g.street,
+					g.proposed.tamano,
+					g.street.carriles,
+				);
+			for (const key of [
+				"x",
+				"y",
+				"angulo",
+				"tamano",
+				"endX",
+				"endY",
+				"bezierControls",
+			])
+				if (key in g.proposed) g.street[key] = g.proposed[key];
+			window.streetInspector?.refresh?.();
+		}
+		render(g.street);
+		if (window.USE_PIXI) window.pixiApp?.sceneManager?.renderAll();
+		canvas.style.cursor = "";
+		setInvalidPreview(false);
+		editor.gesture = null;
+	}
+	editor.finishGesture = () => finish(true);
+	editor.refresh = sync;
+	editor.selectControl = (index) =>
+		window.streetInspector?.selectControl?.(index);
+	editor.setInvalidPreview = setInvalidPreview;
+	window.streetGeometryEditor = editor;
+	function follow() {
+		sync();
+		requestAnimationFrame(follow);
+	}
+	requestAnimationFrame(follow);
+	document.addEventListener(
+		"pointerdown",
+		(e) => {
+			canvas = document.getElementById("simuladorCanvas") || canvas;
+			const s = selected();
+			if (
+				editor.gesture ||
+				e.button !== 0 ||
+				window.drawStreetTool?.isActive?.() ||
+				!s
+			)
+				return;
+			const kind =
+				e.target.closest?.(".street-endpoint-handle")?.dataset.kind ||
+				hit(worldAt(e), s);
+			if (
+				!kind ||
+				(e.target !== canvas && !e.target.closest?.(".street-endpoint-handle"))
+			)
+				return;
+			window.streetEditPause?.();
+			if (kind.startsWith("control:"))
+				window.streetInspector?.selectControl?.(Number(kind.split(":")[1]));
+			const p = worldAt(e);
+			editor.gesture = {
+				street: s,
+				before: clone(s),
+				proposed: clone(s),
+				kind,
+				origin: p,
+				pointerId: e.pointerId,
+			};
+			e.preventDefault();
+			e.stopImmediatePropagation();
+		},
+		true,
+	);
+	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: One gesture state machine keeps preview transforms atomic.
+	document.addEventListener(
+		"pointermove",
+		// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: One gesture state machine keeps preview transforms atomic.
+		(e) => {
+			const g = editor.gesture;
+			if (!g || e.pointerId !== g.pointerId) return;
+			const p = worldAt(e),
+				s = g.proposed,
+				b = g.before,
+				dx = p.x - g.origin.x,
+				dy = p.y - g.origin.y;
+			if (g.kind === "body") {
+				if (e.shiftKey) {
+					const center = {
+							x: (endpoints(b)[0].x + endpoints(b)[1].x) / 2,
+							y: (endpoints(b)[0].y + endpoints(b)[1].y) / 2,
+						},
+						a0 = Math.atan2(g.origin.y - center.y, g.origin.x - center.x),
+						a1 = Math.atan2(p.y - center.y, p.x - center.x),
+						a = a1 - a0,
+						rot = (q) => ({
+							x:
+								center.x +
+								(q.x - center.x) * Math.cos(a) -
+								(q.y - center.y) * Math.sin(a),
+							y:
+								center.y +
+								(q.x - center.x) * Math.sin(a) +
+								(q.y - center.y) * Math.cos(a),
+						});
+					if (isBezier(s)) {
+						const st = rot({ x: b.x, y: b.y }),
+							en = rot({ x: b.endX, y: b.endY });
+						s.x = st.x;
+						s.y = st.y;
+						s.endX = en.x;
+						s.endY = en.y;
+						s.angulo = b.angulo - (a * 180) / Math.PI;
+						s.bezierControls = b.bezierControls.map(rot);
+					} else {
+						s.x = b.x;
+						s.y = b.y;
+						s.angulo = b.angulo - (a * 180) / Math.PI;
+					}
+				} else {
+					s.x = b.x + dx;
+					s.y = b.y + dy;
+					if (isBezier(s)) {
+						s.endX = b.endX + dx;
+						s.endY = b.endY + dy;
+						s.bezierControls = b.bezierControls.map((c) => ({
+							x: c.x + dx,
+							y: c.y + dy,
+						}));
+					}
+				}
+			} else if (g.kind.startsWith("control:")) {
+				const i = Number(g.kind.split(":")[1]);
+				s.bezierControls[i] = { x: p.x, y: p.y };
+			} else if (!isBezier(s)) {
+				const fixed = g.kind === "start" ? straightEnd(b) : { x: b.x, y: b.y },
+					vx = g.kind === "start" ? fixed.x - p.x : p.x - fixed.x,
+					vy = g.kind === "start" ? fixed.y - p.y : p.y - fixed.y,
+					len = Math.hypot(vx, vy);
+				if (len >= cellSize()) {
+					s.tamano = Math.max(1, Math.round(len / cellSize()));
+					s.angulo = (Math.atan2(-vy, vx) * 180) / Math.PI;
+					s.x =
+						g.kind === "start"
+							? fixed.x -
+								Math.cos((s.angulo * Math.PI) / 180) * s.tamano * cellSize()
+							: fixed.x;
+					s.y =
+						g.kind === "start"
+							? fixed.y +
+								Math.sin((s.angulo * Math.PI) / 180) * s.tamano * cellSize()
+							: fixed.y;
+				}
+			} else {
+				const fixed =
+						g.kind === "start" ? endpoint(b, true) : endpoint(b, false),
+					moving = { x: p.x, y: p.y };
+				if (g.kind === "start") {
+					s.x = p.x;
+					s.y = p.y;
+				} else {
+					s.endX = p.x;
+					s.endY = p.y;
+				}
+				const old = endpoint(b, g.kind === "end"),
+					ratio = dist(fixed, moving) / (dist(fixed, old) || 1);
+				s.bezierControls = b.bezierControls.map((c) => ({
+					x: fixed.x + (c.x - fixed.x) * ratio,
+					y: fixed.y + (c.y - fixed.y) * ratio,
+				}));
+			}
+			const result = validate(s);
+			setInvalidPreview(!result.valid, result.reason);
+			if (result.valid) s.tamano = result.cells;
+			Object.assign(g.street, s);
+			render(g.street);
+			e.preventDefault();
+			e.stopImmediatePropagation();
+		},
+		true,
+	);
+	document.addEventListener(
+		"pointerup",
+		(e) => {
+			const g = editor.gesture;
+			if (!g || e.pointerId !== g.pointerId) return;
+			e.preventDefault();
+			e.stopImmediatePropagation();
+			const r = canvas.getBoundingClientRect();
+			finish(
+				e.clientX >= r.left &&
+					e.clientX < r.right &&
+					e.clientY >= r.top &&
+					e.clientY < r.bottom,
+			);
+		},
+		true,
+	);
+	document.addEventListener(
+		"pointercancel",
+		(e) => {
+			if (editor.gesture?.pointerId === e.pointerId) finish(false);
+		},
+		true,
+	);
+	window.addEventListener(
+		"keydown",
+		(e) => {
+			if (e.key === "Escape" && editor.gesture) {
+				e.preventDefault();
+				finish(false);
+			}
+		},
+		true,
+	);
 })();
