@@ -737,12 +737,6 @@ class EditorCalles {
         console.log(`   Anterior: ${calle.tamano}x${calle.carriles}`);
         console.log(`   Nuevo: ${nuevoTamano}x${nuevosCarriles}`);
 
-        // Guardar configuración actual
-        const configuracionAnterior = {
-            tamano: calle.tamano,
-            carriles: calle.carriles
-        };
-
         // Preserve the existing lane/cell state wherever it still fits.
         const arregloAnterior = calle.arreglo || [];
         const esperandoAnterior = calle.celulasEsperando || [];
@@ -874,8 +868,6 @@ class EditorCalles {
         if (window.renderizarCanvas) {
             window.renderizarCanvas();
         }
-
-        alert(`✅ Dimensiones aplicadas correctamente:\n\nCalle: ${calle.nombre}\nTamaño: ${configuracionAnterior.tamano} → ${nuevoTamano} celdas\nCarriles: ${configuracionAnterior.carriles} → ${nuevosCarriles} carriles\n\n⚠️ Vehículos existentes eliminados\n📊 Conexiones inválidas eliminadas`);
 
         console.log(`✅ Calle redimensionada exitosamente`);
     }
@@ -1039,9 +1031,9 @@ class EditorCalles {
             });
         }
         
+        const editedBuilding = this.tipoObjetoEditando === 'edificio';
         this.salirModoEdicion();
-        
-        alert('✅ Cambios guardados correctamente');
+        if (editedBuilding) alert('✅ Cambios guardados correctamente');
     }
     
     cancelarEdicion() {

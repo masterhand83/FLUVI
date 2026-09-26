@@ -399,20 +399,6 @@ function mostrarDialogoNuevaCalle() {
         // Agregar calle
         agregarCalle(nombre, tamano, tipo, x, y, angulo, probGenDecimal, carriles, probSaltoDecimal);
 
-        // Construir mensaje de notificación
-        let mensajeNotificacion = `La calle "${nombre}" se ha creado exitosamente con:\n` +
-            `• Tamaño: ${tamano} celdas\n` +
-            `• Carriles: ${carriles}\n` +
-            `• Tipo: ${tipo}`;
-
-        // Solo mostrar probabilidad de generación si es tipo GENERADOR
-        if (tipo === 'GENERADOR') {
-            mensajeNotificacion += `\n• Prob. Generación: ${probGen}%`;
-        }
-
-        // Mostrar notificación de éxito
-        mostrarNotificacion('success', 'Calle Creada', mensajeNotificacion);
-
         // Cerrar modal
         modal.hide();
 
@@ -621,11 +607,6 @@ function agregarCalle(nombre, tamano, tipo, x, y, angulo, probabilidadGeneracion
         }
 
         console.log(`✅ Calle "${nombre}" agregada a la simulación`);
-
-        // Solo mostrar alerta si no es silencioso (para evitar alertas múltiples al cargar archivo)
-        if (!silencioso) {
-            alert(`Calle "${nombre}" agregada exitosamente`);
-        }
 
         return true;
     } else {
@@ -2119,7 +2100,6 @@ function eliminarObjetoSeleccionado() {
             }
 
             console.log(`🗑️ Calle "${calle.nombre}" eliminada`);
-            alert("Calle eliminada exitosamente");
         }
     } else if (edificio) {
         const confirmacion = confirm(`¿Eliminar el edificio "${edificio.label}"?`);

@@ -96,6 +96,10 @@ for (const usePixi of [false, true]) {
 		if (usePixi) await page.waitForFunction(() => !!window.pixiApp?.cameraController, { timeout: 30000 })
 		await page.evaluate(() => window.hideLoadingScreen?.())
 		await selectStraightCalle(page)
+		await page.evaluate(() => {
+			window.__calleEditAlerts = []
+			window.alert = message => window.__calleEditAlerts.push(message)
+		})
 		let before = await snapshot(page)
 		attached(before, "selected straight Calle")
 		await page.mouse.move((before.handles[0].x + before.handles[1].x) / 2, before.handles[0].y - 30)
@@ -116,6 +120,8 @@ for (const usePixi of [false, true]) {
 		after = await dragHandle(page, "end", 35, 12)
 		attached(after, "end drag")
 		assert.notDeepEqual(after.geometry, before.geometry, "end drag edits Calle geometry")
+		assert.deepEqual(await page.evaluate(() => window.__calleEditAlerts), [], "resizing a Calle does not show a success notification")
+		assert.equal(await page.evaluate(() => document.querySelectorAll('.toast.show').length), 0, "resizing a Calle does not show a toast")
 		near(after.endpoints.start.x, before.endpoints.start.x, "end drag anchors start x", 4)
 		near(after.endpoints.start.y, before.endpoints.start.y, "end drag anchors start y", 4)
 
