@@ -39,7 +39,18 @@
         updateDrawButton();
     });
 
-    closeButton?.addEventListener('click', () => { inspector.hidden = true; });
+    closeButton?.addEventListener('click', () => {
+        // Clear both selectors through their existing change handlers: the editor
+        // removes Pixi borders and the configuration handler clears Canvas state.
+        for (const id of ['selectCalleEditor', 'selectCalle']) {
+            const selector = document.getElementById(id);
+            if (!selector) continue;
+            selector.value = '';
+            selector.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        window.calleSeleccionada = null;
+        setStreet(null);
+    });
     document.addEventListener('street-drawn', (event) => setStreet(event.detail?.calle));
     document.getElementById('selectCalle')?.addEventListener('change', () => setStreet(window.calleSeleccionada));
     document.getElementById('selectCalleEditor')?.addEventListener('change', syncSelectionFromSelector);
@@ -50,10 +61,13 @@
 
     // Canvas selection handlers update window.calleSeleccionada during pointer events.
     // Defer reading until those handlers (including Pixi's) have completed.
-    const syncSelection = () => window.setTimeout(() => {
-        if (window.calleSeleccionada) setStreet(window.calleSeleccionada);
-        else setStreet(null);
-    }, 0);
+    const syncSelection = (event) => {
+        if (inspector.contains(event.target)) return;
+        window.setTimeout(() => {
+            if (window.calleSeleccionada) setStreet(window.calleSeleccionada);
+            else setStreet(null);
+        }, 0);
+    };
     document.addEventListener('pointerup', syncSelection, true);
     canvas?.addEventListener('click', syncSelection, true);
 

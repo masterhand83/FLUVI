@@ -103,6 +103,13 @@ for (const usePixi of [false, true]) {
 		assert.equal(Number(inspector.cells), result.geometry.tamano, "inspector shows its cell count")
 		assert.equal(Number(inspector.lanes), result.geometry.carriles, "inspector shows its lane count")
 		assert.equal(inspector.type, result.defaults.tipo, "inspector shows its type")
+		assert.ok(await page.evaluate(() => window.calleSeleccionada?.nombre), 'street is selected before closing the inspector')
+		await page.click('#streetInspectorClose')
+		await new Promise(resolve => setTimeout(resolve, 50))
+		assert.equal(await page.$eval('#streetInspector', el => el.hidden), true, 'close button keeps inspector closed')
+		assert.equal(await page.evaluate(() => window.calleSeleccionada?.nombre ?? null), null, 'closing the inspector deselects the street')
+		assert.deepEqual(await page.evaluate(() => [document.getElementById('selectCalle').value, document.getElementById('selectCalleEditor').value]), ['', ''], 'close clears both street selectors')
+		if (usePixi) assert.equal(await page.evaluate(() => [...window.pixiApp.sceneManager.calleSprites.values()].some(sprite => sprite.getChildByName('selectionBorder'))), false, 'close clears Pixi selection outline')
 		const existing = await page.evaluate(() => {
 			const calle = window.calles[0]
 			const wasPaused = window.isPaused
