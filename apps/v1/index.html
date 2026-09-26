@@ -27,6 +27,7 @@
   <link rel="stylesheet" href="src/css/estilos.css">
   <link rel="stylesheet" href="src/css/minimapa.css">
   <link rel="stylesheet" href="src/css/reference-image-editor.css">
+  <link rel="stylesheet" href="src/css/create-link.css">
 
   <!-- Script para aplicar modo oscuro ANTES de renderizar -->
   <script src="src/js/ui/darkMode.js"></script>
@@ -2305,6 +2306,22 @@
 
           <button type="button" id="drawStreetButton" class="btn btn-outline-primary btn-sm" data-bs-toggle="tooltip" data-bs-title="Dibujar una calle">✏️ Calle</button>
 
+          <div class="create-link-anchor">
+            <button type="button" id="createLinkButton" class="btn btn-outline-primary btn-sm">🔗 Crear enlace</button>
+            <section id="linkDraftPanel" class="create-link-panel" hidden aria-hidden="true" aria-label="Revisar enlace entre calles">
+              <p id="linkDraftStatus" class="small mb-2">Elige la calle de origen en el mapa.</p>
+              <div class="mb-2"><label class="form-label" for="linkSourceStreet">Origen</label><select id="linkSourceStreet" class="form-select form-select-sm"></select></div>
+              <div class="mb-2"><label class="form-label" for="linkDestinationStreet">Destino</label><select id="linkDestinationStreet" class="form-select form-select-sm"></select></div>
+              <button type="button" id="linkDirectionReverse" class="btn btn-outline-secondary btn-sm mb-2">↔ Invertir dirección</button>
+              <p class="small mb-1">Tipo: Lineal. Las calles pueden estar a cualquier distancia.</p>
+              <div id="linkMappingRows" class="create-link-rows"></div>
+              <div id="linkDraftNotice" role="status" class="small text-info mt-2"></div>
+              <div id="linkDraftNotice" role="status" class="small text-info mt-2"></div>
+              <div id="linkDraftMessage" role="alert" class="small text-danger mt-2"></div>
+              <div class="d-flex gap-2 mt-2"><button type="button" id="linkSaveButton" class="btn btn-primary btn-sm">Guardar enlace</button><button type="button" id="linkCancelButton" class="btn btn-outline-secondary btn-sm">Cancelar</button></div>
+            </section>
+          </div>
+
           <!-- Grupo de acciones -->
           <div class="btn-group">
             <button type="button" id="btnRandom" class="btn btn-warning btn-sm" data-bs-toggle="tooltip" data-bs-title="Llenar las calles con vehículos aleatorios">🎲</button>
@@ -2382,6 +2399,7 @@
   <script src="src/js/ui/drawStreet.js"></script>
   <script src="src/js/ui/streetInspector.js"></script>
   <script src="src/js/ui/editStreetGeometry.js"></script>
+  <script src="src/js/ui/createLink.js"></script>
   <script src="src/js/ui/referenceImageEditor.js"></script>
 
   <!-- Bootstrap JS local (incluye Popper) -->
