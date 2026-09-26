@@ -62,7 +62,7 @@ for (const usePixi of [false, true]) {
 		await page.mouse.move(point.x, point.y)
 		await page.mouse.down()
 		await page.mouse.move(point.x + 25, point.y + 15, { steps: 4 })
-		assert.equal(await page.evaluate((x) => window.calleSeleccionada.x === x, originalX), true, "drag preview does not mutate model")
+		assert.notEqual(await page.evaluate(() => window.calleSeleccionada.x), originalX, "the Calle itself moves during drag")
 		await page.keyboard.press("Escape")
 		await page.mouse.up()
 		assert.equal(await page.evaluate(() => window.calleSeleccionada.x), originalX, "Escape restores geometry")
