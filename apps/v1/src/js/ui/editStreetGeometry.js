@@ -50,14 +50,7 @@
                 y: (point.y * window.escala + window.offsetY) * rect.height / canvas.height });
         const a = toScreen(start), b = toScreen(end);
         for (const [key, value] of Object.entries({ x1: a.x, y1: a.y, x2: b.x, y2: b.y })) line.setAttribute(key, value);
-        line.setAttribute('stroke-width', editor.gesture.street.carriles * cellSize() * window.escala *
-            (window.USE_PIXI ? 1 : rect.width / canvas.width));
         preview.hidden = false;
-    }
-    function followCamera() {
-        if (!editor.gesture) return;
-        showPreview(editor.gesture.proposed);
-        requestAnimationFrame(followCamera);
     }
     function finishGesture(commit) {
         const gesture = editor.gesture;
@@ -117,7 +110,6 @@
         // Structural-edit mode must pause even when this gesture is later cancelled.
         window.streetEditPause?.();
         editor.gesture = { street, kind, before: geometry(street), proposed: geometry(street), pointerId: event.pointerId, origin: point };
-        requestAnimationFrame(followCamera);
         canvas.setPointerCapture?.(event.pointerId);
         event.preventDefault();
         event.stopImmediatePropagation();

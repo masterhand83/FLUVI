@@ -8,7 +8,6 @@
     let cueTimer = null;
     let originalCursor = '';
     let lastPointerEvent = null;
-    let lastPoint = null;
     let suppressClick = false;
     const cellSize = () => window.celda_tamano || 5;
 
@@ -34,28 +33,17 @@
         start = null;
         pointerId = null;
         lastPointerEvent = null;
-        lastPoint = null;
         if (preview) preview.hidden = true;
     }
 
-    function showPreview() {
-        if (!preview || !start || !lastPoint) return;
+    function showPreview(event) {
+        if (!preview) return;
         const rect = view.getBoundingClientRect();
-        const camera = window.USE_PIXI && window.pixiApp?.cameraController;
-        const screen = point => camera ? camera.worldToScreen(point.x, point.y) : {
-            x: (point.x * window.escala + window.offsetX) * rect.width / view.width,
-            y: (point.y * window.escala + window.offsetY) * rect.height / view.height
-        };
-        const a = screen(start), b = screen(lastPoint);
-        for (const [key, value] of Object.entries({ x1: a.x, y1: a.y, x2: b.x, y2: b.y })) preview.setAttribute(key, value);
-        preview.setAttribute('stroke-width', cellSize() * window.escala * (camera ? 1 : rect.width / view.width));
+        preview.setAttribute('x1', start.clientX - rect.left);
+        preview.setAttribute('y1', start.clientY - rect.top);
+        preview.setAttribute('x2', event.clientX - rect.left);
+        preview.setAttribute('y2', event.clientY - rect.top);
         preview.hidden = false;
-    }
-
-    function followCamera() {
-        if (!start) return;
-        showPreview();
-        requestAnimationFrame(followCamera);
     }
 
     function retryCue() {
@@ -103,17 +91,14 @@
         start = { ...point, clientX: event.clientX, clientY: event.clientY };
         pointerId = event.pointerId;
         lastPointerEvent = event;
-        lastPoint = point;
         view.setPointerCapture?.(pointerId);
-        showPreview();
-        requestAnimationFrame(followCamera);
+        showPreview(event);
     }
 
     function onMove(event) {
         if (start && event.pointerId === pointerId) {
             lastPointerEvent = event;
-            lastPoint = worldPoint(event);
-            showPreview();
+            showPreview(event);
         }
     }
 
@@ -124,8 +109,7 @@
         event.stopImmediatePropagation();
         const origin = start;
         const validRelease = inside(event);
-        const end = lastPointerEvent && event.clientX === lastPointerEvent.clientX && event.clientY === lastPointerEvent.clientY
-            ? lastPoint : worldPoint(event);
+        const end = worldPoint(event);
         clearGesture();
         if (!validRelease) return;
         const dx = end.x - origin.x;
