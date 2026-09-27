@@ -418,10 +418,6 @@ function poblarSelectoresCalles(parId) {
         selectSalida.appendChild(optionSalida);
     });
 
-    window.streetListUI.makeSearchable(selectEntrada);
-    window.streetListUI.refreshSearch(selectEntrada);
-    window.streetListUI.makeSearchable(selectSalida);
-    window.streetListUI.refreshSearch(selectSalida);
 }
 
 /**

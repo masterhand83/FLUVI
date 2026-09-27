@@ -825,8 +825,6 @@ function mostrarDialogoNuevaConexion() {
 
     // Mantener los índices originales al ordenar por nombre.
     const callesConIndices = window.streetListUI.sortedEntries(window.calles).map(({ street: calle, index }) => ({ calle, index }));
-    window.streetListUI.makeSearchable(selectOrigen);
-    window.streetListUI.makeSearchable(selectDestino);
 
     // Poblar selectores con calles ordenadas
     callesConIndices.forEach(item => {
@@ -840,8 +838,6 @@ function mostrarDialogoNuevaConexion() {
         optionDestino.textContent = `${item.index}: ${item.calle.nombre}`;
         selectDestino.appendChild(optionDestino);
     });
-    window.streetListUI.refreshSearch(selectOrigen);
-    window.streetListUI.refreshSearch(selectDestino);
 
     // Mostrar el modal
     const modalElement = document.getElementById('modalNuevaConexion');
@@ -1920,14 +1916,12 @@ function actualizarSelectorCalles() {
         }
 
         // Agregar todas las calles
-        window.streetListUI.makeSearchable(selectCalle);
         window.streetListUI.sortedEntries(window.calles).forEach(({ street: calle, index }) => {
             const option = document.createElement('option');
             option.value = index;
             option.textContent = calle.nombre;
             selectCalle.appendChild(option);
         });
-        window.streetListUI.refreshSearch(selectCalle);
     }
 
     // Actualizar selector en Constructor de Mapas
@@ -1938,14 +1932,12 @@ function actualizarSelectorCalles() {
         }
 
         // Agregar todas las calles
-        window.streetListUI.makeSearchable(selectCalleEditor);
         window.streetListUI.sortedEntries(window.calles).forEach(({ street: calle, index }) => {
             const option = document.createElement('option');
             option.value = index;
             option.textContent = calle.nombre;
             selectCalleEditor.appendChild(option);
         });
-        window.streetListUI.refreshSearch(selectCalleEditor);
     }
 }
 

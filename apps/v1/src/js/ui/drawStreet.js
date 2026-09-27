@@ -67,7 +67,6 @@
         for (const id of ['selectCalle', 'selectCalleEditor']) {
             const selector = document.getElementById(id);
             if (!selector) continue;
-            window.streetListUI.makeSearchable(selector);
             if (!Array.from(selector.options).some(option => option.value === String(index))) {
                 selector.innerHTML = '<option value="">Selecciona una calle</option>';
                 window.streetListUI.sortedEntries(window.calles).forEach(({ street, index: streetIndex }) => {
@@ -75,7 +74,6 @@
                 });
             }
             selector.value = String(index);
-            window.streetListUI.refreshSearch(selector);
         }
         document.getElementById('selectCalle')?.dispatchEvent(new Event('change', { bubbles: true }));
         window.calleSeleccionada = calle;

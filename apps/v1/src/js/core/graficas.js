@@ -1472,25 +1472,6 @@ function actualizarListaCallesEnModal() {
     const container = document.getElementById('listaCallesMetricas');
     if (!container || !window.calles) return;
 
-    // Add a local search control without requiring a change to the modal markup.
-    let search = document.getElementById('buscarCallesMetricas');
-    if (!search) {
-        search = document.createElement('input');
-        search.id = 'buscarCallesMetricas';
-        search.type = 'search';
-        search.className = 'form-control form-control-sm mb-2';
-        search.placeholder = 'Buscar calle...';
-        search.setAttribute('aria-label', 'Buscar calle');
-        container.parentNode.insertBefore(search, container);
-        search.addEventListener('input', () => {
-            const normalize = value => value.toLocaleLowerCase('es').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-            const query = normalize(search.value.trim());
-            container.querySelectorAll('.form-check').forEach((row) => {
-                row.hidden = !normalize(row.dataset.streetName).includes(query);
-            });
-        });
-    }
-
     // Limpiar contenido actual
     container.innerHTML = '';
 
@@ -1500,7 +1481,6 @@ function actualizarListaCallesEnModal() {
 
         const div = document.createElement('div');
         div.className = 'form-check';
-        div.dataset.streetName = calle.nombre || `Calle ${idx + 1}`;
         div.innerHTML = `
             <input class="form-check-input" type="checkbox" id="calleMetrica${idx}"
                    data-calle-idx="${idx}" ${isIncluded ? 'checked' : ''}>
@@ -1541,9 +1521,6 @@ function actualizarListaCallesEnModal() {
 
         container.appendChild(div);
     });
-
-    // Re-rendering the checklist keeps the current search applied.
-    search.dispatchEvent(new Event('input'));
 
     actualizarContadorCallesIncluidas();
 }
