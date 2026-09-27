@@ -81,24 +81,28 @@ class EditorCalles {
         // Poblar selector de calles en configuración
         if (this.selectCalle && window.calles) {
             this.selectCalle.innerHTML = '<option value="">Selecciona una calle</option>';
-            window.calles.forEach((calle, index) => {
+            window.streetListUI.makeSearchable(this.selectCalle);
+            window.streetListUI.sortedEntries(window.calles).forEach(({ street: calle, index }) => {
                 const option = document.createElement('option');
                 option.value = index;
                 option.textContent = calle.nombre || `Calle ${index + 1}`;
                 this.selectCalle.appendChild(option);
             });
+            window.streetListUI.refreshSearch(this.selectCalle);
             console.log(`✅ ${window.calles.length} calles agregadas al selector de configuración`);
         }
 
         // Poblar selector de calles en editor (constructor)
         if (this.selectCalleEditor && window.calles) {
             this.selectCalleEditor.innerHTML = '<option value="">Selecciona una calle</option>';
-            window.calles.forEach((calle, index) => {
+            window.streetListUI.makeSearchable(this.selectCalleEditor);
+            window.streetListUI.sortedEntries(window.calles).forEach(({ street: calle, index }) => {
                 const option = document.createElement('option');
                 option.value = index;
                 option.textContent = calle.nombre || `Calle ${index + 1}`;
                 this.selectCalleEditor.appendChild(option);
             });
+            window.streetListUI.refreshSearch(this.selectCalleEditor);
             console.log(`✅ ${window.calles.length} calles agregadas al selector del editor`);
         }
 

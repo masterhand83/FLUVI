@@ -406,7 +406,7 @@ function poblarSelectoresCalles(parId) {
 
     if (!selectEntrada || !selectSalida || !window.calles) return;
 
-    window.calles.forEach(calle => {
+    window.streetListUI.sortedEntries(window.calles).forEach(({ street: calle }) => {
         const optionEntrada = document.createElement('option');
         optionEntrada.value = calle.id || calle.nombre;
         optionEntrada.textContent = `${calle.nombre} (${calle.carriles} carriles, ${calle.tamano} celdas)`;
@@ -417,6 +417,11 @@ function poblarSelectoresCalles(parId) {
         optionSalida.textContent = `${calle.nombre} (${calle.carriles} carriles, ${calle.tamano} celdas)`;
         selectSalida.appendChild(optionSalida);
     });
+
+    window.streetListUI.makeSearchable(selectEntrada);
+    window.streetListUI.refreshSearch(selectEntrada);
+    window.streetListUI.makeSearchable(selectSalida);
+    window.streetListUI.refreshSearch(selectSalida);
 }
 
 /**

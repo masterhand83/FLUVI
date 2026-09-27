@@ -41,7 +41,9 @@
 	function renderSelectors() {
 		for (const [select, picked] of [[sourceSelect, draft?.source], [destinationSelect, draft?.destination]]) {
 			select.replaceChildren(new Option("Selecciona una calle", ""));
-			for (const street of streets()) select.add(new Option(name(street), street.id));
+			for (const { street } of window.streetListUI.sortedEntries(streets())) select.add(new Option(name(street), street.id));
+			window.streetListUI.makeSearchable(select);
+			window.streetListUI.refreshSearch(select);
 			select.value = picked?.id || "";
 		}
 	}
