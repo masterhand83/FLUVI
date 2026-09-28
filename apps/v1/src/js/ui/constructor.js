@@ -2487,6 +2487,12 @@ function limpiarSimulacionActual() {
         window.edificios.length = 0;
     }
 
+    // Las áreas de fondo pertenecen al mapa anterior. Conservar el arreglo
+    // compartido, pero quitar sus zonas antes de cualquier renderizado.
+    if (window.backgroundAreas) {
+        window.backgroundAreas.length = 0;
+    }
+
     // Limpiar selección
     window.calleSeleccionada = null;
     window.edificioSeleccionado = null;
