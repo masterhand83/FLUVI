@@ -33,13 +33,13 @@ it("sorts street choices without changing street indexes or the simulation order
 			expected: sorted.map(({ index }) => String(index)),
 			main: values(selected),
 			editor: values(editor),
-			searchInputs: document.querySelectorAll('input[type="search"]').length,
+			streetSelectSearches: [selected, editor].some((select) => select.nextElementSibling?.type === "search"),
 		}
 	})
 	expect(result.sourceUnchanged).toBe(true)
 	expect(result.main).toEqual(result.expected)
 	expect(result.editor).toEqual(result.expected)
-	expect(result.searchInputs).toBe(0)
+	expect(result.streetSelectSearches).toBe(false)
 }, 180000)
 
 it("sorts map-first connection and parking street choices", async () => {

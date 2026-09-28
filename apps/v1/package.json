@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "vitest run",
-    "test:smoke": "node tests/smoke/smoke.mjs && node tests/smoke/reference-image-lock.mjs && node tests/smoke/linked-reference-image.mjs && node tests/smoke/draw-street.mjs && node tests/smoke/diagonal-street.mjs && node tests/smoke/street-edit.mjs && node tests/smoke/street-handles.mjs && node tests/smoke/curve-street.mjs && node tests/smoke/create-link.mjs",
+    "test:smoke": "node tests/smoke/smoke.mjs && node tests/smoke/reference-image-lock.mjs && node tests/smoke/linked-reference-image.mjs && node tests/smoke/draw-street.mjs && node tests/smoke/diagonal-street.mjs && node tests/smoke/street-edit.mjs && node tests/smoke/street-handles.mjs && node tests/smoke/curve-street.mjs && node tests/smoke/create-link.mjs && node tests/smoke/connection-types.mjs",
     "test:baseline:record": "node tests/baseline/record.mjs",
     "dev": "vite --host 127.0.0.1",
     "lint": "biome lint . --reporter=summary --diagnostic-level=error",

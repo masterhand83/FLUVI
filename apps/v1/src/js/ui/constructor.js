@@ -2524,7 +2524,15 @@ function toggleListaConexiones() {
 // Si se proporciona calleSeleccionada, solo muestra conexiones donde la calle es origen o destino
 function actualizarListaConexiones(calleSeleccionada = null) {
     const listaDiv = document.getElementById('listaConexiones');
+    const searchInput = document.getElementById('linkSearchInput');
+    const query = searchInput ? searchInput.value.trim().toLocaleLowerCase() : '';
     listaDiv.innerHTML = '';
+
+    // Keep the list live as the user types; a query searches the complete saved
+    // mapping set rather than being constrained by the currently selected street.
+    if (searchInput) {
+        searchInput.oninput = () => actualizarListaConexiones(calleSeleccionada);
+    }
 
     if (!window.conexiones || window.conexiones.length === 0) {
         listaDiv.innerHTML = '<div class="list-group-item text-muted text-center">No hay conexiones creadas</div>';
@@ -2533,7 +2541,7 @@ function actualizarListaConexiones(calleSeleccionada = null) {
 
     // Filtrar conexiones si hay una calle seleccionada
     let conexionesFiltradas = window.conexiones;
-    if (calleSeleccionada) {
+    if (calleSeleccionada && !query) {
         conexionesFiltradas = window.conexiones.filter(conexion => {
             if (!conexion || !conexion.origen || !conexion.destino) return false;
             return conexion.origen === calleSeleccionada || conexion.destino === calleSeleccionada;
@@ -2550,14 +2558,35 @@ function actualizarListaConexiones(calleSeleccionada = null) {
     }
 
     // Mostrar encabezado si hay filtro activo
-    if (calleSeleccionada) {
+    if (calleSeleccionada && !query) {
         const header = document.createElement('div');
         header.className = 'list-group-item list-group-item-info';
         header.innerHTML = `<small><strong>📌 Conexiones de:</strong> ${calleSeleccionada.nombre}</small>`;
         listaDiv.appendChild(header);
     }
 
-    conexionesFiltradas.forEach((conexion, indexFiltrado) => {
+    conexionesFiltradas = conexionesFiltradas.filter(conexion => {
+        if (!conexion || !conexion.origen || !conexion.destino) return false;
+        if (!query) return true;
+        const tipo = conexion.tipo || 'lineal';
+        const searchable = [
+            conexion.origen.nombre,
+            conexion.destino.nombre,
+            tipo,
+            conexion.carrilOrigen + 1,
+            conexion.carrilDestino + 1,
+            conexion.posOrigen == null ? '' : conexion.posOrigen + 1,
+            conexion.posDestino == null ? '' : conexion.posDestino + 1
+        ].join(' ').toLocaleLowerCase();
+        return searchable.includes(query);
+    });
+
+    if (query && conexionesFiltradas.length === 0) {
+        listaDiv.innerHTML = '<div class="list-group-item text-muted text-center">No se encontraron conexiones</div>';
+        return;
+    }
+
+    conexionesFiltradas.forEach((conexion) => {
         if (!conexion || !conexion.origen || !conexion.destino) return;
 
         // Obtener el índice real de la conexión en el array global
@@ -2589,7 +2618,7 @@ function actualizarListaConexiones(calleSeleccionada = null) {
         item.innerHTML = `
             <div class="small">${detallesConexion}</div>
             <div class="btn-group btn-group-sm" role="group">
-                <button class="btn btn-outline-warning btn-sm" onclick="editarConexion(${indexReal})" title="Editar">
+                <button class="btn btn-outline-warning btn-sm" onclick="editarConexionDesdeLista(${indexReal})" title="Editar">
                     ✏️
                 </button>
                 <button class="btn btn-outline-danger btn-sm" onclick="eliminarConexion(${indexReal})" title="Eliminar">
@@ -2605,6 +2634,21 @@ function actualizarListaConexiones(calleSeleccionada = null) {
         ? `📋 Conexiones de "${calleSeleccionada.nombre}": ${conexionesFiltradas.length} de ${window.conexiones.length} totales`
         : `📋 Lista de conexiones actualizada: ${window.conexiones.length} conexiones`;
     console.log(mensajeLog);
+}
+
+// The map-first editor is loaded after this script. Preserve the legacy modal
+// as a fallback for pages/builds where that tool is unavailable.
+function editarConexionDesdeLista(index) {
+    const conexion = window.conexiones && window.conexiones[index];
+    if (!conexion) {
+        alert('❌ Conexión no encontrada');
+        return;
+    }
+    if (window.createLinkTool && typeof window.createLinkTool.edit === 'function') {
+        window.createLinkTool.edit(conexion);
+        return;
+    }
+    editarConexion(index);
 }
 
 // Función para poblar el modal de edición con datos de UNA conexión probabilística
