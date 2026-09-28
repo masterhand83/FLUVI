@@ -202,4 +202,29 @@ describe.each([
 		expect(result.generation).toBe("0")
 		if (usePixi) expect(result.pixiStreets).toBe(1)
 	}, 180000)
+
+	it("does not carry session state across repeated New and Load cycles", async () => {
+		for (const index of [1, 2]) {
+			await sim.page.evaluate((cycle) => {
+				window.confirm = () => true
+				window.alert = () => {}
+				document.getElementById("btnPaso").click()
+				window.estadoEscenarios.celdasBloqueadas.set(`old-${cycle}:0:0`, { tipo: "bloqueo" })
+				window.nuevaSimulacion()
+				const saved = { nombre: `Cycle ${cycle}`, calles: [{ nombre: `Cycle ${cycle}`, tamano: 5,
+					tipo: "CONEXION", x: 0, y: 0, angulo: 0, carriles: 1,
+					probabilidadGeneracion: 0, probabilidadSaltoDeCarril: 0.05 }], conexiones: [] }
+				window.cargarSimulacion({ target: { files: [new File([JSON.stringify(saved)], `cycle-${cycle}.json`)], value: "" } })
+			}, index)
+			await sim.page.waitForFunction((cycle) => window.calles.length === 1 && window.calles[0].nombre === `Cycle ${cycle}`,
+				{ polling: 100, timeout: 5000 }, index)
+			await sim.page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 150)))
+			const state = await sim.page.evaluate(() => ({ generation: document.getElementById("infoGeneration").textContent,
+				population: document.getElementById("infoPopulation").textContent,
+				scenarioCount: window.estadoEscenarios.celdasBloqueadas.size, connections: window.conexiones.length,
+				pixiStreets: window.USE_PIXI ? window.pixiApp.sceneManager.calleSprites.size : null }))
+			expect(state).toEqual({ generation: "0", population: "0", scenarioCount: 0, connections: 0,
+				pixiStreets: usePixi ? 1 : null })
+		}
+	}, 180000)
 })
