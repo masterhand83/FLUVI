@@ -9,3 +9,5 @@
 .link-mapping-row input { min-width: 0; }
 .link-mapping-row.is-invalid { outline: 2px solid var(--bs-danger, #dc3545); border-radius: .25rem; }
 .link-unmatched { color: var(--bs-secondary-color, #6c757d); }
+#linkDraftPreview { position: fixed; z-index: 1100; pointer-events: none; overflow: hidden; }
+#linkDraftPreview[hidden] { display: none; }

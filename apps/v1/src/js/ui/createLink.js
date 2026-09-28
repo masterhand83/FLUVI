@@ -15,7 +15,16 @@
 	let draft = null,
 		suppressClick = false,
 		pickRow = null,
-		pickPhase = null;
+		pickPhase = null,
+		hoverStreet = null,
+		previewFrame = null,
+		previewSignature = "";
+	const preview = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+	preview.id = "linkDraftPreview";
+	preview.setAttribute("aria-hidden", "true");
+	preview.setAttribute("data-testid", "link-draft-preview");
+	preview.hidden = true;
+	document.body.append(preview);
 	const streets = () => (Array.isArray(window.calles) ? window.calles : []);
 	const name = (s) => s?.nombre || s?.name || s?.id || "";
 	const types = {
@@ -46,6 +55,12 @@
 	function close() {
 		stopRowPick();
 		draft = null;
+		hoverStreet = null;
+		cancelAnimationFrame(previewFrame);
+		previewFrame = null;
+		previewSignature = "";
+		preview.replaceChildren();
+		preview.hidden = true;
 		panel.hidden = true;
 		panel.setAttribute("aria-hidden", "true");
 		panel.removeAttribute("aria-invalid");
@@ -244,7 +259,141 @@
 				renderMappingRow(mapping, index);
 		updateNotice();
 	}
+	function cellPoint(street, lane, cell) {
+		const curved =
+			street.esCurva && (street.bezierGeometry || street.vertices?.length > 0);
+		const coordinates =
+			(curved && window.obtenerCoordenadasGlobalesCeldaConCurva) ||
+			window.obtenerCoordenadasGlobalesCelda;
+		return coordinates?.(street, lane, cell);
+	}
+	function screenPoint(point, canvas, rect) {
+		if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y))
+			return null;
+		const camera = window.USE_PIXI && window.pixiApp?.cameraController;
+		if (camera) {
+			const screen = camera.worldToScreen(point.x, point.y);
+			return {
+				x: (screen.x * rect.width) / window.pixiApp.app.screen.width,
+				y: (screen.y * rect.height) / window.pixiApp.app.screen.height,
+			};
+		}
+		return {
+			x:
+				((point.x * (Number(window.escala) || 1) +
+					(Number(window.offsetX) || 0)) *
+					rect.width) /
+				canvas.width,
+			y:
+				((point.y * (Number(window.escala) || 1) +
+					(Number(window.offsetY) || 0)) *
+					rect.height) /
+				canvas.height,
+		};
+	}
+	function previewMappings() {
+		if (!draft?.source) return [];
+		if (draft.destination)
+			return mappings()
+				.filter((m) => !invalidMapping(m, draft.source, draft.destination))
+				.map((m) => ({
+					source: draft.source,
+					destination: draft.destination,
+					mapping: m,
+				}));
+		if (!hoverStreet || hoverStreet === draft.source) return [];
+		return [
+			{
+				source: draft.source,
+				destination: hoverStreet,
+				mapping: {
+					"source-lane": 0,
+					"source-cell": draft.source.tamano - 1,
+					"destination-lane": 0,
+					"destination-cell": 0,
+				},
+			},
+		];
+	}
+	function drawPreview() {
+		if (!draft) return;
+		const canvas = document.getElementById("simuladorCanvas");
+		const rect = canvas.getBoundingClientRect();
+		const arrows = previewMappings()
+			.map(({ source, destination, mapping }) => {
+				const start = screenPoint(
+					cellPoint(
+						source,
+						mapping["source-lane"],
+						effective(mapping["source-cell"], source.tamano),
+					),
+					canvas,
+					rect,
+				);
+				const end = screenPoint(
+					cellPoint(
+						destination,
+						mapping["destination-lane"],
+						mapping["destination-cell"],
+					),
+					canvas,
+					rect,
+				);
+				return start && end ? { start, end } : null;
+			})
+			.filter(Boolean);
+		const signature = JSON.stringify([
+			rect.left,
+			rect.top,
+			rect.width,
+			rect.height,
+			draft.type,
+			arrows,
+		]);
+		if (signature !== previewSignature) {
+			previewSignature = signature;
+			preview.style.left = `${rect.left}px`;
+			preview.style.top = `${rect.top}px`;
+			preview.setAttribute("width", rect.width);
+			preview.setAttribute("height", rect.height);
+			preview.setAttribute("viewBox", `0 0 ${rect.width} ${rect.height}`);
+			preview.replaceChildren(
+				...arrows.map(({ start, end }) => {
+					const arrow = document.createElementNS(
+						"http://www.w3.org/2000/svg",
+						"path",
+					);
+					const angle = Math.atan2(end.y - start.y, end.x - start.x);
+					const wing = (offset) =>
+						`${end.x - 11 * Math.cos(angle + offset)},${end.y - 11 * Math.sin(angle + offset)}`;
+					arrow.setAttribute(
+						"d",
+						`M ${start.x},${start.y} L ${end.x},${end.y} M ${wing(Math.PI / 6)} L ${end.x},${end.y} L ${wing(-Math.PI / 6)}`,
+					);
+					arrow.setAttribute("data-testid", "link-preview-arrow");
+					arrow.setAttribute("fill", "none");
+					arrow.setAttribute(
+						"stroke",
+						{
+							[types.LINEAL]: "#15803d",
+							[types.INCORPORACION]: "#c2410c",
+							[types.PROBABILISTICA]: "#7c3aed",
+						}[draft.type],
+					);
+					arrow.setAttribute("stroke-width", "3");
+					arrow.setAttribute("stroke-dasharray", "7 5");
+					arrow.setAttribute("stroke-opacity", "0.8");
+					return arrow;
+				}),
+			);
+			preview.hidden = !arrows.length;
+		}
+		previewFrame = requestAnimationFrame(drawPreview);
+	}
 	function show(source = null, destination = null, link = null) {
+		cancelAnimationFrame(previewFrame);
+		hoverStreet = null;
+		previewSignature = "";
 		window.drawStreetTool?.deactivate();
 		window.streetEditPause?.();
 		draft = {
@@ -284,6 +433,7 @@
 		addExit.hidden = draft.type !== types.PROBABILISTICA;
 		selectors();
 		renderRows();
+		previewFrame = requestAnimationFrame(drawPreview);
 	}
 	function choose(street) {
 		if (!draft || !street) return;
@@ -630,6 +780,26 @@
 		true,
 	);
 	document.addEventListener("click", mapPick, true);
+	window.addEventListener(
+		"pointermove",
+		(event) => {
+			if (
+				event.target !== document.getElementById("simuladorCanvas") ||
+				!draft?.source ||
+				draft.destination
+			)
+				return;
+			const point = worldPoint(event);
+			hoverStreet =
+				window.encontrarCalleEnPunto?.(point.x, point.y)?.calle || null;
+		},
+		true,
+	);
+	document
+		.getElementById("simuladorCanvas")
+		.addEventListener("pointerleave", () => {
+			hoverStreet = null;
+		});
 	for (const [select, key] of [
 		[sourceSelect, "source"],
 		[destinationSelect, "destination"],

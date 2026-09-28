@@ -51,6 +51,11 @@ async function clickStreet(page, streetId, lane = 0, cell = 4) {
 	await page.mouse.click(point.x, point.y)
 }
 
+async function previewCount(page, count) {
+	await page.waitForFunction(expected => document.querySelectorAll('#linkDraftPreview [data-testid="link-preview-arrow"]').length === expected, {}, count)
+	return page.$eval('#linkDraftPreview', svg => ({ hidden: svg.hidden, pointerEvents: getComputedStyle(svg).pointerEvents, paths: [...svg.querySelectorAll('path')].map(path => path.getAttribute('d')) }))
+}
+
 async function createDraft(page, source, destination) {
 	await page.click(TEST_IDS.start)
 	await clickStreet(page, source.id)
@@ -89,10 +94,38 @@ for (const usePixi of [false, true]) {
 		}
 		const initialLinks = await page.evaluate(() => window.conexiones.length)
 		const alternative = await addStreet(page, "Link correction", 0.7, 0.2, 2)
+		await page.click(TEST_IDS.start)
+		await clickStreet(page, streets.source.id)
+		assert.equal(await page.$$eval('#linkDraftPreview path', paths => paths.length), 0, "no ghost connection without a destination")
+		const hoverPoint = await page.evaluate(id => {
+			const street = window.calles.find(item => item.id === id)
+			const canvas = document.querySelector('#simuladorCanvas'), rect = canvas.getBoundingClientRect()
+			const world = window.obtenerCoordenadasGlobalesCelda(street, 0, 4)
+			const camera = window.pixiApp?.cameraController
+			const screen = camera ? camera.worldToScreen(world.x, world.y) : { x: world.x * window.escala + window.offsetX, y: world.y * window.escala + window.offsetY }
+			return { x: rect.left + screen.x * rect.width / (camera ? window.pixiApp.app.screen.width : canvas.width), y: rect.top + screen.y * rect.height / (camera ? window.pixiApp.app.screen.height : canvas.height) }
+		}, streets.destination.id)
+		await page.mouse.move(hoverPoint.x, hoverPoint.y)
+		assert.equal((await previewCount(page, 1)).pointerEvents, 'none', "hover shadow arrow does not intercept map selection")
+		assert.equal(await page.evaluate(() => window.conexiones.length), initialLinks, "hover preview is not a persisted connection")
+		await page.click(TEST_IDS.cancel)
+		assert.equal((await previewCount(page, 0)).hidden, true, "Cancel removes the hover preview")
 
 		// Draft review is visible and spells out the directed last-cell → first-cell
 		// mapping for matching lanes; the extra source lane is visibly unmatched.
 		await createDraft(page, streets.source, streets.destination)
+		const firstPreview = await previewCount(page, 1)
+		assert.equal(firstPreview.hidden, false, "selected streets show their directed draft arrow")
+		assert.equal(await page.$eval('#linkDraftPreview path', path => path.getAttribute('stroke-dasharray')), '7 5', "preview arrow is visually distinct from saved links")
+		await page.evaluate(pixi => {
+			if (pixi) window.pixiApp.cameraController.pan(20, 0)
+			else window.offsetX += 20
+		}, usePixi)
+		await page.waitForFunction(previous => document.querySelector('#linkDraftPreview path')?.getAttribute('d') !== previous, {}, firstPreview.paths[0])
+		await page.evaluate(pixi => {
+			if (pixi) window.pixiApp.cameraController.pan(-20, 0)
+			else window.offsetX -= 20
+		}, usePixi)
 		assert.equal(await page.evaluate(() => window.conexiones.length), initialLinks, "map picks do not connect streets before Save")
 		assert.equal((await rows(page)).length, 0, "Lineal has no configurable mapping rows")
 		assert.match(await page.$eval('[data-testid="link-lineal-summary"]', el => el.textContent), /última celda.*15.*primera celda.*0/i, "Lineal visibly reviews canonical last-to-first cell mapping")
@@ -120,15 +153,18 @@ for (const usePixi of [false, true]) {
 		await page.click(TEST_IDS.reverse)
 		assert.equal(await page.$eval("#linkSourceStreet", (el) => el.value), streets.source.id)
 		assert.equal(await page.$eval("#linkDestinationStreet", (el) => el.value), alternative.id)
+		await page.waitForFunction(previous => document.querySelector('#linkDraftPreview path')?.getAttribute('d') !== previous, {}, firstPreview.paths[0])
 		await page.keyboard.press("Escape")
 		await page.waitForFunction(() => document.querySelector("#linkDraftPanel")?.hidden)
 		assert.equal(await page.evaluate(() => window.conexiones.length), initialLinks, "Escape removes no persisted or existing link")
+		assert.equal((await previewCount(page, 0)).hidden, true, "Escape removes the shadow arrow")
 
 		// A valid draft commits a directed, last-cell-to-first-cell transfer, and a
 		// vehicle placed at that endpoint moves across it on an explicit step.
 		await createDraft(page, streets.source, streets.destination)
 		await page.click(TEST_IDS.save)
 		await page.waitForFunction((count) => window.conexiones.length === count + 1, {}, initialLinks)
+		assert.equal((await previewCount(page, 0)).hidden, true, "Save removes the draft preview")
 		const saved = await page.evaluate(({ sourceId, destinationId }) => {
 			const link = window.conexiones.at(-1)
 			const source = window.calles.find((street) => street.id === sourceId)
