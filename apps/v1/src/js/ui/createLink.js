@@ -273,22 +273,33 @@
 		);
 	}
 	const effective = (v, s) => (Number(v) === -1 ? s - 1 : Number(v));
-	function invalid(m, s, d) {
+	function mappingKey(mapping, source) {
+		return [
+			mapping["source-lane"],
+			effective(mapping["source-cell"], source.tamano),
+			mapping["destination-lane"],
+			mapping["destination-cell"],
+		].join(":");
+	}
+	function invalidMapping(mapping, source, destination) {
 		return (
-			!Number.isInteger(m["source-lane"]) ||
-			m["source-lane"] < 0 ||
-			m["source-lane"] >= s.carriles ||
-			!Number.isInteger(m["destination-lane"]) ||
-			m["destination-lane"] < 0 ||
-			m["destination-lane"] >= d.carriles ||
-			!Number.isInteger(m["source-cell"]) ||
-			(m["source-cell"] !== -1 &&
-				(m["source-cell"] < 0 || m["source-cell"] >= s.tamano)) ||
-			!Number.isInteger(m["destination-cell"]) ||
-			m["destination-cell"] < 0 ||
-			m["destination-cell"] >= d.tamano ||
+			!Number.isInteger(mapping["source-lane"]) ||
+			mapping["source-lane"] < 0 ||
+			mapping["source-lane"] >= source.carriles ||
+			!Number.isInteger(mapping["destination-lane"]) ||
+			mapping["destination-lane"] < 0 ||
+			mapping["destination-lane"] >= destination.carriles ||
+			!Number.isInteger(mapping["source-cell"]) ||
+			(mapping["source-cell"] !== -1 &&
+				(mapping["source-cell"] < 0 ||
+					mapping["source-cell"] >= source.tamano)) ||
+			!Number.isInteger(mapping["destination-cell"]) ||
+			mapping["destination-cell"] < 0 ||
+			mapping["destination-cell"] >= destination.tamano ||
 			(draft.type === types.PROBABILISTICA &&
-				(!Number.isFinite(m.chance) || m.chance < 0 || m.chance > 100))
+				(!Number.isFinite(mapping.chance) ||
+					mapping.chance < 0 ||
+					mapping.chance > 100))
 		);
 	}
 	function isDuplicate(m, s, d) {
@@ -308,15 +319,15 @@
 		notice.textContent = "";
 		if (!draft?.source || !draft.destination) return;
 		const ms = mappings();
-		if (ms.some((m) => invalid(m, draft.source, draft.destination))) return;
+		if (
+			ms.some((mapping) =>
+				invalidMapping(mapping, draft.source, draft.destination),
+			)
+		)
+			return;
 		const keys = new Set();
 		for (const m of ms) {
-			const key = [
-				m["source-lane"],
-				effective(m["source-cell"], draft.source.tamano),
-				m["destination-lane"],
-				m["destination-cell"],
-			].join(":");
+			const key = mappingKey(m, draft.source);
 			if (keys.has(key) || isDuplicate(m, draft.source, draft.destination))
 				return;
 			keys.add(key);
@@ -347,14 +358,9 @@
 		let bad = false,
 			duplicateFound = false;
 		ms.forEach((m, i) => {
-			const key = [
-				m["source-lane"],
-				effective(m["source-cell"], s.tamano),
-				m["destination-lane"],
-				m["destination-cell"],
-			].join(":");
+			const key = mappingKey(m, s);
 			const dup = keys.has(key) || isDuplicate(m, s, d);
-			const invalidRow = invalid(m, s, d);
+			const invalidRow = invalidMapping(m, s, d);
 			rows[i]?.classList.toggle("is-invalid", dup || invalidRow);
 			bad ||= invalidRow;
 			duplicateFound ||= dup;

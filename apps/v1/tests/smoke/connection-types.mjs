@@ -234,17 +234,51 @@ for (const usePixi of [false, true]) {
 			} finally { Math.random = random }
 		}, { sourceId: source.id, destinationId: target.id })
 		assert.deepEqual(probabilityTransfer, { skipped: false, moved: true, source: 0, destination: 1 }, "each probabilistic exit uses its own chance")
-		// The application step visits registered connections in array order. Wrap
-		// transferir to record the order and return false, avoiding random traffic effects.
-		const stepOrder = await page.evaluate(() => {
+		const stepSource = await makeStreet(page, `Issue 06 step source ${usePixi}`, .75, .20, 1, 16)
+		await openDraft(page, stepSource, target, "PROBABILISTICA")
+		await page.click(ui.save)
+		await waitForCount(page, count + 1)
+		// Exercise real transfers in an explicit step. These different source
+		// streets move independently; shared-source links still compete in order.
+		const step = await page.evaluate(({ sourceId, shortId, targetId, stepSourceId }) => {
+			const streets = [sourceId, shortId, targetId, stepSourceId].map(id => window.calles.find(street => street.id === id))
+			for (const street of streets) {
+				for (const lane of street.arreglo) lane.fill(0)
+				for (const lane of street.celulasEsperando) lane.fill(false)
+			}
+			const [from, short, target, probSource] = streets
+			const incorporation = window.conexiones.find(link => link.origen === from && link.destino === short && link.tipo === window.TIPOS_CONEXION.INCORPORACION && link.carrilOrigen === 2)
+			const probabilistic = window.conexiones.find(link => link.origen === probSource && link.destino === target && link.tipo === window.TIPOS_CONEXION.PROBABILISTICA)
+			from.arreglo[incorporation.carrilOrigen][incorporation.posOrigen] = 1
+			probSource.arreglo[probabilistic.carrilOrigen][probabilistic.posOrigen] = 1
 			const links = [...window.conexiones]
-			const calls = []
-			const original = window.ConexionCA.prototype.transferir
-			window.ConexionCA.prototype.transferir = function () { calls.push(window.conexiones.indexOf(this)); return false }
-			try { document.getElementById("btnPaso").click() } finally { window.ConexionCA.prototype.transferir = original }
-			return { expected: links.map((_, index) => index), calls }
-		})
-		assert.deepEqual(stepOrder.calls, stepOrder.expected, "explicit simulation step transfers connections in saved order")
+			const calls = [], transfers = []
+			const originalTransfer = window.ConexionCA.prototype.transferir
+			const originalRandom = Math.random
+			window.ConexionCA.prototype.transferir = function () {
+				calls.push(window.conexiones.indexOf(this))
+				const moved = originalTransfer.call(this)
+				if (this === incorporation || this === probabilistic) transfers.push({
+					type: this.tipo, moved,
+					source: this.origen.arreglo[this.carrilOrigen][this.posOrigen],
+					destination: this.destino.arreglo[this.carrilDestino][this.posDestino],
+				})
+				return moved
+			}
+			try {
+				Math.random = () => 0
+				document.getElementById("btnPaso").click()
+			} finally {
+				Math.random = originalRandom
+				window.ConexionCA.prototype.transferir = originalTransfer
+			}
+			return { expected: links.map((_, index) => index), calls, transfers }
+		}, { sourceId: source.id, shortId: short.id, targetId: target.id, stepSourceId: stepSource.id })
+		assert.deepEqual(step.calls, step.expected, "explicit simulation step visits saved connections in order")
+		assert.deepEqual(step.transfers, [
+			{ type: canonicalType.INCORPORACION, moved: true, source: 0, destination: 1 },
+			{ type: canonicalType.PROBABILISTICA, moved: true, source: 0, destination: 1 },
+		], "both saved link types transfer independently during a real step")
 		console.log(`✅ connection types, editing, validation and transfer (${usePixi ? "Pixi" : "Canvas"})`)
 	} finally {
 		await sim.close()
