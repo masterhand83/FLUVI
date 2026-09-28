@@ -3,7 +3,8 @@
 .create-link-anchor .create-link-panel { position: absolute; bottom: 100%; left: 0; z-index: 1200; width: min(30rem, 90vw); max-height: min(70vh, calc(100dvh - 2rem)); overflow-y: auto; background: var(--bs-body-bg, #fff); box-shadow: 0 .25rem .75rem #0002; }
 .create-link-panel[hidden] { display: none; }
 .create-link-rows { display: grid; gap: .5rem; }
-.link-mapping-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .25rem; align-items: end; }
+.link-mapping-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; align-items: start; }
+.link-mapping-row > label { grid-column: 1 / -1; }
 .link-mapping-row label { font-size: .7rem; }
 .link-mapping-row input { min-width: 0; }
 .link-mapping-row.is-invalid { outline: 2px solid var(--bs-danger, #dc3545); border-radius: .25rem; }

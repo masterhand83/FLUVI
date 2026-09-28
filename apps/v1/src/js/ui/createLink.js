@@ -27,7 +27,9 @@
 		pickRow = pickPhase = null;
 		pickStatus.hidden = true;
 		pickStatus.textContent = "";
-		for (const control of rowsElement.querySelectorAll("[data-testid='link-pick-map']")) {
+		for (const control of rowsElement.querySelectorAll(
+			"[data-testid='link-pick-source'], [data-testid='link-pick-destination']",
+		)) {
 			control.setAttribute("aria-pressed", "false");
 			markPickRow(control, false);
 		}
@@ -87,6 +89,22 @@
 			}),
 		);
 	}
+	function linealMappings(source, destination) {
+		const all = Array.from(
+			{ length: Math.min(source.carriles, destination.carriles) },
+			(_, lane) => ({
+				"source-lane": lane,
+				"source-cell": source.tamano - 1,
+				"destination-lane": lane,
+				"destination-cell": 0,
+			}),
+		);
+		return draft.editing
+			? all.filter(
+					(mapping) => mapping["source-lane"] === draft.editing.carrilOrigen,
+				)
+			: all;
+	}
 	function input(row, key, label, value, min, max, step = "1") {
 		const wrap = document.createElement("label");
 		wrap.textContent = label;
@@ -102,88 +120,43 @@
 		wrap.append(el);
 		row.append(wrap);
 	}
-	function renderRows() {
-		stopRowPick();
-		rowsElement.replaceChildren();
-		if (!draft?.source || !draft.destination) return;
-		for (const [index, m] of draft.rows.entries()) {
-			const row = document.createElement("div");
-			row.className = "link-mapping-row";
-			row.dataset.testid = "link-mapping-row";
-			input(
-				row,
-				"source-lane",
-				"Carril origen",
-				m["source-lane"],
-				0,
-				draft.source.carriles - 1,
-			);
-			input(
-				row,
-				"source-cell",
-				"Celda origen",
-				m["source-cell"],
-				-1,
-				draft.source.tamano - 1,
-			);
-			input(
-				row,
-				"destination-lane",
-				"Carril destino",
-				m["destination-lane"],
-				0,
-				draft.destination.carriles - 1,
-			);
-			input(
-				row,
-				"destination-cell",
-				"Celda destino",
-				m["destination-cell"],
-				0,
-				draft.destination.tamano - 1,
-			);
-			if (draft.type === types.PROBABILISTICA)
-				input(row, "chance", "Probabilidad (%)", m.chance, 0, 100, "any");
-			const pick = document.createElement("button");
-			pick.type = "button";
-			pick.className = "btn btn-outline-secondary btn-sm";
-			pick.dataset.testid = "link-pick-map";
-			pick.textContent = "Elegir en mapa";
-			pick.setAttribute("aria-label", `Elegir origen y destino en mapa para correspondencia ${index + 1}`);
-			pick.setAttribute("aria-pressed", "false");
-			pick.setAttribute("aria-controls", "linkMapPickStatus");
-			pick.addEventListener("click", () => {
-				if (pickRow === row) {
-					stopRowPick();
-					return;
-				}
-				pickRow = row;
-				pickPhase = "source";
-				for (const control of rowsElement.querySelectorAll("[data-testid='link-pick-map']")) {
-					control.setAttribute("aria-pressed", String(control === pick));
-					markPickRow(control, control === pick);
-				}
-				setPickStatus(`Correspondencia ${index + 1}: elige una celda de origen en ${name(draft.source)}. Luego elige el destino en ${name(draft.destination)}. Escape cancela.`);
-			});
-			row.append(pick);
-			if (draft.type === types.PROBABILISTICA) {
-				const remove = document.createElement("button");
-				remove.type = "button";
-				remove.textContent = "×";
-				remove.setAttribute("aria-label", "Eliminar salida");
-				remove.addEventListener("click", () => {
-					const index = [...rowsElement.children].indexOf(row);
-					draft.rows = mappings();
-					draft.rows.splice(index, 1);
-					renderRows();
-				});
-				row.append(remove);
+	function pickButton(container, row, index, phase) {
+		const label = `Elegir ${phase === "source" ? "origen" : "destino"} en mapa para correspondencia ${index + 1}`;
+		const pick = document.createElement("button");
+		pick.type = "button";
+		pick.className = "btn btn-outline-secondary btn-sm mb-1 align-self-start";
+		pick.dataset.testid = `link-pick-${phase}`;
+		pick.dataset.phase = phase;
+		pick.textContent = "📍";
+		pick.title = label;
+		pick.setAttribute("aria-label", label);
+		pick.setAttribute("aria-pressed", "false");
+		pick.setAttribute("aria-controls", "linkMapPickStatus");
+		pick.addEventListener("click", () => {
+			if (pickRow === row && pickPhase === phase) {
+				stopRowPick();
+				return;
 			}
-			rowsElement.append(row);
-		}
+			stopRowPick();
+			pickRow = row;
+			pickPhase = phase;
+			pick.setAttribute("aria-pressed", "true");
+			markPickRow(pick, true);
+			setPickStatus(
+				`Correspondencia ${index + 1}: elige una celda de ${phase === "source" ? "origen" : "destino"} en ${name(phase === "source" ? draft.source : draft.destination)}. Escape cancela.`,
+			);
+		});
+		container.append(pick);
+	}
+	function renderLinealSummary() {
+		const summary = document.createElement("div");
+		summary.className = "small";
+		summary.dataset.testid = "link-lineal-summary";
+		summary.textContent = `Correspondencia fija: última celda de origen (${draft.source.tamano - 1}) → primera celda de destino (0), ${draft.editing ? `carril ${draft.editing.carrilOrigen + 1}` : `por carriles coincidentes (1–${Math.min(draft.source.carriles, draft.destination.carriles)})`}.`;
+		rowsElement.append(summary);
 		for (
-			let lane = Math.min(draft.source.carriles, draft.destination.carriles);
-			draft.type === types.LINEAL && lane < draft.source.carriles;
+			let lane = draft.destination.carriles;
+			lane < draft.source.carriles;
 			lane++
 		) {
 			const el = document.createElement("div");
@@ -192,6 +165,83 @@
 			el.textContent = `Carril origen ${lane + 1} sin correspondencia`;
 			rowsElement.append(el);
 		}
+	}
+	function renderMappingRow(m, index) {
+		const row = document.createElement("div");
+		row.className = "link-mapping-row";
+		row.dataset.testid = "link-mapping-row";
+		const origin = document.createElement("div");
+		origin.className = "d-flex flex-column gap-1";
+		const destination = document.createElement("div");
+		destination.className = "d-flex flex-column gap-1";
+		if (draft.type === types.PROBABILISTICA)
+			pickButton(origin, row, index, "source");
+		input(
+			origin,
+			"source-lane",
+			"Carril origen",
+			m["source-lane"],
+			0,
+			draft.source.carriles - 1,
+		);
+		if (draft.type === types.PROBABILISTICA)
+			input(
+				origin,
+				"source-cell",
+				"Celda origen",
+				m["source-cell"],
+				-1,
+				draft.source.tamano - 1,
+			);
+		else {
+			const fixed = document.createElement("span");
+			fixed.className = "small";
+			fixed.textContent = `Celda origen: última (${draft.source.tamano - 1})`;
+			origin.append(fixed);
+		}
+		pickButton(destination, row, index, "destination");
+		input(
+			destination,
+			"destination-lane",
+			"Carril destino",
+			m["destination-lane"],
+			0,
+			draft.destination.carriles - 1,
+		);
+		input(
+			destination,
+			"destination-cell",
+			"Celda destino",
+			m["destination-cell"],
+			0,
+			draft.destination.tamano - 1,
+		);
+		row.append(origin, destination);
+		if (draft.type === types.PROBABILISTICA)
+			input(row, "chance", "Probabilidad (%)", m.chance, 0, 100, "any");
+		if (draft.type === types.PROBABILISTICA) {
+			const remove = document.createElement("button");
+			remove.type = "button";
+			remove.textContent = "×";
+			remove.setAttribute("aria-label", "Eliminar salida");
+			remove.addEventListener("click", () => {
+				const index = [...rowsElement.children].indexOf(row);
+				draft.rows = mappings();
+				draft.rows.splice(index, 1);
+				renderRows();
+			});
+			row.append(remove);
+		}
+		rowsElement.append(row);
+	}
+	function renderRows() {
+		stopRowPick();
+		rowsElement.replaceChildren();
+		if (!draft?.source || !draft.destination) return;
+		if (draft.type === types.LINEAL) renderLinealSummary();
+		else
+			for (const [index, mapping] of draft.rows.entries())
+				renderMappingRow(mapping, index);
 		updateNotice();
 	}
 	function show(source = null, destination = null, link = null) {
@@ -224,7 +274,9 @@
 		panel.removeAttribute("aria-invalid");
 		button.classList.add("active");
 		status.textContent = link
-			? "Edita la correspondencia y guarda los cambios."
+			? draft.type === types.LINEAL
+				? "Revisa la correspondencia fija y guarda los cambios."
+				: "Edita la correspondencia y guarda los cambios."
 			: "Elige la calle de origen en el mapa.";
 		message.textContent = notice.textContent = "";
 		typeSelect.value =
@@ -273,7 +325,11 @@
 	}
 	function mapPick(e) {
 		const c = document.getElementById("simuladorCanvas");
-		if (e.target !== c && !(pickRow && e.target.closest?.(".street-endpoint-handle"))) return;
+		if (
+			e.target !== c &&
+			!(pickRow && e.target.closest?.(".street-endpoint-handle"))
+		)
+			return;
 		if (suppressClick) {
 			suppressClick = false;
 			e.preventDefault();
@@ -296,15 +352,22 @@
 		const expected = phase === "source" ? draft.source : draft.destination;
 		const p = worldPoint(e);
 		const hit = window.encontrarCalleEnPunto?.(p.x, p.y);
-		const index = [...rowsElement.querySelectorAll("[data-testid='link-mapping-row']")].indexOf(row) + 1;
+		const index =
+			[
+				...rowsElement.querySelectorAll("[data-testid='link-mapping-row']"),
+			].indexOf(row) + 1;
 		if (hit?.calle !== expected) {
 			const reason = hit ? "calle incorrecta" : "fuera de la calle";
-			setPickStatus(`Correspondencia ${index}: ${reason}. Elige una celda de ${phase === "source" ? "origen" : "destino"} en ${name(expected)}.`);
+			setPickStatus(
+				`Correspondencia ${index}: ${reason}. Elige una celda de ${phase === "source" ? "origen" : "destino"} en ${name(expected)}.`,
+			);
 			return;
 		}
 		const cell = window.cellGeometryIndex?.findNearest(p.x, p.y, [expected]);
 		if (!validPickedCell(cell, expected)) {
-			setPickStatus(`Correspondencia ${index}: no se encontró una celda válida en ${name(expected)}. Vuelve a intentarlo.`);
+			setPickStatus(
+				`Correspondencia ${index}: no se encontró una celda válida en ${name(expected)}. Vuelve a intentarlo.`,
+			);
 			return;
 		}
 		applyPickedCell(row, phase, cell, index);
@@ -316,48 +379,45 @@
 		position.value = cell.indice;
 		draft.rows = mappings();
 		updateNotice();
-		if (phase === "source") {
-			pickPhase = "destination";
-			setPickStatus(`Correspondencia ${index}: origen carril ${cell.carril}, celda ${cell.indice}. Ahora elige una celda de destino en ${name(draft.destination)}.`);
-		} else {
-			stopRowPick();
-			setPickStatus(`Correspondencia ${index}: origen y destino elegidos en el mapa. Revisa los campos antes de guardar.`);
-		}
+		stopRowPick();
+		setPickStatus(
+			`Correspondencia ${index}: ${phase === "source" ? "origen" : "destino"} elegido en el mapa (carril ${cell.carril}, celda ${cell.indice}). Revisa los campos antes de guardar.`,
+		);
 	}
 	function validPickedCell(cell, expected) {
-		return cell?.calle === expected &&
+		return (
+			cell?.calle === expected &&
 			Number.isInteger(cell.carril) &&
 			Number.isInteger(cell.indice) &&
-			cell.carril >= 0 && cell.carril < expected.carriles &&
-			cell.indice >= 0 && cell.indice < expected.tamano;
+			cell.carril >= 0 &&
+			cell.carril < expected.carriles &&
+			cell.indice >= 0 &&
+			cell.indice < expected.tamano
+		);
 	}
 	function mappings() {
+		if (draft?.type === types.LINEAL)
+			return draft.source && draft.destination
+				? linealMappings(draft.source, draft.destination)
+				: [];
+		const value = (row, key) => {
+			const text = row.querySelector(`[data-testid='${key}']`).value;
+			return text.trim() === "" ? NaN : Number(text);
+		};
 		return [
 			...rowsElement.querySelectorAll("[data-testid='link-mapping-row']"),
-		].map((row) =>
-			Object.fromEntries(
-				["source-lane", "source-cell", "destination-lane", "destination-cell"]
-					.map((k) => {
-						const v = row.querySelector(`[data-testid='${k}']`).value;
-						return [k, v.trim() === "" ? NaN : Number(v)];
-					})
-					.concat(
-						row.querySelector("[data-testid='chance']")
-							? [
-									[
-										"chance",
-										row.querySelector("[data-testid='chance']").value.trim() ===
-										""
-											? NaN
-											: Number(
-													row.querySelector("[data-testid='chance']").value,
-												),
-									],
-								]
-							: [],
-					),
-			),
-		);
+		].map((row) => ({
+			"source-lane": value(row, "source-lane"),
+			"source-cell":
+				draft.type === types.INCORPORACION
+					? draft.source.tamano - 1
+					: value(row, "source-cell"),
+			"destination-lane": value(row, "destination-lane"),
+			"destination-cell": value(row, "destination-cell"),
+			...(draft.type === types.PROBABILISTICA
+				? { chance: value(row, "chance") }
+				: {}),
+		}));
 	}
 	const effective = (v, s) => (Number(v) === -1 ? s - 1 : Number(v));
 	function mappingKey(mapping, source) {
@@ -448,7 +508,12 @@
 			const key = mappingKey(m, s);
 			const dup = keys.has(key) || isDuplicate(m, s, d);
 			const invalidRow = invalidMapping(m, s, d);
-			rows[i]?.classList.toggle("is-invalid", dup || invalidRow);
+			(
+				rows[i] ||
+				(draft.type === types.LINEAL
+					? rowsElement.querySelector("[data-testid='link-lineal-summary']")
+					: null)
+			)?.classList.toggle("is-invalid", dup || invalidRow);
 			bad ||= invalidRow;
 			duplicateFound ||= dup;
 			keys.add(key);

@@ -28,12 +28,19 @@ async function openDraft(page, source, destination, type) {
 	await page.select("#linkDestinationStreet", destination.id)
 	await page.select(ui.type, type)
 	await page.waitForFunction(() => document.querySelector("#linkDraftPanel")?.hidden === false)
-	await page.waitForSelector(rowsSelector)
+	await page.waitForSelector(type === "LINEAL" ? '[data-testid="link-lineal-summary"]' : rowsSelector)
 }
 
 async function readRows(page) {
 	return page.$$eval(rowsSelector, elements => elements.map(row => Object.fromEntries(
-		["source-lane", "source-cell", "destination-lane", "destination-cell", "chance"].map(key => [key, row.querySelector(`[data-testid="${key}"]`)?.value ?? null]),
+		["source-lane", "source-cell", "destination-lane", "destination-cell", "chance"].map(key => {
+			const el = row.querySelector(`[data-testid="${key}"]`)
+			if (!el && key === "source-cell" && document.querySelector("#linkTypeSelect")?.value === "INCORPORACION") {
+				const street = window.calles.find(item => item.id === document.querySelector("#linkSourceStreet")?.value)
+				return [key, String(street?.tamano - 1)]
+			}
+			return [key, el ? ("value" in el ? el.value : el.textContent.trim()) : null]
+		}),
 	)))
 }
 
@@ -62,9 +69,9 @@ async function clickCell(page, streetId, lane, cell) {
 	await page.mouse.click(point.x, point.y)
 }
 
-async function pickRow(page, index) {
-	const buttons = await page.$$(`${rowsSelector} [data-testid="link-pick-map"]`)
-	assert.ok(buttons[index], `incorporation row ${index} has an optional map picker`)
+async function pickRow(page, index, endpoint) {
+	const buttons = await page.$$(`${rowsSelector} [data-testid="link-pick-${endpoint}"]`)
+	assert.ok(buttons[index], `mapping row ${index} has a ${endpoint} map picker`)
 	await buttons[index].click()
 }
 
@@ -84,7 +91,7 @@ for (const usePixi of [false, true]) {
 		await page.evaluate(() => window.streetEditPause?.())
 		const source = await makeStreet(page, `Issue 06 source ${usePixi}`, .20, .20, 3, 16)
 		const short = await makeStreet(page, `Issue 06 short ${usePixi}`, .20, .70, 2, 2)
-		const target = await makeStreet(page, `Issue 06 target ${usePixi}`, .70, .70, 3, 16)
+		const target = await makeStreet(page, `Issue 06 target ${usePixi}`, .70, .10, 3, 16)
 		const initial = await connectionCount(page)
 
 		// Incorporation creates an exit for every source lane. Out-of-range rows stay
@@ -95,12 +102,16 @@ for (const usePixi of [false, true]) {
 		assert.deepEqual(rows.map(row => Number(row["source-lane"])), [0, 1, 2])
 		assert.deepEqual(rows.map(row => Number(row["destination-lane"])), [0, 0, 0])
 		assert.deepEqual(rows.map(row => Number(row["destination-cell"])), [0, 1, 2], "all lanes expand to destination cells; the final cell is out of range")
-		await pickRow(page, 1)
+		assert.equal(await page.$$eval(rowsSelector, elements => elements.filter(row => /celda origen.*última.*15/i.test(row.textContent)).length), 3, "every incorporation row visibly fixes origin at its last cell")
+		assert.equal(await page.$$eval(rowsSelector, elements => elements.filter(row => row.querySelector('[data-testid="link-pick-source"], [data-phase="source"]') || [...row.querySelectorAll('[data-testid="source-cell"]')].some(el => !el.disabled && !el.readOnly && el.matches('input, select, textarea'))).length), 0, "incorporation has no origin picker or editable origin cell")
+		assert.equal(await page.$eval(`${rowsSelector} [data-testid="link-pick-destination"]`, button => button.title.includes("destino") && button.getAttribute("aria-label")?.includes("destino") && button.parentElement.querySelector('[data-testid="destination-lane"]') && button.parentElement.querySelector('[data-testid="destination-cell"]') && !button.textContent.includes("Elegir")), true, "destination icon has a tooltip and sits above its destination fields")
+		await pickRow(page, 1, "destination")
 		await clickCell(page, source.id, 1, 5)
-		assert.deepEqual((await readRows(page)).map(row => Number(row["source-cell"])), [15, 5, 15], "origin pick changes only the active incorporation row")
+		assert.deepEqual((await readRows(page)).map(row => Number(row["source-cell"])), [15, 15, 15], "wrong-street pick cannot change the fixed incorporation origin")
+		assert.match(await page.$eval("#linkMapPickStatus", el => el.textContent), /incorrecta|fuera|destino/i, "invalid destination pick has visible feedback")
 		await clickCell(page, short.id, 1, 1)
 		rows = await readRows(page)
-		assert.deepEqual(rows.map(row => [Number(row["source-lane"]), Number(row["source-cell"]), Number(row["destination-lane"]), Number(row["destination-cell"])]), [[0, 15, 0, 0], [1, 5, 1, 1], [2, 15, 0, 2]], "the destination pick leaves other rows and their validation state intact")
+		assert.deepEqual(rows.map(row => [Number(row["source-lane"]), Number(row["source-cell"]), Number(row["destination-lane"]), Number(row["destination-cell"])]), [[0, 15, 0, 0], [1, 15, 1, 1], [2, 15, 0, 2]], "the destination pick leaves other rows and their validation state intact")
 		await page.click(ui.save)
 		assert.equal(await connectionCount(page), initial, "invalid incorporation does not partially commit")
 		assert.ok(await page.$(`${rowsSelector}.is-invalid`), "invalid lane is highlighted")
@@ -109,7 +120,18 @@ for (const usePixi of [false, true]) {
 		await waitForCount(page, initial + 3)
 		const incorporated = await page.evaluate(() => window.conexiones.slice(-3).map(link => ({ type: link.tipo, sourceLane: link.carrilOrigen, sourceCell: link.posOrigen, destLane: link.carrilDestino, destCell: link.posDestino })))
 		assert.deepEqual(incorporated.map(link => link.type), Array(3).fill(canonicalType.INCORPORACION))
-		assert.deepEqual(incorporated.map(link => [link.sourceLane, link.sourceCell, link.destLane, link.destCell]), [[0, 15, 0, 0], [1, 5, 1, 1], [2, 15, 0, 1]], "only the picked incorporation row persists its chosen cells")
+		assert.deepEqual(incorporated.map(link => [link.sourceLane, link.sourceCell, link.destLane, link.destCell]), [[0, 15, 0, 0], [1, 15, 1, 1], [2, 15, 0, 1]], "incorporation keeps fixed origins and persists the chosen destination")
+		let incorporationCount = await connectionCount(page)
+		await openDraft(page, source, target, "INCORPORACION")
+		await pickRow(page, 0, "destination")
+		await clickCell(page, target.id, 1, 5)
+		await closeDraft(page)
+		assert.equal(await connectionCount(page), incorporationCount, "Cancel discards picked incorporation destination")
+		await openDraft(page, source, target, "INCORPORACION")
+		await pickRow(page, 0, "destination")
+		await page.keyboard.press("Escape")
+		await page.waitForFunction(() => document.querySelector("#linkDraftPanel")?.hidden)
+		assert.equal(await connectionCount(page), incorporationCount, "Escape discards armed incorporation pick")
 
 		// A probabilistic draft starts with one 100% exit. Additional exits are
 		// explicitly added and retain independent, non-normalized percentages.
@@ -117,25 +139,56 @@ for (const usePixi of [false, true]) {
 		rows = await readRows(page)
 		assert.equal(rows.length, 1, "probabilistic type defaults to one exit")
 		assert.equal(Number(rows[0].chance), 100)
+		assert.equal(await page.$eval(rowsSelector, row => ["source", "destination"].every(phase => { const button = row.querySelector(`[data-testid="link-pick-${phase}"]`); return button?.title && button.getAttribute("aria-label") && button.parentElement.querySelector(`[data-testid="${phase}-lane"]`) && button.parentElement.querySelector(`[data-testid="${phase}-cell"]`) && !button.textContent.includes("Elegir") })), true, "both probabilistic icon pickers have tooltips and sit above their field pairs")
 		await setRow(page, 0, "chance", 35)
 		await page.click(ui.add)
 		await page.waitForFunction(() => document.querySelectorAll('#linkMappingRows [data-testid="link-mapping-row"]').length === 2)
 		assert.equal(Number((await readRows(page))[0].chance), 35, "adding an exit retains the edited first exit")
-		await setRow(page, 1, "source-lane", 1)
-		await setRow(page, 1, "destination-lane", 2)
+		const firstExit = (await readRows(page))[0]
+		await pickRow(page, 1, "destination")
+		await clickCell(page, source.id, 1, 6)
+		assert.deepEqual((await readRows(page))[0], firstExit, "invalid destination pick does not touch another exit")
+		assert.match(await page.$eval("#linkMapPickStatus", el => el.textContent), /incorrecta|fuera|destino/i, "wrong-street probabilistic pick has visible feedback")
+		await clickCell(page, target.id, 2, 5)
+		rows = await readRows(page)
+		assert.deepEqual([Number(rows[1]["destination-lane"]), Number(rows[1]["destination-cell"])], [2, 5], `destination can be picked without first picking origin: ${await page.$eval("#linkMapPickStatus", el => el.textContent)}`)
+		assert.deepEqual(rows[0], firstExit, "destination pick is isolated to its row")
+		await pickRow(page, 1, "source")
+		await clickCell(page, target.id, 2, 5)
+		assert.deepEqual((await readRows(page))[1], rows[1], "wrong-street origin pick is ignored")
+		await clickCell(page, source.id, 1, 6)
+		rows = await readRows(page)
+		assert.deepEqual([Number(rows[1]["source-lane"]), Number(rows[1]["source-cell"])], [1, 6], "source pick changes only origin of its row")
+		assert.deepEqual(rows[0], firstExit, "origin pick leaves other rows untouched")
 		await setRow(page, 1, "destination-cell", 3)
+		assert.equal(Number((await readRows(page))[1]["destination-cell"]), 3, "manual correction remains possible after map picking")
 		await setRow(page, 1, "chance", 80)
 		const beforeProbSave = await connectionCount(page)
 		await page.click(ui.save)
 		await waitForCount(page, beforeProbSave + 2)
-		const probabilistic = await page.evaluate(() => window.conexiones.slice(-2).map(link => ({ type: link.tipo, sourceLane: link.carrilOrigen, destLane: link.carrilDestino, destCell: link.posDestino, chance: link.probabilidadTransferencia })))
+		const probabilistic = await page.evaluate(() => window.conexiones.slice(-2).map(link => ({ type: link.tipo, sourceLane: link.carrilOrigen, sourceCell: link.posOrigen, destLane: link.carrilDestino, destCell: link.posDestino, chance: link.probabilidadTransferencia })))
 		assert.deepEqual(probabilistic.map(link => link.type), Array(2).fill(canonicalType.PROBABILISTICA))
 		assert.deepEqual(probabilistic.map(link => [link.sourceLane, link.destLane, link.destCell]), [[0, 0, 0], [1, 2, 3]])
+		assert.deepEqual(probabilistic.map(link => link.sourceCell), [15, 6], "picked probabilistic origin persists independently")
 		assert.deepEqual(probabilistic.map(link => Math.round(link.chance * 100)), [35, 80], "chance is persisted per exit, without normalization")
+
+		// Both dismissal paths discard an armed per-endpoint pick and all draft edits.
+		let count = await connectionCount(page)
+		await openDraft(page, source, target, "PROBABILISTICA")
+		await pickRow(page, 0, "source")
+		await clickCell(page, source.id, 2, 4)
+		await pickRow(page, 0, "destination")
+		await page.keyboard.press("Escape")
+		await page.waitForFunction(() => document.querySelector("#linkDraftPanel")?.hidden)
+		assert.equal(await connectionCount(page), count, "Escape discards probabilistic draft with a pending pick")
+		await openDraft(page, source, target, "PROBABILISTICA")
+		await pickRow(page, 0, "destination")
+		await clickCell(page, target.id, 1, 4)
+		await closeDraft(page)
+		assert.equal(await connectionCount(page), count, "Cancel discards probabilistic picked destination")
 
 		// Identical exits inside a draft and against a committed mapping are rejected;
 		// non-identical shared-endpoint overlap and reverse direction remain legal.
-		let count = await connectionCount(page)
 		await openDraft(page, source, target, "PROBABILISTICA")
 		await page.click(ui.add)
 		await setRow(page, 1, "source-lane", 0)
@@ -144,13 +197,34 @@ for (const usePixi of [false, true]) {
 		await page.click(ui.save)
 		assert.equal(await connectionCount(page), count, "duplicate exits in the expanded draft are rejected atomically")
 		await closeDraft(page)
-
-		await openDraft(page, source, target, "LINEAL")
+		await openDraft(page, source, target, "PROBABILISTICA")
+		await setRow(page, 0, "destination-cell", 999)
+		await page.click(ui.save)
+		assert.equal(await connectionCount(page), count, "out-of-range probabilistic mapping is rejected")
+		assert.ok(await page.$(`${rowsSelector}.is-invalid`), "invalid probabilistic row stays highlighted")
 		await setRow(page, 0, "destination-cell", 1)
+		assert.match(await page.$eval("#linkDraftNotice", el => el.textContent), /solapamiento/i, "nonidentical shared endpoint remains informational")
+		await page.click(ui.save)
+		await waitForCount(page, count + 1)
+		count++
+
+		const linealSource = await makeStreet(page, `Issue 06 lineal source ${usePixi}`, .45, .20, 3, 16)
+		await openDraft(page, linealSource, target, "LINEAL")
+		assert.equal(await page.$$eval(rowsSelector, elements => elements.filter(row => [...row.querySelectorAll('input, select, textarea')].some(el => !el.disabled && !el.readOnly) || row.querySelector('[data-testid="link-pick-source"], [data-testid="link-pick-destination"], [data-testid="link-pick-map"]')).length), 0, "Lineal mapping cannot be edited or picked")
 		await page.click(ui.save)
 		await waitForCount(page, count + 3)
 		count += 3
-		await openDraft(page, target, source, "LINEAL")
+		const linealEdit = await page.evaluate(({ sourceId, targetId }) => {
+			const links = window.conexiones.filter(link => link.origen.id === sourceId && link.destino.id === targetId && link.tipo === window.TIPOS_CONEXION.LINEAL)
+			window.__linealSiblings = [links[0], links[2]]
+			window.createLinkTool.edit(links[1])
+			return links[1].carrilOrigen
+		}, { sourceId: linealSource.id, targetId: target.id })
+		assert.match(await page.$eval('[data-testid="link-lineal-summary"]', el => el.textContent), new RegExp(`carril ${linealEdit + 1}`))
+		await page.click(ui.save)
+		assert.equal(await connectionCount(page), count, "editing one fixed Lineal lane does not add its siblings again")
+		assert.equal(await page.evaluate(() => window.__linealSiblings.every(link => window.conexiones.includes(link))), true, "other saved Lineal lanes remain untouched")
+		await openDraft(page, target, linealSource, "LINEAL")
 		await page.click(ui.save)
 		await waitForCount(page, count + 3)
 		count += 3
@@ -243,7 +317,7 @@ for (const usePixi of [false, true]) {
 			destination.arreglo[link.carrilDestino][link.posDestino] = 0
 			const transferred = link.transferir()
 			return { transferred, source: source.arreglo[link.carrilOrigen][link.posOrigen], destination: destination.arreglo[link.carrilDestino][link.posDestino] }
-		}, { sourceId: source.id, destinationId: target.id })
+		}, { sourceId: linealSource.id, destinationId: target.id })
 		assert.equal(transferResult.transferred, true)
 		assert.equal(transferResult.source, 0)
 		assert.equal(transferResult.destination, 1)

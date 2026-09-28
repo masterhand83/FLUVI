@@ -1,15 +1,8 @@
 import assert from "node:assert/strict"
 import { openSimulator } from "../helpers/simulator.mjs"
 
-// Public UI contract proposed for the map-first directed-link workflow:
-// #createLinkButton, #linkDraftPanel, #linkMappingRows,
-// #linkDirectionReverse, #linkSaveButton, #linkCancelButton.
-// Each mapping row is [data-testid="link-mapping-row"] and exposes
-// [data-testid="source-lane"|"source-cell"|"destination-lane"|"destination-cell"]
-// and a per-row [data-testid="link-pick-map"] button for optional map cell picking.
-// inputs and an unmatched source lane marked [data-testid="link-unmatched-lane"]
-// when lane counts differ. The issue requests a visible, correctable review rather than a
-// particular layout, so assertions use these hooks and the public model.
+// Lineal is a read-only last-cell → first-cell review. Its lane-count mismatch
+// is visible, but cell correction and map picking belong to the other types.
 
 const TEST_IDS = {
 	start: "#createLinkButton",
@@ -64,7 +57,8 @@ async function createDraft(page, source, destination) {
 	await clickStreet(page, destination.id)
 	await page.waitForFunction(() => {
 		const panel = document.querySelector("#linkDraftPanel")
-		return panel && !panel.hidden && panel.getAttribute("aria-hidden") !== "true"
+		return panel && !panel.hidden && panel.getAttribute("aria-hidden") !== "true" &&
+			!!document.querySelector('#linkMappingRows [data-testid="link-lineal-summary"]')
 	})
 }
 
@@ -73,24 +67,10 @@ async function rows(page) {
 		elements.map((row) => Object.fromEntries(
 			["source-lane", "source-cell", "destination-lane", "destination-cell"].map((key) => [
 				key,
-				row.querySelector(`[data-testid="${key}"]`)?.value ?? null,
+				(() => { const el = row.querySelector(`[data-testid="${key}"]`); return el ? ("value" in el ? el.value : el.textContent.trim()) : null })(),
 			]),
 		)),
 	)
-}
-
-async function editFirstRow(page, field, value) {
-	await page.$eval(`${TEST_IDS.rows} [data-testid="link-mapping-row"] [data-testid="${field}"]`, (input, next) => {
-		input.value = String(next)
-		input.dispatchEvent(new Event("input", { bubbles: true }))
-		input.dispatchEvent(new Event("change", { bubbles: true }))
-	}, value)
-}
-
-async function pickRow(page, index = 0) {
-	const buttons = await page.$$(`${TEST_IDS.rows} [data-testid="link-mapping-row"] [data-testid="link-pick-map"]`)
-	assert.ok(buttons[index], `mapping row ${index} has an optional map picker`)
-	await buttons[index].click()
 }
 
 for (const usePixi of [false, true]) {
@@ -114,14 +94,15 @@ for (const usePixi of [false, true]) {
 		// mapping for matching lanes; the extra source lane is visibly unmatched.
 		await createDraft(page, streets.source, streets.destination)
 		assert.equal(await page.evaluate(() => window.conexiones.length), initialLinks, "map picks do not connect streets before Save")
-		const initialRows = await rows(page)
-		assert.equal(initialRows.length, 1, "Lineal defaults to lane pairs up to the smaller lane count")
-		assert.equal(Number(initialRows[0]["source-lane"]), 0)
-		assert.ok([15, -1].includes(Number(initialRows[0]["source-cell"])), "source defaults to its final cell (or the equivalent last-cell sentinel)")
-		assert.equal(Number(initialRows[0]["destination-lane"]), 0)
-		assert.equal(Number(initialRows[0]["destination-cell"]), 0, "destination defaults to its first cell")
+		assert.equal((await rows(page)).length, 0, "Lineal has no configurable mapping rows")
+		assert.match(await page.$eval('[data-testid="link-lineal-summary"]', el => el.textContent), /última celda.*15.*primera celda.*0/i, "Lineal visibly reviews canonical last-to-first cell mapping")
+		const linealControls = await page.$$eval(`${TEST_IDS.rows} [data-testid="link-mapping-row"]`, elements => elements.map(row => ({
+			pickers: row.querySelectorAll('[data-testid="link-pick-source"], [data-testid="link-pick-destination"], [data-testid="link-pick-map"]').length,
+			editable: [...row.querySelectorAll('input, select, textarea')].filter(el => !el.disabled && !el.readOnly).length,
+		})))
+		assert.deepEqual(linealControls, [], "Lineal review has no editable mapping config or map picks")
 		assert.ok(await page.$(`${TEST_IDS.rows} [data-testid="link-unmatched-lane"]`), "the unmatched source lane is visible")
-		const visibleReview = await page.$eval(TEST_IDS.rows, (el) => getComputedStyle(el).display !== "none" && el.getBoundingClientRect().height > 0)
+		const visibleReview = await page.$eval('[data-testid="link-lineal-summary"]', (el) => getComputedStyle(el).display !== "none" && el.getBoundingClientRect().height > 0)
 		assert.ok(visibleReview, "mapping rows are visibly reviewable")
 		const panelBounds = await page.$eval(TEST_IDS.panel, (el) => ({
 			top: el.getBoundingClientRect().top,
@@ -131,25 +112,6 @@ for (const usePixi of [false, true]) {
 		assert.ok(panelBounds.top >= 0 && panelBounds.bottom <= panelBounds.viewportHeight,
 			`link instructions and Save/Cancel must fit in the viewport: ${JSON.stringify(panelBounds)}`)
 
-		// Picking a row is opt-in: an unrelated street cannot fill either endpoint.
-		// Once armed, the first valid cell fills only the origin; the second fills
-		// the destination. Manual edits continue to work after both map picks.
-		await pickRow(page)
-		await clickStreet(page, streets.destination.id, 0, 5)
-		assert.deepEqual(await rows(page), initialRows, "destination street cannot be picked as the origin")
-		await clickStreet(page, streets.source.id, 1, 6)
-		let picked = await rows(page)
-		assert.deepEqual([Number(picked[0]["source-lane"]), Number(picked[0]["source-cell"])], [1, 6])
-		assert.equal(picked[0]["destination-cell"], initialRows[0]["destination-cell"], "origin pick does not fill the destination")
-		await clickStreet(page, alternative.id, 0, 4)
-		assert.deepEqual(await rows(page), picked, "an unrelated street cannot be picked as the destination")
-		await clickStreet(page, streets.destination.id, 0, 8)
-		picked = await rows(page)
-		assert.deepEqual([Number(picked[0]["source-lane"]), Number(picked[0]["source-cell"]), Number(picked[0]["destination-lane"]), Number(picked[0]["destination-cell"])], [1, 6, 0, 8])
-		assert.equal(await page.evaluate(() => window.conexiones.length), initialLinks, "cell picks remain draft-only")
-		await editFirstRow(page, "destination-cell", 7)
-		assert.equal(Number((await rows(page))[0]["destination-cell"]), 7, "manual correction remains available after picking")
-
 		// Correct both street choices, then reverse direction. Escape discards only
 		// this draft; it must not mutate existing links.
 		await page.waitForSelector("#linkSourceStreet")
@@ -158,8 +120,6 @@ for (const usePixi of [false, true]) {
 		await page.click(TEST_IDS.reverse)
 		assert.equal(await page.$eval("#linkSourceStreet", (el) => el.value), streets.source.id)
 		assert.equal(await page.$eval("#linkDestinationStreet", (el) => el.value), alternative.id)
-		await pickRow(page)
-		await clickStreet(page, streets.source.id, 0, 3)
 		await page.keyboard.press("Escape")
 		await page.waitForFunction(() => document.querySelector("#linkDraftPanel")?.hidden)
 		assert.equal(await page.evaluate(() => window.conexiones.length), initialLinks, "Escape removes no persisted or existing link")
@@ -184,27 +144,16 @@ for (const usePixi of [false, true]) {
 		// Cancel is the other explicit draft-discard path.
 		const beforeCancel = await page.evaluate(() => window.conexiones.length)
 		await createDraft(page, streets.source, alternative)
-		await pickRow(page)
-		await clickStreet(page, streets.source.id, 0, 2)
 		await page.click(TEST_IDS.cancel)
 		await page.waitForFunction(() => document.querySelector("#linkDraftPanel")?.hidden)
 		assert.equal(await page.evaluate(() => window.conexiones.length), beforeCancel)
 
-		// Out-of-range mapping and exact directed duplicate are blocked without
-		// adding a connection. A different destination cell remains allowed.
-		await createDraft(page, streets.source, streets.destination)
-		await editFirstRow(page, "destination-cell", 999)
-		await page.click(TEST_IDS.save)
-		assert.equal(await page.evaluate(() => window.conexiones.length), beforeCancel, "out-of-range mapping is rejected")
-		assert.ok(await page.$eval(TEST_IDS.panel, (el) => el.getAttribute("aria-invalid") === "true" || el.querySelector("[role=alert]")?.textContent.trim()), "invalid mapping has visible feedback")
-		assert.ok(await page.$eval(`${TEST_IDS.rows} [data-testid="link-mapping-row"]`, (row) => row.classList.contains("is-invalid")), "the offending mapping stays highlighted for correction")
-		await editFirstRow(page, "destination-cell", 1)
-		assert.match(await page.$eval("#linkDraftNotice", (el) => el.textContent), /solapamiento/i, "nonidentical endpoint overlap is informational")
-		await page.click(TEST_IDS.save)
-		await page.waitForFunction((count) => window.conexiones.length === count + 1, {}, beforeCancel)
+		// Exact directed duplicates are blocked even when the visible Lineal
+		// mapping is immutable. Probabilistic validation/correction is covered
+		// in connection-types.mjs.
 		await createDraft(page, streets.source, streets.destination)
 		await page.click(TEST_IDS.save)
-		assert.equal(await page.evaluate(() => window.conexiones.length), beforeCancel + 1, "an exact directed duplicate is rejected")
+		assert.equal(await page.evaluate(() => window.conexiones.length), beforeCancel, "an exact directed duplicate is rejected")
 		assert.ok(await page.$eval(TEST_IDS.panel, (el) => el.getAttribute("aria-invalid") === "true" || el.querySelector("[role=alert]")?.textContent.trim()), "duplicate rejection has visible feedback")
 		await page.click(TEST_IDS.cancel)
 
@@ -235,6 +184,7 @@ for (const usePixi of [false, true]) {
 		await page.click(TEST_IDS.start)
 		await page.select("#linkSourceStreet", longReview[0])
 		await page.select("#linkDestinationStreet", longReview[1])
+		await page.select("#linkTypeSelect", "INCORPORACION")
 		await page.setViewport({ width: 900, height: 600 })
 		const compactLayout = await page.$eval(TEST_IDS.panel, (el) => {
 			const rect = el.getBoundingClientRect()
@@ -244,7 +194,7 @@ for (const usePixi of [false, true]) {
 			`long review remains within viewport and scrollable: ${JSON.stringify(compactLayout)}`)
 		await page.click(TEST_IDS.cancel)
 
-		console.log(`✅ directed Lineal link creation, review, correction, cancellation and validation (${usePixi ? "Pixi" : "Canvas"})`)
+		console.log(`✅ directed Lineal fixed review, save, cancellation and duplicate validation (${usePixi ? "Pixi" : "Canvas"})`)
 	} finally {
 		await sim.close()
 	}
