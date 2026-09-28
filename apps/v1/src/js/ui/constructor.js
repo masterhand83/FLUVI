@@ -2161,7 +2161,11 @@ function guardarSimulacion() {
                 bezierGeometry: true,
                 endX: calle.endX,
                 endY: calle.endY,
-                bezierControls: calle.bezierControls.map(control => ({ x: control.x, y: control.y }))
+                bezierControls: (calle.bezierControls || []).map(control => ({ x: control.x, y: control.y })),
+                ...(calle.bezierSegments ? { bezierSegments: calle.bezierSegments.map(segment => ({
+                    controls: segment.controls.map(control => ({ x: control.x, y: control.y })),
+                    end: { x: segment.end.x, y: segment.end.y }
+                })) } : {})
             } : {})
         })) : [],
         conexiones: window.conexiones ? window.conexiones.map(c => {
@@ -2268,10 +2272,15 @@ function cargarSimulacion(event) {
                 if (exito) {
                     callesExitosas++;
                     const calleCreada = window.calles[window.calles.length - 1];
-                    if (calleCreada && calleData.bezierGeometry && Array.isArray(calleData.bezierControls)) {
+                    if (calleCreada && calleData.bezierGeometry &&
+                        (Array.isArray(calleData.bezierSegments) || Array.isArray(calleData.bezierControls))) {
                         const proposed = { ...calleCreada, esCurva: true, bezierGeometry: true,
                             endX: calleData.endX, endY: calleData.endY,
-                            bezierControls: calleData.bezierControls.map(control => ({ x: control.x, y: control.y })) };
+                            bezierControls: (calleData.bezierControls || []).map(control => ({ x: control.x, y: control.y })),
+                            ...(Array.isArray(calleData.bezierSegments) ? { bezierSegments: calleData.bezierSegments.map(segment => ({
+                                controls: Array.isArray(segment?.controls) ? segment.controls.map(control => ({ x: control?.x, y: control?.y })) : null,
+                                end: { x: segment?.end?.x, y: segment?.end?.y }
+                            })) } : {}) };
                         const geometry = window.streetBezier?.validate(proposed);
                         if (geometry?.valid && geometry.cells === calleCreada.tamano) {
                             Object.assign(calleCreada, proposed);

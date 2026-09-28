@@ -22,7 +22,30 @@
 	const clone = (s) => ({
 		...s,
 		bezierControls: (s.bezierControls || []).map((p) => ({ ...p })),
+		...(s.bezierSegments && {
+			bezierSegments: s.bezierSegments.map((segment) => ({
+				controls: segment.controls.map((p) => ({ ...p })),
+				end: { ...segment.end },
+			})),
+		}),
 	});
+	const segments = (s) => s.bezierSegments || null;
+	const handlesFor = (s) => segments(s)
+		? segments(s).flatMap((segment, section) => [
+			...segment.controls.map((p, index) => ({ kind: `control:${section}:${index}`, p })),
+			...(section < segments(s).length - 1 ? [{ kind: `anchor:${section}`, p: segment.end }] : []),
+		])
+		: (s.bezierControls || []).map((p, index) => ({ kind: `control:0:${index}`, p }));
+	function transformCurve(s, points, source = s) {
+		if (segments(source)) {
+			s.bezierSegments = segments(source).map((segment) => ({
+				controls: segment.controls.map(points),
+				end: points(segment.end),
+			}));
+			s.endX = s.bezierSegments.at(-1).end.x;
+			s.endY = s.bezierSegments.at(-1).end.y;
+		} else if (source.bezierControls) s.bezierControls = source.bezierControls.map(points);
+	}
 	const worldAt = (e) => {
 		const r = canvas.getBoundingClientRect();
 		if (window.USE_PIXI && window.pixiApp?.cameraController) {
@@ -93,12 +116,7 @@
 			s && !window.drawStreetTool?.isActive?.()
 				? [
 						...endpoints(s).map((p, i) => ({ kind: i ? "end" : "start", p })),
-						...(isBezier(s)
-							? (s.bezierControls || []).map((p, i) => ({
-									kind: `control:${i}`,
-									p,
-								}))
-							: []),
+						...(isBezier(s) ? handlesFor(s) : []),
 					]
 				: [];
 		while (editor.handles.length < items.length) {
@@ -116,15 +134,12 @@
 				h.dataset.kind = item.kind;
 				if (item.kind === "start" || item.kind === "end") h.dataset.end = item.kind;
 				else delete h.dataset.end;
-				h.classList.toggle(
-					"selected",
-					item.kind ===
-						`control:${window.streetInspector?.getSelectedControlIndex?.()}`,
-				);
+				h.classList.toggle("selected", item.kind === window.streetInspector?.getSelectedHandleKind?.());
+				h.classList.toggle("street-anchor-handle", item.kind.startsWith("anchor:"));
 				h.setAttribute(
 					"aria-label",
-					item.kind.startsWith("control")
-						? `Mover ${item.kind}`
+					item.kind.startsWith("anchor:") ? `Mover ancla ${Number(item.kind.split(":")[1]) + 1}` : item.kind.startsWith("control:")
+						? `Mover control ${Number(item.kind.split(":")[2]) + 1}`
 						: `Mover ${item.kind === "start" ? "inicio" : "fin"} de calle`,
 				);
 				if (h.parentElement !== canvas.parentElement)
@@ -140,8 +155,8 @@
 			r = 14 / (Number(window.escala) || 1);
 		if (dist(p, ends[0]) < r) return "start";
 		if (dist(p, ends[1]) < r) return "end";
-		for (let i = 0; i < (s.bezierControls || []).length; i++)
-			if (dist(p, s.bezierControls[i]) < r) return `control:${i}`;
+		for (const item of handlesFor(s))
+			if (dist(p, item.p) < r) return item.kind;
 		if (isBezier(s)) {
 			// The same cell geometry used for clicks defines the draggable body.
 			// Fixed-count curve samples miss cells on long Bezier streets.
@@ -238,6 +253,7 @@
 				"endX",
 				"endY",
 				"bezierControls",
+				"bezierSegments",
 			])
 				if (key in g.proposed) g.street[key] = g.proposed[key];
 			window.streetInspector?.refresh?.();
@@ -291,8 +307,11 @@
 			)
 				return;
 			if (kind !== "body") window.streetEditPause?.();
-			if (kind.startsWith("control:"))
-				window.streetInspector?.selectControl?.(Number(kind.split(":")[1]));
+			if (kind.startsWith("control:")) {
+				const [, section, index] = kind.split(":").map(Number);
+				window.streetInspector?.selectControl?.(section, index);
+			} else if (kind.startsWith("anchor:"))
+				window.streetInspector?.selectAnchor?.(Number(kind.split(":")[1]));
 			const p = worldAt(e);
 			editor.gesture = {
 				street: s,
@@ -352,7 +371,7 @@
 						s.endX = en.x;
 						s.endY = en.y;
 						s.angulo = b.angulo - (a * 180) / Math.PI;
-						s.bezierControls = b.bezierControls.map(rot);
+						transformCurve(s, rot, b);
 					} else {
 						s.x = b.x;
 						s.y = b.y;
@@ -364,15 +383,16 @@
 					if (isBezier(s)) {
 						s.endX = b.endX + dx;
 						s.endY = b.endY + dy;
-						s.bezierControls = b.bezierControls.map((c) => ({
-							x: c.x + dx,
-							y: c.y + dy,
-						}));
+						transformCurve(s, (c) => ({ x: c.x + dx, y: c.y + dy }), b);
 					}
 				}
 			} else if (g.kind.startsWith("control:")) {
-				const i = Number(g.kind.split(":")[1]);
-				s.bezierControls[i] = { x: p.x, y: p.y };
+				const [, section, index] = g.kind.split(":").map(Number);
+				if (segments(s)) s.bezierSegments[section].controls[index] = { x: p.x, y: p.y };
+				else s.bezierControls[index] = { x: p.x, y: p.y };
+			} else if (g.kind.startsWith("anchor:")) {
+				const section = Number(g.kind.split(":")[1]);
+				s.bezierSegments[section].end = { x: p.x, y: p.y };
 			} else if (!isBezier(s)) {
 				const fixed = g.kind === "start" ? straightEnd(b) : { x: b.x, y: b.y },
 					vx = g.kind === "start" ? fixed.x - p.x : p.x - fixed.x,
@@ -405,10 +425,15 @@
 				}
 				const old = endpoint(b, g.kind === "end"),
 					ratio = dist(fixed, moving) / (dist(fixed, old) || 1);
-				s.bezierControls = b.bezierControls.map((c) => ({
+				transformCurve(s, (c) => ({
 					x: fixed.x + (c.x - fixed.x) * ratio,
 					y: fixed.y + (c.y - fixed.y) * ratio,
-				}));
+				}), b);
+				if (g.kind === "end" && segments(s)) {
+					s.endX = p.x;
+					s.endY = p.y;
+					s.bezierSegments.at(-1).end = { x: p.x, y: p.y };
+				}
 			}
 			const result = validate(s);
 			setInvalidPreview(!result.valid, result.reason);

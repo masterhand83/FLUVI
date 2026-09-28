@@ -104,4 +104,24 @@ describe('cell geometry index', () => {
         expect(w.cellGeometryIndex.nearbyStreets(2.5, 40, [road]).has(road)).toBe(true);
         expect(w.cellGeometryIndex.nearbyStreets(2.5, 2.5, [road]).has(road)).toBe(false);
     });
+
+    it('reindexes moved multi-section anchors and handles when edited directly', () => {
+        const w = setup();
+        w.obtenerCoordenadasGlobalesCeldaConCurva = (street, lane, index) => ({
+            x: street.bezierSegments[0].end.x + street.bezierSegments[1].controls[0].x + index * 5,
+            y: street.bezierSegments[0].end.y + lane * 5
+        });
+        const road = { x: 0, y: 0, endX: 40, endY: 40, angulo: 0, tamano: 2, carriles: 1,
+            esCurva: true, vertices: [], bezierSegments: [
+                { controls: [], end: { x: 10, y: 10 } },
+                { controls: [{ x: 10, y: 20 }], end: { x: 40, y: 40 } }
+            ] };
+        expect(w.cellGeometryIndex.findNearest(20, 10, [road])?.calle).toBe(road);
+        road.bezierSegments[0].end.y = 40;
+        expect(w.cellGeometryIndex.findNearest(20, 10, [road])).toBeNull();
+        expect(w.cellGeometryIndex.findNearest(20, 40, [road])?.calle).toBe(road);
+        road.bezierSegments[1].controls[0].x = 30;
+        expect(w.cellGeometryIndex.findNearest(20, 40, [road])).toBeNull();
+        expect(w.cellGeometryIndex.findNearest(40, 40, [road])?.calle).toBe(road);
+    });
 });

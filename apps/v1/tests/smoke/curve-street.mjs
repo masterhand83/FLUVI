@@ -283,6 +283,7 @@ for (const usePixi of [false, true]) {
 		);
 
 		await page.click("#streetInspectorAddControl");
+		await page.click("#streetInspectorChooseBezier");
 		await page.waitForFunction(
 			() =>
 				window.calleSeleccionada?.esCurva === true &&
@@ -307,6 +308,7 @@ for (const usePixi of [false, true]) {
 			"Add control converts straight street and creates the first control",
 		);
 		await page.click("#streetInspectorAddControl");
+		await page.click("#streetInspectorChooseBezier");
 		await page.waitForFunction(
 			() => window.calleSeleccionada?.bezierControls?.length === 2,
 		);
@@ -611,6 +613,7 @@ for (const usePixi of [false, true]) {
 
 		// Search only candidate coordinates; the actual change still occurs by dragging the map handle.
 		await page.click("#streetInspectorAddControl");
+		await page.click("#streetInspectorChooseBezier");
 		await page.waitForFunction(
 			() => window.calleSeleccionada?.bezierControls?.length === 2,
 		);
@@ -767,8 +770,85 @@ for (const usePixi of [false, true]) {
 			{ links: saved.conexiones.length },
 			"JSON roundtrip restores only explicit links, not geometric crossings",
 		);
+		// A street with no Bezier controls can have literal, independently movable corners.
+		await page.evaluate(() => {
+			const original = window.calles.find((street) => street.nombre === "Curve smoke Calle");
+			const street = window.crearCalle("Anchor smoke Calle", 30, window.TIPOS.CONEXION,
+				original.x, original.y + 150, 0, 0, 1, 0.02);
+			const index = window.calles.indexOf(street);
+			for (const id of ["selectCalle", "selectCalleEditor"])
+				document.getElementById(id).add(new Option(street.nombre, index));
+			const selector = document.getElementById("selectCalle");
+			selector.value = String(index);
+			window.calleSeleccionada = street;
+			selector.dispatchEvent(new Event("change", { bubbles: true }));
+			window.pixiApp?.sceneManager?.renderAll();
+			window.renderizarCanvas?.();
+		});
+		await page.waitForFunction(() => document.querySelector("#streetInspectorName")?.value === "Anchor smoke Calle");
+		await page.click("#streetInspectorAddControl");
+		await page.click("#streetInspectorChooseAnchor");
+		await page.waitForFunction(() => window.calleSeleccionada?.bezierSegments?.length === 2);
+		await page.$$eval("#streetInspectorBezierControls .street-inspector-section", (buttons) => buttons.at(-1).click());
+		await page.click("#streetInspectorAddControl");
+		await page.click("#streetInspectorChooseAnchor");
+		await page.waitForFunction(() => window.calleSeleccionada?.bezierSegments?.length === 3);
+		await page.click("#streetInspectorAddControl");
+		await page.click("#streetInspectorCancelAdd");
+		assert.equal(await page.evaluate(() => window.calleSeleccionada.bezierSegments.length), 3,
+			"canceling the add choice leaves anchors unchanged");
+		let anchored = await page.evaluate(() => {
+			const street = window.calleSeleccionada;
+			return { sections: street.bezierSegments, valid: window.streetBezier.validate(street).valid };
+		});
+		assert.equal(anchored.valid, true, "straight street converts to valid anchored geometry");
+		assert.ok(anchored.sections.every((section) => section.controls.length === 0), "anchor-only sections remain straight");
+		const first = await endpointCenter(page, "start");
+		assert.ok(first.x > 0, "street remains visible after conversion");
+		const anchorHandle = await page.$eval(".street-endpoint-handle[data-kind='anchor:0']", (element) => {
+			const box = element.getBoundingClientRect();
+			return { x: box.left + box.width / 2, y: box.top + box.height / 2 };
+		});
+		await dragTo(page, anchorHandle, { x: anchorHandle.x, y: anchorHandle.y - 22 });
+		await page.mouse.up();
+		anchored = await page.evaluate(() => {
+			const street = window.calleSeleccionada;
+			return { sections: street.bezierSegments, valid: window.streetBezier.validate(street).valid,
+				cell: window.encontrarCeldaMasCercana?.(street.bezierSegments[0].end.x, street.bezierSegments[0].end.y)?.calle === street };
+		});
+		assert.equal(anchored.valid, true, "dragged anchor produces valid sharp-turn geometry");
+		assert.equal(anchored.cell, true, "cell hit-testing follows the new corner");
+		assert.equal(anchored.sections[0].controls.length, 0, "corner does not require Bezier controls");
+		await page.evaluate(() => { window.__curveJsonPromise = null; });
+		await page.$eval("#btnGuardarSimulacion", (button) => button.click());
+		await page.waitForFunction(() => !!window.__curveJsonPromise);
+		const anchoredSave = await page.evaluate(async () => JSON.parse(await window.__curveJsonPromise));
+		const anchoredStreet = anchoredSave.calles.find((street) => street.nombre === "Anchor smoke Calle");
+		assert.deepEqual(anchoredStreet.bezierSegments, anchored.sections, "JSON saves anchors and sections");
+		await page.evaluate((json) => {
+			const input = document.getElementById("inputCargarSimulacion");
+			const transfer = new DataTransfer();
+			transfer.items.add(new File([JSON.stringify(json)], "anchor-smoke.json", { type: "application/json" }));
+			input.files = transfer.files;
+			input.dispatchEvent(new Event("change", { bubbles: true }));
+		}, anchoredSave);
+		await page.waitForFunction(() => window.calles?.some((street) => street.nombre === "Anchor smoke Calle" && street.bezierSegments?.length === 3), { timeout: 15000 });
+		assert.deepEqual(await page.evaluate(() => window.calles.find((street) => street.nombre === "Anchor smoke Calle").bezierSegments),
+			anchored.sections, "JSON restores movable corners in both renderers");
+		await page.evaluate(() => {
+			const index = window.calles.findIndex((street) => street.nombre === "Anchor smoke Calle");
+			const selector = document.getElementById("selectCalle");
+			selector.value = String(index);
+			window.calleSeleccionada = window.calles[index];
+			selector.dispatchEvent(new Event("change", { bubbles: true }));
+		});
+		await page.waitForFunction(() => document.querySelector("#streetInspectorName")?.value === "Anchor smoke Calle");
+		await page.click("[aria-label='Eliminar ancla fija 1']");
+		await page.waitForFunction(() => window.calleSeleccionada?.bezierSegments?.length === 2);
+		assert.ok(await page.evaluate(() => window.calleSeleccionada.bezierSegments.every((section) => section.controls.length === 0)),
+			"deleting a sharp-turn anchor joins straight legs without introducing a curve control");
 		console.log(
-			`✅ UI Bezier conversion, inspector scaling, invalid drag rollback, endpoint proportion, JSON and crossings (${usePixi ? "Pixi" : "Canvas"})`,
+			`✅ UI Bezier controls and sharp anchors, invalid drag rollback, JSON and crossings (${usePixi ? "Pixi" : "Canvas"})`,
 		);
 	} finally {
 		await sim.close();

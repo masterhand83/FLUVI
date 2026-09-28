@@ -75,7 +75,7 @@ El Constructor de Mapas es una herramienta integrada en el Simulador de Tráfico
 
 ### 5. Eliminar Calles
 
-Para curvar una calle seleccionada, pulsa **+ Añadir control** en el inspector. Arrastra el control exterior en el mapa o selecciona un control para introducir sus coordenadas X/Y exactas. Puedes añadir varios controles y eliminar solo el seleccionado con **Eliminar control** o la tecla Supr. Los extremos se pueden arrastrar; X/Y y ángulo mueven o giran toda la curva, y el número de celdas escala su forma desde el inicio. La longitud del arco determina el número de celdas (redondeado a la celda más cercana). Una previsualización inválida se señala y recupera la geometría anterior al soltar. Cruzar otra calle no crea una conexión de tráfico automáticamente. Reanuda la simulación explícitamente tras editar.
+Para dar forma a una calle seleccionada, pulsa **+ Añadir control** en el inspector y elige **Control Bézier** o **Ancla fija**. Los controles curvan una sección sin obligar a la calle a pasar por ellos; las anclas son puntos de la calle que separan secciones y permiten crear giros angulosos. Una sección sin controles es recta. Arrastra el control o el ancla en el mapa, o selecciónalo para introducir sus coordenadas X/Y exactas. Mover un control no desplaza las anclas ni modifica otra sección; mover un ancla modifica sus dos secciones vecinas. Puedes eliminar el elemento seleccionado; al quitar un ancla se unen las secciones vecinas y puede cambiar la forma. Los extremos se pueden arrastrar; X/Y y ángulo mueven o giran toda la calle, y el número de celdas escala su forma desde el inicio. La longitud del recorrido determina el número de celdas (redondeado a la celda más cercana). Una previsualización inválida se señala y recupera la geometría anterior al soltar. Cruzar otra calle no crea una conexión de tráfico automáticamente. Reanuda la simulación explícitamente tras editar.
 
 1. Selecciona la calle que deseas eliminar
 2. Haz clic en "🗑️ Eliminar Calle Seleccionada"
@@ -90,7 +90,7 @@ Para curvar una calle seleccionada, pulsa **+ Añadir control** en el inspector.
 **El archivo JSON incluye:**
 - Todas las calles con sus parámetros
 - Todas las conexiones
-- Vértices de curvas heredadas o extremos y controles Bézier (si existen)
+- Vértices de curvas heredadas o extremos y secciones Bézier con controles y anclas (si existen)
 - Edificios (si existen)
 - Metadata (versión, fecha, nombre)
 

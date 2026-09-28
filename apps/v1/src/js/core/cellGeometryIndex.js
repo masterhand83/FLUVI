@@ -11,7 +11,8 @@
         return [street.x, street.y, street.angulo, street.tamano, street.carriles,
             street.esCurva, street.endX, street.endY, street.bezierGeometry,
             (street.vertices || []).map(v => `${v.indiceCelda},${v.anguloOffset}`).join(';'),
-            (street.bezierControls || []).map(p => `${p.x},${p.y}`).join(';')].join('|');
+            (street.bezierControls || []).map(p => `${p.x},${p.y}`).join(';'),
+            JSON.stringify(street.bezierSegments)].join('|');
     }
 
     function key(x, y) { return `${x},${y}`; }
@@ -34,7 +35,7 @@
         for (let carril = 0; carril < calle.carriles; carril++) {
             for (let indice = 0; indice < calle.tamano; indice++) {
                 // Match encontrarCeldaMasCercana's historical curve dispatch.
-                const curved = calle.esCurva && (calle.bezierControls || (calle.vertices && calle.vertices.length > 0));
+                const curved = calle.esCurva && (calle.bezierSegments || calle.bezierControls || (calle.vertices && calle.vertices.length > 0));
                 const center = curved
                     ? root.obtenerCoordenadasGlobalesCeldaConCurva(calle, carril, indice)
                     : root.obtenerCoordenadasGlobalesCelda(calle, carril, indice);

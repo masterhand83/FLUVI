@@ -64,4 +64,94 @@ describe('streetBezier', () => {
         const foldedLanes = road({ x: 0, y: 0, endX: 0, endY: 0, bezierControls: [{ x: 100, y: 0 }, { x: 100, y: 5 }], tamano: 1, carriles: 4 });
         expect(api.validate(foldedLanes).reason).toBe('folded-lane-overlap');
     });
+
+    it('normalizes legacy and multi-section geometry without exposing mutable input', () => {
+        const legacy = road();
+        expect(api.isBezier(legacy)).toBe(true);
+        expect(api.isBezier({ x: 0, y: 0 })).toBe(false);
+        const normalized = api.segments(legacy);
+        expect(normalized).toEqual([{ controls: [{ x: 50, y: 50 }], end: { x: 100, y: 0 } }]);
+        normalized[0].controls[0].x = 999;
+        expect(legacy.bezierControls[0].x).toBe(50);
+    });
+
+    it('splits a curved section exactly and preserves all points on its shape', () => {
+        const street = road({ bezierControls: [{ x: 20, y: 60 }, { x: 80, y: 60 }] });
+        const before = Array.from({ length: 101 }, (_, i) => api.point(street, i / 100));
+        const sections = api.splitSegment(street, 0, 0.25);
+        const result = { ...street, bezierSegments: sections };
+        before.forEach((p, i) => {
+            const t = i / 100;
+            const after = api.point(result, t <= 0.25 ? t / 0.25 / 2 : (1 + (t - 0.25) / 0.75) / 2);
+            expect(after.x).toBeCloseTo(p.x, 8);
+            expect(after.y).toBeCloseTo(p.y, 8);
+        });
+        expect(street.bezierControls).toHaveLength(2);
+        expect(sections[0].end).toEqual(api.point(street, 0.25));
+    });
+
+    it('retains sharp corners, proportional section parameters and arc-length cells', () => {
+        const street = road({ bezierControls: undefined, endX: 40, endY: 40, carriles: 1,
+            bezierSegments: [
+                { controls: [], end: { x: 40, y: 0 } },
+                { controls: [], end: { x: 40, y: 40 } }
+            ] });
+        expect(api.point(street, 0.5)).toEqual({ x: 40, y: 0 });
+        expect(api.point(street, 0.75)).toEqual({ x: 40, y: 20 });
+        expect(api.coordinates(street, 0, 7).angulo).toBeCloseTo(0);
+        expect(api.coordinates(street, 0, 8).angulo).toBeCloseTo(-90);
+        expect(api.coordinates(street, 0, 8).x).toBeCloseTo(40);
+        expect(api.validate(street).valid).toBe(true);
+        const pieces = api.splitSegment(street, 0);
+        expect(pieces[0]).toEqual({ controls: [], end: { x: 20, y: 0 } });
+        expect(pieces[1]).toEqual({ controls: [], end: { x: 40, y: 0 } });
+    });
+
+    it('keeps the other side of an anchor fixed when one section control moves', () => {
+        const street = road({ bezierControls: undefined, endX: 120, endY: 0, carriles: 1,
+            bezierSegments: [
+                { controls: [{ x: 20, y: 20 }], end: { x: 60, y: 0 } },
+                { controls: [{ x: 90, y: -20 }], end: { x: 120, y: 0 } }
+            ] });
+        const anchor = api.point(street, 0.5);
+        const farSide = api.point(street, 0.75);
+        const nearSide = api.point(street, 0.25);
+        street.bezierSegments[0].controls[0].y += 15;
+        expect(api.point(street, 0.5)).toEqual(anchor);
+        expect(api.point(street, 0.75)).toEqual(farSide);
+        expect(api.point(street, 0.25)).not.toEqual(nearSide);
+    });
+
+    it('allows ordinary multi-lane right-angle turns at an anchor', () => {
+        for (const carriles of [2, 4]) {
+            const street = road({ bezierControls: undefined, endX: 50, endY: 50, carriles,
+                bezierSegments: [
+                    { controls: [], end: { x: 50, y: 0 } },
+                    { controls: [], end: { x: 50, y: 50 } }
+                ] });
+            expect(api.validate(street).valid).toBe(true);
+        }
+    });
+
+    it('does not treat a reversal at an anchor as a valid corner', () => {
+        const street = road({ bezierControls: undefined, endX: 0, endY: 0, carriles: 2,
+            bezierSegments: [
+                { controls: [], end: { x: 50, y: 0 } },
+                { controls: [], end: { x: 0, y: 0 } }
+            ] });
+        expect(api.validate(street).reason).toBe('folded-lane-overlap');
+    });
+
+    it('invalidates cached length and rejects malformed anchors', () => {
+        const street = road({ bezierControls: undefined, endX: 100, endY: 0,
+            bezierSegments: [{ controls: [], end: { x: 50, y: 0 } }, { controls: [], end: { x: 100, y: 0 } }] });
+        expect(api.validate(street).length).toBeCloseTo(100);
+        street.bezierSegments[0].end.y = 50;
+        expect(api.validate(street).length).toBeGreaterThan(140);
+        street.bezierSegments[0].end.x = NaN;
+        expect(api.validate(street).reason).toBe('invalid-controls');
+        street.bezierSegments[0].end.x = 50;
+        street.bezierSegments[1].end.x = 101;
+        expect(api.validate(street).reason).toBe('invalid-controls');
+    });
 });

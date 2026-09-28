@@ -20,6 +20,8 @@
 	const endYRow = document.getElementById("streetInspectorEndYRow");
 	const controlsHost = document.getElementById("streetInspectorBezierControls");
 	const addControlButton = document.getElementById("streetInspectorAddControl");
+	const addChoice = document.getElementById("streetInspectorAddChoice");
+	const pointLabel = document.getElementById("streetInspectorSelectedPointLabel");
 	const controlFields = {
 		x: document.getElementById("streetInspectorControlX"),
 		y: document.getElementById("streetInspectorControlY"),
@@ -38,8 +40,10 @@
 	let focusedField = null;
 	let committing = false;
 	let selectedControlIndex = null;
+	let selectedSegmentIndex = null;
+	let selectedAnchorIndex = null;
 	const isBezier = (street) =>
-		Boolean(
+		window.streetBezier?.isBezier?.(street) ?? Boolean(
 			street &&
 				(street.bezierGeometry === true ||
 					!(
@@ -51,6 +55,33 @@
 				Number.isFinite(street.endX) &&
 				Number.isFinite(street.endY),
 		);
+	const sections = (street) => {
+		if (window.streetBezier?.segments) return window.streetBezier.segments(street);
+		return Array.isArray(street.bezierSegments)
+			? street.bezierSegments.map((s) => ({ controls: s.controls.map((p) => ({ ...p })), end: { ...s.end } }))
+			: [{ controls: (street.bezierControls || []).map((p) => ({ ...p })), end: { x: street.endX, y: street.endY } }];
+	};
+	const sectionIndex = (parts) => selectedAnchorIndex != null
+		? selectedAnchorIndex
+		: selectedSegmentIndex != null ? selectedSegmentIndex : parts.length - 1;
+	const candidateWithSections = (street, parts, forceSegments = false) => {
+		const candidate = {
+			...street,
+			bezierGeometry: true,
+			esCurva: true,
+			endX: parts.at(-1).end.x,
+			endY: parts.at(-1).end.y,
+		};
+		if (forceSegments || Array.isArray(street.bezierSegments) || parts.length > 1) {
+			candidate.bezierSegments = parts;
+			// Legacy consumers may still inspect this field; segmented roads use the sections.
+			candidate.bezierControls = [];
+		} else {
+			delete candidate.bezierSegments;
+			candidate.bezierControls = parts[0].controls.map((p) => ({ ...p }));
+		}
+		return candidate;
+	};
 	const editable = Object.values(fields);
 	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Rebuilds inspector rows and values from one selected street snapshot.
 	const readModel = (calle) => {
@@ -72,49 +103,70 @@
 		if (controlsHost) {
 			controlsHost.replaceChildren();
 			controlsHost.hidden = !isBezier(calle);
-			const controls = isBezier(calle) ? calle.bezierControls : [];
+			const parts = isBezier(calle) ? sections(calle) : [];
 			const count = document.createElement("strong");
-			count.textContent = `Controles (${controls.length})`;
+			count.textContent = `Secciones (${parts.length})`;
 			controlsHost.append(count);
-			controls.forEach((_, index) => {
+			const addRow = (labelText, kind, segmentIndex, controlIndex) => {
 				const row = document.createElement("div");
-				row.className = "street-inspector-control";
+				row.className = `street-inspector-control ${kind === "anchor" ? "anchor" : ""}`;
 				const label = document.createElement("span");
-				label.textContent = `Control ${index + 1}`;
+				label.textContent = labelText;
 				const select = document.createElement("button");
 				select.type = "button";
 				select.className = "btn btn-sm btn-outline-secondary";
 				select.textContent = "Seleccionar";
-				select.setAttribute(
-					"aria-pressed",
-					String(selectedControlIndex === index),
-				);
-				select.addEventListener("click", () => selectControl(index));
+				select.setAttribute("aria-pressed", String(kind === "anchor" ? selectedAnchorIndex === segmentIndex : selectedAnchorIndex == null && selectedSegmentIndex === segmentIndex && selectedControlIndex === controlIndex));
+				select.addEventListener("click", () => kind === "anchor" ? selectAnchor(segmentIndex) : selectControl(segmentIndex, controlIndex));
 				const remove = document.createElement("button");
 				remove.type = "button";
 				remove.className = "btn btn-sm btn-outline-danger";
 				remove.textContent = "−";
-				remove.setAttribute("aria-label", `Eliminar control ${index + 1}`);
+				remove.setAttribute("aria-label", `Eliminar ${labelText.toLowerCase()}`);
 				remove.addEventListener("click", () => {
-					selectControl(index);
+					if (kind === "anchor") selectAnchor(segmentIndex);
+					else selectControl(segmentIndex, controlIndex);
 					deleteSelectedControl();
 				});
 				row.append(label, select, remove);
 				controlsHost.append(row);
+			};
+			parts.forEach((part, segmentIndex) => {
+				const heading = document.createElement("button");
+				heading.type = "button";
+				heading.className = "btn btn-sm btn-outline-secondary street-inspector-section";
+				heading.textContent = `Sección ${segmentIndex + 1}`;
+				heading.setAttribute("aria-pressed", String(selectedSegmentIndex === segmentIndex && selectedAnchorIndex == null && selectedControlIndex == null));
+				heading.addEventListener("click", () => {
+					selectedSegmentIndex = segmentIndex;
+					selectedAnchorIndex = null;
+					selectedControlIndex = null;
+					readModel(selected);
+				});
+				controlsHost.append(heading);
+				part.controls.forEach((_, index) => {
+					addRow(`Control ${index + 1}`, "control", segmentIndex, index);
+				});
+				if (segmentIndex < parts.length - 1) addRow(`Ancla fija ${segmentIndex + 1}`, "anchor", segmentIndex);
 			});
 		}
+		const parts = isBezier(calle) ? sections(calle) : [];
+		const point = selectedAnchorIndex != null ? parts[selectedAnchorIndex]?.end : parts[selectedSegmentIndex]?.controls[selectedControlIndex];
 		selectedControlPanel.hidden =
-			!isBezier(calle) ||
-			selectedControlIndex == null ||
-			!calle.bezierControls[selectedControlIndex];
+			!point;
 		if (!selectedControlPanel.hidden) {
-			controlFields.x.value = calle.bezierControls[selectedControlIndex].x;
-			controlFields.y.value = calle.bezierControls[selectedControlIndex].y;
+			pointLabel.textContent = selectedAnchorIndex != null ? "Ancla fija seleccionada" : "Control seleccionado";
+			deleteControlButton.textContent = selectedAnchorIndex != null ? "Eliminar ancla" : "Eliminar control";
+			controlFields.x.value = point.x;
+			controlFields.y.value = point.y;
 		}
 	};
 	function show(calle) {
 		if (selected !== calle) {
 			selectedControlIndex = null;
+			selectedSegmentIndex = null;
+			selectedAnchorIndex = null;
+			addChoice.hidden = true;
 			for (const field of editable) {
 				field.setCustomValidity("");
 				field.removeAttribute("aria-invalid");
@@ -150,15 +202,8 @@
 	function scaleCurve(street, factor) {
 		const x = street.x,
 			y = street.y;
-		return {
-			...street,
-			endX: x + (street.endX - x) * factor,
-			endY: y + (street.endY - y) * factor,
-			bezierControls: street.bezierControls.map((p) => ({
-				x: x + (p.x - x) * factor,
-				y: y + (p.y - y) * factor,
-			})),
-		};
+		const move = (p) => ({ x: x + (p.x - x) * factor, y: y + (p.y - y) * factor });
+		return candidateWithSections(street, sections(street).map((part) => ({ controls: part.controls.map(move), end: move(part.end) })));
 	}
 	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Validation is intentionally centralized so commits share one atomic model-update path.
 	function commit(field) {
@@ -203,21 +248,14 @@
 									: "endY";
 				if (numeric !== selected[prop]) window.streetEditPause?.();
 				if (isBezier(selected) && numeric !== selected[prop]) {
-					let candidate = {
-						...selected,
-						bezierControls: selected.bezierControls.map((p) => ({ ...p })),
-					};
+					let candidate = candidateWithSections(selected, sections(selected));
+					let transform = (p) => p;
 					if (prop === "x" || prop === "y") {
 						const dx = prop === "x" ? numeric - selected.x : 0,
 							dy = prop === "y" ? numeric - selected.y : 0;
 						candidate.x += dx;
 						candidate.y += dy;
-						candidate.endX += dx;
-						candidate.endY += dy;
-						candidate.bezierControls = candidate.bezierControls.map((p) => ({
-							x: p.x + dx,
-							y: p.y + dy,
-						}));
+						transform = (p) => ({ x: p.x + dx, y: p.y + dy });
 					} else if (prop === "angulo") {
 						const a =
 								((Number(selected.angulo || 0) - numeric) * Math.PI) / 180,
@@ -227,11 +265,8 @@
 							x: ox + (p.x - ox) * Math.cos(a) - (p.y - oy) * Math.sin(a),
 							y: oy + (p.x - ox) * Math.sin(a) + (p.y - oy) * Math.cos(a),
 						});
-						const end = rotate({ x: selected.endX, y: selected.endY });
-						candidate.endX = end.x;
-						candidate.endY = end.y;
 						candidate.angulo = numeric;
-						candidate.bezierControls = candidate.bezierControls.map(rotate);
+						transform = rotate;
 					} else {
 						const oldEnd = { x: selected.endX, y: selected.endY },
 							newEnd = {
@@ -246,13 +281,14 @@
 								Math.abs(oldEnd.y - selected.y) > 1e-8
 									? (newEnd.y - selected.y) / (oldEnd.y - selected.y)
 									: 1;
-						candidate.endX = newEnd.x;
-						candidate.endY = newEnd.y;
-						candidate.bezierControls = candidate.bezierControls.map((p) => ({
-							x: selected.x + (p.x - selected.x) * sx,
-							y: selected.y + (p.y - selected.y) * sy,
-						}));
+						transform = (p) => ({
+							x: Math.abs(oldEnd.x - selected.x) > 1e-8
+							? selected.x + (p.x - selected.x) * sx : p.x + newEnd.x - oldEnd.x,
+							y: Math.abs(oldEnd.y - selected.y) > 1e-8
+							? selected.y + (p.y - selected.y) * sy : p.y + newEnd.y - oldEnd.y,
+						});
 					}
+					candidate = candidateWithSections(candidate, sections(candidate).map((part) => ({ controls: part.controls.map(transform), end: transform(part.end) })));
 					if (!applyCurve(candidate))
 						return fail(field, "La geometría de la curva no es válida.");
 					return true;
@@ -417,18 +453,36 @@
 			return selected;
 		},
 		selectControl(index) {
-			selectControl(index);
+			selectControl(...arguments);
+		},
+		selectAnchor(index) {
+			selectAnchor(index);
 		},
 		getSelectedControlIndex() {
-			return selectedControlIndex;
+			return selectedSegmentIndex === 0 && selectedAnchorIndex == null ? selectedControlIndex : null;
+		},
+		getSelectedHandleKind() {
+			if (selectedAnchorIndex != null) return `anchor:${selectedAnchorIndex}`;
+			if (selectedControlIndex != null) return `control:${selectedSegmentIndex}:${selectedControlIndex}`;
+			return null;
 		},
 		setGeometryError(message) {
 			error.textContent = message || "";
 		},
 	};
-	function selectControl(index) {
-		if (!isBezier(selected) || !selected.bezierControls[index]) return;
+	function selectControl(segmentIndex, index = undefined) {
+		if (index === undefined) [segmentIndex, index] = [0, segmentIndex];
+		if (!isBezier(selected) || !sections(selected)[segmentIndex]?.controls[index]) return;
+		selectedSegmentIndex = segmentIndex;
+		selectedAnchorIndex = null;
 		selectedControlIndex = index;
+		readModel(selected);
+	}
+	function selectAnchor(index) {
+		if (!isBezier(selected) || index < 0 || index >= sections(selected).length - 1) return;
+		selectedAnchorIndex = index;
+		selectedSegmentIndex = index;
+		selectedControlIndex = null;
 		readModel(selected);
 	}
 	function applyCurve(candidate, before = selected) {
@@ -454,8 +508,11 @@
 			"endX",
 			"endY",
 			"bezierControls",
-		])
-			before[key] = candidate[key];
+			"bezierSegments",
+		]) {
+			if (key === "bezierSegments" && !Array.isArray(candidate.bezierSegments)) delete before.bezierSegments;
+			else before[key] = candidate[key];
+		}
 		// Once converted, legacy angle-offset vertices must not overlay or intercept
 		// the independently editable exterior Bezier controls.
 		if (candidate.bezierGeometry) before.vertices = [];
@@ -466,7 +523,7 @@
 		return true;
 	}
 	function updateSelectedControl() {
-		if (!isBezier(selected) || selectedControlIndex == null) return;
+		if (!isBezier(selected) || (selectedControlIndex == null && selectedAnchorIndex == null)) return;
 		if (controlFields.x.value === "" || controlFields.y.value === "") {
 			readModel(selected);
 			error.textContent = "Introduce coordenadas numéricas válidas.";
@@ -474,12 +531,15 @@
 		}
 		const x = Number(controlFields.x.value),
 			y = Number(controlFields.y.value);
-		if (!Number.isFinite(x) || !Number.isFinite(y)) return;
-		const candidate = {
-			...selected,
-			bezierControls: selected.bezierControls.map((p) => ({ ...p })),
-		};
-		candidate.bezierControls[selectedControlIndex] = { x, y };
+		if (!Number.isFinite(x) || !Number.isFinite(y)) {
+			readModel(selected);
+			error.textContent = "Introduce coordenadas numéricas válidas.";
+			return;
+		}
+		const parts = sections(selected);
+		if (selectedAnchorIndex != null) parts[selectedAnchorIndex].end = { x, y };
+		else parts[selectedSegmentIndex].controls[selectedControlIndex] = { x, y };
+		const candidate = candidateWithSections(selected, parts);
 		if (!applyCurve(candidate)) {
 			readModel(selected);
 			error.textContent = "La geometría de la curva no es válida.";
@@ -488,24 +548,44 @@
 	controlFields.x.addEventListener("change", updateSelectedControl);
 	controlFields.y.addEventListener("change", updateSelectedControl);
 	function deleteSelectedControl() {
-		if (!isBezier(selected) || selectedControlIndex == null) return;
-		const candidate = {
-			...selected,
-			bezierControls: selected.bezierControls.map((p) => ({ ...p })),
-		};
-		candidate.bezierControls.splice(selectedControlIndex, 1);
+		if (!isBezier(selected) || (selectedControlIndex == null && selectedAnchorIndex == null)) return;
+		const parts = sections(selected);
+		if (selectedAnchorIndex != null) {
+			const index = selectedAnchorIndex;
+			// The removed corner must not survive as an off-path control: two
+			// straight legs become one straight leg after removing their anchor.
+			parts.splice(index, 2, {
+				controls: [...parts[index].controls, ...parts[index + 1].controls],
+				end: { ...parts[index + 1].end },
+			});
+		} else parts[selectedSegmentIndex].controls.splice(selectedControlIndex, 1);
+		const candidate = candidateWithSections(selected, parts);
 		if (applyCurve(candidate)) {
-			selectedControlIndex = candidate.bezierControls.length
-				? Math.min(selectedControlIndex, candidate.bezierControls.length - 1)
-				: null;
+			selectedAnchorIndex = null;
+			selectedSegmentIndex = Math.min(selectedSegmentIndex ?? 0, parts.length - 1);
+			selectedControlIndex = null;
 			readModel(selected);
 		} else
 			error.textContent =
-				"No se puede eliminar el control: la curva resultante no es válida.";
+				"No se puede eliminar el punto: la curva resultante no es válida.";
 	}
 	deleteControlButton?.addEventListener("click", deleteSelectedControl);
-	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Degree elevation inserts a control while preserving the complete current curve.
 	addControlButton?.addEventListener("click", () => {
+		if (!selected || (selected.esCurva && !isBezier(selected))) return;
+		addChoice.hidden = !addChoice.hidden;
+		if (!addChoice.hidden) document.getElementById("streetInspectorChooseBezier")?.focus();
+	});
+	document.getElementById("streetInspectorCancelAdd")?.addEventListener("click", () => {
+		addChoice.hidden = true;
+		addControlButton.focus();
+	});
+	addChoice?.addEventListener("keydown", (event) => {
+		if (event.key !== "Escape") return;
+		event.preventDefault();
+		addChoice.hidden = true;
+		addControlButton.focus();
+	});
+	function initialCandidate() {
 		if (!selected || (selected.esCurva && !isBezier(selected))) return;
 		const before = selected;
 		const straightEndX =
@@ -518,18 +598,20 @@
 			before.tamano *
 				(Number(window.celda_tamano) || 5) *
 				Math.sin(((before.angulo || 0) * Math.PI) / 180);
-		const candidate = {
-			...before,
-			endX: before.endX ?? straightEndX,
-			endY: before.endY ?? straightEndY,
-			bezierControls: isBezier(before)
-				? before.bezierControls.map((p) => ({ ...p }))
-				: [],
-		};
+		return isBezier(before) ? candidateWithSections(before, sections(before)) : candidateWithSections(before, [{ controls: [], end: { x: straightEndX, y: straightEndY } }]);
+	}
+	// Degree elevation preserves the selected section's entire curve.
+	document.getElementById("streetInspectorChooseBezier")?.addEventListener("click", () => {
+		addChoice.hidden = true;
+		const candidate = initialCandidate();
+		if (!candidate) return;
+		const parts = sections(candidate);
+		const index = sectionIndex(parts);
+		const start = index ? parts[index - 1].end : { x: candidate.x, y: candidate.y };
 		const points = [
-			{ x: candidate.x, y: candidate.y },
-			...candidate.bezierControls,
-			{ x: candidate.endX, y: candidate.endY },
+			start,
+			...parts[index].controls,
+			parts[index].end,
 		];
 		const degree = points.length - 1;
 		const elevated = [];
@@ -539,21 +621,35 @@
 				b = points[i];
 			elevated.push({ x: t * a.x + (1 - t) * b.x, y: t * a.y + (1 - t) * b.y });
 		}
-		candidate.esCurva = true;
-		candidate.bezierGeometry = true;
-		candidate.bezierControls = elevated;
-		if (applyCurve(candidate)) {
+		parts[index].controls = elevated;
+		if (applyCurve(candidateWithSections(candidate, parts))) {
+			selectedSegmentIndex = index;
+			selectedAnchorIndex = null;
 			selectedControlIndex = elevated.length - 1;
 			readModel(selected);
 			window.streetGeometryEditor?.refresh?.();
 		}
+	});
+	document.getElementById("streetInspectorChooseAnchor")?.addEventListener("click", () => {
+		addChoice.hidden = true;
+		const candidate = initialCandidate();
+		if (!candidate) return;
+		const parts = sections(candidate);
+		const index = sectionIndex(parts);
+		const split = window.streetBezier?.splitSegment?.(candidate, index, 0.5);
+		if (!Array.isArray(split) || split.length !== parts.length + 1) {
+			error.textContent = "No se pudo dividir esta sección.";
+			return;
+		}
+		if (applyCurve(candidateWithSections(candidate, split, true))) selectAnchor(index);
+		else error.textContent = "La geometría de la curva no es válida.";
 	});
 	document.addEventListener(
 		"keydown",
 		(event) => {
 			if (
 				event.key !== "Delete" ||
-				selectedControlIndex == null ||
+				(selectedControlIndex == null && selectedAnchorIndex == null) ||
 				!isBezier(selected)
 			)
 				return;
