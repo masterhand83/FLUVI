@@ -7,65 +7,41 @@ class ConexionRenderer {
     constructor(sceneManager, assetLoader) {
         this.scene = sceneManager;
         this.assets = assetLoader;
+        this.lastGeometry = new Map();
     }
 
     renderAll(conexiones) {
         if (!conexiones || !window.mostrarConexiones) return;
 
-        // Solo renderizar si no están ya renderizadas
-        if (this.scene.conexionGraphics.size > 0) return;
-
-        // Limpiar conexiones anteriores (por si acaso)
-        this.clearAll();
-
+        const current = new Set(conexiones);
+        for (const [conexion, graphics] of this.scene.conexionGraphics) {
+            if (current.has(conexion)) continue;
+            graphics.destroy();
+            this.scene.conexionGraphics.delete(conexion);
+            this.lastGeometry.delete(conexion);
+        }
         conexiones.forEach(conexion => {
-            this.renderConexion(conexion);
+            const posOrig = conexion.posOrigen === -1 ? conexion.origen.tamano - 1 : conexion.posOrigen;
+            const coordOrigen = this.cellCoordinates(conexion.origen, conexion.carrilOrigen, posOrig);
+            const coordDestino = this.cellCoordinates(conexion.destino, conexion.carrilDestino, conexion.posDestino);
+            if (!coordOrigen || !coordDestino) return;
+            const geometry = [coordOrigen.x, coordOrigen.y, coordDestino.x, coordDestino.y, conexion.tipo, conexion.bloqueada];
+            const previous = this.lastGeometry.get(conexion);
+            if (previous && previous.every((value, index) => value === geometry[index]) && this.scene.conexionGraphics.has(conexion)) return;
+            this.scene.conexionGraphics.get(conexion)?.destroy();
+            this.scene.conexionGraphics.delete(conexion);
+            this.renderConexion(conexion, coordOrigen, coordDestino);
+            this.lastGeometry.set(conexion, geometry);
         });
     }
 
-    renderConexion(conexion) {
-        // Calcular posición de origen
-        const posOrig = conexion.posOrigen === -1 ? conexion.origen.tamano - 1 : conexion.posOrigen;
+    cellCoordinates(calle, carril, indice) {
+        const curved = calle.esCurva && (calle.bezierGeometry || calle.vertices?.length > 0);
+        const coordinates = (curved && window.obtenerCoordenadasGlobalesCeldaConCurva) || window.obtenerCoordenadasGlobalesCelda;
+        return coordinates?.(calle, carril, indice);
+    }
 
-        // Calcular coordenadas del origen
-        let coordOrigen;
-        if (conexion.origen.esCurva && conexion.origen.vertices && conexion.origen.vertices.length > 0) {
-            if (typeof window.obtenerCoordenadasGlobalesCeldaConCurva === 'function') {
-                coordOrigen = window.obtenerCoordenadasGlobalesCeldaConCurva(conexion.origen, conexion.carrilOrigen, posOrig);
-            } else if (typeof window.obtenerCoordenadasGlobalesCelda === 'function') {
-                coordOrigen = window.obtenerCoordenadasGlobalesCelda(conexion.origen, conexion.carrilOrigen, posOrig);
-            } else {
-                console.warn('No se encontró función para calcular coordenadas');
-                return;
-            }
-        } else {
-            if (typeof window.obtenerCoordenadasGlobalesCelda === 'function') {
-                coordOrigen = window.obtenerCoordenadasGlobalesCelda(conexion.origen, conexion.carrilOrigen, posOrig);
-            } else {
-                console.warn('No se encontró función para calcular coordenadas');
-                return;
-            }
-        }
-
-        // Calcular coordenadas del destino
-        let coordDestino;
-        if (conexion.destino.esCurva && conexion.destino.vertices && conexion.destino.vertices.length > 0) {
-            if (typeof window.obtenerCoordenadasGlobalesCeldaConCurva === 'function') {
-                coordDestino = window.obtenerCoordenadasGlobalesCeldaConCurva(conexion.destino, conexion.carrilDestino, conexion.posDestino);
-            } else if (typeof window.obtenerCoordenadasGlobalesCelda === 'function') {
-                coordDestino = window.obtenerCoordenadasGlobalesCelda(conexion.destino, conexion.carrilDestino, conexion.posDestino);
-            } else {
-                console.warn('No se encontró función para calcular coordenadas');
-                return;
-            }
-        } else {
-            if (typeof window.obtenerCoordenadasGlobalesCelda === 'function') {
-                coordDestino = window.obtenerCoordenadasGlobalesCelda(conexion.destino, conexion.carrilDestino, conexion.posDestino);
-            } else {
-                console.warn('No se encontró función para calcular coordenadas');
-                return;
-            }
-        }
+    renderConexion(conexion, coordOrigen, coordDestino) {
 
         const x1 = coordOrigen.x;
         const y1 = coordOrigen.y;
@@ -266,6 +242,7 @@ class ConexionRenderer {
             graphics.destroy();
         });
         this.scene.conexionGraphics.clear();
+        this.lastGeometry.clear();
         this.scene.getLayer('connections').removeChildren();
     }
 }

@@ -2,7 +2,7 @@
 (() => {
 	let canvas = document.getElementById("simuladorCanvas");
 	if (!canvas) return;
-	const editor = { gesture: null, handles: [] };
+	const editor = { gesture: null, handles: [], suppressCanvasClick: false };
 	const cellSize = () => Number(window.celda_tamano) || 5;
 	const selected = () => {
 		const s = window.calleSeleccionada;
@@ -143,15 +143,19 @@
 		for (let i = 0; i < (s.bezierControls || []).length; i++)
 			if (dist(p, s.bezierControls[i]) < r) return `control:${i}`;
 		if (isBezier(s)) {
-			for (let i = 0; i < 30; i++)
-				if (
-					dist(p, curvePoint(s, i / 30)) <
-					Math.max(
-						12 / (Number(window.escala) || 1),
-						(s.carriles * cellSize()) / 2,
-					)
-				)
+			// The same cell geometry used for clicks defines the draggable body.
+			// Fixed-count curve samples miss cells on long Bezier streets.
+			if (window.cellGeometryIndex) {
+				if (window.cellGeometryIndex.nearbyStreets(p.x, p.y, window.calles).has(s))
 					return "body";
+			} else {
+				for (let i = 0; i < 30; i++)
+					if (
+						dist(p, curvePoint(s, i / 30)) <
+						Math.max(12 / (Number(window.escala) || 1), (s.carriles * cellSize()) / 2)
+					)
+						return "body";
+			}
 		} else {
 			const d = ends[1],
 				dx = d.x - ends[0].x,
@@ -196,6 +200,26 @@
 	function finish(commit) {
 		const g = editor.gesture;
 		if (!g) return;
+		// Pixi receives vehicle clicks on pointerdown, which the selected-street
+		// editor captures. A body tap is not a geometry edit: dispatch its cell
+		// action on release without pausing the simulation.
+		if (commit && g.kind === "body" && !g.didDrag && window.USE_PIXI) {
+			const cell = window.encontrarCeldaMasCercana?.(g.origin.x, g.origin.y);
+			if (cell?.calle === g.street && window.clickActionManager?.executeAction(cell)) {
+				window.pixiApp?.sceneManager?.carroRenderer?.updateCell?.(
+					cell.calle,
+					cell.carril,
+					cell.indice,
+				);
+			}
+		}
+		if (g.kind === "body" && !g.didDrag) {
+			editor.gesture = null;
+			return;
+		}
+		// Canvas emits a click after a completed drag; that click must not also
+		// toggle the vehicle under the released pointer.
+		if (g.didDrag && !window.USE_PIXI) editor.suppressCanvasClick = true;
 		Object.assign(g.street, g.before);
 		const result = validate(g.proposed);
 		if (commit && result.valid) {
@@ -235,14 +259,25 @@
 		requestAnimationFrame(follow);
 	}
 	requestAnimationFrame(follow);
+	document.addEventListener("click", (event) => {
+		if (!editor.suppressCanvasClick) return;
+		editor.suppressCanvasClick = false;
+		if (event.target !== canvas) return;
+		event.preventDefault();
+		event.stopImmediatePropagation();
+	}, true);
 	document.addEventListener(
 		"pointerdown",
 		(e) => {
+			editor.suppressCanvasClick = false;
 			canvas = document.getElementById("simuladorCanvas") || canvas;
 			const s = selected();
 			if (
 				editor.gesture ||
 				e.button !== 0 ||
+				e.ctrlKey || e.metaKey ||
+				window.estadoEscenarios?.modoBloqueoActivo ||
+				window.esModoSeleccionCallesActivo?.() ||
 				window.drawStreetTool?.isActive?.() ||
 				!s
 			)
@@ -255,7 +290,7 @@
 				(e.target !== canvas && !e.target.closest?.(".street-endpoint-handle"))
 			)
 				return;
-			window.streetEditPause?.();
+			if (kind !== "body") window.streetEditPause?.();
 			if (kind.startsWith("control:"))
 				window.streetInspector?.selectControl?.(Number(kind.split(":")[1]));
 			const p = worldAt(e);
@@ -266,6 +301,7 @@
 				kind,
 				origin: p,
 				pointerId: e.pointerId,
+				didDrag: false,
 			};
 			e.preventDefault();
 			e.stopImmediatePropagation();
@@ -284,6 +320,11 @@
 				b = g.before,
 				dx = p.x - g.origin.x,
 				dy = p.y - g.origin.y;
+			if (g.kind === "body" && !g.didDrag) {
+				if (Math.hypot(dx, dy) * (Number(window.escala) || 1) < 3) return;
+				g.didDrag = true;
+				window.streetEditPause?.();
+			}
 			if (g.kind === "body") {
 				if (e.shiftKey) {
 					const center = {

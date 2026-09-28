@@ -76,7 +76,7 @@
 			const count = document.createElement("strong");
 			count.textContent = `Controles (${controls.length})`;
 			controlsHost.append(count);
-			controls.forEach((point, index) => {
+			controls.forEach((_, index) => {
 				const row = document.createElement("div");
 				row.className = "street-inspector-control";
 				const label = document.createElement("span");
@@ -84,7 +84,7 @@
 				const select = document.createElement("button");
 				select.type = "button";
 				select.className = "btn btn-sm btn-outline-secondary";
-				select.textContent = `${index + 1}: (${Number(point.x).toFixed(1)}, ${Number(point.y).toFixed(1)})`;
+				select.textContent = "Seleccionar";
 				select.setAttribute(
 					"aria-pressed",
 					String(selectedControlIndex === index),

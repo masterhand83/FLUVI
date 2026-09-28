@@ -19,6 +19,7 @@ for (const usePixi of [false, true]) {
 	try {
 		if (usePixi) await page.waitForFunction(() => !!window.pixiApp?.sceneManager, { timeout: 30000 })
 		await page.evaluate(() => window.hideLoadingScreen?.())
+		await page.waitForFunction(() => document.getElementById("loadingScreen")?.style.display === "none")
 		await page.waitForSelector("#drawStreetButton", { visible: true, timeout: 10000 })
 		await page.waitForFunction(() => !!window.drawStreetTool?.isActive, { timeout: 10000 })
 

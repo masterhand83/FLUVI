@@ -8,6 +8,7 @@ for (const usePixi of [false, true]) {
 		if (usePixi)
 			await page.waitForFunction(() => !!window.pixiApp?.cameraController);
 		await page.evaluate(() => window.hideLoadingScreen?.());
+		await page.waitForFunction(() => document.getElementById("loadingScreen")?.style.display === "none");
 		const points = await page.evaluate(() => {
 			const canvas = document.getElementById("simuladorCanvas");
 			const rect = canvas.getBoundingClientRect();

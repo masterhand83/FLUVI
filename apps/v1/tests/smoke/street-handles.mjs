@@ -95,6 +95,7 @@ for (const usePixi of [false, true]) {
 	try {
 		if (usePixi) await page.waitForFunction(() => !!window.pixiApp?.cameraController, { timeout: 30000 })
 		await page.evaluate(() => window.hideLoadingScreen?.())
+		await page.waitForFunction(() => document.getElementById("loadingScreen")?.style.display === "none")
 		await selectStraightCalle(page)
 		await page.evaluate(() => {
 			window.__calleEditAlerts = []

@@ -236,6 +236,7 @@ window.offsetX = offsetX;
 window.offsetY = offsetY;
 window.celda_tamano = celda_tamano;
 window.renderizarCanvas = renderizarCanvas;
+window.obtenerCoordenadasGlobalesCelda = obtenerCoordenadasGlobalesCelda;
 window.modoSeleccion = "configuracion"; // Para diferenciar entre "configuracion" y "constructor"
 
 // Cargar las imágenes de los 6 tipos de carros
@@ -2060,6 +2061,9 @@ function calcularViewportVisible() {
 }
 
 function encontrarCeldaMasCercana(worldX, worldY) {
+    if (window.cellGeometryIndex) {
+        return window.cellGeometryIndex.findNearest(worldX, worldY, calles);
+    }
     let celdaMasCercana = null;
     let distanciaMinima = Infinity;
     const umbralDistancia = celda_tamano;
@@ -2069,7 +2073,7 @@ function encontrarCeldaMasCercana(worldX, worldY) {
             for (let indice = 0; indice < calle.tamano; indice++) {
                 // CORRECCIÓN: Usar la función correcta según si la calle tiene curvas o no
                 let centroCelda;
-                if (calle.esCurva && calle.vertices && calle.vertices.length > 0) {
+                if (calle.esCurva && (calle.bezierControls || (calle.vertices && calle.vertices.length > 0))) {
                     centroCelda = obtenerCoordenadasGlobalesCeldaConCurva(calle, carril, indice);
                 } else {
                     centroCelda = obtenerCoordenadasGlobalesCelda(calle, carril, indice);
@@ -2096,12 +2100,19 @@ function encontrarCeldaMasCercana(worldX, worldY) {
 
 // Función para detectar si un punto está sobre una calle (para selección por clic)
 function encontrarCalleEnPunto(worldX, worldY) {
+    const nearbyCurvedStreets = window.cellGeometryIndex?.nearbyStreets(worldX, worldY, calles);
     // Iterar sobre todas las calles en orden inverso (las de arriba primero)
     for (let i = calles.length - 1; i >= 0; i--) {
         const calle = calles[i];
 
         // Si la calle tiene curvas, usar método de detección por celdas
-        if (calle.esCurva && calle.vertices && calle.vertices.length > 0) {
+        if (calle.esCurva && (calle.bezierControls || (calle.vertices && calle.vertices.length > 0))) {
+            if (nearbyCurvedStreets) {
+                if (nearbyCurvedStreets.has(calle)) {
+                    return { calle, calleIndex: i };
+                }
+                continue;
+            }
             for (let carril = 0; carril < calle.carriles; carril++) {
                 for (let indice = 0; indice < calle.tamano; indice++) {
                     const coords = obtenerCoordenadasGlobalesCeldaConCurva(calle, carril, indice);
@@ -4014,6 +4025,9 @@ function iniciarSimulacion() {
     conexiones = conexionesCA;
     buildingInitialMap = false;
 
+    // Build the pointer index before the user can interact, not on the first click.
+    window.cellGeometryIndex?.findNearest(-1e9, -1e9, calles);
+
     calles.forEach(calle => {
         const option = document.createElement("option");
         option.value = calles.indexOf(calle);
@@ -4195,6 +4209,7 @@ function iniciarSimulacion() {
         if (window.updateSimulationInfo) {
             window.updateSimulationInfo();
         }
+        window.recordSimulationFrame?.();
     }
 
     function animate(tiempoActual) {
@@ -4230,6 +4245,7 @@ function iniciarSimulacion() {
             }
             isPaused = !isPaused;
             window.isPaused = isPaused;
+            window.resetSimulationFPS?.();
             if (isPaused) {
                 // No cancelar animationFrame - dejar que siga corriendo pero sin ejecutar paso()
                 btnPauseResume.textContent = '▶️';
@@ -4666,7 +4682,9 @@ canvas.addEventListener('click', (event) => {
                 console.log('➖ Vehículo quitado');
             }
 
-            renderizarCanvas();
+            // While running, the next simulation step already redraws the whole
+            // scene. An extra redraw here would block a user-triggered frame.
+            if (isPaused) renderizarCanvas();
         } else {
             console.log('❌ ERROR: El arreglo del carril no existe');
         }
@@ -4783,7 +4801,8 @@ canvas.addEventListener("mouseup", () => {
     hasDragged = false; // IMPORTANTE: Resetear hasDragged en mouseup
     controlandoVertice = false;
     verticeSeleccionado = null;
-    renderizarCanvas();
+    // A plain mouse-up changes no scene state; the subsequent click or simulation
+    // tick will draw the vehicle. Drags already redraw on move.
 });
 
 canvas.addEventListener("mouseleave", () => {

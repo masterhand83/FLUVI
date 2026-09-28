@@ -655,9 +655,10 @@ class CalleRenderer {
                         const valorActual = calleObjetivo.arreglo[carril]?.[indice];
                         console.log('📍 Celda encontrada - Carril:', carril, 'Índice:', indice, 'Valor actual:', valorActual);
 
+                        let changed = false;
                         // Usar ClickActionManager si existe
                         if (window.clickActionManager) {
-                            const changed = window.clickActionManager.executeAction({
+                            changed = window.clickActionManager.executeAction({
                                 calle: calleObjetivo,
                                 carril: carril,
                                 indice: indice
@@ -682,10 +683,12 @@ class CalleRenderer {
                                 calleObjetivo.arreglo[carril][indice] = 0;
                                 console.log('✅ QUITADO (valor anterior:', valorActual, ')');
                             }
+                            changed = true;
                         }
 
-                        // Los vehículos se actualizan automáticamente en el siguiente frame
-                        // No es necesario llamar a renderizarCanvas en PixiJS
+                        // A paused simulation has no next simulation step to reveal
+                        // the manually changed cell: update its Pixi sprite now.
+                        if (changed) this.scene.carroRenderer?.updateCell(calleObjetivo, carril, indice);
                     } else {
                         console.log(`⚠️ La celda más cercana no pertenece a la calle clickeada`);
                     }
@@ -920,8 +923,8 @@ class CalleRenderer {
                 }
 
                 // Forzar actualización del CarroRenderer para renderizar el bloqueo inmediatamente
-                if (this.scene && this.scene.carroRenderer && window.calles) {
-                    this.scene.carroRenderer.updateAll(window.calles);
+                if (this.scene && this.scene.carroRenderer) {
+                    this.scene.carroRenderer.updateCell(calleObjetivo, carril, indice);
 
                     // Si la simulación está pausada, forzar render manual de PixiJS
                     if (window.isPaused && window.pixiApp && window.pixiApp.app) {

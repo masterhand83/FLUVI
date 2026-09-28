@@ -260,6 +260,7 @@ for (const usePixi of [false, true]) {
 				timeout: 30000,
 			});
 		await page.evaluate(() => window.hideLoadingScreen?.());
+		await page.waitForFunction(() => document.getElementById("loadingScreen")?.style.display === "none");
 		await page.waitForFunction(
 			() => typeof window.drawStreetTool?.isActive === "function",
 		);

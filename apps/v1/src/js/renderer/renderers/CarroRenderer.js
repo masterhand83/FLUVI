@@ -57,6 +57,20 @@ class CarroRenderer {
         }
     }
 
+    // Apply a manual edit immediately without scanning every street or advancing
+    // the periodic full-update counter. Keep dirty tracking in sync with the sprite.
+    updateCell(calle, carril, indice) {
+        if (!calle?.arreglo || !Number.isInteger(carril) || !Number.isInteger(indice) ||
+            carril < 0 || carril >= calle.carriles || indice < 0 || indice >= calle.tamano ||
+            !calle.arreglo[carril] || indice >= calle.arreglo[carril].length) return;
+
+        const id = this.getCarroId(calle, carril, indice);
+        const tipo = calle.arreglo[carril][indice];
+        this.lastVehicleState.set(id, tipo);
+        if (tipo === 0) this.removeCarroSprite(id);
+        else this.createOrUpdateCarroSprite(calle, carril, indice);
+    }
+
     renderCalleVehiculos(calle) {
         if (!calle.arreglo) return;
 

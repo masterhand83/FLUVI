@@ -171,6 +171,12 @@ class PixiApp {
                 this.sceneManager.update(delta);
             }
 
+            // La edición pausa el tráfico, pero los links visibles deben seguir
+            // los extremos de las calles durante el arrastre.
+            if (window.mostrarConexiones && this.sceneManager?.conexionRenderer) {
+                this.sceneManager.conexionRenderer.renderAll(window.conexiones);
+            }
+
             // OPTIMIZACIÓN: Actualizar minimapa a menor frecuencia (20 FPS en vez de 60 FPS)
             minimapaFrameCounter++;
             if (minimapaFrameCounter >= minimapaUpdateInterval) {

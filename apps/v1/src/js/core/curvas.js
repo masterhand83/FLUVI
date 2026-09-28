@@ -11,6 +11,24 @@
 const verticeSeleccionado = null;
 const controlandoVertice = false;
 
+// Geometry is read far more often than it is edited. Keep the legacy integration
+// order (including its rounding) while sharing its prefixes between cells/lanes.
+const prefijosCurva = new WeakMap();
+function geometriaCurvaIgual(cache, calle) {
+    if (!cache || cache.x !== calle.x || cache.y !== calle.y ||
+        cache.angulo !== calle.angulo || cache.tamano !== calle.tamano ||
+        cache.carriles !== calle.carriles || cache.esCurva !== calle.esCurva ||
+        cache.celdaTamano !== celda_tamano || cache.vertices.length !== calle.vertices.length) return false;
+    for (let i = 0; i < cache.vertices.length; i++) {
+        const old = cache.vertices[i], current = calle.vertices[i];
+        if (old[0] !== current.indiceCelda || old[1] !== current.anguloOffset) return false;
+    }
+    return true;
+}
+function invalidarGeometriaCurva(calle) {
+    if (calle) prefijosCurva.delete(calle);
+}
+
 // Inicializar vértices en una calle
 function inicializarVertices(calle) {
     if (calle.tipo !== TIPOS.CONEXION) return;
@@ -40,6 +58,8 @@ function inicializarVertices(calle) {
             anguloOffset: 0,
         });
     }
+
+    invalidarGeometriaCurva(calle);
 
     console.log(`✨ Inicializados ${calle.vertices.length} vértices (puntos de curvatura) para ${calle.nombre}: [0, cada 10, ${ultimaCelda}]`);
 }
@@ -148,6 +168,7 @@ function actualizarAnguloVertice(calle, indiceVertice, nuevoAnguloOffset) {
     }
 
     calle.vertices[indiceVertice].anguloOffset = nuevoAnguloOffset;
+    invalidarGeometriaCurva(calle);
     return true;
 }
 
@@ -250,24 +271,30 @@ function obtenerCoordenadasGlobalesCeldaConCurva(calle, carril, indice) {
         return obtenerCoordenadasGlobalesCelda(calle, carril, indice);
     }
 
-    // Calcular la posición acumulando desplazamientos desde el inicio
-    let posX = calle.x;
-    let posY = calle.y;
-    let anguloActual = calle.angulo;
-
-    // Recorrer desde el inicio hasta la celda objetivo
-    for (let i = 0; i <= indice; i++) {
-        const anguloEnPunto = obtenerAnguloEnPunto(calle, i);
-
-        if (i > 0) {
-            // Mover en la dirección del ángulo actual
-            const anguloRad = -anguloEnPunto * Math.PI / 180;
-            posX += Math.cos(anguloRad) * celda_tamano;
-            posY += Math.sin(anguloRad) * celda_tamano;
-        }
-
-        anguloActual = anguloEnPunto;
+    let cache = prefijosCurva.get(calle);
+    if (!geometriaCurvaIgual(cache, calle)) {
+        cache = { x: calle.x, y: calle.y, angulo: calle.angulo,
+            tamano: calle.tamano, carriles: calle.carriles, esCurva: calle.esCurva,
+            celdaTamano: celda_tamano,
+            vertices: calle.vertices.map(v => [v.indiceCelda, v.anguloOffset]), puntos: [] };
+        prefijosCurva.set(calle, cache);
     }
+    // For indices outside the street, preserve the original loop behavior.
+    const puntos = cache.puntos;
+    for (let i = puntos.length; i <= indice; i++) {
+        const angulo = obtenerAnguloEnPunto(calle, i);
+        const anterior = puntos[i - 1];
+        const rad = -angulo * Math.PI / 180;
+        puntos.push(i === 0 ? { x: calle.x, y: calle.y, angulo } : {
+            x: anterior.x + Math.cos(rad) * celda_tamano,
+            y: anterior.y + Math.sin(rad) * celda_tamano,
+            angulo
+        });
+    }
+    const punto = puntos[indice] || { x: calle.x, y: calle.y, angulo: calle.angulo };
+    const posX = punto.x;
+    const posY = punto.y;
+    const anguloActual = punto.angulo;
 
     // Ajustar por carril (perpendicular a la dirección)
     const anguloRad = -anguloActual * Math.PI / 180;
@@ -333,6 +360,7 @@ window.actualizarAnguloVertice = actualizarAnguloVertice;
 window.actualizarVerticePorArrastre = actualizarVerticePorArrastre;
 window.detectarVerticeEnPosicion = detectarVerticeEnPosicion;
 window.obtenerCoordenadasGlobalesCeldaConCurva = obtenerCoordenadasGlobalesCeldaConCurva;
+window.invalidarGeometriaCurva = invalidarGeometriaCurva;
 window.calcularCentroCalleCurva = calcularCentroCalleCurva;
 window.calcularPuntoFinalCalleCurva = calcularPuntoFinalCalleCurva;
 

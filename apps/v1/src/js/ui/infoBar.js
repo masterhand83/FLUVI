@@ -10,6 +10,9 @@
   let infoTrafficMultiplier;
   let infoSimulatedDateTime;
   let infoTimePerFrame;
+  let infoFPS;
+  let fpsWindowStart = null;
+  let fpsFrames = 0;
 
   // Contador de generación
   let generationCount = 0;
@@ -21,6 +24,28 @@
     infoTrafficMultiplier = document.getElementById('infoTrafficMultiplier');
     infoSimulatedDateTime = document.getElementById('infoSimulatedDateTime');
     infoTimePerFrame = document.getElementById('infoTimePerFrame');
+    infoFPS = document.getElementById('infoFPS');
+  }
+
+  // FPS de pasos reales de la simulación, no la velocidad solicitada por el slider.
+  function recordSimulationFrame() {
+    if (!infoFPS) initDOMReferences();
+    const now = performance.now();
+    if (fpsWindowStart === null) fpsWindowStart = now;
+    fpsFrames++;
+    const elapsed = now - fpsWindowStart;
+    if (elapsed >= 1000) {
+      if (infoFPS) infoFPS.textContent = (fpsFrames * 1000 / elapsed).toFixed(1);
+      fpsWindowStart = now;
+      fpsFrames = 0;
+    }
+  }
+
+  function resetSimulationFPS() {
+    fpsWindowStart = null;
+    fpsFrames = 0;
+    if (!infoFPS) initDOMReferences();
+    if (infoFPS) infoFPS.textContent = '0.0';
   }
 
   // Calcular tiempo por frame basado en física de la simulación
@@ -162,6 +187,7 @@
     if (!infoGeneration) {
       initDOMReferences();
     }
+    resetSimulationFPS();
 
     simulatedStartDate = new Date();
     simulatedCurrentDate = new Date(simulatedStartDate);
@@ -210,6 +236,8 @@
   // Exponer funciones y variables globalmente
   window.updateSimulationInfo = updateInfo;
   window.resetSimulationInfo = resetInfo;
+  window.recordSimulationFrame = recordSimulationFrame;
+  window.resetSimulationFPS = resetSimulationFPS;
 
   // Exponer tiempo simulado para el ciclo día/noche
   Object.defineProperty(window, 'simulatedCurrentDate', {
