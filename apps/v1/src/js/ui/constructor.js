@@ -9,6 +9,7 @@ let simulacionActual = {
     conexiones: [],
     edificios: []
 };
+let simulationVersion = 0;
 
 window.referenceImage = null;
 let referenceImageRequest = 0;
@@ -2221,10 +2222,12 @@ function cargarSimulacion(event) {
     const file = event.target.files[0];
     if (!file) return;
 
+    const requestVersion = simulationVersion;
     const reader = new FileReader();
 
     reader.onload = async (e) => {
         try {
+            if (requestVersion !== simulationVersion) return;
             const datosSimulacion = JSON.parse(e.target.result);
 
             // Validar estructura
@@ -2238,8 +2241,10 @@ function cargarSimulacion(event) {
 
             // Limpiar simulación actual
             limpiarSimulacionActual();
+            const loadVersion = simulationVersion;
             if (datosSimulacion.imagenReferencia) {
                 await window.setReferenceImage(datosSimulacion.imagenReferencia);
+                if (loadVersion !== simulationVersion) return;
             }
 
             // Cargar calles (silenciosamente, sin alertas individuales)
@@ -2303,10 +2308,13 @@ function cargarSimulacion(event) {
             } else {
                 console.log(`⏰ No se encontró configuración de tiempo, usando valores por defecto`);
             }
+            const timestamp = document.getElementById('infoSimulatedDateTime');
+            if (timestamp && window.obtenerTimestampVirtual) timestamp.textContent = window.obtenerTimestampVirtual();
+            window.actualizarDisplayTiempoSimulador?.();
 
             // Cargar conexiones (en segundo paso para asegurar que las calles existan)
-            if (datosSimulacion.conexiones && Array.isArray(datosSimulacion.conexiones)) {
-                setTimeout(() => {
+            setTimeout(() => {
+                    if (loadVersion !== simulationVersion) return;
                     // Asegurarse de que la clase ConexionCA y los tipos estén disponibles
                     if (!window.ConexionCA || !window.TIPOS_CONEXION) {
                         console.error("❌ ConexionCA o TIPOS_CONEXION no están disponibles");
@@ -2316,7 +2324,7 @@ function cargarSimulacion(event) {
                     const conexionesCreadas = [];
 
                     // Crear cada conexión individualmente desde los detalles del JSON
-                    datosSimulacion.conexiones.forEach(conexionData => {
+                    (Array.isArray(datosSimulacion.conexiones) ? datosSimulacion.conexiones : []).forEach(conexionData => {
                         const origen = window.calles[conexionData.origenIdx];
                         const destino = window.calles[conexionData.destinoIdx];
 
@@ -2385,7 +2393,6 @@ function cargarSimulacion(event) {
                     // Re-renderizar todo en PixiJS si está activo
                     if (window.USE_PIXI && window.pixiApp && window.pixiApp.sceneManager) {
                         console.log('🎨 Re-renderizando simulación cargada en PixiJS');
-                        window.pixiApp.sceneManager.clearAll();
                         window.pixiApp.sceneManager.renderAll();
 
                         // Forzar actualización de etiquetas si están habilitadas
@@ -2402,9 +2409,9 @@ function cargarSimulacion(event) {
 
                     console.log(`✅ Simulación "${datosSimulacion.nombre}" cargada completamente`);
                 }, 100);
-            }
 
             simulacionActual = datosSimulacion;
+            window.simulacionActual = simulacionActual;
 
             // Mostrar resumen de la carga
             let mensaje = `✅ Simulación "${datosSimulacion.nombre}" cargada exitosamente\n\n`;
@@ -2446,6 +2453,7 @@ function nuevaSimulacion() {
         conexiones: [],
         edificios: []
     };
+    window.simulacionActual = simulacionActual;
 
     alert("Nueva simulación creada");
 }
@@ -2453,9 +2461,12 @@ function nuevaSimulacion() {
 // ==================== LIMPIAR SIMULACIÓN ====================
 
 function limpiarSimulacionActual() {
+    simulationVersion++;
+    window.streetEditPause?.();
     referenceImageRequest++;
     window.referenceImage = null;
     window.referenceImageEditor?.sync();
+    window.restablecerSesionEscenarios?.();
     // Limpiar calles
     if (window.calles) {
         window.calles.length = 0;
@@ -2479,6 +2490,16 @@ function limpiarSimulacionActual() {
     // Limpiar selección
     window.calleSeleccionada = null;
     window.edificioSeleccionado = null;
+    const selectCalleConfig = document.getElementById('selectCalle');
+    if (selectCalleConfig) {
+        selectCalleConfig.value = '';
+        selectCalleConfig.dispatchEvent(new Event('change'));
+    }
+
+    window.cellGeometryIndex?.clear?.();
+    window.resetSimulationMetrics?.();
+    window.resetSimulationInfo?.();
+    if (typeof limpiarInfoEscenarioActual === 'function') limpiarInfoEscenarioActual();
 
     // Actualizar selectores
     actualizarSelectorCalles();

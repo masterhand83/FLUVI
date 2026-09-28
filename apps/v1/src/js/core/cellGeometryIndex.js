@@ -129,5 +129,11 @@
         if (calle && root.invalidarGeometriaCurva) root.invalidarGeometriaCurva(calle);
     }
 
-    root.cellGeometryIndex = { findNearest, nearbyStreets, invalidate };
+    function clear() {
+        indexedStreets.clear();
+        buckets.clear();
+        size = 0;
+    }
+
+    root.cellGeometryIndex = { findNearest, nearbyStreets, invalidate, clear };
 })(window);

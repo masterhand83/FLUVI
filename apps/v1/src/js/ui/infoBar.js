@@ -188,6 +188,9 @@
       initDOMReferences();
     }
     resetSimulationFPS();
+    // Flush throttled values so the first post-reset update reads fresh state.
+    infoBarUpdateCounter = 0;
+    cachedPopulation = 0;
 
     simulatedStartDate = new Date();
     simulatedCurrentDate = new Date(simulatedStartDate);
@@ -215,6 +218,8 @@
     }
 
     // Resetear tiempo virtual
+    // This resets virtual time; callers restoring a saved clock must apply it
+    // after resetSimulationInfo() has completed.
     if (window.reiniciarTiempo) {
       window.reiniciarTiempo();
     }

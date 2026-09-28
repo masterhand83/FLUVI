@@ -397,18 +397,49 @@ class SceneManager {
     }
 
     clearAll() {
-        Object.keys(this.layers).forEach(name => {
-            this.clearLayer(name);
+        // Renderer-owned cleanup can dispose its internal state, but the
+        // background renderer's clearAll also destroys textures. Keep disposal
+        // here so shared AssetLoader textures are never touched.
+        if (this.referenceImageRenderer) this.referenceImageRenderer.clear();
+
+        // Background areas use textures generated exclusively from their own
+        // canvases (not AssetLoader assets), so dispose those to release memory.
+        this.backgroundAreaRenderer?.backgroundAreas.forEach(sprite => {
+            sprite.parent?.removeChild(sprite);
+            sprite.destroy({ children: true, texture: true, baseTexture: true });
         });
 
-        this.referenceImageRenderer.clear();
+        Object.values(this.layers).forEach(layer => {
+            // These display objects belong to this scene. Explicitly preserve
+            // textures/base textures, which may be shared by AssetLoader.
+            layer.removeChildren().forEach(child => {
+                child.destroy({ children: true, texture: false, baseTexture: false });
+            });
+        });
+
+        this.backgroundAreaRenderer?.backgroundAreas.clear();
+        this.edificioRenderer?.etiquetasEdificios.clear();
+        this.uiRenderer?.etiquetas.clear();
+        this.uiRenderer?.contadores?.clear();
+        this.conexionRenderer?.lastGeometry.clear();
+        this.carroRenderer?.lastVehicleState.clear();
+        this.carroRenderer?.spritePool.forEach(sprite => {
+            sprite.destroy({ children: true, texture: false, baseTexture: false });
+        });
+        this.carroRenderer?.spritePool.splice(0);
 
         this.calleSprites.clear();
         this.carroSprites.clear();
         this.edificioSprites.clear();
         this.conexionGraphics.clear();
         this.verticeSprites.clear();
-        this.referenceImageRenderer.render();
+
+        this.backgroundRendered = false;
+        this.verticesRendered = false;
+        this.conexionesRendered = false;
+        this.lastMostrarConexiones = false;
+        this.lastMostrarVertices = false;
+        this.lastMostrarEtiquetas = false;
 
         console.log('🗑️ Escena limpiada');
     }

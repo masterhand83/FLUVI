@@ -32,6 +32,16 @@ function scan(window, roads, x, y) {
 }
 
 describe('cell geometry index', () => {
+    it('can drop cached cell centers when replacing a simulation', () => {
+        const w = setup();
+        const oldRoad = { x: 0, y: 0, angulo: 0, tamano: 2, carriles: 1 };
+        expect(w.cellGeometryIndex.findNearest(2.5, 2.5, [oldRoad])?.calle).toBe(oldRoad);
+        w.cellGeometryIndex.clear();
+        expect(w.cellGeometryIndex.findNearest(2.5, 2.5, [])).toBeNull();
+        const newRoad = { x: 0, y: 0, angulo: 0, tamano: 2, carriles: 1 };
+        expect(w.cellGeometryIndex.findNearest(2.5, 2.5, [newRoad])?.calle).toBe(newRoad);
+    });
+
     it('matches the scan, including overlapping ties, thresholds and negative coordinates', () => {
         const w = setup();
         const straight = { x: -25, y: -25, angulo: 0, tamano: 10, carriles: 2 };

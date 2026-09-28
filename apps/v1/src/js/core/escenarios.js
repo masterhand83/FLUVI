@@ -260,7 +260,7 @@ function toggleModoBloqueo(activar, tipo = 'bloqueo') {
             paintModeIndicatorObstaculo.style.display = 'block';
         }
 
-        canvasEscenarios.classList.add('blocking-mode');
+        if (canvasEscenarios) canvasEscenarios.classList.add('blocking-mode');
     } else {
         console.log('🚧 Modo escenario DESACTIVADO');
 
@@ -275,7 +275,7 @@ function toggleModoBloqueo(activar, tipo = 'bloqueo') {
             console.log('🌧️ Efecto de lluvia desactivado');
         }
 
-        canvasEscenarios.classList.remove('blocking-mode');
+        if (canvasEscenarios) canvasEscenarios.classList.remove('blocking-mode');
         estadoEscenarios.isPainting = false;
     }
 }
@@ -321,6 +321,26 @@ function limpiarTodosLosBloqueosSilencioso() {
     if (window.pixiApp && window.pixiApp.sceneManager && window.pixiApp.sceneManager.carroRenderer) {
         window.pixiApp.sceneManager.carroRenderer.updateAll(window.calles);
     }
+}
+
+/**
+ * Restablece la sesión activa de escenarios sin confirmaciones ni cambios a la
+ * biblioteca guardada. Útil al iniciar otra simulación/mapa.
+ */
+function restablecerSesionEscenarios() {
+    // The outgoing streets are discarded immediately after this reset; avoid
+    // repainting all of their cells or rebuilding sprites just to remove them.
+    estadoEscenarios.celdasBloqueadas.clear();
+    desactivarEscenario();
+
+    // También funciona si se invoca antes de inicializar los listeners del UI.
+    [toggleBloqueoCarril, toggleInundacion, toggleObstaculo].forEach(toggle => {
+        if (toggle) toggle.checked = false;
+    });
+    const selectorContainer = document.getElementById('selectorObstaculoContainer');
+    if (selectorContainer) selectorContainer.style.display = 'none';
+    estadoEscenarios.isPainting = false;
+    window.escenarioActualCargado = null;
 }
 
 /**
@@ -946,5 +966,6 @@ window.generarEscenarioInundacionMasiva = generarEscenarioInundacionMasiva;
 window.generarEscenarioBachesAleatorios = generarEscenarioBachesAleatorios;
 window.limpiarTodosLosBloqueos = limpiarTodosLosBloqueos;
 window.limpiarTodosLosBloqueosSilencioso = limpiarTodosLosBloqueosSilencioso;
+window.restablecerSesionEscenarios = restablecerSesionEscenarios;
 
 console.log('✅ escenarios.js cargado');

@@ -546,6 +546,45 @@ function updateMetrics() {
     }
 }
 
+function clearMetricHistories() {
+    for (const history of [metricsHistory, completeMetricsHistory]) {
+        for (const key of ['timestamps', 'density', 'netGeneration', 'throughput', 'speed', 'entropy']) {
+            history[key].length = 0;
+        }
+    }
+}
+
+/** Reset metric history and all state that carries measurements across ticks. */
+function resetSimulationMetrics() {
+    clearMetricHistories();
+
+    previousCarCount = 0;
+    lastFlowMeasure = null;
+    lastFlowValue = 0;
+    previousStreetStates.clear();
+    lastEntropyValue = 0;
+    metricsUpdateCounter = 0;
+    callesIncluidasEnMetricas = null;
+    updateCharts();
+
+    const statusPanel = document.getElementById('statusPanel');
+    if (statusPanel) {
+        statusPanel.className = 'status-panel status-moderado mb-3';
+        statusPanel.innerHTML = `
+            <div class="status-header">
+                <span class="status-emoji">🟡</span>
+                <span class="status-title">INICIANDO...</span>
+            </div>
+            <div class="status-description">Esperando datos de simulación...</div>
+        `;
+    }
+
+    // Discard checkbox nodes from the old map; opening the modal rebuilds them.
+    const streetList = document.getElementById('listaCallesMetricas');
+    if (streetList) streetList.innerHTML = '';
+    actualizarContadorCallesIncluidas();
+}
+
 // ==================== FUNCIONES DE INICIALIZACIÓN Y ACTUALIZACIÓN DE GRÁFICAS ====================
 
 /**
@@ -1209,22 +1248,7 @@ function limpiarMetricas() {
         '¿Estás seguro de que deseas limpiar todas las métricas?<br><br><strong>Esta acción no se puede deshacer.</strong>',
         () => {
             // Callback si el usuario confirma
-            // Limpiar historial de gráficas
-            metricsHistory.timestamps = [];
-            metricsHistory.density = [];
-            metricsHistory.throughput = [];
-            metricsHistory.netGeneration = [];
-            metricsHistory.speed = [];
-            metricsHistory.entropy = [];
-
-            // Limpiar historial COMPLETO
-            completeMetricsHistory.timestamps = [];
-            completeMetricsHistory.density = [];
-            completeMetricsHistory.throughput = [];
-            completeMetricsHistory.netGeneration = [];
-            completeMetricsHistory.speed = [];
-            completeMetricsHistory.entropy = [];
-
+            clearMetricHistories();
             updateCharts();
 
             console.log('✅ Métricas limpiadas exitosamente (historial completo y gráficas)');
@@ -1646,6 +1670,7 @@ window.updateCharts = updateCharts;
 window.descargarMetricasCSV = descargarMetricasCSV;
 window.descargarMetricasJSON = descargarMetricasJSON;
 window.limpiarMetricas = limpiarMetricas;
+window.resetSimulationMetrics = resetSimulationMetrics;
 
 // Exponer funciones de gestión de calles en métricas
 window.inicializarCallesExcluidasPorDefecto = inicializarCallesExcluidasPorDefecto;
