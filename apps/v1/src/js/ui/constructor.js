@@ -2282,7 +2282,16 @@ function cargarSimulacion(event) {
                                 end: { x: segment?.end?.x, y: segment?.end?.y }
                             })) } : {}) };
                         const geometry = window.streetBezier?.validate(proposed);
-                        if (geometry?.valid && geometry.cells === calleCreada.tamano) {
+                        if (geometry?.valid && (geometry.cells === calleCreada.tamano || Array.isArray(proposed.bezierSegments))) {
+                            if (geometry.cells !== calleCreada.tamano) {
+                                if (window.editorCalles?.aplicarNuevasDimensiones) {
+                                    window.editorCalles.aplicarNuevasDimensiones(calleCreada, geometry.cells, calleCreada.carriles);
+                                } else {
+                                    calleCreada.arreglo = calleCreada.arreglo.map(lane => Array.from({ length: geometry.cells }, (_, index) => lane[index] ?? 0));
+                                    calleCreada.celulasEsperando = calleCreada.celulasEsperando.map(lane => Array.from({ length: geometry.cells }, (_, index) => lane[index] ?? false));
+                                }
+                                proposed.tamano = geometry.cells;
+                            }
                             Object.assign(calleCreada, proposed);
                             calleCreada.vertices = [];
                         }

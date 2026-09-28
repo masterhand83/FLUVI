@@ -13,6 +13,11 @@
             return [{ controls: (street.bezierControls || []).map(copyPoint), end: endPoint(street) }];
         },
         point(street, t) {
+            const rounded = geometryFor(street);
+            if (rounded.rounded) {
+                const position = atDistance(rounded.samples, Math.max(0, Math.min(1, t)) * rounded.length);
+                return { x: position.x, y: position.y };
+            }
             const sections = api.segments(street);
             const u = Math.max(0, Math.min(1, t));
             const scaled = u * sections.length;
@@ -110,9 +115,70 @@
             length = sampleSection([start, ...sections[section].controls, sections[section].end], length, samples);
             if (section < sections.length - 1) seams.push(length);
         }
-        const result = { signature, samples, length, seams };
+        const rounded = roundCorners(samples, seams);
+        const result = { signature, ...rounded, length: rounded.samples.at(-1).distance };
         cache.set(street, result);
         return result;
+    }
+
+    function roundCorners(raw, seams) {
+        const corners = seams.map((seam, index) => cornerFor(raw, seams, seam, index)).filter(Boolean);
+        if (!corners.length) return { samples: raw, seams, rounded: false };
+        const samples = [];
+        const roundedSeams = [];
+        let rawIndex = 0;
+        const append = (point) => appendPathSample(samples, point);
+        for (const corner of corners) {
+            const entryDistance = corner.seam - corner.radius;
+            const exitDistance = corner.seam + corner.radius;
+            while (rawIndex < raw.length && raw[rawIndex].distance < entryDistance) append(raw[rawIndex++]);
+            const entry = atDistance(raw, entryDistance);
+            const exit = atDistance(raw, exitDistance);
+            append(entry);
+            roundedSeams.push(appendCorner(entry, exit, corner.radius, append, samples));
+            append(exit);
+            while (rawIndex < raw.length && raw[rawIndex].distance <= exitDistance) rawIndex++;
+        }
+        while (rawIndex < raw.length) append(raw[rawIndex++]);
+        return { samples, seams: roundedSeams, rounded: true };
+    }
+    function appendPathSample(samples, point) {
+        const prior = samples.at(-1);
+        const distance = (prior?.distance || 0) + (prior ? Math.hypot(point.x - prior.x, point.y - prior.y) : 0);
+        samples.push({ ...point, distance });
+    }
+    function cornerFor(raw, seams, seam, index) {
+        const before = atDistance(raw, Math.max(0, seam - cellSize() / 10));
+        const after = atDistance(raw, Math.min(raw.at(-1).distance, seam + cellSize() / 10));
+        const difference = Math.cos((before.angle - after.angle) * Math.PI / 180);
+        const previous = index ? seams[index - 1] : 0;
+        const next = index + 1 < seams.length ? seams[index + 1] : raw.at(-1).distance;
+        const radius = Math.min(cellSize() * 4, (seam - previous) * 0.4, (next - seam) * 0.4);
+        return difference < 0.999 && radius > 1e-6 ? { seam, radius } : null;
+    }
+    function appendCorner(entry, exit, radius, append, samples) {
+        const incoming = -entry.angle * Math.PI / 180;
+        const outgoing = -exit.angle * Math.PI / 180;
+        const handle = radius * 0.6;
+        const controls = [
+            { x: entry.x + Math.cos(incoming) * handle, y: entry.y + Math.sin(incoming) * handle },
+            { x: exit.x - Math.cos(outgoing) * handle, y: exit.y - Math.sin(outgoing) * handle },
+        ];
+        const derivatives = [
+            { x: 3 * (controls[0].x - entry.x), y: 3 * (controls[0].y - entry.y) },
+            { x: 3 * (controls[1].x - controls[0].x), y: 3 * (controls[1].y - controls[0].y) },
+            { x: 3 * (exit.x - controls[1].x), y: 3 * (exit.y - controls[1].y) },
+        ];
+        const count = Math.max(32, Math.ceil(radius * 8 / cellSize()));
+        let center;
+        for (let i = 1; i < count; i++) {
+            const t = i / count;
+            const point = evaluate([entry, ...controls, exit], t);
+            const tangent = evaluate(derivatives, t);
+            append({ ...point, angle: Math.atan2(-tangent.y, tangent.x) * 180 / Math.PI });
+            if (i === Math.floor(count / 2)) center = samples.at(-1).distance;
+        }
+        return center;
     }
     function sampleSection(points, initialLength, samples) {
         const controlLength = points.slice(1).reduce((sum, p, i) => sum + Math.hypot(p.x - points[i].x, p.y - points[i].y), 0);

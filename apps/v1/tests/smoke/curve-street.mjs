@@ -813,11 +813,17 @@ for (const usePixi of [false, true]) {
 		await page.mouse.up();
 		anchored = await page.evaluate(() => {
 			const street = window.calleSeleccionada;
+			const anchor = street.bezierSegments[0].end;
 			return { sections: street.bezierSegments, valid: window.streetBezier.validate(street).valid,
-				cell: window.encontrarCeldaMasCercana?.(street.bezierSegments[0].end.x, street.bezierSegments[0].end.y)?.calle === street };
+				cell: window.encontrarCeldaMasCercana?.(anchor.x, anchor.y)?.calle === street,
+				cornerDistance: Math.min(...Array.from({ length: 1001 }, (_, i) => {
+					const point = window.streetBezier.point(street, i / 1000);
+					return Math.hypot(point.x - anchor.x, point.y - anchor.y);
+				})) };
 		});
-		assert.equal(anchored.valid, true, "dragged anchor produces valid sharp-turn geometry");
+		assert.equal(anchored.valid, true, "dragged anchor produces valid rounded-turn geometry");
 		assert.equal(anchored.cell, true, "cell hit-testing follows the new corner");
+		assert.ok(anchored.cornerDistance > 0.1, "road rounds inside the draggable anchor instead of passing through it");
 		assert.equal(anchored.sections[0].controls.length, 0, "corner does not require Bezier controls");
 		await page.evaluate(() => { window.__curveJsonPromise = null; });
 		await page.$eval("#btnGuardarSimulacion", (button) => button.click());

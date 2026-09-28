@@ -528,6 +528,7 @@ body {
 .street-inspector-control [aria-pressed="true"] { border-color: #0d6efd; background: #cfe2ff; color: #084298; }
 .street-inspector-control.anchor span { color: #8a5900; font-weight: 700; }
 .street-inspector-add-choice { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.street-inspector-add-choice small { flex-basis: 100%; }
 .street-inspector-add-choice[hidden] { display: none; }
 .street-inspector { max-height: min(80vh, 680px); overflow-y: auto; }
 .street-inspector-selected-control { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 6px; }

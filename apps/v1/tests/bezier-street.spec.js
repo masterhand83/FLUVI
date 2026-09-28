@@ -90,17 +90,20 @@ describe('streetBezier', () => {
         expect(sections[0].end).toEqual(api.point(street, 0.25));
     });
 
-    it('retains sharp corners, proportional section parameters and arc-length cells', () => {
+    it('rounds the corner inside a draggable anchor while retaining arc-length cells', () => {
         const street = road({ bezierControls: undefined, endX: 40, endY: 40, carriles: 1,
             bezierSegments: [
                 { controls: [], end: { x: 40, y: 0 } },
                 { controls: [], end: { x: 40, y: 40 } }
             ] });
-        expect(api.point(street, 0.5)).toEqual({ x: 40, y: 0 });
-        expect(api.point(street, 0.75)).toEqual({ x: 40, y: 20 });
-        expect(api.coordinates(street, 0, 7).angulo).toBeCloseTo(0);
-        expect(api.coordinates(street, 0, 8).angulo).toBeCloseTo(-90);
-        expect(api.coordinates(street, 0, 8).x).toBeCloseTo(40);
+        const bend = api.point(street, 0.5);
+        expect(bend.x).toBeLessThan(40);
+        expect(bend.y).toBeGreaterThan(0);
+        expect(api.coordinates(street, 0, 4).angulo).toBeCloseTo(0);
+        expect(api.coordinates(street, 0, 7).angulo).toBeLessThan(0);
+        expect(api.coordinates(street, 0, 7).angulo).toBeGreaterThan(-90);
+        expect(api.coordinates(street, 0, 10).angulo).toBeCloseTo(-90);
+        expect(api.validate(street).length).toBeLessThan(80);
         expect(api.validate(street).valid).toBe(true);
         const pieces = api.splitSegment(street, 0);
         expect(pieces[0]).toEqual({ controls: [], end: { x: 20, y: 0 } });
@@ -113,12 +116,11 @@ describe('streetBezier', () => {
                 { controls: [{ x: 20, y: 20 }], end: { x: 60, y: 0 } },
                 { controls: [{ x: 90, y: -20 }], end: { x: 120, y: 0 } }
             ] });
-        const anchor = api.point(street, 0.5);
-        const farSide = api.point(street, 0.75);
+        const farSide = api.segments(street)[1];
         const nearSide = api.point(street, 0.25);
         street.bezierSegments[0].controls[0].y += 15;
-        expect(api.point(street, 0.5)).toEqual(anchor);
-        expect(api.point(street, 0.75)).toEqual(farSide);
+        expect(street.bezierSegments[0].end).toEqual({ x: 60, y: 0 });
+        expect(api.segments(street)[1]).toEqual(farSide);
         expect(api.point(street, 0.25)).not.toEqual(nearSide);
     });
 
@@ -147,7 +149,7 @@ describe('streetBezier', () => {
             bezierSegments: [{ controls: [], end: { x: 50, y: 0 } }, { controls: [], end: { x: 100, y: 0 } }] });
         expect(api.validate(street).length).toBeCloseTo(100);
         street.bezierSegments[0].end.y = 50;
-        expect(api.validate(street).length).toBeGreaterThan(140);
+        expect(api.validate(street).length).toBeGreaterThan(130);
         street.bezierSegments[0].end.x = NaN;
         expect(api.validate(street).reason).toBe('invalid-controls');
         street.bezierSegments[0].end.x = 50;
