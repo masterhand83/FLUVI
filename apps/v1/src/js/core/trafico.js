@@ -1731,8 +1731,6 @@ function dibujarConexionesDetectadas() {
     ctx.save();
 
     conexiones.forEach(conexion => {
-        const preview = window.streetGeometryEditor?.dependentPreview;
-        if (preview && (preview.survivingConnections.includes(conexion) || preview.lostConnections.includes(conexion))) return;
         if (conexion instanceof ConexionCA) {
             conexion.dibujar();
         }

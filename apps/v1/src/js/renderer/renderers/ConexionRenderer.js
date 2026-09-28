@@ -21,22 +21,16 @@ class ConexionRenderer {
             this.lastGeometry.delete(conexion);
         }
         conexiones.forEach(conexion => {
-            const preview = window.streetGeometryEditor?.dependentPreview;
-            const previewed = preview && (preview.survivingConnections.includes(conexion) || preview.lostConnections.includes(conexion));
             const posOrig = conexion.posOrigen === -1 ? conexion.origen.tamano - 1 : conexion.posOrigen;
             const coordOrigen = this.cellCoordinates(conexion.origen, conexion.carrilOrigen, posOrig);
             const coordDestino = this.cellCoordinates(conexion.destino, conexion.carrilDestino, conexion.posDestino);
             if (!coordOrigen || !coordDestino) return;
             const geometry = [coordOrigen.x, coordOrigen.y, coordDestino.x, coordDestino.y, conexion.tipo, conexion.bloqueada];
             const previous = this.lastGeometry.get(conexion);
-            if (previous && previous.every((value, index) => value === geometry[index]) && this.scene.conexionGraphics.has(conexion)) {
-                this.scene.conexionGraphics.get(conexion).visible = !previewed;
-                return;
-            }
+            if (previous && previous.every((value, index) => value === geometry[index]) && this.scene.conexionGraphics.has(conexion)) return;
             this.scene.conexionGraphics.get(conexion)?.destroy();
             this.scene.conexionGraphics.delete(conexion);
             this.renderConexion(conexion, coordOrigen, coordDestino);
-            this.scene.conexionGraphics.get(conexion).visible = !previewed;
             this.lastGeometry.set(conexion, geometry);
         });
     }

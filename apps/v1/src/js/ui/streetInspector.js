@@ -29,7 +29,6 @@
 		"streetInspectorDeleteControl",
 	);
 	const error = document.getElementById("streetInspectorError");
-	const dependentSummary = document.getElementById("streetInspectorDependentSummary");
 	const canvas = document.getElementById("simuladorCanvas");
 	if (!button || !inspector) return;
 
@@ -39,9 +38,6 @@
 	let selectedControlIndex = null;
 	let selectedSegmentIndex = null;
 	let selectedAnchorIndex = null;
-	let previewCanvas = null;
-	let previewEscapedField = null;
-	let skipBlurCommit = false;
 	const isBezier = (street) =>
 		window.streetBezier?.isBezier?.(street) ?? Boolean(
 			street &&
@@ -161,7 +157,6 @@
 	};
 	function show(calle) {
 		if (selected !== calle) {
-			clearDimensionPreview();
 			selectedControlIndex = null;
 			selectedSegmentIndex = null;
 			selectedAnchorIndex = null;
@@ -190,85 +185,6 @@
 		window.renderizarCanvas?.();
 		if (window.USE_PIXI && window.pixiApp?.sceneManager)
 			window.pixiApp.sceneManager.renderAll();
-	}
-	function refreshDerivedGeometry(street) {
-		window.cellGeometryIndex?.invalidate?.(street);
-		window.inicializarIntersecciones?.();
-		window.construirMapaIntersecciones?.();
-	}
-	function clearDimensionPreview() {
-		if (dependentSummary) { dependentSummary.hidden = true; dependentSummary.textContent = ""; }
-		previewCanvas?.remove();
-		previewCanvas = null;
-	}
-	function previewCanvasForMap() {
-		if (!previewCanvas) {
-			previewCanvas = document.createElement("canvas");
-			previewCanvas.className = "street-inspector-preview-overlay";
-			previewCanvas.setAttribute("aria-hidden", "true");
-			document.body.append(previewCanvas);
-		}
-		const rect = canvas.getBoundingClientRect();
-		const ratio = window.devicePixelRatio || 1;
-		previewCanvas.style.left = `${rect.left}px`; previewCanvas.style.top = `${rect.top}px`;
-		previewCanvas.style.width = `${rect.width}px`; previewCanvas.style.height = `${rect.height}px`;
-		previewCanvas.width = Math.max(1, Math.round(rect.width * ratio));
-		previewCanvas.height = Math.max(1, Math.round(rect.height * ratio));
-		const ctx = previewCanvas.getContext("2d");
-		ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-		ctx.translate(Number(window.offsetX) || 0, Number(window.offsetY) || 0);
-		ctx.scale(Number(window.escala) || 1, Number(window.escala) || 1);
-		return { ctx, scale: Number(window.escala) || 1 };
-	}
-	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Candidate construction, dependent inspection and overlay rendering form one validated preview transaction.
-	function previewDimensions(field) {
-		if (!selected || (field !== fields.cells && field !== fields.lanes)) return;
-		if (!canvas || !window.obtenerCoordenadasGlobalesCelda) return;
-		const n = Number(field.value);
-		if (!field.value.trim() || !Number.isInteger(n) || n < 1 || n > (field === fields.cells ? 2500 : 10)) { clearDimensionPreview(); return; }
-		let proposed = { ...selected, arreglo: selected.arreglo, celulasEsperando: selected.celulasEsperando };
-		let cells = field === fields.cells ? n : Number(selected.tamano);
-		const lanes = field === fields.lanes ? n : Number(selected.carriles);
-		if (isBezier(selected)) {
-			if (field === fields.cells) {
-				const geometry = window.streetBezier?.validate?.(selected);
-				if (!geometry?.valid || !geometry.cells) { clearDimensionPreview(); return; }
-				proposed = scaleCurve(selected, n / geometry.cells);
-				proposed.carriles = lanes;
-				const scaledValidation = window.streetBezier.validate(proposed);
-				if (!scaledValidation.valid) { clearDimensionPreview(); return; }
-				cells = scaledValidation.cells;
-			} else {
-				proposed = { ...selected, carriles: lanes };
-				const geometry = window.streetBezier?.validate?.(proposed);
-				if (!geometry?.valid) { clearDimensionPreview(); return; }
-				cells = geometry.cells;
-			}
-		}
-		proposed.tamano = cells; proposed.carriles = lanes;
-		const report = window.streetDependentPreview?.inspect?.(selected, { tamano: cells, carriles: lanes });
-		if (dependentSummary && report) {
-			const c = report.counts;
-			dependentSummary.textContent = `Conexiones: ${c.survivingConnections} se mantienen, ${c.lostConnections} se perderían · Pares de parking: ${c.survivingParkingPairs} / ${c.lostParkingPairs} · Marcas: ${c.survivingScenarioMarks} / ${c.lostScenarioMarks} (se mantienen / se perderían)`;
-			dependentSummary.hidden = false;
-		}
-		const { ctx, scale } = previewCanvasForMap();
-		const cellSize = Number(window.celda_tamano) || 5;
-		const coordinate = (lane, index) => isBezier(proposed)
-			? window.streetBezier.coordinates(proposed, lane, index)
-			: proposed.esCurva && window.obtenerCoordenadasGlobalesCeldaConCurva
-				? window.obtenerCoordenadasGlobalesCeldaConCurva(proposed, lane, index)
-				: window.obtenerCoordenadasGlobalesCelda(proposed, lane, index);
-		ctx.fillStyle = "rgba(13, 110, 253, .28)";
-		ctx.strokeStyle = "rgba(13, 110, 253, .9)";
-		ctx.lineWidth = 1 / scale;
-		for (let lane = 0; lane < lanes; lane++) for (let index = 0; index < cells; index++) {
-			const point = coordinate(lane, index);
-			const angle = Number(point.angulo ?? proposed.angulo ?? 0) * Math.PI / 180;
-			const half = cellSize / 2;
-			ctx.save(); ctx.translate(point.x, point.y); ctx.rotate(-angle);
-			ctx.fillRect(-half, -half, cellSize, cellSize); ctx.strokeRect(-half, -half, cellSize, cellSize); ctx.restore();
-		}
 	}
 	function uniqueName(value) {
 		return !(window.calles || []).some(
@@ -381,7 +297,6 @@
 					selected[prop] = old;
 					return fail(field, "La geometría de la curva no es válida.");
 				}
-				if (old !== numeric) refreshDerivedGeometry(selected);
 			} else if (field === fields.cells || field === fields.lanes) {
 				if (
 					!value ||
@@ -501,28 +416,22 @@
 		field.addEventListener("keydown", (event) => {
 			if (event.key === "Enter") {
 				event.preventDefault();
-				if (commit(field)) { clearDimensionPreview(); skipBlurCommit = true; field.blur(); }
+				if (commit(field)) field.blur();
 			}
 			if (event.key === "Escape") {
-				clearDimensionPreview();
-				previewEscapedField = field;
 				readModel(selected);
 				field.blur();
 				error.textContent = "";
 			}
 		});
 		field.addEventListener("blur", () => {
-			if (previewEscapedField === field) previewEscapedField = null;
-			else if (skipBlurCommit) skipBlurCommit = false;
-			else commit(field);
-			clearDimensionPreview();
+			commit(field);
 			if (focusedField === field) focusedField = null;
 		});
 		field.addEventListener("input", () => {
 			field.setCustomValidity("");
 			field.removeAttribute("aria-invalid");
 			error.textContent = "";
-			previewDimensions(field);
 		});
 	});
 	fields.type.addEventListener("change", () => commit(fields.type));
@@ -601,7 +510,6 @@
 		// Once converted, legacy angle-offset vertices must not overlay or intercept
 		// the independently editable exterior Bezier controls.
 		if (candidate.bezierGeometry) before.vertices = [];
-		refreshDerivedGeometry(before);
 		window.streetGeometryEditor?.setInvalidPreview?.(false);
 		window.streetGeometryEditor?.refresh?.();
 		refresh();
