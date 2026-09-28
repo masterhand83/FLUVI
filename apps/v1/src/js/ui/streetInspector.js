@@ -22,10 +22,6 @@
 	const addControlButton = document.getElementById("streetInspectorAddControl");
 	const addChoice = document.getElementById("streetInspectorAddChoice");
 	const pointLabel = document.getElementById("streetInspectorSelectedPointLabel");
-	const controlFields = {
-		x: document.getElementById("streetInspectorControlX"),
-		y: document.getElementById("streetInspectorControlY"),
-	};
 	const selectedControlPanel = document.getElementById(
 		"streetInspectorSelectedControl",
 	);
@@ -157,8 +153,6 @@
 		if (!selectedControlPanel.hidden) {
 			pointLabel.textContent = selectedAnchorIndex != null ? "Ancla fija seleccionada" : "Control seleccionado";
 			deleteControlButton.textContent = selectedAnchorIndex != null ? "Eliminar ancla" : "Eliminar control";
-			controlFields.x.value = point.x;
-			controlFields.y.value = point.y;
 		}
 	};
 	function show(calle) {
@@ -522,31 +516,6 @@
 		readModel(before);
 		return true;
 	}
-	function updateSelectedControl() {
-		if (!isBezier(selected) || (selectedControlIndex == null && selectedAnchorIndex == null)) return;
-		if (controlFields.x.value === "" || controlFields.y.value === "") {
-			readModel(selected);
-			error.textContent = "Introduce coordenadas numéricas válidas.";
-			return;
-		}
-		const x = Number(controlFields.x.value),
-			y = Number(controlFields.y.value);
-		if (!Number.isFinite(x) || !Number.isFinite(y)) {
-			readModel(selected);
-			error.textContent = "Introduce coordenadas numéricas válidas.";
-			return;
-		}
-		const parts = sections(selected);
-		if (selectedAnchorIndex != null) parts[selectedAnchorIndex].end = { x, y };
-		else parts[selectedSegmentIndex].controls[selectedControlIndex] = { x, y };
-		const candidate = candidateWithSections(selected, parts);
-		if (!applyCurve(candidate)) {
-			readModel(selected);
-			error.textContent = "La geometría de la curva no es válida.";
-		}
-	}
-	controlFields.x.addEventListener("change", updateSelectedControl);
-	controlFields.y.addEventListener("change", updateSelectedControl);
 	function deleteSelectedControl() {
 		if (!isBezier(selected) || (selectedControlIndex == null && selectedAnchorIndex == null)) return;
 		const parts = sections(selected);
@@ -653,12 +622,7 @@
 				!isBezier(selected)
 			)
 				return;
-			if (
-				event.target.matches?.("input,textarea,select") &&
-				event.target !== controlFields.x &&
-				event.target !== controlFields.y
-			)
-				return;
+			if (event.target.matches?.("input,textarea,select")) return;
 			event.preventDefault();
 			event.stopImmediatePropagation();
 			deleteSelectedControl();

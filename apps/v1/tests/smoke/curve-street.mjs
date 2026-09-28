@@ -423,14 +423,10 @@ for (const usePixi of [false, true]) {
 		state = await model(page);
 		assertArcAligned(state, "inspector-scaled curve");
 
-		// Select the first control by its rendered handle; the inspector fields follow selection.
+		// Select the first control by its rendered handle; edit its position by dragging.
 		const firstHandle = await controlCenter(page);
 		await page.mouse.click(firstHandle.x, firstHandle.y);
-		await page.waitForFunction(
-			() =>
-				window.streetInspector?.getSelectedControlIndex?.() === 0 ||
-				document.activeElement?.id === "streetInspectorControlX",
-		);
+		await page.waitForFunction(() => window.streetInspector?.getSelectedControlIndex?.() === 0);
 		const controlBeforeDrag = state.controls[0];
 		await page.mouse.move(firstHandle.x, firstHandle.y);
 		await page.mouse.down();
@@ -454,60 +450,8 @@ for (const usePixi of [false, true]) {
 			"dragging selected control changes its world coordinates",
 		);
 
-		const exact = {
-			x: state.controls[0].x + 11.25,
-			y: state.controls[0].y - 7.5,
-		};
-		await page.$eval(
-			"#streetInspectorControlX",
-			(input, value) => {
-				input.value = String(value);
-				input.dispatchEvent(new Event("input", { bubbles: true }));
-				input.dispatchEvent(new Event("change", { bubbles: true }));
-			},
-			exact.x,
-		);
-		await page.$eval(
-			"#streetInspectorControlY",
-			(input, value) => {
-				input.value = String(value);
-				input.dispatchEvent(new Event("input", { bubbles: true }));
-				input.dispatchEvent(new Event("change", { bubbles: true }));
-			},
-			exact.y,
-		);
-		await page.waitForFunction(
-			([x, y]) => {
-				const control = window.calleSeleccionada?.bezierControls?.[0];
-				return control?.x === x && control?.y === y;
-			},
-			{},
-			[exact.x, exact.y],
-		);
-		assert.deepEqual(
-			(await model(page)).controls[0],
-			exact,
-			"inspector commits exact X/Y coordinates",
-		);
-
-		const beforeInvalid = (await model(page)).controls[0];
-		await page.$eval("#streetInspectorControlX", (input) => {
-			input.value = "invalid";
-			input.dispatchEvent(new Event("input", { bubbles: true }));
-			input.dispatchEvent(new Event("change", { bubbles: true }));
-		});
-		assert.deepEqual(
-			(await model(page)).controls[0],
-			beforeInvalid,
-			"invalid control field rolls geometry back",
-		);
-		assert.notEqual(
-			await page.$eval("#streetInspectorError", (element) =>
-				element.textContent.trim(),
-			),
-			"",
-			"invalid control field explains the rollback",
-		);
+		assert.equal(await page.$$eval("#streetInspectorControlX, #streetInspectorControlY", (inputs) => inputs.length), 0,
+			"control and anchor coordinates are edited on the map, not in inspector inputs");
 
 		await page.click("#streetInspectorDeleteControl");
 		await page.waitForFunction(
@@ -789,6 +733,8 @@ for (const usePixi of [false, true]) {
 		await page.click("#streetInspectorAddControl");
 		await page.click("#streetInspectorChooseAnchor");
 		await page.waitForFunction(() => window.calleSeleccionada?.bezierSegments?.length === 2);
+		assert.equal(await page.$$eval("#streetInspectorSelectedControl input", (inputs) => inputs.length), 0,
+			"selected anchors have no coordinate inputs, but retain a draggable handle");
 		await page.$$eval("#streetInspectorBezierControls .street-inspector-section", (buttons) => buttons.at(-1).click());
 		await page.click("#streetInspectorAddControl");
 		await page.click("#streetInspectorChooseAnchor");
