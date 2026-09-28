@@ -2280,6 +2280,7 @@
           <div><dt>Ángulo (°)</dt><dd><input id="streetInspectorAngle" type="number" step="any"></dd></div>
           <div><dt>Celdas</dt><dd><input id="streetInspectorCells" type="number" min="1" max="2500" step="1"></dd></div>
           <div><dt>Carriles</dt><dd><input id="streetInspectorLanes" type="number" min="1" max="10" step="1"></dd></div>
+          <div id="streetInspectorDependentSummary" class="street-inspector-dependent-summary" hidden aria-live="polite"></div>
           <div><dt>Tipo</dt><dd><select id="streetInspectorType"><option value="generador">Generador</option><option value="conexion">Conexión</option><option value="devorador">Devorador</option></select></dd></div>
           <div id="streetInspectorGenerationRow"><dt>Generación (%)</dt><dd><input id="streetInspectorGeneration" type="number" min="0" max="100" step="any"></dd></div>
           <div><dt>Cambio de carril (%)</dt><dd><input id="streetInspectorLaneChange" type="number" min="0" max="100" step="any"></dd></div>
@@ -2408,6 +2409,7 @@
   <script src="src/js/core/reglas.js"></script>
   <script src="src/js/core/trafico.js"></script>
   <script src="src/js/core/graficas.js"></script>
+  <script src="src/js/ui/streetDependentPreview.js"></script>
   <script src="src/js/ui/editor.js"></script>
   <script src="src/js/ui/edificioUI.js"></script>
   <script src="src/js/ui/constructor.js"></script>

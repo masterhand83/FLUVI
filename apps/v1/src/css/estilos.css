@@ -550,6 +550,9 @@ body {
   white-space: nowrap;
 }
 
+.street-inspector-dependent-summary { grid-column: 1 / -1; color: #6c757d; font-size: .7rem; white-space: normal; }
+.street-inspector-preview-overlay { position: fixed; z-index: 109; pointer-events: none; }
+
 body.dark-mode .street-inspector {
   border-color: rgba(110, 168, 254, 0.5);
   background: rgba(33, 37, 41, 0.96);

@@ -3,6 +3,58 @@
 	let canvas = document.getElementById("simuladorCanvas");
 	if (!canvas) return;
 	const editor = { gesture: null, handles: [], suppressCanvasClick: false };
+	const dependentOverlay = document.createElement?.("canvas") || null;
+	if (dependentOverlay) {
+		dependentOverlay.setAttribute("aria-hidden", "true");
+		Object.assign(dependentOverlay.style, { position: "fixed", pointerEvents: "none", zIndex: "20", display: "none" });
+		document.body?.append?.(dependentOverlay);
+	}
+	function clearDependentOverlay() {
+		if (!dependentOverlay) return;
+		dependentOverlay.style.display = "none";
+		dependentOverlay.getContext("2d")?.clearRect(0, 0, dependentOverlay.width, dependentOverlay.height);
+		const graphics = window.pixiApp?.sceneManager?.conexionGraphics;
+		for (const link of [...(editor.dependentPreview?.survivingConnections || []), ...(editor.dependentPreview?.lostConnections || [])]) {
+			if (graphics?.get(link)) graphics.get(link).visible = true;
+		}
+		editor.dependentPreview = null;
+	}
+	function cellPoint(street, lane, index) {
+		if (window.streetBezier?.isBezier?.(street)) return window.streetBezier.coordinates(street, lane, index);
+		return window.obtenerCoordenadasGlobalesCelda?.(street, lane, index);
+	}
+	function drawDependentArrow(ctx, a, b, color, alpha) {
+		const rect = canvas.getBoundingClientRect(), cam = window.USE_PIXI && window.pixiApp?.cameraController;
+		const screen = (p) => {
+			const q = cam ? cam.worldToScreen(p.x, p.y) : { x: p.x * (Number(window.escala) || 1) + (Number(window.offsetX) || 0), y: p.y * (Number(window.escala) || 1) + (Number(window.offsetY) || 0) };
+			const z = cam ? window.pixiApp.app?.screen : null;
+			return { x: q.x * rect.width / (z?.width || canvas.width), y: q.y * rect.height / (z?.height || canvas.height) };
+		};
+		const p = screen(a), q = screen(b), angle = Math.atan2(q.y - p.y, q.x - p.x), head = 8;
+		ctx.globalAlpha = alpha; ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 2;
+		ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y); ctx.stroke();
+		ctx.beginPath(); ctx.moveTo(q.x, q.y); ctx.lineTo(q.x - head * Math.cos(angle - .45), q.y - head * Math.sin(angle - .45)); ctx.lineTo(q.x - head * Math.cos(angle + .45), q.y - head * Math.sin(angle + .45)); ctx.closePath(); ctx.fill();
+	}
+	function renderDependentOverlay(street, proposed, preview) {
+		if (!dependentOverlay) return;
+		const rect = canvas.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+		dependentOverlay.style.display = "block";
+		dependentOverlay.style.left = `${rect.left}px`; dependentOverlay.style.top = `${rect.top}px`;
+		dependentOverlay.style.width = `${rect.width}px`; dependentOverlay.style.height = `${rect.height}px`;
+		dependentOverlay.width = Math.max(1, Math.round(rect.width * dpr)); dependentOverlay.height = Math.max(1, Math.round(rect.height * dpr));
+		const ctx = dependentOverlay.getContext("2d"); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+		ctx.save(); ctx.beginPath(); ctx.rect(0, 0, rect.width, rect.height); ctx.clip();
+		for (const [links, color, alpha] of [[preview.survivingConnections, "#16a34a", 1], [preview.lostConnections, "#dc2626", .28]]) for (const link of links) {
+			const endpointFor = (road, lane, index, source) => {
+				const at = road === street ? proposed : road;
+				const cell = source && index === -1 ? at.tamano - 1 : index;
+				return cellPoint(at, lane, cell);
+			};
+			const a = endpointFor(link.origen, link.carrilOrigen, link.posOrigen, true), b = endpointFor(link.destino, link.carrilDestino, link.posDestino, false);
+			if (a && b) drawDependentArrow(ctx, a, b, color, alpha);
+		}
+		ctx.restore();
+	}
 	const cellSize = () => Number(window.celda_tamano) || 5;
 	const selected = () => {
 		const s = window.calleSeleccionada;
@@ -205,6 +257,7 @@
 	}
 	function setInvalidPreview(invalid, reason) {
 		canvas.classList.toggle("street-geometry-invalid", invalid);
+		if (invalid) clearDependentOverlay();
 		window.streetInspector?.setGeometryError?.(
 			invalid
 				? `Geometría inválida${reason ? `: ${reason}` : ""}. Se revertirá al soltar.`
@@ -239,25 +292,25 @@
 		const result = validate(g.proposed);
 		if (commit && result.valid) {
 			g.proposed.tamano = result.cells;
-			if (g.proposed.tamano !== g.before.tamano)
-				window.editorCalles?.aplicarNuevasDimensiones?.(
-					g.street,
-					g.proposed.tamano,
-					g.street.carriles,
-				);
 			for (const key of [
 				"x",
 				"y",
 				"angulo",
-				"tamano",
 				"endX",
 				"endY",
 				"bezierControls",
 				"bezierSegments",
 			])
 				if (key in g.proposed) g.street[key] = g.proposed[key];
+			// Reconcile dependents for every geometry edit, not just a size edit:
+			// the commit boundary also rebuilds intersections and derived indexes.
+			window.streetDependentPreview?.commit?.(g.street, {
+				tamano: g.proposed.tamano,
+				carriles: g.street.carriles,
+			});
 			window.streetInspector?.refresh?.();
 		}
+		clearDependentOverlay();
 		render(g.street);
 		if (window.USE_PIXI) window.pixiApp?.sceneManager?.renderAll();
 		canvas.style.cursor = "";
@@ -271,6 +324,7 @@
 	editor.setInvalidPreview = setInvalidPreview;
 	window.streetGeometryEditor = editor;
 	function follow() {
+		if (editor.gesture && selected() !== editor.gesture.street) finish(false);
 		sync();
 		requestAnimationFrame(follow);
 	}
@@ -438,7 +492,23 @@
 			const result = validate(s);
 			setInvalidPreview(!result.valid, result.reason);
 			if (result.valid) s.tamano = result.cells;
-			Object.assign(g.street, s);
+		editor.dependentPreview = result.valid
+				? window.streetDependentPreview?.inspect?.(g.street, { tamano: s.tamano, carriles: s.carriles }) || null
+				: null;
+			if (editor.dependentPreview) {
+				const graphics = window.pixiApp?.sceneManager?.conexionGraphics;
+				for (const link of [...editor.dependentPreview.survivingConnections, ...editor.dependentPreview.lostConnections]) {
+					if (graphics?.get(link)) graphics.get(link).visible = false;
+				}
+				renderDependentOverlay(g.street, s, editor.dependentPreview);
+			}
+			else clearDependentOverlay();
+			// Keep the live simulation's cell-array extent stable during preview.
+			// Geometry is temporary, but changing tamano here would make current
+			// references (cars, waiting cells and connections) out of range.
+			const proposedSize = s.tamano;
+			Object.assign(g.street, s, { tamano: g.before.tamano });
+			g.proposed.tamano = proposedSize;
 			render(g.street);
 			e.preventDefault();
 			e.stopImmediatePropagation();
