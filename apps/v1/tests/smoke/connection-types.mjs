@@ -45,6 +45,29 @@ async function setRow(page, index, key, value) {
 	}, value)
 }
 
+async function clickCell(page, streetId, lane, cell) {
+	const point = await page.evaluate(({ streetId, lane, cell }) => {
+		const street = window.calles.find(item => item.id === streetId)
+		if (!street) throw new Error(`street ${streetId} disappeared`)
+		const canvas = document.getElementById("simuladorCanvas")
+		const rect = canvas.getBoundingClientRect()
+		const world = window.obtenerCoordenadasGlobalesCelda(street, lane, cell)
+		const camera = window.pixiApp?.cameraController
+		const screen = camera ? camera.worldToScreen(world.x, world.y) : { x: world.x * window.escala + window.offsetX, y: world.y * window.escala + window.offsetY }
+		return {
+			x: rect.left + screen.x * rect.width / (camera ? window.pixiApp.app.screen.width : canvas.width),
+			y: rect.top + screen.y * rect.height / (camera ? window.pixiApp.app.screen.height : canvas.height),
+		}
+	}, { streetId, lane, cell })
+	await page.mouse.click(point.x, point.y)
+}
+
+async function pickRow(page, index) {
+	const buttons = await page.$$(`${rowsSelector} [data-testid="link-pick-map"]`)
+	assert.ok(buttons[index], `incorporation row ${index} has an optional map picker`)
+	await buttons[index].click()
+}
+
 async function connectionCount(page) { return page.evaluate(() => window.conexiones.length) }
 async function waitForCount(page, expected) { await page.waitForFunction(count => window.conexiones.length === count, {}, expected) }
 async function closeDraft(page, button = ui.cancel) {
@@ -72,15 +95,21 @@ for (const usePixi of [false, true]) {
 		assert.deepEqual(rows.map(row => Number(row["source-lane"])), [0, 1, 2])
 		assert.deepEqual(rows.map(row => Number(row["destination-lane"])), [0, 0, 0])
 		assert.deepEqual(rows.map(row => Number(row["destination-cell"])), [0, 1, 2], "all lanes expand to destination cells; the final cell is out of range")
+		await pickRow(page, 1)
+		await clickCell(page, source.id, 1, 5)
+		assert.deepEqual((await readRows(page)).map(row => Number(row["source-cell"])), [15, 5, 15], "origin pick changes only the active incorporation row")
+		await clickCell(page, short.id, 1, 1)
+		rows = await readRows(page)
+		assert.deepEqual(rows.map(row => [Number(row["source-lane"]), Number(row["source-cell"]), Number(row["destination-lane"]), Number(row["destination-cell"])]), [[0, 15, 0, 0], [1, 5, 1, 1], [2, 15, 0, 2]], "the destination pick leaves other rows and their validation state intact")
 		await page.click(ui.save)
 		assert.equal(await connectionCount(page), initial, "invalid incorporation does not partially commit")
 		assert.ok(await page.$(`${rowsSelector}.is-invalid`), "invalid lane is highlighted")
 		await setRow(page, 2, "destination-cell", 1)
 		await page.click(ui.save)
 		await waitForCount(page, initial + 3)
-		const incorporated = await page.evaluate(() => window.conexiones.slice(-3).map(link => ({ type: link.tipo, sourceLane: link.carrilOrigen, destLane: link.carrilDestino, destCell: link.posDestino })))
+		const incorporated = await page.evaluate(() => window.conexiones.slice(-3).map(link => ({ type: link.tipo, sourceLane: link.carrilOrigen, sourceCell: link.posOrigen, destLane: link.carrilDestino, destCell: link.posDestino })))
 		assert.deepEqual(incorporated.map(link => link.type), Array(3).fill(canonicalType.INCORPORACION))
-		assert.deepEqual(incorporated.map(link => [link.sourceLane, link.destLane, link.destCell]), [[0, 0, 0], [1, 0, 1], [2, 0, 1]])
+		assert.deepEqual(incorporated.map(link => [link.sourceLane, link.sourceCell, link.destLane, link.destCell]), [[0, 15, 0, 0], [1, 5, 1, 1], [2, 15, 0, 1]], "only the picked incorporation row persists its chosen cells")
 
 		// A probabilistic draft starts with one 100% exit. Additional exits are
 		// explicitly added and retain independent, non-normalized percentages.

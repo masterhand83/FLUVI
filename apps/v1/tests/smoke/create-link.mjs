@@ -6,6 +6,7 @@ import { openSimulator } from "../helpers/simulator.mjs"
 // #linkDirectionReverse, #linkSaveButton, #linkCancelButton.
 // Each mapping row is [data-testid="link-mapping-row"] and exposes
 // [data-testid="source-lane"|"source-cell"|"destination-lane"|"destination-cell"]
+// and a per-row [data-testid="link-pick-map"] button for optional map cell picking.
 // inputs and an unmatched source lane marked [data-testid="link-unmatched-lane"]
 // when lane counts differ. The issue requests a visible, correctable review rather than a
 // particular layout, so assertions use these hooks and the public model.
@@ -86,6 +87,12 @@ async function editFirstRow(page, field, value) {
 	}, value)
 }
 
+async function pickRow(page, index = 0) {
+	const buttons = await page.$$(`${TEST_IDS.rows} [data-testid="link-mapping-row"] [data-testid="link-pick-map"]`)
+	assert.ok(buttons[index], `mapping row ${index} has an optional map picker`)
+	await buttons[index].click()
+}
+
 for (const usePixi of [false, true]) {
 	const sim = await openSimulator({ seed: 105, usePixi, freezeFrames: false })
 	const { page } = sim
@@ -124,6 +131,25 @@ for (const usePixi of [false, true]) {
 		assert.ok(panelBounds.top >= 0 && panelBounds.bottom <= panelBounds.viewportHeight,
 			`link instructions and Save/Cancel must fit in the viewport: ${JSON.stringify(panelBounds)}`)
 
+		// Picking a row is opt-in: an unrelated street cannot fill either endpoint.
+		// Once armed, the first valid cell fills only the origin; the second fills
+		// the destination. Manual edits continue to work after both map picks.
+		await pickRow(page)
+		await clickStreet(page, streets.destination.id, 0, 5)
+		assert.deepEqual(await rows(page), initialRows, "destination street cannot be picked as the origin")
+		await clickStreet(page, streets.source.id, 1, 6)
+		let picked = await rows(page)
+		assert.deepEqual([Number(picked[0]["source-lane"]), Number(picked[0]["source-cell"])], [1, 6])
+		assert.equal(picked[0]["destination-cell"], initialRows[0]["destination-cell"], "origin pick does not fill the destination")
+		await clickStreet(page, alternative.id, 0, 4)
+		assert.deepEqual(await rows(page), picked, "an unrelated street cannot be picked as the destination")
+		await clickStreet(page, streets.destination.id, 0, 8)
+		picked = await rows(page)
+		assert.deepEqual([Number(picked[0]["source-lane"]), Number(picked[0]["source-cell"]), Number(picked[0]["destination-lane"]), Number(picked[0]["destination-cell"])], [1, 6, 0, 8])
+		assert.equal(await page.evaluate(() => window.conexiones.length), initialLinks, "cell picks remain draft-only")
+		await editFirstRow(page, "destination-cell", 7)
+		assert.equal(Number((await rows(page))[0]["destination-cell"]), 7, "manual correction remains available after picking")
+
 		// Correct both street choices, then reverse direction. Escape discards only
 		// this draft; it must not mutate existing links.
 		await page.waitForSelector("#linkSourceStreet")
@@ -132,6 +158,8 @@ for (const usePixi of [false, true]) {
 		await page.click(TEST_IDS.reverse)
 		assert.equal(await page.$eval("#linkSourceStreet", (el) => el.value), streets.source.id)
 		assert.equal(await page.$eval("#linkDestinationStreet", (el) => el.value), alternative.id)
+		await pickRow(page)
+		await clickStreet(page, streets.source.id, 0, 3)
 		await page.keyboard.press("Escape")
 		await page.waitForFunction(() => document.querySelector("#linkDraftPanel")?.hidden)
 		assert.equal(await page.evaluate(() => window.conexiones.length), initialLinks, "Escape removes no persisted or existing link")
@@ -156,6 +184,8 @@ for (const usePixi of [false, true]) {
 		// Cancel is the other explicit draft-discard path.
 		const beforeCancel = await page.evaluate(() => window.conexiones.length)
 		await createDraft(page, streets.source, alternative)
+		await pickRow(page)
+		await clickStreet(page, streets.source.id, 0, 2)
 		await page.click(TEST_IDS.cancel)
 		await page.waitForFunction(() => document.querySelector("#linkDraftPanel")?.hidden)
 		assert.equal(await page.evaluate(() => window.conexiones.length), beforeCancel)

@@ -10,9 +10,12 @@
 	const status = document.getElementById("linkDraftStatus"),
 		rowsElement = document.getElementById("linkMappingRows");
 	const message = document.getElementById("linkDraftMessage"),
-		notice = document.getElementById("linkDraftNotice");
+		notice = document.getElementById("linkDraftNotice"),
+		pickStatus = document.getElementById("linkMapPickStatus");
 	let draft = null,
-		suppressClick = false;
+		suppressClick = false,
+		pickRow = null,
+		pickPhase = null;
 	const streets = () => (Array.isArray(window.calles) ? window.calles : []);
 	const name = (s) => s?.nombre || s?.name || s?.id || "";
 	const types = {
@@ -20,7 +23,26 @@
 		INCORPORACION: window.TIPOS_CONEXION?.INCORPORACION || "incorporacion",
 		PROBABILISTICA: window.TIPOS_CONEXION?.PROBABILISTICA || "probabilistica",
 	};
+	function stopRowPick() {
+		pickRow = pickPhase = null;
+		pickStatus.hidden = true;
+		pickStatus.textContent = "";
+		for (const control of rowsElement.querySelectorAll("[data-testid='link-pick-map']")) {
+			control.setAttribute("aria-pressed", "false");
+			markPickRow(control, false);
+		}
+	}
+	function markPickRow(control, active) {
+		const row = control.closest("[data-testid='link-mapping-row']");
+		for (const cls of ["border", "border-primary", "rounded", "p-1"])
+			row.classList.toggle(cls, active);
+	}
+	function setPickStatus(text) {
+		pickStatus.hidden = false;
+		pickStatus.textContent = text;
+	}
 	function close() {
+		stopRowPick();
 		draft = null;
 		panel.hidden = true;
 		panel.setAttribute("aria-hidden", "true");
@@ -81,9 +103,10 @@
 		row.append(wrap);
 	}
 	function renderRows() {
+		stopRowPick();
 		rowsElement.replaceChildren();
 		if (!draft?.source || !draft.destination) return;
-		for (const m of draft.rows) {
+		for (const [index, m] of draft.rows.entries()) {
 			const row = document.createElement("div");
 			row.className = "link-mapping-row";
 			row.dataset.testid = "link-mapping-row";
@@ -121,6 +144,28 @@
 			);
 			if (draft.type === types.PROBABILISTICA)
 				input(row, "chance", "Probabilidad (%)", m.chance, 0, 100, "any");
+			const pick = document.createElement("button");
+			pick.type = "button";
+			pick.className = "btn btn-outline-secondary btn-sm";
+			pick.dataset.testid = "link-pick-map";
+			pick.textContent = "Elegir en mapa";
+			pick.setAttribute("aria-label", `Elegir origen y destino en mapa para correspondencia ${index + 1}`);
+			pick.setAttribute("aria-pressed", "false");
+			pick.setAttribute("aria-controls", "linkMapPickStatus");
+			pick.addEventListener("click", () => {
+				if (pickRow === row) {
+					stopRowPick();
+					return;
+				}
+				pickRow = row;
+				pickPhase = "source";
+				for (const control of rowsElement.querySelectorAll("[data-testid='link-pick-map']")) {
+					control.setAttribute("aria-pressed", String(control === pick));
+					markPickRow(control, control === pick);
+				}
+				setPickStatus(`Correspondencia ${index + 1}: elige una celda de origen en ${name(draft.source)}. Luego elige el destino en ${name(draft.destination)}. Escape cancela.`);
+			});
+			row.append(pick);
 			if (draft.type === types.PROBABILISTICA) {
 				const remove = document.createElement("button");
 				remove.type = "button";
@@ -228,14 +273,14 @@
 	}
 	function mapPick(e) {
 		const c = document.getElementById("simuladorCanvas");
-		if (e.target !== c) return;
+		if (e.target !== c && !(pickRow && e.target.closest?.(".street-endpoint-handle"))) return;
 		if (suppressClick) {
 			suppressClick = false;
 			e.preventDefault();
 			e.stopImmediatePropagation();
 			return;
 		}
-		if (!draft || draft.destination) return;
+		if (!draft || draft.destination || pickRow) return;
 		const p = worldPoint(e),
 			hit = window.encontrarCalleEnPunto?.(p.x, p.y);
 		if (hit) {
@@ -243,6 +288,48 @@
 			e.stopImmediatePropagation();
 			choose(hit.calle);
 		}
+	}
+	function pickCell(e) {
+		const row = pickRow;
+		if (!row || !draft) return;
+		const phase = pickPhase;
+		const expected = phase === "source" ? draft.source : draft.destination;
+		const p = worldPoint(e);
+		const hit = window.encontrarCalleEnPunto?.(p.x, p.y);
+		const index = [...rowsElement.querySelectorAll("[data-testid='link-mapping-row']")].indexOf(row) + 1;
+		if (hit?.calle !== expected) {
+			const reason = hit ? "calle incorrecta" : "fuera de la calle";
+			setPickStatus(`Correspondencia ${index}: ${reason}. Elige una celda de ${phase === "source" ? "origen" : "destino"} en ${name(expected)}.`);
+			return;
+		}
+		const cell = window.cellGeometryIndex?.findNearest(p.x, p.y, [expected]);
+		if (!validPickedCell(cell, expected)) {
+			setPickStatus(`Correspondencia ${index}: no se encontró una celda válida en ${name(expected)}. Vuelve a intentarlo.`);
+			return;
+		}
+		applyPickedCell(row, phase, cell, index);
+	}
+	function applyPickedCell(row, phase, cell, index) {
+		const lane = row.querySelector(`[data-testid='${phase}-lane']`);
+		const position = row.querySelector(`[data-testid='${phase}-cell']`);
+		lane.value = cell.carril;
+		position.value = cell.indice;
+		draft.rows = mappings();
+		updateNotice();
+		if (phase === "source") {
+			pickPhase = "destination";
+			setPickStatus(`Correspondencia ${index}: origen carril ${cell.carril}, celda ${cell.indice}. Ahora elige una celda de destino en ${name(draft.destination)}.`);
+		} else {
+			stopRowPick();
+			setPickStatus(`Correspondencia ${index}: origen y destino elegidos en el mapa. Revisa los campos antes de guardar.`);
+		}
+	}
+	function validPickedCell(cell, expected) {
+		return cell?.calle === expected &&
+			Number.isInteger(cell.carril) &&
+			Number.isInteger(cell.indice) &&
+			cell.carril >= 0 && cell.carril < expected.carriles &&
+			cell.indice >= 0 && cell.indice < expected.tamano;
 	}
 	function mappings() {
 		return [
@@ -458,14 +545,19 @@
 		(e) => {
 			if (
 				!draft ||
-				draft.destination ||
-				e.target !== document.getElementById("simuladorCanvas") ||
+				(draft.destination && !pickRow) ||
+				(e.target !== document.getElementById("simuladorCanvas") &&
+					!(pickRow && e.target.closest?.(".street-endpoint-handle"))) ||
 				e.button !== 0
 			)
 				return;
 			e.preventDefault();
 			e.stopImmediatePropagation();
 			suppressClick = true;
+			if (pickRow) {
+				pickCell(e);
+				return;
+			}
 			const p = worldPoint(e),
 				hit = window.encontrarCalleEnPunto?.(p.x, p.y);
 			if (hit) choose(hit.calle);
@@ -478,6 +570,7 @@
 		[destinationSelect, "destination"],
 	])
 		select.addEventListener("change", () => {
+			stopRowPick();
 			const picked = streets().find((s) => s.id === select.value);
 			if (
 				!picked ||
