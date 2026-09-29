@@ -103,4 +103,70 @@ describe.each([
 			y: 267.375,
 		});
 	}, 180000);
+
+	it("exports and reloads uploaded building image data without runtime image objects", async () => {
+		const imageDataUrl = await source.page.evaluate(() => {
+			const canvas = document.createElement("canvas");
+			canvas.width = 20;
+			canvas.height = 10;
+			canvas.getContext("2d").fillRect(0, 0, canvas.width, canvas.height);
+			return canvas.toDataURL("image/png");
+		});
+		const savedJson = await source.page.evaluate(async (dataUrl) => {
+			const building = window.agregarEdificio("Uploaded image", 120, 140, 80, 60, 0);
+			Object.assign(building, {
+				imageDataUrl: dataUrl,
+				imageMimeType: "image/png",
+				image: new Image(),
+				texture: new (class RuntimeTexture {})(),
+			});
+			window.prompt = () => "Uploaded image round trip";
+			const createObjectURL = URL.createObjectURL;
+			URL.createObjectURL = (blob) => {
+				window.__uploadedImageExport = blob.text();
+				return "blob:uploaded-image-persistence-test";
+			};
+			window.guardarSimulacion();
+			URL.createObjectURL = createObjectURL;
+			return await window.__uploadedImageExport;
+		}, imageDataUrl);
+
+		const exported = JSON.parse(savedJson).edificios[0];
+		expect(exported).toMatchObject({
+			imageDataUrl,
+			imageMimeType: "image/png",
+		});
+		expect(exported).not.toHaveProperty("image");
+		expect(exported).not.toHaveProperty("texture");
+
+		restored = await openSimulator({ usePixi, freezeFrames: false });
+		if (usePixi) {
+			await restored.page.waitForFunction(
+				() => !!window.pixiApp?.sceneManager?.edificioRenderer,
+				{ timeout: 30000 },
+			);
+		}
+		await restored.page.evaluate(async (json) => {
+			window.hideLoadingScreen?.();
+			window.confirm = () => true;
+			window.alert = () => {};
+			const file = new File([json], "uploaded-image.json", { type: "application/json" });
+			window.cargarSimulacion({ target: { files: [file], value: "" } });
+		}, savedJson);
+		await restored.page.waitForFunction(
+			() => window.edificios?.[0]?.label === "Uploaded image" && !!window.uploadedBuildingImages?.get(window.edificios[0]),
+			{ polling: 100, timeout: 10000 },
+		);
+
+		const loaded = await restored.page.evaluate(() => {
+			const { imageDataUrl: dataUrl, imageMimeType, image, texture } = window.edificios[0];
+			return { imageDataUrl: dataUrl, imageMimeType, hasImageObject: !!image, hasTextureObject: !!texture };
+		});
+		expect(loaded).toEqual({
+			imageDataUrl,
+			imageMimeType: "image/png",
+			hasImageObject: false,
+			hasTextureObject: false,
+		});
+	}, 180000);
 });

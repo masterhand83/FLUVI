@@ -8,6 +8,7 @@ class EdificioRenderer {
         this.scene = sceneManager;
         this.assets = assetLoader;
         this.etiquetasEdificios = new Map(); // Map<edificio, Container> - etiquetas de edificios
+        this.pendingUploadedImageChecks = new Map();
 
         // 📱 OPTIMIZACIÓN MÓVIL: Lazy loading de edificios distantes
         this.isMobile = window.pixiApp && window.pixiApp.isMobile;
@@ -66,12 +67,31 @@ class EdificioRenderer {
         }
 
         let sprite;
+        let uploadedImage = null;
+
+        if (!isPolygon && edificio.imageDataUrl && window.uploadedBuildingImages?.get) {
+            try {
+                uploadedImage = window.uploadedBuildingImages.get(edificio);
+            } catch (error) {
+                // Decoding is asynchronous and may fail; use the normal fallback.
+            }
+            if (!uploadedImage) this.scheduleUploadedImageCheck(edificio);
+        }
+
+        if (uploadedImage) {
+            try {
+                sprite = this.createUploadedImageSprite(edificio, uploadedImage);
+            } catch (error) {
+                // A failed Pixi texture conversion should not hide the building.
+                sprite = null;
+            }
+        }
 
         // Intentar usar imagen del edificio basada en label (case-insensitive)
         // Buscar tanto en edificio.imagen como edificio.label
         const imagenKey = edificio.imagen || edificio.label;
 
-        if (!isPolygon && imagenKey) {
+        if (!sprite && !isPolygon && imagenKey) {
             const imagenLower = imagenKey.toLowerCase();
             if (this.assets.hasTexture(imagenLower)) {
                 const texture = this.assets.getTexture(imagenLower);
@@ -146,6 +166,14 @@ class EdificioRenderer {
 
         sprite.x = isPolygon ? 0 : edificio.x;
         sprite.y = isPolygon ? 0 : edificio.y;
+        if (!isPolygon && edificio.imageDataUrl) {
+            sprite.hitArea = new PIXI.Rectangle(
+                -(edificio.width || 100) / 2,
+                -(edificio.height || 100) / 2,
+                edificio.width || 100,
+                edificio.height || 100,
+            );
+        }
 
         if (!isPolygon && edificio.angle) {
             sprite.rotation = CoordinateConverter.degreesToRadians(edificio.angle);
@@ -199,10 +227,23 @@ class EdificioRenderer {
     }
 
     updateEdificioSprite(edificio) {
-        const sprite = this.scene.edificioSprites.get(edificio);
+        let sprite = this.scene.edificioSprites.get(edificio);
         if (!sprite) return;
 
         const isPolygon = edificio.geometryType === 'polygon';
+        if (!isPolygon && edificio.imageDataUrl && window.uploadedBuildingImages?.get) {
+            try {
+                const image = window.uploadedBuildingImages.get(edificio);
+                if (image && !sprite._uploadedBuildingImage) {
+                    sprite = this.replaceWithUploadedImage(edificio, sprite, image);
+                } else if (!image) {
+                    this.scheduleUploadedImageCheck(edificio);
+                }
+            } catch (error) {
+                // Keep the existing fallback while decode is pending or failed.
+                this.scheduleUploadedImageCheck(edificio);
+            }
+        }
         if (isPolygon) {
             const validation = window.edificioPolygonGeometry?.validate(edificio.vertices);
             if (!validation?.valid) {
@@ -262,6 +303,74 @@ class EdificioRenderer {
         // Actualizar borde de selección
         this.updateSelectionBorder(sprite, edificio);
         this.updateFunctionalParkingBorder(sprite, edificio);
+    }
+
+    createUploadedImageSprite(edificio, image) {
+        const sprite = new PIXI.Sprite(PIXI.Texture.from(image));
+        sprite.anchor.set(0.5);
+        sprite.width = edificio.width || 100;
+        sprite.height = edificio.height || 100;
+        sprite._uploadedBuildingImage = image;
+        return sprite;
+    }
+
+    scheduleUploadedImageCheck(edificio, attempt = 0) {
+        if (attempt >= 100 || this.pendingUploadedImageChecks.has(edificio)) return;
+        const timer = setTimeout(() => {
+            this.pendingUploadedImageChecks.delete(edificio);
+            if (!this.scene.edificioSprites.has(edificio) || !edificio.imageDataUrl) return;
+            let image = null;
+            try {
+                image = window.uploadedBuildingImages?.get?.(edificio) || null;
+            } catch (error) {
+                // Keep the fallback and retry briefly in case decode is still pending.
+            }
+            const sprite = this.scene.edificioSprites.get(edificio);
+            if (image && sprite && !sprite._uploadedBuildingImage) {
+                this.replaceWithUploadedImage(edificio, sprite, image);
+            } else if (!sprite?._uploadedBuildingImage) {
+                this.scheduleUploadedImageCheck(edificio, attempt + 1);
+            }
+        }, 100);
+        this.pendingUploadedImageChecks.set(edificio, timer);
+    }
+
+    replaceWithUploadedImage(edificio, oldSprite, image) {
+        const layer = oldSprite.parent;
+        if (!layer) return oldSprite;
+        const childIndex = layer.getChildIndex(oldSprite);
+        const sprite = this.createUploadedImageSprite(edificio, image);
+        sprite.x = edificio.x;
+        sprite.y = edificio.y;
+        sprite.rotation = CoordinateConverter.degreesToRadians(edificio.angle || 0);
+        sprite.visible = oldSprite.visible;
+        sprite.alpha = oldSprite.alpha;
+        sprite.hitArea = new PIXI.Rectangle(
+            -(edificio.width || 100) / 2,
+            -(edificio.height || 100) / 2,
+            edificio.width || 100,
+            edificio.height || 100,
+        );
+
+        if (edificio.interactive !== false) {
+            sprite.eventMode = 'static';
+            sprite.cursor = 'pointer';
+            sprite.on('pointerdown', event => this.onEdificioClick(edificio, event));
+            sprite.on('pointerover', () => this.onEdificioHover(edificio, sprite));
+            sprite.on('pointerout', () => this.onEdificioOut(edificio, sprite));
+        } else {
+            sprite.eventMode = 'none';
+            sprite.interactiveChildren = false;
+        }
+
+        layer.removeChild(oldSprite);
+        layer.addChildAt(sprite, childIndex);
+        this.scene.edificioSprites.set(edificio, sprite);
+        oldSprite.destroy({ children: true });
+        if (edificio.label && edificio.label !== "CONO") this.addBuildingLabel(sprite, edificio);
+        if (window.edificioSeleccionado === edificio) this.addSelectionBorder(sprite, edificio);
+        this.updateFunctionalParkingBorder(sprite, edificio);
+        return sprite;
     }
 
     addBuildingLabel(sprite, edificio) {
@@ -443,6 +552,11 @@ class EdificioRenderer {
     }
 
     removeEdificioSprite(edificio) {
+        const pendingImageCheck = this.pendingUploadedImageChecks.get(edificio);
+        if (pendingImageCheck) {
+            clearTimeout(pendingImageCheck);
+            this.pendingUploadedImageChecks.delete(edificio);
+        }
         const sprite = this.scene.edificioSprites.get(edificio);
         if (sprite) {
             sprite.destroy({ children: true });

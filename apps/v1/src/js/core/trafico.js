@@ -1597,8 +1597,18 @@ function dibujarEdificios() {
         ctx.translate(edificio.x, edificio.y);
         ctx.rotate((edificio.angle || 0) * Math.PI / 180);
 
-        // Buscar si existe una imagen para este edificio
-        const img = buildingImageMap[edificio.label];
+        // Uploaded building imagery is resolved by the shared image registry;
+        // it may be pending or unavailable while the serialized data remains.
+        let img = null;
+        if (edificio.imageDataUrl && window.uploadedBuildingImages?.get) {
+            try {
+                img = window.uploadedBuildingImages.get(edificio);
+            } catch (error) {
+                // Keep rendering the color fallback if decoding fails.
+            }
+        }
+        // Built-in building sprites remain available for the original map.
+        if (!img) img = buildingImageMap[edificio.label];
 
         // Si existe una imagen y está cargada, dibujarla
         if (img && img.complete && img.naturalHeight !== 0) {
