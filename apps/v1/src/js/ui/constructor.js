@@ -2168,6 +2168,34 @@ function normalizarDireccionesCarriles(directions, lanes) {
     return Array.from({ length: lanes }, (_, lane) => Array.isArray(directions) && directions[lane] === -1 ? -1 : 1);
 }
 
+function serializarEdificio(edificio) {
+    if (edificio.geometryType !== 'polygon') return edificio;
+
+    return {
+        ...edificio,
+        geometryType: 'polygon',
+        vertices: Array.isArray(edificio.vertices)
+            ? edificio.vertices.map(vertex => ({ x: vertex.x, y: vertex.y }))
+            : [],
+        appearanceMode: 'polygon'
+    };
+}
+
+function restaurarEdificios(edificios) {
+    return edificios.map(edificio => {
+        if (edificio?.geometryType !== 'polygon') return edificio;
+
+        return {
+            ...edificio,
+            geometryType: 'polygon',
+            vertices: Array.isArray(edificio.vertices)
+                ? edificio.vertices.map(vertex => ({ x: vertex.x, y: vertex.y }))
+                : [],
+            appearanceMode: 'polygon'
+        };
+    });
+}
+
 function guardarSimulacion() {
     // Obtener nombre de la simulación
     const nombreSimulacion = prompt("Nombre de la simulación:", simulacionActual.nombre || "Nueva Simulación");
@@ -2226,7 +2254,7 @@ function guardarSimulacion() {
                 }]
             };
         }) : [],
-        edificios: window.edificios || [],
+        edificios: window.edificios ? window.edificios.map(serializarEdificio) : [],
         imagenReferencia: window.referenceImage ? {
             ...(window.referenceImage.url ? { url: window.referenceImage.url } : { dataUrl: window.referenceImage.dataUrl }),
             x: window.referenceImage.x,
@@ -2365,7 +2393,7 @@ function cargarSimulacion(event) {
 
             // Cargar edificios si existen
             if (datosSimulacion.edificios && Array.isArray(datosSimulacion.edificios)) {
-                window.edificios = datosSimulacion.edificios;
+                window.edificios = restaurarEdificios(datosSimulacion.edificios);
 
                 // IMPORTANTE: Actualizar selector de edificios después de cargar
                 actualizarSelectorEdificios();

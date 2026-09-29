@@ -466,6 +466,32 @@ body {
   stroke-width: 2;
   stroke-dasharray: 6 4;
 }
+.building-draw-preview polygon {
+  fill: rgba(46, 125, 50, 0.2);
+  stroke: #2e7d32;
+  stroke-width: 2;
+  stroke-dasharray: 6 4;
+}
+.building-draw-panel {
+  position: absolute;
+  z-index: 125;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100% - 24px);
+  padding: 8px;
+  border-radius: 6px;
+  background: var(--bs-body-bg, #fff);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .3);
+}
+.building-draw-panel[hidden] { display: none; }
+.building-vertex-editor { display: grid; gap: 5px; margin-top: 8px; }
+.building-vertex-editor[hidden] { display: none; }
+.building-vertex-editor textarea { width: 100%; min-width: 170px; font: 12px monospace; }
+.building-vertex-handle { width: 14px; height: 14px; background: #dc3545; cursor: grab; }
 
 .building-proportion-lock { display: inline-flex; align-items: center; gap: 3px; margin: 0 3px; }
 

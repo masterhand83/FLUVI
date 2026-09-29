@@ -53,6 +53,13 @@ class EdificioRenderer {
     }
 
     renderEdificio(edificio) {
+        const isPolygon = edificio.geometryType === 'polygon';
+        if (isPolygon && !window.edificioPolygonGeometry?.validate(edificio.vertices).valid) {
+            const existingSprite = this.scene.edificioSprites.get(edificio);
+            if (existingSprite) existingSprite.visible = false;
+            return null;
+        }
+
         // Si ya existe, actualizar
         if (this.scene.edificioSprites.has(edificio)) {
             return this.updateEdificioSprite(edificio);
@@ -64,7 +71,7 @@ class EdificioRenderer {
         // Buscar tanto en edificio.imagen como edificio.label
         const imagenKey = edificio.imagen || edificio.label;
 
-        if (imagenKey) {
+        if (!isPolygon && imagenKey) {
             const imagenLower = imagenKey.toLowerCase();
             if (this.assets.hasTexture(imagenLower)) {
                 const texture = this.assets.getTexture(imagenLower);
@@ -119,27 +126,36 @@ class EdificioRenderer {
             }
 
             graphics.beginFill(color);
-            // Dibujar desde 0,0 (luego ajustaremos el pivot)
-            const width = edificio.width || 100;
-            const height = edificio.height || 100;
-            graphics.drawRect(0, 0, width, height);
+            if (isPolygon) {
+                const points = edificio.vertices.flatMap(point => [point.x, point.y]);
+                graphics.drawPolygon(points);
+                graphics.hitArea = new PIXI.Polygon(points);
+                graphics._edificioPolygon = true;
+                graphics._polygonSignature = `${edificio.color}|${edificio.vertices.map(point => `${point.x},${point.y}`).join(';')}`;
+            } else {
+                // Dibujar desde 0,0 (luego ajustaremos el pivot)
+                const width = edificio.width || 100;
+                const height = edificio.height || 100;
+                graphics.drawRect(0, 0, width, height);
+                // Establecer el pivot en el centro para que la rotación funcione correctamente
+                graphics.pivot.set(width / 2, height / 2);
+            }
             graphics.endFill();
-
-            // Establecer el pivot en el centro para que la rotación funcione correctamente
-            graphics.pivot.set(width / 2, height / 2);
             sprite = graphics;
         }
 
-        sprite.x = edificio.x;
-        sprite.y = edificio.y;
+        sprite.x = isPolygon ? 0 : edificio.x;
+        sprite.y = isPolygon ? 0 : edificio.y;
 
-        if (edificio.angle) {
+        if (!isPolygon && edificio.angle) {
             sprite.rotation = CoordinateConverter.degreesToRadians(edificio.angle);
         }
 
         // 📱 OPTIMIZACIÓN MÓVIL: Lazy loading (culling de viewport)
         if (this.viewportCullingEnabled) {
-            sprite.visible = this.isInViewport(edificio.x, edificio.y, edificio.width || 100, edificio.height || 100);
+            sprite.visible = isPolygon
+                ? this.isPolygonInViewport(edificio.vertices)
+                : this.isInViewport(edificio.x, edificio.y, edificio.width || 100, edificio.height || 100);
         } else {
             sprite.visible = true;
         }
@@ -186,16 +202,49 @@ class EdificioRenderer {
         const sprite = this.scene.edificioSprites.get(edificio);
         if (!sprite) return;
 
-        sprite.x = edificio.x;
-        sprite.y = edificio.y;
+        const isPolygon = edificio.geometryType === 'polygon';
+        if (isPolygon) {
+            const validation = window.edificioPolygonGeometry?.validate(edificio.vertices);
+            if (!validation?.valid) {
+                sprite.visible = false;
+                return;
+            }
+            const signature = `${edificio.color}|${edificio.vertices.map(point => `${point.x},${point.y}`).join(';')}`;
+            if (sprite._polygonSignature !== signature && sprite instanceof PIXI.Graphics) {
+                sprite.clear();
+                const color = typeof edificio.color === 'string'
+                    ? parseInt(edificio.color.replace('#', '').slice(0, 6), 16)
+                    : (edificio.color ?? 0x808080);
+                sprite.beginFill(Number.isFinite(color) ? color : 0x808080);
+                const points = edificio.vertices.flatMap(point => [point.x, point.y]);
+                sprite.drawPolygon(points);
+                sprite.endFill();
+                sprite.hitArea = new PIXI.Polygon(points);
+                sprite._polygonSignature = signature;
+                const parkingBorder = sprite.getChildByName?.('functionalParkingBorder');
+                if (parkingBorder) {
+                    sprite.removeChild(parkingBorder);
+                    parkingBorder.destroy();
+                    this.addFunctionalParkingBorder(sprite, edificio);
+                }
+            }
+            sprite.x = 0;
+            sprite.y = 0;
+            sprite.rotation = 0;
+        } else {
+            sprite.x = edificio.x;
+            sprite.y = edificio.y;
+        }
 
-        if (edificio.angle !== undefined) {
+        if (!isPolygon && edificio.angle !== undefined) {
             sprite.rotation = CoordinateConverter.degreesToRadians(edificio.angle);
         }
 
         // 📱 OPTIMIZACIÓN MÓVIL: Lazy loading (culling de viewport)
         if (this.viewportCullingEnabled) {
-            sprite.visible = this.isInViewport(edificio.x, edificio.y, edificio.width || 100, edificio.height || 100);
+            sprite.visible = isPolygon
+                ? this.isPolygonInViewport(edificio.vertices)
+                : this.isInViewport(edificio.x, edificio.y, edificio.width || 100, edificio.height || 100);
         } else {
             sprite.visible = true;
         }
@@ -203,8 +252,11 @@ class EdificioRenderer {
         // Actualizar posición de la etiqueta (si existe)
         const etiqueta = this.etiquetasEdificios.get(edificio);
         if (etiqueta) {
-            etiqueta.x = edificio.x;
-            etiqueta.y = edificio.y;
+            const center = isPolygon
+                ? window.edificioPolygonGeometry.center(edificio.vertices)
+                : { x: edificio.x, y: edificio.y };
+            etiqueta.x = center.x;
+            etiqueta.y = center.y;
         }
 
         // Actualizar borde de selección
@@ -224,8 +276,11 @@ class EdificioRenderer {
         const container = new PIXI.Container();
 
         // Posicionar en el centro del edificio (coordenadas globales)
-        container.x = edificio.x;
-        container.y = edificio.y;
+        const center = edificio.geometryType === 'polygon'
+            ? window.edificioPolygonGeometry.center(edificio.vertices)
+            : { x: edificio.x, y: edificio.y };
+        container.x = center.x;
+        container.y = center.y;
 
         // NO aplicar rotación - mantener siempre horizontal
         container.rotation = 0;
@@ -277,6 +332,15 @@ class EdificioRenderer {
 
     addSelectionBorder(sprite, edificio) {
         const graphics = new PIXI.Graphics();
+
+        if (edificio.geometryType === 'polygon') {
+            const points = edificio.vertices.flatMap(point => [point.x, point.y]);
+            graphics.lineStyle(2, 0xFFD700);
+            graphics.drawPolygon(points);
+            graphics.name = 'selectionBorder';
+            sprite.addChild(graphics);
+            return;
+        }
 
         // Usar las dimensiones REALES del sprite, no las del objeto edificio
         // porque el sprite puede haber sido redimensionado
@@ -334,6 +398,15 @@ class EdificioRenderer {
 
     addFunctionalParkingBorder(sprite, edificio) {
         const graphics = new PIXI.Graphics();
+
+        if (edificio.geometryType === 'polygon') {
+            const points = edificio.vertices.flatMap(point => [point.x, point.y]);
+            graphics.lineStyle(4, 0x0066FF, 1);
+            graphics.drawPolygon(points);
+            graphics.name = 'functionalParkingBorder';
+            sprite.addChild(graphics);
+            return;
+        }
 
         // Use image texture coordinates for sprites so the outline follows the
         // sprite's scale and rotation. Expand it beyond the separate gold
@@ -566,6 +639,14 @@ class EdificioRenderer {
                edificioLeft <= bounds.right &&
                edificioBottom >= bounds.top &&
                edificioTop <= bounds.bottom;
+    }
+
+    isPolygonInViewport(vertices) {
+        const polygonBounds = window.edificioPolygonGeometry.bounds(vertices);
+        if (!polygonBounds) return false;
+        const bounds = this.getViewportBounds();
+        return polygonBounds.maxX >= bounds.left && polygonBounds.minX <= bounds.right &&
+            polygonBounds.maxY >= bounds.top && polygonBounds.minY <= bounds.bottom;
     }
 }
 

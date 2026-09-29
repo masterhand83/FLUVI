@@ -1461,12 +1461,139 @@ window.backgroundAreas = backgroundAreas;
 window.edificios = edificios;
 window.edificioSeleccionado = null;
 
+// Edificios poligonales almacenan sus vértices directamente en coordenadas del mundo.
+// Mantener estas operaciones juntas permite que Canvas y Pixi validen y consulten
+// exactamente la misma geometría.
+const edificioPolygonGeometry = (() => {
+    const cross = (a, b, c) => (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+    const onSegment = (a, b, point) => Math.abs(cross(a, b, point)) < 1e-8 &&
+        point.x >= Math.min(a.x, b.x) - 1e-8 && point.x <= Math.max(a.x, b.x) + 1e-8 &&
+        point.y >= Math.min(a.y, b.y) - 1e-8 && point.y <= Math.max(a.y, b.y) + 1e-8;
+    const segmentsIntersect = (a, b, c, d) => {
+        const abC = cross(a, b, c), abD = cross(a, b, d);
+        const cdA = cross(c, d, a), cdB = cross(c, d, b);
+        if (((abC > 0 && abD < 0) || (abC < 0 && abD > 0)) &&
+            ((cdA > 0 && cdB < 0) || (cdA < 0 && cdB > 0))) return true;
+        return (Math.abs(abC) < 1e-8 && onSegment(a, b, c)) ||
+            (Math.abs(abD) < 1e-8 && onSegment(a, b, d)) ||
+            (Math.abs(cdA) < 1e-8 && onSegment(c, d, a)) ||
+            (Math.abs(cdB) < 1e-8 && onSegment(c, d, b));
+    };
+
+    function validate(vertices) {
+        if (!Array.isArray(vertices) || vertices.length < 3 || vertices.some(point =>
+            !point || !Number.isFinite(point.x) || !Number.isFinite(point.y))) {
+            return { valid: false, reason: 'invalid-vertices' };
+        }
+        const distinct = new Set(vertices.map(point => `${point.x},${point.y}`));
+        if (distinct.size < 3) return { valid: false, reason: 'too-few-distinct-vertices' };
+
+        let twiceArea = 0;
+        for (let i = 0; i < vertices.length; i++) {
+            const current = vertices[i], next = vertices[(i + 1) % vertices.length];
+            twiceArea += current.x * next.y - next.x * current.y;
+        }
+        if (Math.abs(twiceArea) < 1e-8) return { valid: false, reason: 'zero-area' };
+
+        for (let i = 0; i < vertices.length; i++) {
+            const a = vertices[i], b = vertices[(i + 1) % vertices.length];
+            if (a.x === b.x && a.y === b.y) return { valid: false, reason: 'zero-length-edge' };
+            for (let j = i + 1; j < vertices.length; j++) {
+                // Adjacent edges share an expected endpoint and are not self-intersections.
+                if (j === i || j === i + 1 || (i === 0 && j === vertices.length - 1)) continue;
+                if (segmentsIntersect(a, b, vertices[j], vertices[(j + 1) % vertices.length])) {
+                    return { valid: false, reason: 'self-intersection' };
+                }
+            }
+        }
+        return { valid: true, reason: null };
+    }
+
+    function contains(vertices, x, y) {
+        if (!validate(vertices).valid || !Number.isFinite(x) || !Number.isFinite(y)) return false;
+        const point = { x, y };
+        let inside = false;
+        for (let i = 0, j = vertices.length - 1; i < vertices.length; j = i++) {
+            const a = vertices[j], b = vertices[i];
+            if (onSegment(a, b, point)) return true;
+            if ((a.y > y) !== (b.y > y) && x < (b.x - a.x) * (y - a.y) / (b.y - a.y) + a.x) inside = !inside;
+        }
+        return inside;
+    }
+
+    function bounds(vertices) {
+        if (!validate(vertices).valid) return null;
+        return vertices.reduce((result, point) => ({
+            minX: Math.min(result.minX, point.x), minY: Math.min(result.minY, point.y),
+            maxX: Math.max(result.maxX, point.x), maxY: Math.max(result.maxY, point.y)
+        }), { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity });
+    }
+
+    function center(vertices) {
+        const areaTwice = vertices.reduce((sum, point, i) => {
+            const next = vertices[(i + 1) % vertices.length];
+            return sum + point.x * next.y - next.x * point.y;
+        }, 0);
+        if (Math.abs(areaTwice) < 1e-8) return { x: vertices[0].x, y: vertices[0].y };
+        let x = 0, y = 0;
+        vertices.forEach((point, i) => {
+            const next = vertices[(i + 1) % vertices.length];
+            const factor = point.x * next.y - next.x * point.y;
+            x += (point.x + next.x) * factor;
+            y += (point.y + next.y) * factor;
+        });
+        return { x: x / (3 * areaTwice), y: y / (3 * areaTwice) };
+    }
+
+    return { validate, contains, bounds, center };
+})();
+window.edificioPolygonGeometry = edificioPolygonGeometry;
+
+function esEdificioPoligonal(edificio) {
+    return edificio?.geometryType === 'polygon';
+}
+
 // Función mejorada para dibujar edificios con selección visual
 function dibujarEdificios() {
     // Usar window.edificios si existe, sino usar la constante local edificios como fallback
     const edificiosADibujar = window.edificios || edificios;
     edificiosADibujar.forEach((edificio, index) => {
+        if (esEdificioPoligonal(edificio) && !edificioPolygonGeometry.validate(edificio.vertices).valid) return;
         ctx.save();
+        if (esEdificioPoligonal(edificio)) {
+            const vertices = edificio.vertices;
+            ctx.beginPath();
+            ctx.moveTo(vertices[0].x, vertices[0].y);
+            vertices.slice(1).forEach(point => ctx.lineTo(point.x, point.y));
+            ctx.closePath();
+            // Polygon appearance is color-based and immutable; do not substitute
+            // a label sprite, otherwise palette edits would be invisible on Canvas.
+            ctx.fillStyle = edificio.color || '#808080';
+            ctx.fill();
+
+            if (window.edificioTieneConexionesEstacionamientoFuncionales?.(edificio)) {
+                ctx.strokeStyle = '#0066FF';
+                ctx.lineWidth = 4 / escala;
+                ctx.setLineDash([]);
+                ctx.stroke();
+            }
+            if (window.edificioSeleccionado && (window.edificioSeleccionado === edificio || window.edificioSeleccionado.index === index)) {
+                ctx.strokeStyle = window.modoSeleccion === 'constructor' ? '#FFA500' : '#FFD700';
+                ctx.lineWidth = 2 / escala;
+                ctx.setLineDash([10 / escala, 5 / escala]);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+            if (edificio.label && edificio.label !== 'CONO') {
+                const labelCenter = edificioPolygonGeometry.center(vertices);
+                ctx.fillStyle = 'white';
+                ctx.font = `${12 / escala}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.fillText(edificio.label, labelCenter.x, labelCenter.y);
+            }
+            ctx.restore();
+            return;
+        }
         ctx.translate(edificio.x, edificio.y);
         ctx.rotate((edificio.angle || 0) * Math.PI / 180);
 
@@ -2301,6 +2428,13 @@ function encontrarEdificioEnPunto(worldX, worldY) {
     for (let i = edificiosABuscar.length - 1; i >= 0; i--) {
         const edificio = edificiosABuscar[i];
 
+        if (esEdificioPoligonal(edificio)) {
+            if (edificioPolygonGeometry.contains(edificio.vertices, worldX, worldY)) {
+                return { edificio, edificioIndex: i };
+            }
+            continue;
+        }
+
         // Transformar el punto al sistema de coordenadas local del edificio
         const angle = -(edificio.angle || 0) * Math.PI / 180;
         const cos = Math.cos(angle);
@@ -2323,6 +2457,7 @@ function encontrarEdificioEnPunto(worldX, worldY) {
 
     return null;
 }
+window.encontrarEdificioEnPunto = encontrarEdificioEnPunto;
 
 function limpiarCeldas(){
     calles.forEach(calle => {
