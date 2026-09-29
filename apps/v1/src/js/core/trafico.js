@@ -4207,17 +4207,23 @@ function iniciarSimulacion() {
     }
 
     if (btnParkingOutlines) {
-        btnParkingOutlines.addEventListener('click', () => {
-            mostrarContornosEstacionamiento = !mostrarContornosEstacionamiento;
+        // Asignar una sola acción idempotente: reinicializar la simulación no
+        // debe acumular listeners que alternen dos veces en el mismo clic.
+        btnParkingOutlines.onclick = () => {
+            mostrarContornosEstacionamiento = window.mostrarContornosEstacionamiento === false;
             window.mostrarContornosEstacionamiento = mostrarContornosEstacionamiento;
             btnParkingOutlines.setAttribute('aria-pressed', String(mostrarContornosEstacionamiento));
-            btnParkingOutlines.textContent = mostrarContornosEstacionamiento ? '🅿️' : '🚫';
+            btnParkingOutlines.setAttribute('aria-label', mostrarContornosEstacionamiento ?
+                'Ocultar contornos de estacionamientos funcionales' :
+                'Mostrar contornos de estacionamientos funcionales');
+            btnParkingOutlines.classList.toggle('btn-info', mostrarContornosEstacionamiento);
+            btnParkingOutlines.classList.toggle('btn-outline-info', !mostrarContornosEstacionamiento);
 
             if (window.USE_PIXI && window.pixiApp?.sceneManager?.edificioRenderer) {
                 window.pixiApp.sceneManager.edificioRenderer.renderAll(window.edificios);
             }
             renderizarCanvas();
-        });
+        };
     }
 
     const btnVertices = document.getElementById('btnVertices');

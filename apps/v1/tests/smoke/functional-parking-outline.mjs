@@ -123,6 +123,7 @@ for (const usePixi of [false, true]) {
 			}
 			window.renderizarCanvas?.()
 		})
+		await new Promise(resolve => setTimeout(resolve, 600))
 		await render(page)
 
 		let pixels = await visiblePixels(page)
@@ -151,23 +152,30 @@ for (const usePixi of [false, true]) {
 		await page.evaluate(() => {
 			window.edificioSeleccionado = window.__parkingSmoke.blueFill
 			window.modoSeleccion = "constructor"
+			document.dispatchEvent(new CustomEvent("building-selected", { detail: { building: window.__parkingSmoke.blueFill } }))
+			document.getElementById("buildingInspectorName")?.focus()
 		})
 		await render(page)
 		pixels = await visiblePixels(page)
 		assert.ok(pixels["blue-fill"].blueOutside > baselinePixels["blue-fill"].blueOutside + 30, "selected functional parking retains its blue outline")
 		assert.ok(pixels["blue-fill"].selection > 20, "selection has a separately visible orange/gold outline")
 
-		await page.$eval("#btnParkingOutlines", button => button.click())
+		const parkingToggle = await page.$("#btnParkingOutlines")
+		const parkingToggleBox = await parkingToggle.boundingBox()
+		const parkingTogglePoint = { x: parkingToggleBox.x + parkingToggleBox.width / 2, y: parkingToggleBox.y + parkingToggleBox.height / 2 }
+		await page.mouse.click(parkingTogglePoint.x, parkingTogglePoint.y)
 		await new Promise(resolve => setTimeout(resolve, 80))
 		pixels = await visiblePixels(page)
 		assert.equal(await page.$eval("#btnParkingOutlines", button => button.getAttribute("aria-pressed")), "false", "toolbar reports that functional parking outlines are hidden")
+		assert.equal(await page.$eval("#btnParkingOutlines", button => button.textContent), "🅿️", "toolbar keeps a stable parking toggle target while hidden")
 		assert.ok(pixels["blue-fill"].blueOutside < activePixels["blue-fill"].blueOutside * 0.5, "toolbar hides the functional parking outline")
 		assert.ok(pixels["blue-fill"].selection > 20, "selection remains visible while parking outlines are hidden")
 
-		await page.$eval("#btnParkingOutlines", button => button.click())
+		await page.mouse.click(parkingTogglePoint.x, parkingTogglePoint.y)
 		await new Promise(resolve => setTimeout(resolve, 80))
 		pixels = await visiblePixels(page)
 		assert.equal(await page.$eval("#btnParkingOutlines", button => button.getAttribute("aria-pressed")), "true", "toolbar reports that functional parking outlines are visible")
+		assert.equal(await page.$eval("#btnParkingOutlines", button => button.textContent), "🅿️", "toolbar keeps a stable parking toggle target when restored")
 		assert.ok(pixels["blue-fill"].blueOutside > baselinePixels["blue-fill"].blueOutside + 30, "toolbar restores the functional parking outline")
 
 		await page.evaluate(() => {
