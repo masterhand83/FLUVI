@@ -671,7 +671,9 @@ class EditorCalles {
     
     actualizarEstadoBotonEdicion() {
         if (this.btnModoEdicion) {
-            const haySeleccion = window.calleSeleccionada || window.edificioSeleccionado;
+            // Building handles are always live through buildingInspector.js;
+            // the transactional visual mode remains a Calle-only workflow.
+            const haySeleccion = window.calleSeleccionada;
             this.btnModoEdicion.disabled = !haySeleccion;
         }
     }

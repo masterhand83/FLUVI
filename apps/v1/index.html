@@ -594,7 +594,7 @@
               <button type="button" id="btnAgregarCalle" class="btn btn-outline-primary btn-sm" data-bs-toggle="tooltip" data-bs-title="Abrir formulario para crear una nueva calle en el mapa">
                 ➕ Agregar Calle
               </button>
-              <button type="button" id="btnAgregarEdificio" class="btn btn-outline-success btn-sm" data-bs-toggle="tooltip" data-bs-title="Abrir formulario para crear un nuevo edificio en el mapa">
+              <button type="button" id="btnAgregarEdificio" class="btn btn-outline-success btn-sm" data-bs-toggle="tooltip" data-bs-title="Arrastrar un edificio rectangular en el mapa">
                 🏢 Agregar Edificio
               </button>
               <button type="button" id="btnEditarEdificio" class="btn btn-outline-warning btn-sm" style="display: none;" data-bs-toggle="tooltip" data-bs-title="Editar configuración del edificio seleccionado (Ctrl+Click para seleccionar)">
@@ -2299,6 +2299,29 @@
         <div id="streetInspectorError" class="street-inspector-error" role="alert" aria-live="assertive"></div>
       </aside>
 
+      <aside id="buildingInspector" class="street-inspector building-inspector" aria-live="polite" hidden>
+        <div class="street-inspector-heading">
+          <label class="street-inspector-field">Nombre <input id="buildingInspectorName" type="text" autocomplete="off"></label>
+          <button type="button" id="buildingInspectorClose" class="btn-close" aria-label="Cerrar"></button>
+        </div>
+        <dl class="street-inspector-details">
+          <div><dt>X</dt><dd><input id="buildingInspectorX" type="number" step="any"></dd></div>
+          <div><dt>Y</dt><dd><input id="buildingInspectorY" type="number" step="any"></dd></div>
+          <div><dt>Ancho</dt><dd><input id="buildingInspectorWidth" type="number" min="1" step="any"></dd></div>
+          <div><dt>Alto</dt><dd><input id="buildingInspectorHeight" type="number" min="1" step="any"></dd></div>
+          <div><dt>Ángulo (°)</dt><dd><input id="buildingInspectorAngle" type="number" step="any"></dd></div>
+          <div class="building-color-row"><dt>Color</dt><dd id="buildingColorPalette" class="building-color-palette" aria-label="Color del edificio">
+            <button type="button" name="buildingColor" value="#A0522D" title="Café" aria-label="Café"></button>
+            <button type="button" name="buildingColor" value="#6C757D" title="Gris" aria-label="Gris"></button>
+            <button type="button" name="buildingColor" value="#1F4E9E" title="Azul" aria-label="Azul"></button>
+            <button type="button" name="buildingColor" value="#46B5D1" title="Cielo" aria-label="Cielo"></button>
+            <button type="button" name="buildingColor" value="#2E7D32" title="Verde" aria-label="Verde"></button>
+            <button type="button" name="buildingColor" value="#8B4513" title="Café heredado" aria-label="Café heredado"></button>
+          </dd></div>
+        </dl>
+        <div id="buildingInspectorError" class="street-inspector-error" role="alert" aria-live="assertive"></div>
+      </aside>
+
       <!-- Control Bar -->
       <div id="canvasControlBar">
         <div id="controlBar" class="align-items-center">
@@ -2317,6 +2340,8 @@
           </div>
 
           <button type="button" id="drawStreetButton" class="btn btn-outline-primary btn-sm" data-bs-toggle="tooltip" data-bs-title="Dibujar una calle">✏️ Calle</button>
+          <button type="button" id="drawBuildingButton" class="btn btn-outline-success btn-sm" aria-pressed="false" data-bs-toggle="tooltip" data-bs-title="Arrastra dos esquinas para crear un edificio rectangular">▭ Edificio</button>
+          <label class="building-proportion-lock small"><input id="buildingProportionLock" type="checkbox"> Cuadrado</label>
           <div class="create-link-anchor">
             <button type="button" id="createLinkButton" class="btn btn-outline-primary btn-sm">🔗 Crear enlace</button>
             <section id="linkDraftPanel" class="create-link-panel" hidden aria-hidden="true" aria-label="Revisar enlace entre calles">
@@ -2412,6 +2437,7 @@
   <script src="src/js/ui/edificioUI.js"></script>
   <script src="src/js/ui/constructor.js"></script>
   <script src="src/js/ui/drawStreet.js"></script>
+  <script src="src/js/ui/buildingInspector.js"></script>
   <script src="src/js/ui/streetInspector.js"></script>
   <script src="src/js/ui/editStreetGeometry.js"></script>
   <script src="src/js/ui/createLink.js"></script>

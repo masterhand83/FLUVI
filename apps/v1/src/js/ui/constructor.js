@@ -187,18 +187,6 @@ function configurarEventosConstructor() {
         btnAgregarCalle.addEventListener('click', mostrarDialogoNuevaCalle);
     }
 
-    // Botón Agregar Edificio
-    const btnAgregarEdificio = document.getElementById('btnAgregarEdificio');
-    if (btnAgregarEdificio) {
-        btnAgregarEdificio.addEventListener('click', mostrarDialogoNuevoEdificio);
-    }
-
-    // Botón Editar Edificio
-    const btnEditarEdificio = document.getElementById('btnEditarEdificio');
-    if (btnEditarEdificio) {
-        btnEditarEdificio.addEventListener('click', editarEdificioSeleccionado);
-    }
-
     // Botón Agregar Conexión
     const btnAgregarConexion = document.getElementById('btnAgregarConexion');
     if (btnAgregarConexion) {
@@ -1670,7 +1658,11 @@ function agregarEdificio(label, x, y, width, height, angle) {
     window.edificios.push(edificio);
 
     // Agregar a simulación actual
-    simulacionActual.edificios.push(edificio);
+    // After a JSON load, simulacionActual.edificios and window.edificios can be
+    // the same array. Do not append the same gesture twice in that case.
+    if (simulacionActual.edificios !== window.edificios) {
+        simulacionActual.edificios.push(edificio);
+    }
 
     // Actualizar selectores
     actualizarSelectorEdificios();
@@ -1689,6 +1681,8 @@ function agregarEdificio(label, x, y, width, height, angle) {
     return edificio;
 }
 
+window.agregarEdificio = agregarEdificio;
+
 // ==================== EDITAR EDIFICIO ====================
 
 /**
@@ -1698,12 +1692,8 @@ function actualizarBotonEditarEdificio() {
     const btnEditarEdificio = document.getElementById('btnEditarEdificio');
     if (!btnEditarEdificio) return;
 
-    // Mostrar el botón solo si hay un edificio seleccionado
-    if (window.edificioSeleccionado) {
-        btnEditarEdificio.style.display = 'block';
-    } else {
-        btnEditarEdificio.style.display = 'none';
-    }
+    // Rectangular buildings use the always-live unified inspector instead.
+    btnEditarEdificio.style.display = 'none';
 }
 
 /**
@@ -1969,6 +1959,8 @@ function actualizarSelectorEdificios() {
         selectEdificio.appendChild(option);
     });
 }
+
+window.actualizarSelectorEdificios = actualizarSelectorEdificios;
 
 // ==================== ELIMINAR OBJETO SELECCIONADO ====================
 

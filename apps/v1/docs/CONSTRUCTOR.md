@@ -1,5 +1,11 @@
 # 🏗️ Constructor de Mapas - Guía de Usuario
 
+## Edificios rectangulares
+
+Pulsa **▭ Edificio** (o **Agregar Edificio**) y arrastra de una esquina a la opuesta. Activa **Cuadrado** para bloquear ambas dimensiones. Al soltar se crea y selecciona un único edificio; su inspector permite cambiar nombre, posición, ancho, alto, ángulo y color inmediatamente, sin Guardar ni Cancelar. Los controles sobre el mapa permiten mover, redimensionar y girar.
+
+Los edificios de forma usan una paleta fija: café `#A0522D`, gris `#6C757D`, azul `#1F4E9E`, cielo `#46B5D1`, verde `#2E7D32` y café heredado `#8B4513`. Los colores de mapas antiguos que no pertenezcan a esta paleta se conservan hasta elegir explícitamente una muestra.
+
 ## Descripción General
 
 El Constructor de Mapas es una herramienta integrada en el Simulador de Tráfico FLUVI que te permite crear, editar, guardar y cargar simulaciones personalizadas desde cero.

@@ -133,9 +133,18 @@ async function editObject(page, type) {
 		if (!object) throw new Error(`No ${kind} available in the default map`)
 		window.calleSeleccionada = kind === "calle" ? object : null
 		window.edificioSeleccionado = kind === "edificio" ? object : null
-		document.getElementById("btnModoEdicion").disabled = false
+		if (kind === "calle") document.getElementById("btnModoEdicion").disabled = false
 		return { id: object.id ?? object.label, x: object.x }
 	}, type)
+	if (type === "edificio") {
+		await page.waitForFunction(() => !document.getElementById("buildingInspector").hidden)
+		await page.$eval("#buildingInspectorX", (input) => {
+			input.value = String(Number(input.value) + 17)
+			input.dispatchEvent(new Event("input", { bubbles: true }))
+		})
+		assert.notEqual(await page.evaluate(() => window.edificioSeleccionado.x), before.x, "live building inspector works beneath locked image")
+		return
+	}
 	await page.$eval("#btnModoEdicion", (button) => button.click())
 	assert.equal(await page.evaluate(() => window.editorCalles.modoEdicion), true, `${type} enters edit mode under locked image`)
 	if (type === "calle") {
@@ -183,7 +192,7 @@ for (const usePixi of [false, true]) {
 		await clickStreetUnderImage(sim.page)
 		for (const type of ["calle", "edificio"]) {
 			await editObject(sim.page, type)
-			await sim.page.$eval("#btnCancelarEdicion", (button) => button.click())
+			if (type === "calle") await sim.page.$eval("#btnCancelarEdicion", (button) => button.click())
 			await sim.page.evaluate(() => {
 				window.calleSeleccionada = null
 				window.edificioSeleccionado = null
