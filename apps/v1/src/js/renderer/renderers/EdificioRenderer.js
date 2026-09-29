@@ -153,6 +153,7 @@ class EdificioRenderer {
         if (window.edificioSeleccionado === edificio) {
             this.addSelectionBorder(sprite, edificio);
         }
+        this.updateFunctionalParkingBorder(sprite, edificio);
 
         // Guardar referencia
         this.scene.edificioSprites.set(edificio, sprite);
@@ -208,6 +209,7 @@ class EdificioRenderer {
 
         // Actualizar borde de selección
         this.updateSelectionBorder(sprite, edificio);
+        this.updateFunctionalParkingBorder(sprite, edificio);
     }
 
     addBuildingLabel(sprite, edificio) {
@@ -275,7 +277,6 @@ class EdificioRenderer {
 
     addSelectionBorder(sprite, edificio) {
         const graphics = new PIXI.Graphics();
-        graphics.lineStyle(2, 0xFFD700);
 
         // Usar las dimensiones REALES del sprite, no las del objeto edificio
         // porque el sprite puede haber sido redimensionado
@@ -289,15 +290,24 @@ class EdificioRenderer {
             // dibujando en coordenadas de la textura (sin escala)
             const textureWidth = sprite.texture.width;
             const textureHeight = sprite.texture.height;
+            const scaleX = Math.abs(sprite.scale.x) || 1;
+            const scaleY = Math.abs(sprite.scale.y) || 1;
+            graphics.lineStyle(2 / Math.max(scaleX, scaleY), 0xFFD700);
 
             // Dibujar en coordenadas de la textura original (se escalará automáticamente con el sprite)
-            graphics.drawRect(-textureWidth / 2, -textureHeight / 2, textureWidth, textureHeight);
+            graphics.drawRect(
+                -textureWidth / 2 + 4 / scaleX,
+                -textureHeight / 2 + 4 / scaleY,
+                textureWidth - 8 / scaleX,
+                textureHeight - 8 / scaleY
+            );
         } else {
             // Para Graphics (figuras geométricas), usar las dimensiones del edificio
             width = edificio.width || 100;
             height = edificio.height || 100;
+            graphics.lineStyle(2, 0xFFD700);
             // Para Graphics, dibujar desde 0, 0
-            graphics.drawRect(0, 0, width, height);
+            graphics.drawRect(4, 4, width - 8, height - 8);
         }
 
         graphics.name = 'selectionBorder';
@@ -315,6 +325,47 @@ class EdificioRenderer {
 
         if (window.edificioSeleccionado === edificio) {
             this.addSelectionBorder(sprite, edificio);
+        }
+    }
+
+    isFunctionalParking(edificio) {
+        return window.edificioTieneConexionesEstacionamientoFuncionales?.(edificio) === true;
+    }
+
+    addFunctionalParkingBorder(sprite, edificio) {
+        const graphics = new PIXI.Graphics();
+
+        // Use image texture coordinates for sprites so the outline follows the
+        // sprite's scale and rotation. Expand it beyond the separate gold
+        // selection border so both remain visible when selected.
+        if (sprite instanceof PIXI.Sprite && sprite.texture) {
+            const width = sprite.texture.width;
+            const height = sprite.texture.height;
+            const scaleX = Math.abs(sprite.scale.x) || 1;
+            const scaleY = Math.abs(sprite.scale.y) || 1;
+            graphics.lineStyle(4 / Math.max(scaleX, scaleY), 0x0066FF, 1);
+            graphics.drawRect(-width / 2 - 2 / scaleX, -height / 2 - 2 / scaleY, width + 4 / scaleX, height + 4 / scaleY);
+        } else {
+            const width = edificio.width || 100;
+            const height = edificio.height || 100;
+            graphics.lineStyle(4, 0x0066FF, 1);
+            graphics.drawRect(-2, -2, width + 4, height + 4);
+        }
+
+        graphics.name = 'functionalParkingBorder';
+        sprite.addChild(graphics);
+    }
+
+    updateFunctionalParkingBorder(sprite, edificio) {
+        const oldBorder = sprite.getChildByName ? sprite.getChildByName('functionalParkingBorder') : null;
+        const shouldHaveBorder = this.isFunctionalParking(edificio);
+
+        // Avoid rebuilding Pixi Graphics every frame; only react to parking
+        // activation/deactivation transitions.
+        if (shouldHaveBorder && !oldBorder) {
+            this.addFunctionalParkingBorder(sprite, edificio);
+        } else if (!shouldHaveBorder && oldBorder) {
+            sprite.removeChild(oldBorder);
         }
     }
 

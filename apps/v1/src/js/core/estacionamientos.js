@@ -9,6 +9,30 @@ console.log('🏢 estacionamientos.js cargando...');
 const CELDA_ENTRADA_ESTACIONAMIENTO = 8;  // Marca celdas de entrada
 const CELDA_SALIDA_ESTACIONAMIENTO = 9;   // Marca celdas de salida
 
+function obtenerCalleConexionEstacionamiento(conexion) {
+    return window.calles?.find(calle => calle.id === conexion?.calleId || calle.nombre === conexion?.calleId) || null;
+}
+
+function conexionEstacionamientoEsValida(conexion, calle = obtenerCalleConexionEstacionamiento(conexion)) {
+    return Number.isInteger(conexion?.carril) && Number.isInteger(conexion?.indice) &&
+        calle?.arreglo?.[conexion.carril]?.[conexion.indice] !== undefined;
+}
+
+function edificioTieneConexionesEstacionamientoFuncionales(edificio) {
+    if (edificio?.esEstacionamiento !== true || !Array.isArray(edificio.conexiones)) {
+        return false;
+    }
+
+    const conexionEsValida = conexion => {
+        return ['entrada', 'salida'].includes(conexion?.tipo) && conexionEstacionamientoEsValida(conexion);
+    };
+
+    return edificio.conexiones.some(conexion => conexion?.tipo === 'entrada' && conexionEsValida(conexion)) &&
+        edificio.conexiones.some(conexion => conexion?.tipo === 'salida' && conexionEsValida(conexion));
+}
+
+window.edificioTieneConexionesEstacionamientoFuncionales = edificioTieneConexionesEstacionamientoFuncionales;
+
 /**
  * Convierte un edificio en estacionamiento y configura sus conexiones
  * @param {Object} edificio - El edificio a convertir
@@ -34,6 +58,7 @@ function configurarEstacionamiento(edificio, conexiones = [], capacidad = 50) {
         console.warn('⚠️ Edificio sin conexiones - será decorativo');
         edificio.esEstacionamiento = false;
         edificio.conexiones = [];
+        actualizarVisualizacionEdificioEstacionamiento(edificio);
         return true;
     }
 
@@ -65,7 +90,7 @@ function configurarEstacionamiento(edificio, conexiones = [], capacidad = 50) {
 
     // Marcar las celdas en las calles
     conexiones.forEach(conexion => {
-        const calle = window.calles.find(c => c.id === conexion.calleId || c.nombre === conexion.calleId);
+        const calle = obtenerCalleConexionEstacionamiento(conexion);
         if (!calle) {
             console.error(`❌ Calle "${conexion.calleId}" no encontrada`);
             return;
@@ -84,7 +109,7 @@ function configurarEstacionamiento(edificio, conexiones = [], capacidad = 50) {
             longitudCarril: calle.arreglo[carril]?.length
         });
 
-        if (!calle.arreglo[carril] || calle.arreglo[carril][indice] === undefined) {
+        if (!conexionEstacionamientoEsValida(conexion, calle)) {
             console.error(`❌ Celda inválida: ${conexion.calleId}[${carril}][${indice}]`);
             console.error(`   Calle tiene ${calle.carriles} carriles (0-${calle.carriles-1}) y tamaño ${calle.tamano} (0-${calle.tamano-1})`);
             return;
@@ -116,7 +141,15 @@ function configurarEstacionamiento(edificio, conexiones = [], capacidad = 50) {
     });
 
     console.log(`🏢 Estacionamiento "${edificio.label}" configurado: ${entradas.length} pares, capacidad ${capacidad}`);
+    actualizarVisualizacionEdificioEstacionamiento(edificio);
     return true;
+}
+
+function actualizarVisualizacionEdificioEstacionamiento(edificio) {
+    if (window.USE_PIXI && window.pixiApp?.sceneManager?.edificioRenderer) {
+        window.pixiApp.sceneManager.edificioRenderer.updateEdificioSprite(edificio);
+    }
+    window.renderizarCanvas?.();
 }
 
 /**

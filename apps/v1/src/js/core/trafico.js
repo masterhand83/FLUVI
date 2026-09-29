@@ -1482,13 +1482,32 @@ function dibujarEdificios() {
             ctx.fillRect(-edificio.width / 2, -edificio.height / 2, edificio.width, edificio.height);
         }
 
+        // Mantener este indicador ligado al estado funcional y a conexiones
+        // reales, nunca al nombre ni a la imagen del edificio.
+        if (window.edificioTieneConexionesEstacionamientoFuncionales?.(edificio)) {
+            ctx.strokeStyle = '#0066FF';
+            ctx.lineWidth = 4 / escala;
+            ctx.setLineDash([]);
+            ctx.strokeRect(
+                -edificio.width / 2 - 2 / escala,
+                -edificio.height / 2 - 2 / escala,
+                edificio.width + 4 / escala,
+                edificio.height + 4 / escala
+            );
+        }
+
         // Resaltar edificio seleccionado
         if (window.edificioSeleccionado && window.edificioSeleccionado.index === index) {
             // Naranja para Constructor, dorado para Configuración
             ctx.strokeStyle = window.modoSeleccion === "constructor" ? "#FFA500" : "#FFD700";
             ctx.lineWidth = 2 / escala;
             ctx.setLineDash([10 / escala, 5 / escala]);
-            ctx.strokeRect(-edificio.width / 2, -edificio.height / 2, edificio.width, edificio.height);
+            ctx.strokeRect(
+                -edificio.width / 2 + 4 / escala,
+                -edificio.height / 2 + 4 / escala,
+                edificio.width - 8 / escala,
+                edificio.height - 8 / escala
+            );
             ctx.setLineDash([]);
         }
 
