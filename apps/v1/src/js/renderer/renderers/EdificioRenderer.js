@@ -149,6 +149,9 @@ class EdificioRenderer {
             this.addBuildingLabel(sprite, edificio);
         }
 
+        // El estacionamiento funcional conserva su borde independientemente de la selección.
+        this.updateFunctionalParkingBorder(sprite, edificio);
+
         // Agregar borde si está seleccionado
         if (window.edificioSeleccionado === edificio) {
             this.addSelectionBorder(sprite, edificio);
@@ -205,6 +208,9 @@ class EdificioRenderer {
             etiqueta.x = edificio.x;
             etiqueta.y = edificio.y;
         }
+
+        // El estado de estacionamiento puede cambiar sin recrear el sprite.
+        this.updateFunctionalParkingBorder(sprite, edificio);
 
         // Actualizar borde de selección
         this.updateSelectionBorder(sprite, edificio);
@@ -273,31 +279,91 @@ class EdificioRenderer {
         this.etiquetasEdificios.set(edificio, container);
     }
 
-    addSelectionBorder(sprite, edificio) {
-        const graphics = new PIXI.Graphics();
-        graphics.lineStyle(6, 0xFFD700); // 4px de grosor (era 3px)
+    isFunctionalParking(edificio) {
+        return window.esEstacionamientoFuncional?.(edificio) === true;
+    }
 
-        // Usar las dimensiones REALES del sprite, no las del objeto edificio
-        // porque el sprite puede haber sido redimensionado
-        let width, height;
-
+    getBorderRect(sprite, edificio, margin = 0) {
         if (sprite instanceof PIXI.Sprite && sprite.texture) {
-            // Para imágenes (Sprite), necesitamos compensar la escala del sprite
-            // porque el graphics hereda la transformación del padre
-
-            // El graphics se escala con el sprite, así que necesitamos compensar
-            // dibujando en coordenadas de la textura (sin escala)
+            // Los hijos de Sprite usan coordenadas de la textura y heredan su escala.
             const textureWidth = sprite.texture.width;
             const textureHeight = sprite.texture.height;
+            const scaleX = Math.abs(sprite.scale.x) || 1;
+            const scaleY = Math.abs(sprite.scale.y) || 1;
+            const marginX = margin / scaleX;
+            const marginY = margin / scaleY;
 
-            // Dibujar en coordenadas de la textura original (se escalará automáticamente con el sprite)
-            graphics.drawRect(-textureWidth / 2, -textureHeight / 2, textureWidth, textureHeight);
+            return {
+                x: -textureWidth / 2 - marginX,
+                y: -textureHeight / 2 - marginY,
+                width: textureWidth + marginX * 2,
+                height: textureHeight + marginY * 2
+            };
+        }
+
+        // Graphics se dibuja desde 0,0 y centra su rotación mediante pivot.
+        const width = edificio.width || 100;
+        const height = edificio.height || 100;
+        return {
+            x: -margin,
+            y: -margin,
+            width: width + margin * 2,
+            height: height + margin * 2
+        };
+    }
+
+    drawBorderRect(graphics, sprite, edificio, margin = 0) {
+        const rect = this.getBorderRect(sprite, edificio, margin);
+        graphics.drawRect(rect.x, rect.y, rect.width, rect.height);
+    }
+
+    getBorderLineWidth(sprite, screenWidth) {
+        if (!(sprite instanceof PIXI.Sprite)) return screenWidth;
+
+        // La escala de la imagen también afecta a sus hijos. Compensar por la
+        // escala menor garantiza el grosor mínimo aun con imágenes deformadas.
+        const scaleX = Math.abs(sprite.scale.x) || 1;
+        const scaleY = Math.abs(sprite.scale.y) || 1;
+        return screenWidth / Math.min(scaleX, scaleY);
+    }
+
+    addFunctionalParkingBorder(sprite, edificio) {
+        const graphics = new PIXI.Graphics();
+
+        // El halo claro separa el azul tanto de imágenes como de rellenos #0066FF.
+        graphics.lineStyle(this.getBorderLineWidth(sprite, 8), 0xFFFFFF, 0.95);
+        this.drawBorderRect(graphics, sprite, edificio);
+        graphics.lineStyle(this.getBorderLineWidth(sprite, 4), 0x0066FF, 1);
+        this.drawBorderRect(graphics, sprite, edificio);
+        graphics.name = 'functionalParkingBorder';
+        sprite.addChild(graphics);
+    }
+
+    updateFunctionalParkingBorder(sprite, edificio) {
+        const oldBorder = sprite.getChildByName ? sprite.getChildByName('functionalParkingBorder') : null;
+        if (oldBorder) {
+            sprite.removeChild(oldBorder);
+            oldBorder.destroy();
+        }
+
+        if (this.isFunctionalParking(edificio)) {
+            this.addFunctionalParkingBorder(sprite, edificio);
+        }
+    }
+
+    addSelectionBorder(sprite, edificio) {
+        const graphics = new PIXI.Graphics();
+
+        if (this.isFunctionalParking(edificio)) {
+            // La selección queda fuera del borde de estacionamiento y conserva su identidad.
+            graphics.lineStyle(this.getBorderLineWidth(sprite, 9), 0x000000, 0.8);
+            this.drawBorderRect(graphics, sprite, edificio, 7);
+            graphics.lineStyle(this.getBorderLineWidth(sprite, 5), 0xFFD700, 1);
+            this.drawBorderRect(graphics, sprite, edificio, 7);
         } else {
-            // Para Graphics (figuras geométricas), usar las dimensiones del edificio
-            width = edificio.width || 100;
-            height = edificio.height || 100;
-            // Para Graphics, dibujar desde 0, 0
-            graphics.drawRect(0, 0, width, height);
+            // Conservar el aspecto de selección existente para edificios decorativos.
+            graphics.lineStyle(this.getBorderLineWidth(sprite, 6), 0xFFD700);
+            this.drawBorderRect(graphics, sprite, edificio);
         }
 
         graphics.name = 'selectionBorder';
@@ -311,6 +377,7 @@ class EdificioRenderer {
         const oldBorder = sprite.getChildByName ? sprite.getChildByName('selectionBorder') : null;
         if (oldBorder) {
             sprite.removeChild(oldBorder);
+            oldBorder.destroy();
         }
 
         if (window.edificioSeleccionado === edificio) {

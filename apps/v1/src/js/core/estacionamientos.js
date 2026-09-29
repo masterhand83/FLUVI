@@ -10,6 +10,34 @@ const CELDA_ENTRADA_ESTACIONAMIENTO = 8;  // Marca celdas de entrada
 const CELDA_SALIDA_ESTACIONAMIENTO = 9;   // Marca celdas de salida
 
 /**
+ * Indica si el edificio tiene comportamiento de estacionamiento activo.
+ * La apariencia, imagen y etiqueta del edificio no participan en esta decisión.
+ * @param {Object} edificio - Edificio a comprobar
+ * @returns {boolean} true cuando tiene al menos una entrada y una salida activas
+ */
+function esEstacionamientoFuncional(edificio) {
+    if (!edificio?.esEstacionamiento || !Array.isArray(edificio.conexiones)) {
+        return false;
+    }
+
+    return edificio.conexiones.some(conexion => conexion?.tipo === 'entrada') &&
+        edificio.conexiones.some(conexion => conexion?.tipo === 'salida');
+}
+
+function actualizarAparienciaEstacionamiento(edificio) {
+    if (window.USE_PIXI && window.pixiApp?.sceneManager?.edificioRenderer) {
+        window.pixiApp.sceneManager.edificioRenderer.renderEdificio(edificio);
+    }
+    window.renderizarCanvas?.();
+}
+
+function conexionEstacionamientoValida(conexion) {
+    const calle = window.calles?.find(c => c.id === conexion?.calleId || c.nombre === conexion?.calleId);
+    return Boolean(calle && Number.isInteger(conexion?.carril) && Number.isInteger(conexion?.indice) &&
+        calle.arreglo?.[conexion.carril]?.[conexion.indice] !== undefined);
+}
+
+/**
  * Convierte un edificio en estacionamiento y configura sus conexiones
  * @param {Object} edificio - El edificio a convertir
  * @param {Array} conexiones - Array de conexiones {tipo, calleId, carril, indice}
@@ -34,11 +62,17 @@ function configurarEstacionamiento(edificio, conexiones = [], capacidad = 50) {
         console.warn('⚠️ Edificio sin conexiones - será decorativo');
         edificio.esEstacionamiento = false;
         edificio.conexiones = [];
+        actualizarAparienciaEstacionamiento(edificio);
         return true;
     }
 
     if (entradas.length > 10) {
         console.error('❌ Máximo 10 pares de conexiones permitidos');
+        return false;
+    }
+
+    if (!conexiones.every(conexionEstacionamientoValida)) {
+        console.error('❌ El estacionamiento contiene conexiones a celdas inexistentes');
         return false;
     }
 
@@ -116,6 +150,7 @@ function configurarEstacionamiento(edificio, conexiones = [], capacidad = 50) {
     });
 
     console.log(`🏢 Estacionamiento "${edificio.label}" configurado: ${entradas.length} pares, capacidad ${capacidad}`);
+    actualizarAparienciaEstacionamiento(edificio);
     return true;
 }
 
@@ -281,11 +316,14 @@ function limpiarConexionesEdificio(edificio) {
     edificio.conexiones = [];
     edificio.esEstacionamiento = false;
 
+    actualizarAparienciaEstacionamiento(edificio);
+
     console.log(`🧹 Conexiones de "${edificio.label}" eliminadas`);
 }
 
 // Exponer funciones globalmente
 window.configurarEstacionamiento = configurarEstacionamiento;
+window.esEstacionamientoFuncional = esEstacionamientoFuncional;
 window.procesarEntradaVehiculo = procesarEntradaVehiculo;
 window.intentarGenerarSalida = intentarGenerarSalida;
 window.obtenerEdificioPorCelda = obtenerEdificioPorCelda;
@@ -297,5 +335,15 @@ window.limpiarConexionesEdificio = limpiarConexionesEdificio;
 // Constantes globales
 window.CELDA_ENTRADA_ESTACIONAMIENTO = CELDA_ENTRADA_ESTACIONAMIENTO;
 window.CELDA_SALIDA_ESTACIONAMIENTO = CELDA_SALIDA_ESTACIONAMIENTO;
+
+document.addEventListener('street-deleted', () => {
+    const renderer = window.USE_PIXI && window.pixiApp?.sceneManager?.edificioRenderer;
+    if (renderer) {
+        (window.edificios || []).forEach(edificio => {
+            renderer.renderEdificio(edificio);
+        });
+    }
+    window.renderizarCanvas?.();
+});
 
 console.log('✅ estacionamientos.js cargado');

@@ -1355,13 +1355,33 @@ function dibujarEdificios() {
             ctx.fillRect(-edificio.width / 2, -edificio.height / 2, edificio.width, edificio.height);
         }
 
+        // El estacionamiento funcional conserva su identidad visual con
+        // cualquier imagen o color de relleno. El halo claro hace visible el
+        // azul incluso sobre un edificio del mismo color.
+        const estacionamientoFuncional = window.esEstacionamientoFuncional?.(edificio) === true;
+        if (estacionamientoFuncional) {
+            ctx.lineJoin = "round";
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.95)";
+            ctx.lineWidth = 6 / escala;
+            ctx.strokeRect(-edificio.width / 2, -edificio.height / 2, edificio.width, edificio.height);
+            ctx.strokeStyle = "#0066FF";
+            ctx.lineWidth = 3 / escala;
+            ctx.strokeRect(-edificio.width / 2, -edificio.height / 2, edificio.width, edificio.height);
+        }
+
         // Resaltar edificio seleccionado
         if (window.edificioSeleccionado && window.edificioSeleccionado.index === index) {
             // Naranja para Constructor, dorado para Configuración
             ctx.strokeStyle = window.modoSeleccion === "constructor" ? "#FFA500" : "#FFD700";
             ctx.lineWidth = 4 / escala;
             ctx.setLineDash([10 / escala, 5 / escala]);
-            ctx.strokeRect(-edificio.width / 2, -edificio.height / 2, edificio.width, edificio.height);
+            const separacionSeleccion = estacionamientoFuncional ? 6 / escala : 0;
+            ctx.strokeRect(
+                -edificio.width / 2 - separacionSeleccion,
+                -edificio.height / 2 - separacionSeleccion,
+                edificio.width + separacionSeleccion * 2,
+                edificio.height + separacionSeleccion * 2
+            );
             ctx.setLineDash([]);
         }
 
