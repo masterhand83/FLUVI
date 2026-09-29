@@ -3,6 +3,10 @@
 	let canvas = document.getElementById("simuladorCanvas")
 	const button = document.getElementById("drawBuildingButton")
 	const polygonButton = document.getElementById("drawPolygonBuildingButton")
+	const imageButton = document.getElementById("uploadBuildingImageButton")
+	const imageInput = document.getElementById("buildingImageInput")
+	const imageStatus = document.getElementById("buildingImageStatus")
+	const imageCancel = document.getElementById("buildingImageCancel")
 	const inspector = document.getElementById("buildingInspector")
 	if (!canvas || !button || !inspector) return
 
@@ -26,6 +30,9 @@
 
 	let active = false
 	let polygonMode = false
+	let placementImage = null
+	let uploadToken = 0
+	let uploadPending = false
 	let polygonPoints = []
 	let drawPanel = null
 	let gesture = null
@@ -36,6 +43,12 @@
 	let lastSelection
 
 	const normalizeColor = value => typeof value === "string" && /^#[0-9a-f]{6}$/i.test(value) ? value.toUpperCase() : ""
+	const isUploadedImage = building => building?.appearanceMode === "uploaded-image"
+	function imageRatio(building) {
+		const width = building.imageElement?.naturalWidth || building.imageNaturalWidth
+		const height = building.imageElement?.naturalHeight || building.imageNaturalHeight
+		return width > 0 && height > 0 ? width / height : building.width / building.height
+	}
 	const inside = event => {
 		const rect = canvas.getBoundingClientRect()
 		return event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom
@@ -89,7 +102,8 @@
 		fields.width.closest("div").hidden = polygon
 		fields.height.closest("div").hidden = polygon
 		fields.angle.closest("div").hidden = polygon
-		lock.closest("label").hidden = polygon
+		lock.closest("label").hidden = polygon || isUploadedImage(building)
+		document.getElementById("buildingColorPalette").closest("div").hidden = isUploadedImage(building)
 		vertexEditor.hidden = !polygon
 		if (polygon) vertexText.value = building.vertices.map(point => `${point.x}, ${point.y}`).join("\n")
 		const color = normalizeColor(building.color)
@@ -164,9 +178,15 @@
 			if (field.value.trim() === "" || !Number.isFinite(value)) return fail(field, "Introduce un número válido.")
 			const key = Object.entries(fields).find(([, input]) => input === field)?.[0]
 			if ((key === "width" || key === "height") && value <= 0) return fail(field, "El tamaño debe ser mayor que cero.")
+			if (isUploadedImage(selected) && (key === "width" || key === "height")) {
+				const ratio = imageRatio(selected)
+				const other = key === "width" ? value / ratio : value * ratio
+				if (!Number.isFinite(other) || other <= 0) return fail(field, "Introduce un tamaño proporcional válido.")
+				selected[key === "width" ? "height" : "width"] = other
+			}
 			selected[key] = key === "angle" ? ((value % 360) + 360) % 360 : value
-			if (lock.checked && (key === "width" || key === "height")) {
-				selected[key === "width" ? "height" : "width"] = value
+			if ((lock.checked || isUploadedImage(selected)) && (key === "width" || key === "height")) {
+				if (!isUploadedImage(selected)) selected[key === "width" ? "height" : "width"] = value
 				readModel(selected)
 			}
 		}
@@ -175,7 +195,7 @@
 	}
 	for (const field of Object.values(fields)) field.addEventListener("input", () => commit(field))
 	for (const swatch of palette) swatch.addEventListener("click", () => {
-		if (!selected) return
+		if (!selected || isUploadedImage(selected)) return
 		selected.color = swatch.value
 		readModel(selected)
 		redraw()
@@ -245,6 +265,13 @@
 	function onDrawDown(event) {
 		if (!active || event.button !== 0 || event.target !== canvas || !inside(event)) return
 		const point = worldPoint(event)
+		if (placementImage) {
+			event.preventDefault()
+			event.stopImmediatePropagation()
+			gesture = { ...point, pointerId: event.pointerId }
+			canvas.setPointerCapture?.(event.pointerId)
+			return
+		}
 		if (polygonMode) {
 			event.preventDefault()
 			event.stopImmediatePropagation()
@@ -261,13 +288,28 @@
 		updatePreview(event)
 	}
 	function onDrawMove(event) {
-		if (gesture?.pointerId === event.pointerId) updatePreview(event)
+		if (!placementImage && gesture?.pointerId === event.pointerId) updatePreview(event)
 	}
 	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: The rectangle and polygon pointer-up paths share one capture listener to avoid duplicate map event handling.
 	function onDrawUp(event) {
 		if (!gesture || gesture.pointerId !== event.pointerId) return
 		event.preventDefault()
 		event.stopImmediatePropagation()
+		if (placementImage) {
+			const origin = gesture
+			clearGesture()
+			if (!inside(event)) return
+			const { imageData, imageElement } = placementImage
+			// A 120-world-unit maximum keeps artwork usable regardless of source resolution.
+			const scale = 120 / Math.max(imageElement.naturalWidth, imageElement.naturalHeight)
+			const building = window.agregarEdificio(nextName(), origin.x, origin.y, imageElement.naturalWidth * scale, imageElement.naturalHeight * scale, 0)
+			Object.assign(building, { appearanceMode: "uploaded-image", imageData, imageElement })
+			deactivate()
+			redraw(building)
+			selectBuilding(building)
+			imageStatus.textContent = "Edificio con imagen creado."
+			return
+		}
 		if (polygonMode) {
 			const point = worldPoint(event)
 			gesture = null
@@ -332,10 +374,12 @@
 		selectBuilding(building)
 		deactivate()
 	}
-	function activate(asPolygon = false) {
+	function activate(asPolygon = false, image = null) {
 		if (active) return
+		if (uploadPending) deactivate()
 		canvas = document.getElementById("simuladorCanvas") || canvas
 		polygonMode = asPolygon
+		placementImage = image
 		polygonPoints = []
 		window.drawStreetTool?.deactivate()
 		window.drawRoundaboutTool?.deactivate()
@@ -344,21 +388,35 @@
 		button.classList.add("active")
 		button.setAttribute("aria-pressed", "true")
 		canvas.style.cursor = "crosshair"
-		button.setAttribute("aria-pressed", String(!polygonMode))
+		button.setAttribute("aria-pressed", String(!polygonMode && !placementImage))
 		polygonButton?.setAttribute("aria-pressed", String(polygonMode))
-		button.classList.toggle("active", !polygonMode)
+		button.classList.toggle("active", !polygonMode && !placementImage)
 		polygonButton?.classList.toggle("active", polygonMode)
-		lock.closest("label").hidden = polygonMode
+		imageButton?.setAttribute("aria-pressed", String(!!placementImage))
+		imageButton?.classList.toggle("active", !!placementImage)
+		lock.closest("label").hidden = polygonMode || !!placementImage
 		ensurePreview()
-		preview.hidden = polygonMode
+		preview.hidden = polygonMode || !!placementImage
 		polygonPreview.hidden = !polygonMode
-		drawPanel.hidden = !polygonMode
+		drawPanel.hidden = !polygonMode && !placementImage
+		if (placementImage) {
+			drawPanel.querySelector("#buildingDrawFinish").hidden = true
+			drawPanel.querySelector("#buildingDrawStatus").textContent = "Haz clic en el centro del edificio con imagen."
+		}
 		document.addEventListener("pointerdown", onDrawDown, true)
 		document.addEventListener("pointermove", onDrawMove, true)
 		document.addEventListener("pointerup", onDrawUp, true)
 		document.addEventListener("pointercancel", clearGesture, true)
 	}
 	function deactivate() {
+		// Reset must invalidate decoding even before placement has been armed.
+		uploadToken++
+		uploadPending = false
+		placementImage = null
+		if (imageStatus) imageStatus.textContent = ""
+		if (imageCancel) imageCancel.hidden = true
+		imageButton?.classList.remove("active")
+		imageButton?.setAttribute("aria-pressed", "false")
 		if (!active) return
 		clearGesture()
 		active = false
@@ -368,7 +426,7 @@
 		button.setAttribute("aria-pressed", "false")
 		polygonButton?.classList.remove("active")
 		polygonButton?.setAttribute("aria-pressed", "false")
-		lock.closest("label").hidden = selected?.geometryType === "polygon"
+		lock.closest("label").hidden = selected?.geometryType === "polygon" || isUploadedImage(selected)
 		canvas.style.cursor = ""
 		document.removeEventListener("pointerdown", onDrawDown, true)
 		document.removeEventListener("pointermove", onDrawMove, true)
@@ -384,8 +442,51 @@
 	button.addEventListener("click", toggleTool)
 	polygonButton?.addEventListener("click", () => active ? deactivate() : activate(true))
 	document.getElementById("btnAgregarEdificio")?.addEventListener("click", toggleTool)
+	imageButton?.addEventListener("click", () => {
+		deactivate()
+		imageInput.value = ""
+		imageInput.click()
+	})
+	imageCancel?.addEventListener("click", deactivate)
+	imageInput?.addEventListener("change", async () => {
+		deactivate()
+		const file = imageInput.files?.[0]
+		if (!file) return
+		if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
+			imageStatus.textContent = "Formato no admitido. Usa PNG, JPEG o WebP."
+			return
+		}
+		if (file.size > window.buildingImageCodec.maxBytes) {
+			imageStatus.textContent = "La imagen no puede superar 5 MB."
+			return
+		}
+		const token = ++uploadToken
+		uploadPending = true
+		imageCancel.hidden = false
+		imageStatus.textContent = "Comprobando imagen…"
+		try {
+			const imageData = await new Promise((resolve, reject) => {
+				const reader = new FileReader()
+				reader.onload = () => resolve(reader.result)
+				reader.onerror = reject
+				reader.onabort = reject
+				reader.readAsDataURL(file)
+			})
+			if (token !== uploadToken) return
+			const imageElement = await window.buildingImageCodec.decode(imageData)
+			if (token !== uploadToken) return
+			uploadPending = false
+			activate(false, { imageData, imageElement })
+			imageStatus.textContent = "Imagen lista. Haz clic en su centro en el mapa; Escape cancela."
+		} catch {
+			if (token !== uploadToken) return
+			uploadPending = false
+			imageCancel.hidden = true
+			imageStatus.textContent = "No se pudo leer la imagen. Elige un PNG, JPEG o WebP válido."
+		}
+	})
 	document.addEventListener("keydown", event => {
-		if (active && event.key === "Escape") deactivate()
+		if ((active || uploadPending) && event.key === "Escape") deactivate()
 	})
 
 	const handles = ["move", "resize", "rotate"].map(kind => {
@@ -502,7 +603,11 @@
 			const dy = point.y - before.y
 			let width = Math.abs(2 * (dx * Math.cos(angle) - dy * Math.sin(angle)))
 			let height = Math.abs(2 * (dx * Math.sin(angle) + dy * Math.cos(angle)))
-			if (lock.checked) width = height = Math.max(width, height)
+			if (isUploadedImage(selected)) {
+				const ratio = imageRatio(selected)
+				height = Math.max(width / ratio, height)
+				width = height * ratio
+			} else if (lock.checked) width = height = Math.max(width, height)
 			if (width >= 1 && height >= 1) Object.assign(selected, { width, height })
 		}
 		readModel(selected)

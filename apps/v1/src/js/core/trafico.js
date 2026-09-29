@@ -1598,7 +1598,8 @@ function dibujarEdificios() {
         ctx.rotate((edificio.angle || 0) * Math.PI / 180);
 
         // Buscar si existe una imagen para este edificio
-        const img = buildingImageMap[edificio.label];
+        const img = edificio.appearanceMode === 'uploaded-image'
+            ? edificio.imageElement : buildingImageMap[edificio.label];
 
         // Si existe una imagen y está cargada, dibujarla
         if (img && img.complete && img.naturalHeight !== 0) {
@@ -2436,7 +2437,7 @@ function encontrarEdificioEnPunto(worldX, worldY) {
         }
 
         // Transformar el punto al sistema de coordenadas local del edificio
-        const angle = -(edificio.angle || 0) * Math.PI / 180;
+        const angle = (edificio.appearanceMode === 'uploaded-image' ? 1 : -1) * (edificio.angle || 0) * Math.PI / 180;
         const cos = Math.cos(angle);
         const sin = Math.sin(angle);
 

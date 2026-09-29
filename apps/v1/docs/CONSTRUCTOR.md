@@ -6,6 +6,12 @@ Pulsa **▭ Edificio** (o **Agregar Edificio**) y arrastra de una esquina a la o
 
 Los edificios de forma usan una paleta fija: café `#A0522D`, gris `#6C757D`, azul `#1F4E9E`, cielo `#46B5D1`, verde `#2E7D32` y café heredado `#8B4513`. Los colores de mapas antiguos que no pertenezcan a esta paleta se conservan hasta elegir explícitamente una muestra.
 
+## Edificios con imagen
+
+Pulsa **Edificio con imagen** y elige un PNG, JPEG o WebP de hasta 5 MB. Los archivos incompatibles, demasiado grandes o dañados se rechazan antes de crear un edificio. Tras cargar la imagen, haz clic en el mapa para colocar su centro; se crea un único edificio con proporciones originales y una dimensión máxima inicial de 120 unidades del mapa. Escape cancela la colocación pendiente.
+
+El inspector y los controles del mapa permiten mover, girar y cambiar el tamaño inmediatamente. Cambiar ancho o alto ajusta también la otra dimensión para no deformar la imagen; no hay conversión de modo ni Guardar/Cancelar. Su superficie de selección es rectangular, incluida la zona transparente de la imagen. El archivo JSON incluye los bytes de la imagen y la restaura tanto en Canvas como en Pixi, sin depender del archivo original.
+
 ## Descripción General
 
 El Constructor de Mapas es una herramienta integrada en el Simulador de Tráfico FLUVI que te permite crear, editar, guardar y cargar simulaciones personalizadas desde cero.

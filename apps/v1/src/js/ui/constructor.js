@@ -2169,6 +2169,18 @@ function normalizarDireccionesCarriles(directions, lanes) {
 }
 
 function serializarEdificio(edificio) {
+    if (edificio.appearanceMode === 'uploaded-image') {
+        // Only persistent data: never copy decoded images or renderer resources.
+        const fields = ['id', 'label', 'x', 'y', 'width', 'height', 'angle', 'color',
+            'layer', 'interactive', 'esEstacionamiento', 'capacidadMaxima', 'vehiculosActuales',
+            'conexiones', 'probabilidadesEntrada', 'probabilidadesSalida',
+            'imageData', 'imageNaturalWidth', 'imageNaturalHeight'];
+        const saved = { appearanceMode: 'uploaded-image' };
+        fields.forEach(field => {
+            if (edificio[field] !== undefined) saved[field] = edificio[field];
+        });
+        return saved;
+    }
     if (edificio.geometryType !== 'polygon') return edificio;
 
     return {
@@ -2181,8 +2193,54 @@ function serializarEdificio(edificio) {
     };
 }
 
-function restaurarEdificios(edificios) {
-    return edificios.map(edificio => {
+async function decodificarImagenEdificio(imageData) {
+    const match = typeof imageData === 'string' &&
+        /^data:image\/(png|jpeg|webp);base64,([A-Za-z0-9+/]+={0,2})$/i.exec(imageData);
+    if (!match || match[2].length % 4 !== 0) throw new Error('Formato de imagen no admitido');
+    const size = match[2].length / 4 * 3 - (match[2].endsWith('==') ? 2 : match[2].endsWith('=') ? 1 : 0);
+    if (size > window.buildingImageCodec.maxBytes) throw new Error('La imagen no puede superar 5 MB');
+    const header = atob(match[2].slice(0, 16));
+    const signatures = {
+        png: header.startsWith('\x89PNG\r\n\x1a\n'),
+        jpeg: header.startsWith('\xff\xd8\xff'),
+        webp: header.startsWith('RIFF') && header.slice(8, 12) === 'WEBP',
+    };
+    if (!signatures[match[1].toLowerCase()]) throw new Error('El contenido no es PNG, JPEG o WebP válido');
+    const image = new Image();
+    await new Promise((resolve, reject) => {
+        image.onload = resolve;
+        image.onerror = () => reject(new Error('No se pudo decodificar la imagen'));
+        image.src = imageData;
+    });
+    if (!image.naturalWidth || !image.naturalHeight) throw new Error('Imagen vacía');
+    return image;
+}
+
+window.buildingImageCodec = { maxBytes: 5 * 1024 * 1024, decode: decodificarImagenEdificio };
+
+function validarImagenEdificioGuardada(saved) {
+    if (![saved.x, saved.y, saved.width, saved.height, saved.angle ?? 0].every(Number.isFinite) ||
+        saved.width <= 0 || saved.height <= 0) {
+        throw new Error('Dimensiones de imagen inválidas');
+    }
+}
+
+async function restaurarImagenEdificio(edificio) {
+    try {
+        const saved = serializarEdificio(edificio);
+        validarImagenEdificioGuardada(saved);
+        const image = await window.buildingImageCodec.decode(saved.imageData);
+        return { ...saved, imageElement: image,
+            imageNaturalWidth: image.naturalWidth, imageNaturalHeight: image.naturalHeight };
+    } catch (error) {
+        console.warn(`Edificio con imagen omitido: ${edificio.label || 'sin nombre'}`, error);
+        return null;
+    }
+}
+
+async function restaurarEdificios(edificios) {
+    const restored = await Promise.all(edificios.map(async edificio => {
+        if (edificio?.appearanceMode === 'uploaded-image') return restaurarImagenEdificio(edificio);
         if (edificio?.geometryType !== 'polygon') return edificio;
 
         return {
@@ -2193,7 +2251,8 @@ function restaurarEdificios(edificios) {
                 : [],
             appearanceMode: 'polygon'
         };
-    });
+    }));
+    return restored.filter(edificio => edificio !== null);
 }
 
 function guardarSimulacion() {
@@ -2318,6 +2377,10 @@ function cargarSimulacion(event) {
                 await window.setReferenceImage(datosSimulacion.imagenReferencia);
                 if (loadVersion !== simulationVersion) return;
             }
+            const edificiosRestaurados = Array.isArray(datosSimulacion.edificios)
+                ? await restaurarEdificios(datosSimulacion.edificios) : [];
+            // Image decoding must never install an older map after New/Load.
+            if (loadVersion !== simulationVersion) return;
 
             // Cargar calles (silenciosamente, sin alertas individuales)
             let callesExitosas = 0;
@@ -2393,7 +2456,7 @@ function cargarSimulacion(event) {
 
             // Cargar edificios si existen
             if (datosSimulacion.edificios && Array.isArray(datosSimulacion.edificios)) {
-                window.edificios = restaurarEdificios(datosSimulacion.edificios);
+                window.edificios = edificiosRestaurados;
 
                 // IMPORTANTE: Actualizar selector de edificios después de cargar
                 actualizarSelectorEdificios();
@@ -2526,6 +2589,8 @@ function cargarSimulacion(event) {
                 mensaje += ` (${callesFallidas} fallidas)`;
             }
             mensaje += `\n  • Edificios: ${window.edificios ? window.edificios.length : 0} cargados\n`;
+            const edificiosOmitidos = (datosSimulacion.edificios?.length || 0) - edificiosRestaurados.length;
+            if (edificiosOmitidos > 0) mensaje += `    (${edificiosOmitidos} omitidos por imagen o dimensiones inválidas)\n`;
             mensaje += `  • Conexiones: ${datosSimulacion.conexiones ? datosSimulacion.conexiones.length : 0} configuradas`;
 
             alert(mensaje);
@@ -2567,6 +2632,7 @@ function nuevaSimulacion() {
 
 function limpiarSimulacionActual() {
     simulationVersion++;
+    window.drawBuildingTool?.deactivate();
     window.streetEditPause?.();
     referenceImageRequest++;
     window.referenceImage = null;

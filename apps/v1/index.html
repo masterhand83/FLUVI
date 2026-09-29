@@ -2345,6 +2345,10 @@
           <button type="button" id="drawRoundaboutButton" class="btn btn-outline-primary btn-sm" aria-pressed="false" data-bs-toggle="tooltip" data-bs-title="Arrastra del centro al radio interior">↻ Glorieta</button>
           <button type="button" id="drawBuildingButton" class="btn btn-outline-success btn-sm" aria-pressed="false" data-bs-toggle="tooltip" data-bs-title="Arrastra dos esquinas para crear un edificio rectangular">▭ Edificio</button>
           <button type="button" id="drawPolygonBuildingButton" class="btn btn-outline-success btn-sm" aria-pressed="false" data-bs-toggle="tooltip" data-bs-title="Coloca vértices en el mapa; cierra el polígono para terminar">⬠ Polígono</button>
+          <button type="button" id="uploadBuildingImageButton" class="btn btn-outline-success btn-sm" aria-pressed="false">🖼️ Edificio con imagen</button>
+          <input id="buildingImageInput" type="file" accept="image/png,image/jpeg,image/webp" hidden>
+          <small id="buildingImageStatus" role="status" aria-live="polite">PNG, JPEG o WebP, hasta 5 MB. Después, haz clic en el centro del edificio.</small>
+          <button type="button" id="buildingImageCancel" class="btn btn-outline-secondary btn-sm" hidden>Cancelar imagen</button>
           <label class="building-proportion-lock small"><input id="buildingProportionLock" type="checkbox"> Cuadrado</label>
           <div class="create-link-anchor">
             <button type="button" id="createLinkButton" class="btn btn-outline-primary btn-sm">🔗 Crear enlace</button>

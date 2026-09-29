@@ -67,11 +67,24 @@ class EdificioRenderer {
 
         let sprite;
 
+        if (edificio.appearanceMode === 'uploaded-image' && edificio.imageElement?.naturalWidth) {
+            // Private texture, not a shared AssetLoader/cache resource. Release it
+            // when this scene-owned sprite is destroyed (including map reset).
+            const texture = new PIXI.Texture(new PIXI.BaseTexture(edificio.imageElement));
+            sprite = new PIXI.Sprite(texture);
+            sprite.on('destroyed', () => texture.destroy(true));
+            sprite._uploadedImage = edificio.imageElement;
+            sprite.width = edificio.width;
+            sprite.height = edificio.height;
+            sprite.anchor.set(0.5);
+            sprite.hitArea = new PIXI.Rectangle(-texture.width / 2, -texture.height / 2, texture.width, texture.height);
+        }
+
         // Intentar usar imagen del edificio basada en label (case-insensitive)
         // Buscar tanto en edificio.imagen como edificio.label
         const imagenKey = edificio.imagen || edificio.label;
 
-        if (!isPolygon && imagenKey) {
+        if (!sprite && !isPolygon && edificio.appearanceMode !== 'uploaded-image' && imagenKey) {
             const imagenLower = imagenKey.toLowerCase();
             if (this.assets.hasTexture(imagenLower)) {
                 const texture = this.assets.getTexture(imagenLower);
@@ -148,14 +161,15 @@ class EdificioRenderer {
         sprite.y = isPolygon ? 0 : edificio.y;
 
         if (!isPolygon && edificio.angle) {
-            sprite.rotation = CoordinateConverter.degreesToRadians(edificio.angle);
+            sprite.rotation = edificio.appearanceMode === 'uploaded-image'
+                ? edificio.angle * Math.PI / 180 : CoordinateConverter.degreesToRadians(edificio.angle);
         }
 
         // 📱 OPTIMIZACIÓN MÓVIL: Lazy loading (culling de viewport)
         if (this.viewportCullingEnabled) {
             sprite.visible = isPolygon
                 ? this.isPolygonInViewport(edificio.vertices)
-                : this.isInViewport(edificio.x, edificio.y, edificio.width || 100, edificio.height || 100);
+                : this.isInViewport(edificio.x, edificio.y, edificio.width || 100, edificio.height || 100, edificio.angle || 0);
         } else {
             sprite.visible = true;
         }
@@ -202,6 +216,15 @@ class EdificioRenderer {
         const sprite = this.scene.edificioSprites.get(edificio);
         if (!sprite) return;
 
+        if (edificio.appearanceMode === 'uploaded-image' && edificio.imageElement?.naturalWidth) {
+            if (sprite._uploadedImage !== edificio.imageElement) {
+                this.removeEdificioSprite(edificio);
+                return this.renderEdificio(edificio);
+            }
+            // Labels/outlines must not affect image sizing or its rectangular hit area.
+            sprite.scale.set(edificio.width / sprite.texture.width, edificio.height / sprite.texture.height);
+        }
+
         const isPolygon = edificio.geometryType === 'polygon';
         if (isPolygon) {
             const validation = window.edificioPolygonGeometry?.validate(edificio.vertices);
@@ -237,14 +260,15 @@ class EdificioRenderer {
         }
 
         if (!isPolygon && edificio.angle !== undefined) {
-            sprite.rotation = CoordinateConverter.degreesToRadians(edificio.angle);
+            sprite.rotation = edificio.appearanceMode === 'uploaded-image'
+                ? edificio.angle * Math.PI / 180 : CoordinateConverter.degreesToRadians(edificio.angle);
         }
 
         // 📱 OPTIMIZACIÓN MÓVIL: Lazy loading (culling de viewport)
         if (this.viewportCullingEnabled) {
             sprite.visible = isPolygon
                 ? this.isPolygonInViewport(edificio.vertices)
-                : this.isInViewport(edificio.x, edificio.y, edificio.width || 100, edificio.height || 100);
+                : this.isInViewport(edificio.x, edificio.y, edificio.width || 100, edificio.height || 100, edificio.angle || 0);
         } else {
             sprite.visible = true;
         }
@@ -622,12 +646,14 @@ class EdificioRenderer {
         return { left, top, right, bottom };
     }
 
-    isInViewport(worldX, worldY, width = 0, height = 0) {
+    isInViewport(worldX, worldY, width = 0, height = 0, angle = 0) {
         const bounds = this.getViewportBounds();
 
         // Calcular los límites del edificio (considerando su tamaño)
-        const halfWidth = width / 2;
-        const halfHeight = height / 2;
+        const radians = angle * Math.PI / 180;
+        const cos = Math.abs(Math.cos(radians)), sin = Math.abs(Math.sin(radians));
+        const halfWidth = (width * cos + height * sin) / 2;
+        const halfHeight = (width * sin + height * cos) / 2;
 
         const edificioLeft = worldX - halfWidth;
         const edificioRight = worldX + halfWidth;
