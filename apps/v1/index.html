@@ -2273,14 +2273,16 @@
           <button type="button" id="streetInspectorClose" class="btn-close" aria-label="Cerrar"></button>
         </div>
         <dl class="street-inspector-details">
-          <div><dt>X</dt><dd><input id="streetInspectorX" type="number" step="any"></dd></div>
-          <div><dt>Y</dt><dd><input id="streetInspectorY" type="number" step="any"></dd></div>
+          <div><dt id="streetInspectorXLabel">X</dt><dd><input id="streetInspectorX" type="number" step="any"></dd></div>
+          <div><dt id="streetInspectorYLabel">Y</dt><dd><input id="streetInspectorY" type="number" step="any"></dd></div>
+          <div id="streetInspectorRadiusRow" hidden><dt>Radio interior</dt><dd><input id="streetInspectorRadius" type="number" min="0" step="any"></dd></div>
           <div id="streetInspectorEndXRow" hidden><dt>Fin X</dt><dd><input id="streetInspectorEndX" type="number" step="any"></dd></div>
           <div id="streetInspectorEndYRow" hidden><dt>Fin Y</dt><dd><input id="streetInspectorEndY" type="number" step="any"></dd></div>
-          <div><dt>Ángulo (°)</dt><dd><input id="streetInspectorAngle" type="number" step="any"></dd></div>
+          <div id="streetInspectorAngleRow"><dt>Ángulo (°)</dt><dd><input id="streetInspectorAngle" type="number" step="any"></dd></div>
           <div><dt>Celdas</dt><dd><input id="streetInspectorCells" type="number" min="1" max="2500" step="1"></dd></div>
           <div><dt>Carriles</dt><dd><input id="streetInspectorLanes" type="number" min="1" max="10" step="1"></dd></div>
-          <div><dt>Tipo</dt><dd><select id="streetInspectorType"><option value="generador">Generador</option><option value="conexion">Conexión</option><option value="devorador">Devorador</option></select></dd></div>
+          <div><dt>Sentido por carril</dt><dd id="streetInspectorLaneDirections" role="group" aria-label="Sentido por carril"></dd></div>
+          <div id="streetInspectorTypeRow"><dt>Tipo</dt><dd><select id="streetInspectorType"><option value="generador">Generador</option><option value="conexion">Conexión</option><option value="devorador">Devorador</option></select></dd></div>
           <div id="streetInspectorGenerationRow"><dt>Generación (%)</dt><dd><input id="streetInspectorGeneration" type="number" min="0" max="100" step="any"></dd></div>
           <div><dt>Cambio de carril (%)</dt><dd><input id="streetInspectorLaneChange" type="number" min="0" max="100" step="any"></dd></div>
           <div id="streetInspectorBezierControls" class="street-inspector-controls" hidden></div>
@@ -2296,6 +2298,7 @@
           <span id="streetInspectorSelectedPointLabel">Control seleccionado</span>
           <button type="button" id="streetInspectorDeleteControl" class="btn btn-sm btn-outline-danger">Eliminar control</button>
         </div>
+        <button type="button" id="streetInspectorDeleteStreet" class="btn btn-sm btn-outline-danger mt-2">Eliminar calle</button>
         <div id="streetInspectorError" class="street-inspector-error" role="alert" aria-live="assertive"></div>
       </aside>
 
@@ -2335,11 +2338,12 @@
           <div class="btn-group">
             <button type="button" id="btnConexiones" class="btn btn-info btn-sm" data-bs-toggle="tooltip" data-bs-title="Mostrar/ocultar las conexiones entre calles en el canvas">🔗</button>
             <button type="button" id="btnVertices" class="btn btn-info btn-sm" data-bs-toggle="tooltip" data-bs-title="Mostrar/ocultar los vértices de las calles para edición">📍</button>
-            <button type="button" id="btnEtiquetas" class="btn btn-info btn-sm" data-bs-toggle="tooltip" data-bs-title="Mostrar/ocultar las etiquetas con nombres de calles y edificios">🏷️</button>
-            <button type="button" id="btnContadores" class="btn btn-info btn-sm" data-bs-toggle="tooltip" data-bs-title="Mostrar/ocultar contadores de ocupación de estacionamientos">🔢</button>
+             <button type="button" id="btnEtiquetas" class="btn btn-info btn-sm" data-bs-toggle="tooltip" data-bs-title="Mostrar/ocultar las etiquetas con nombres de calles y edificios">🏷️</button>
+             <button type="button" id="btnContadores" class="btn btn-info btn-sm" data-bs-toggle="tooltip" data-bs-title="Mostrar/ocultar contadores de ocupación de estacionamientos">🔢</button>
           </div>
 
           <button type="button" id="drawStreetButton" class="btn btn-outline-primary btn-sm" data-bs-toggle="tooltip" data-bs-title="Dibujar una calle">✏️ Calle</button>
+          <button type="button" id="drawRoundaboutButton" class="btn btn-outline-primary btn-sm" aria-pressed="false" data-bs-toggle="tooltip" data-bs-title="Arrastra del centro al radio interior">↻ Glorieta</button>
           <button type="button" id="drawBuildingButton" class="btn btn-outline-success btn-sm" aria-pressed="false" data-bs-toggle="tooltip" data-bs-title="Arrastra dos esquinas para crear un edificio rectangular">▭ Edificio</button>
           <label class="building-proportion-lock small"><input id="buildingProportionLock" type="checkbox"> Cuadrado</label>
           <div class="create-link-anchor">
@@ -2422,6 +2426,7 @@
   <script src="src/js/ui/streetListUI.js"></script>
   <script src="src/js/ui/HeatmapModal.js"></script>
   <script src="src/js/core/bezierStreet.js"></script>
+  <script src="src/js/core/roundaboutStreet.js"></script>
   <script src="src/js/core/curvas.js"></script>
   <script src="src/js/core/cellGeometryIndex.js"></script>
   <script src="src/js/ui/etiquetas.js"></script>
@@ -2437,6 +2442,7 @@
   <script src="src/js/ui/edificioUI.js"></script>
   <script src="src/js/ui/constructor.js"></script>
   <script src="src/js/ui/drawStreet.js"></script>
+  <script src="src/js/ui/drawRoundabout.js"></script>
   <script src="src/js/ui/buildingInspector.js"></script>
   <script src="src/js/ui/streetInspector.js"></script>
   <script src="src/js/ui/editStreetGeometry.js"></script>

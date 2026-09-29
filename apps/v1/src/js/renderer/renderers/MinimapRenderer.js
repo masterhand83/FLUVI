@@ -74,6 +74,20 @@ class MinimapRenderer {
             const graphics = new PIXI.Graphics();
             graphics.beginFill(0x000000); // Negro para las calles
 
+            if (window.roundaboutStreet?.isRoundabout(calle)) {
+                const inner = calle.innerRadius * minimapaEscala;
+                graphics.drawCircle(0, 0, inner + calle.carriles * celda_tamano * minimapaEscala);
+                graphics.beginHole();
+                graphics.drawCircle(0, 0, inner);
+                graphics.endHole();
+                graphics.endFill();
+                graphics.x = calle.x * minimapaEscala;
+                graphics.y = calle.y * minimapaEscala;
+                this.container.addChild(graphics);
+                this.calleSprites.push(graphics);
+                return;
+            }
+
             const width = calle.tamano * celda_tamano * minimapaEscala;
             const height = calle.carriles * celda_tamano * minimapaEscala;
 

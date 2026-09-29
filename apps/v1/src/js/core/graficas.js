@@ -375,6 +375,7 @@ function calculateMetrics() {
 
         for (let c = 0; c < calle.carriles; c++) {
             totalCells += calle.tamano;
+            const direction = window.getLaneDirection?.(calle, c) ?? 1;
 
             for (let i = 0; i < calle.tamano; i++) {
                 const cellValue = calle.arreglo[c][i];
@@ -386,7 +387,7 @@ function calculateMetrics() {
                 // Contar vehículos
                 if (cellValue > 0) {
                     totalCars++;
-                    const nextIndex = (i + 1) % calle.tamano;
+                    const nextIndex = (i + direction + calle.tamano) % calle.tamano;
                     if (calle.arreglo[c][nextIndex] === 0) {
                         carsInMotion++;
                     }
@@ -397,9 +398,9 @@ function calculateMetrics() {
                 // Solo si hay estado anterior disponible
                 if (shouldCalculateEntropy && previousStreetStates.size > 0) {
                     // Obtener estado anterior de las 3 celdas del vecindario (en binario: 0 o 1)
-                    const leftKey = `${calleIdx}-${c}-${i === 0 ? calle.tamano - 1 : i - 1}`;
+                    const leftKey = `${calleIdx}-${c}-${(i - direction + calle.tamano) % calle.tamano}`;
                     const centerKey = `${calleIdx}-${c}-${i}`;
-                    const rightKey = `${calleIdx}-${c}-${(i + 1) % calle.tamano}`;
+                    const rightKey = `${calleIdx}-${c}-${(i + direction + calle.tamano) % calle.tamano}`;
 
                     // Convertir a estado binario: 0 = sin carro, 1 = con carro
                     const leftState = (previousStreetStates.get(leftKey) ?? 0) > 0 ? 1 : 0;

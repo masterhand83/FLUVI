@@ -275,7 +275,7 @@ class EdificioRenderer {
 
     addSelectionBorder(sprite, edificio) {
         const graphics = new PIXI.Graphics();
-        graphics.lineStyle(6, 0xFFD700); // 4px de grosor (era 3px)
+        graphics.lineStyle(2, 0xFFD700);
 
         // Usar las dimensiones REALES del sprite, no las del objeto edificio
         // porque el sprite puede haber sido redimensionado

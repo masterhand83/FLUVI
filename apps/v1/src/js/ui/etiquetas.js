@@ -32,6 +32,10 @@ function obtenerColorTextoSegunFondo() {
 // Función para calcular una posición específica en una calle
 // posicion: valor entre 0 y 1, donde 0.5 es el centro
 function calcularPosicionEnCalle(calle, posicion = 0.5) {
+    if (window.roundaboutStreet?.isRoundabout(calle)) {
+        const indice = Math.max(0, Math.min(calle.tamano - 1, Math.floor(calle.tamano * posicion)));
+        return window.roundaboutStreet.coordinates(calle, calle.carriles - 1, indice);
+    }
     if (calle.esCurva && calle.vertices && calle.vertices.length >= 2) {
         // Para calles curvas, usar el punto según posición
         const indice = Math.floor(calle.tamano * posicion);
@@ -116,7 +120,12 @@ function dibujarEtiquetasCalles() {
 
         // Dibujar etiqueta en cada posición
         posiciones.forEach(posicion => {
-            if (calle.esCurva && calle.vertices && calle.vertices.length >= 2) {
+            if (window.roundaboutStreet?.isRoundabout(calle)) {
+                const point = calcularPosicionEnCalle(calle, posicion);
+                const dx = point.x - calle.x, dy = point.y - calle.y;
+                const radius = Math.hypot(dx, dy) || 1;
+                dibujarEtiquetaRoundabout(calle, colorTexto, tamanoFuente, point.x + dx / radius * 12, point.y + dy / radius * 12);
+            } else if (calle.esCurva && calle.vertices && calle.vertices.length >= 2) {
                 // Para calles curvas: dibujar texto siguiendo la curva
                 dibujarEtiquetaSiguiendoCurva(calle, colorTexto, tamanoFuente, posicion);
             } else {
@@ -127,6 +136,16 @@ function dibujarEtiquetasCalles() {
     });
 
     ctx.restore();
+}
+
+function dibujarEtiquetaRoundabout(calle, colorTexto, tamanoFuente, x, y) {
+    const medida = ctx.measureText(calle.nombre).width;
+    ctx.globalAlpha = 0.7;
+    ctx.fillStyle = colorTexto === '#FFFFFF' ? '#000000' : '#FFFFFF';
+    ctx.fillRect(x - medida / 2 - 4, y - tamanoFuente / 2 - 2, medida + 8, tamanoFuente + 4);
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = colorTexto;
+    ctx.fillText(calle.nombre, x, y);
 }
 
 // Función para dibujar etiqueta en calle recta

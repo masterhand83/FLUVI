@@ -25,7 +25,9 @@ class CalleRenderer {
 
         calles.forEach(calle => {
             try {
-                if (calle.esCurva) {
+                if (this.isRoundabout(calle)) {
+                    this.renderRoundabout(calle);
+                } else if (calle.esCurva) {
                     this.renderCalleCurva(calle);
                 } else {
                     this.renderCalleRecta(calle);
@@ -84,6 +86,7 @@ class CalleRenderer {
         tilingSprite.cursor = 'pointer';
 
         container.addChild(tilingSprite);
+        this.updateLaneDirectionArrows(container, calle);
 
         // Agregar borde de selección si es la calle seleccionada
         if (window.calleSeleccionada === calle) {
@@ -102,6 +105,77 @@ class CalleRenderer {
         container.on('pointerout', () => this.onCalleOut(calle, container));
 
         return container;
+    }
+
+    isRoundabout(calle) {
+        return window.roundaboutStreet?.isRoundabout(calle) ?? calle.geometryType === 'roundabout';
+    }
+
+    roundaboutRadii(calle) {
+        const inner = calle.innerRadius;
+        return { inner, outer: inner + calle.carriles * this.celda_tamano };
+    }
+
+    drawRoundaboutRing(graphics, calle, color, alpha = 1) {
+        const { inner, outer } = this.roundaboutRadii(calle);
+        graphics.beginFill(color, alpha);
+        graphics.drawCircle(0, 0, outer);
+        graphics.beginHole();
+        graphics.drawCircle(0, 0, inner);
+        graphics.endHole();
+        graphics.endFill();
+    }
+
+    renderRoundabout(calle) {
+        const signature = [calle.x, calle.y, calle.innerRadius, calle.carriles, calle.tamano, calle.startAngle, this.celda_tamano].join(':');
+        const existing = this.scene.calleSprites.get(calle);
+        if (existing?._geometryKind === 'roundabout' && existing._geometrySignature === signature) return existing;
+        if (this.scene.calleSprites.has(calle)) this.removeCalleSprite(calle);
+        const container = new PIXI.Container();
+        container._geometryKind = 'roundabout';
+        container._geometrySignature = signature;
+        container.x = calle.x;
+        container.y = calle.y;
+        const road = new PIXI.Graphics();
+        const { inner, outer } = this.roundaboutRadii(calle);
+        this.drawRoundaboutRing(road, calle, 0x44474a);
+        road.lineStyle(0.6, 0xf0e6bc, 0.9);
+        road.drawCircle(0, 0, inner);
+        road.drawCircle(0, 0, outer);
+        for (let lane = 1; lane < calle.carriles; lane++) {
+            road.lineStyle(0.35, 0xfafafa, 0.6);
+            road.drawCircle(0, 0, inner + lane * this.celda_tamano);
+        }
+        road.eventMode = 'static';
+        road.cursor = 'pointer';
+        // The transparent central island must not steal clicks from objects underneath it.
+        road.hitArea = {
+            contains: (x, y) => {
+                const r2 = x * x + y * y;
+                return r2 >= inner * inner && r2 <= outer * outer;
+            }
+        };
+        road.on('pointerdown', e => this.onCalleClick(calle, e));
+        road.on('pointerover', () => this.onCalleHover(calle, container));
+        road.on('pointerout', () => this.onCalleOut(calle, container));
+        container.addChild(road);
+        this.updateLaneDirectionArrows(container, calle);
+        if (window.calleSeleccionada === calle) this.addSelectionBorderRoundabout(container, calle);
+        this.scene.calleSprites.set(calle, container);
+        this.scene.getLayer('streets').addChild(container);
+        this.updateMetricsOverlay(calle);
+        return container;
+    }
+
+    addSelectionBorderRoundabout(container, calle) {
+        const border = new PIXI.Graphics();
+        border.name = 'selectionBorder';
+        border.eventMode = 'none';
+        border.lineStyle(1, window.modoSeleccion === 'constructor' ? 0xFFA500 : 0xFFD700);
+        const { inner, outer } = this.roundaboutRadii(calle);
+        border.drawCircle(0, 0, inner);
+        border.drawCircle(0, 0, outer);
+        container.addChild(border);
     }
 
     renderCalleCurva(calle) {
@@ -147,6 +221,8 @@ class CalleRenderer {
                 container.addChild(sprite);
             }
         }
+
+        this.updateLaneDirectionArrows(container, calle);
 
         // Agregar overlay de contorno si modo selección está activo
         if (window.esModoSeleccionCallesActivo && window.esModoSeleccionCallesActivo()) {
@@ -225,6 +301,61 @@ class CalleRenderer {
         };
     }
 
+    // A few noninteractive cues per lane; showing both directions on mixed roads
+    // makes the forward lanes unambiguous without covering every cell.
+    updateLaneDirectionArrows(container, calle) {
+        const previous = container.getChildByName('laneDirectionArrows');
+        if (previous) {
+            container.removeChild(previous);
+            previous.destroy();
+        }
+        if (!calle.tamano || !calle.carriles || (!this.isRoundabout(calle) && !Array.from({ length: calle.carriles }, (_, lane) =>
+            window.getLaneDirection ? window.getLaneDirection(calle, lane) : (calle.laneDirections?.[lane] === -1 ? -1 : 1)
+        ).includes(-1))) return;
+
+        const arrows = new PIXI.Graphics();
+        arrows.name = 'laneDirectionArrows';
+        arrows.eventMode = 'none';
+        arrows.lineStyle(0.4, 0xffffff, 0.75);
+        const spacing = 8;
+        for (let lane = 0; lane < calle.carriles; lane++) {
+            const direction = window.getLaneDirection ? window.getLaneDirection(calle, lane) : (calle.laneDirections?.[lane] === -1 ? -1 : 1);
+            for (let index = Math.min(Math.floor(calle.tamano / 2), 3); index < calle.tamano; index += spacing) {
+                let x, y, angle;
+                if (this.isRoundabout(calle)) {
+                    const coords = window.roundaboutStreet?.coordinates(calle, lane, index);
+                    if (!coords) continue;
+                    x = coords.x - calle.x;
+                    y = coords.y - calle.y;
+                    angle = CoordinateConverter.degreesToRadians(coords.angulo);
+                } else if (calle.esCurva) {
+                    const coords = window.obtenerCoordenadasGlobalesCeldaConCurva
+                        ? window.obtenerCoordenadasGlobalesCeldaConCurva(calle, lane, index)
+                        : this.obtenerCoordenadasBasicas(calle, lane, index);
+                    x = coords.x;
+                    y = coords.y;
+                    angle = CoordinateConverter.degreesToRadians(coords.angulo ?? calle.angulo);
+                } else {
+                    x = (index + 0.5) * this.celda_tamano;
+                    y = (lane + 0.5) * this.celda_tamano;
+                    angle = 0; // The straight container already has the street rotation.
+                }
+                const cos = Math.cos(angle);
+                const sin = Math.sin(angle);
+                // Keep the cue off the yellow center stripe in the road texture.
+                const point = (forward, lateral) => [x + forward * cos - (lateral - 1.1) * sin, y + forward * sin + (lateral - 1.1) * cos];
+                const line = (from, to) => {
+                    arrows.moveTo(...point(...from));
+                    arrows.lineTo(...point(...to));
+                };
+                line([-direction * 1.3, 0], [direction * 1.3, 0]);
+                line([direction * 0.35, -0.9], [direction * 1.3, 0]);
+                line([direction * 0.35, 0.9], [direction * 1.3, 0]);
+            }
+        }
+        container.addChild(arrows);
+    }
+
     updateCalleSprite(calle) {
         const container = this.scene.calleSprites.get(calle);
         if (!container) return;
@@ -237,6 +368,8 @@ class CalleRenderer {
             road.width = calle.tamano * this.celda_tamano;
             road.height = calle.carriles * this.celda_tamano;
         }
+
+        this.updateLaneDirectionArrows(container, calle);
 
         // Actualizar borde de selección
         this.updateSelectionBorder(container, calle);
@@ -362,7 +495,8 @@ class CalleRenderer {
                 overlay.beginFill(0xff0000, 0.25); // Relleno rojo semi-transparente
             }
 
-            overlay.drawRect(0, 0, calle.tamano * this.celda_tamano, calle.carriles * this.celda_tamano);
+            if (this.isRoundabout(calle)) this.drawRoundaboutRing(overlay, calle, estaIncluida ? 0x00ff00 : 0xff0000, estaIncluida ? 0.15 : 0.25);
+            else overlay.drawRect(0, 0, calle.tamano * this.celda_tamano, calle.carriles * this.celda_tamano);
             overlay.endFill();
 
             // Agregar como último hijo para que esté encima de todo
@@ -387,7 +521,9 @@ class CalleRenderer {
         let curvasActualizadas = 0;
 
         window.calles.forEach((calle, idx) => {
-            if (calle.esCurva) {
+            if (this.isRoundabout(calle)) {
+                this.updateMetricsOverlay(calle);
+            } else if (calle.esCurva) {
                 // Para calles curvas, reconstruir completamente
                 console.log(`  Reconstruyendo calle curva [${idx}]:`, calle.nombre);
                 this.removeCalleSprite(calle);
@@ -584,7 +720,9 @@ class CalleRenderer {
                 }
 
                 // Agregar el nuevo borde
-                if (calle.esCurva) {
+                if (this.isRoundabout(calle)) {
+                    this.addSelectionBorderRoundabout(currentContainer, calle);
+                } else if (calle.esCurva) {
                     this.addSelectionBorderCurva(currentContainer, calle);
                 } else {
                     this.addSelectionBorder(currentContainer, calle);

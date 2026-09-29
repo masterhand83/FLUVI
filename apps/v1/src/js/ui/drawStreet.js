@@ -144,6 +144,7 @@
 
     function activate() {
         if (active) return;
+        window.drawRoundaboutTool?.deactivate();
         view = document.getElementById('simuladorCanvas');
         if (!view) return;
         window.streetEditPause?.();

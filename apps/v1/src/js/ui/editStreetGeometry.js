@@ -4,6 +4,7 @@
 	if (!canvas) return;
 	const editor = { gesture: null, handles: [], suppressCanvasClick: false };
 	const cellSize = () => Number(window.celda_tamano) || 5;
+	const isRoundabout = (s) => window.roundaboutStreet?.isRoundabout?.(s) ?? s?.geometryType === 'roundabout';
 	const selected = () => {
 		const s = window.calleSeleccionada;
 		return s && window.calles?.includes(s) && (!s.esCurva || isBezier(s))
@@ -13,6 +14,7 @@
 	const isBezier = (s) =>
 		Boolean(
 			s &&
+				!isRoundabout(s) &&
 				(s.bezierGeometry === true ||
 					!(s.esCurva && Array.isArray(s.vertices) && s.vertices.length > 0)) &&
 				Array.isArray(s.bezierControls) &&
@@ -21,7 +23,7 @@
 		);
 	const clone = (s) => ({
 		...s,
-		bezierControls: (s.bezierControls || []).map((p) => ({ ...p })),
+		...(Array.isArray(s.bezierControls) && { bezierControls: s.bezierControls.map((p) => ({ ...p })) }),
 		...(s.bezierSegments && {
 			bezierSegments: s.bezierSegments.map((segment) => ({
 				controls: segment.controls.map((p) => ({ ...p })),
@@ -88,7 +90,8 @@
 	function render(s) {
 		if (window.USE_PIXI) {
 			const r = window.pixiApp?.sceneManager?.calleRenderer;
-			if (s.esCurva) r?.renderCalleCurva?.(s);
+			if (isRoundabout(s)) r?.renderRoundabout?.(s);
+			else if (s.esCurva) r?.renderCalleCurva?.(s);
 			else r?.renderCalleRecta?.(s);
 			window.pixiApp?.sceneManager?.refreshEtiquetas?.();
 		} else window.renderizarCanvas?.();
@@ -114,7 +117,7 @@
 		const s = selected();
 		const items =
 			s && !window.drawStreetTool?.isActive?.()
-				? [
+				? isRoundabout(s) ? [{ kind: 'radius', p: { x: s.x + s.innerRadius, y: s.y } }] : [
 						...endpoints(s).map((p, i) => ({ kind: i ? "end" : "start", p })),
 						...(isBezier(s) ? handlesFor(s) : []),
 					]
@@ -140,7 +143,7 @@
 					"aria-label",
 					item.kind.startsWith("anchor:") ? `Mover ancla ${Number(item.kind.split(":")[1]) + 1}` : item.kind.startsWith("control:")
 						? `Mover control ${Number(item.kind.split(":")[2]) + 1}`
-						: `Mover ${item.kind === "start" ? "inicio" : "fin"} de calle`,
+						: item.kind === 'radius' ? 'Cambiar radio interior de glorieta' : `Mover ${item.kind === "start" ? "inicio" : "fin"} de calle`,
 				);
 				if (h.parentElement !== canvas.parentElement)
 					canvas.parentElement.append(h);
@@ -151,6 +154,11 @@
 	const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Hit testing checks endpoint, control, then shape priority.
 	function hit(p, s) {
+		if (isRoundabout(s)) {
+			if (dist(p, { x: s.x + s.innerRadius, y: s.y }) < 14 / (Number(window.escala) || 1)) return 'radius';
+			const d = dist(p, s);
+			return d >= s.innerRadius - 8 / (Number(window.escala) || 1) && d <= s.innerRadius + s.carriles * cellSize() + 8 / (Number(window.escala) || 1) ? 'body' : null;
+		}
 		const ends = endpoints(s),
 			r = 14 / (Number(window.escala) || 1);
 		if (dist(p, ends[0]) < r) return "start";
@@ -192,7 +200,7 @@
 		return null;
 	}
 	function validate(s) {
-		const result = isBezier(s) ? window.streetBezier?.validate?.(s) : null;
+		const result = isRoundabout(s) ? window.roundaboutStreet?.validate?.(s) : isBezier(s) ? window.streetBezier?.validate?.(s) : null;
 		return (
 			result || {
 				valid:
@@ -248,6 +256,7 @@
 			for (const key of [
 				"x",
 				"y",
+				"innerRadius",
 				"angulo",
 				"tamano",
 				"endX",
@@ -256,6 +265,7 @@
 				"bezierSegments",
 			])
 				if (key in g.proposed) g.street[key] = g.proposed[key];
+			window.cellGeometryIndex?.invalidate?.(g.street);
 			window.streetInspector?.refresh?.();
 		}
 		render(g.street);
@@ -295,6 +305,7 @@
 				window.estadoEscenarios?.modoBloqueoActivo ||
 				window.esModoSeleccionCallesActivo?.() ||
 				window.drawStreetTool?.isActive?.() ||
+				window.drawRoundaboutTool?.isActive?.() ||
 				!s
 			)
 				return;
@@ -344,7 +355,12 @@
 				g.didDrag = true;
 				window.streetEditPause?.();
 			}
-			if (g.kind === "body") {
+			if (g.kind === 'radius') {
+				s.innerRadius = Math.hypot(p.x - b.x, p.y - b.y);
+			} else if (g.kind === "body" && isRoundabout(s)) {
+				s.x = b.x + dx;
+				s.y = b.y + dy;
+			} else if (g.kind === "body") {
 				if (e.shiftKey) {
 					const center = {
 							x: (endpoints(b)[0].x + endpoints(b)[1].x) / 2,
@@ -437,9 +453,11 @@
 			}
 			const result = validate(s);
 			setInvalidPreview(!result.valid, result.reason);
-			if (result.valid) s.tamano = result.cells;
-			Object.assign(g.street, s);
-			render(g.street);
+			if (result.valid) {
+				s.tamano = result.cells;
+				Object.assign(g.street, s);
+				render(g.street);
+			}
 			e.preventDefault();
 			e.stopImmediatePropagation();
 		},

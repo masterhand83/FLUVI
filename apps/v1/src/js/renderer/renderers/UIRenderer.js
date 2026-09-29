@@ -52,7 +52,7 @@ class UIRenderer {
     createEtiquetasParaCalle(calle) {
         // CONDICIÓN: No renderizar etiquetas para calles de tipo CONEXION menores a 8 celdas
         // (Son retornos y no necesitan mostrar su nombre)
-        if (calle.tipo === 'conexion' && calle.tamano < 8) {
+        if (calle.tipo === 'conexion' && calle.tamano < 8 && !window.roundaboutStreet?.isRoundabout(calle)) {
             return; // Salir sin crear etiquetas
         }
 
@@ -79,7 +79,9 @@ class UIRenderer {
         posiciones.forEach(posicion => {
             let etiquetaContainer;
 
-            if (calle.esCurva && calle.vertices && calle.vertices.length >= 2) {
+            if (window.roundaboutStreet?.isRoundabout(calle)) {
+                etiquetaContainer = this.createEtiquetaRoundabout(calle, posicion);
+            } else if (calle.esCurva && calle.vertices && calle.vertices.length >= 2) {
                 // Para calles curvas: crear texto siguiendo la curva
                 etiquetaContainer = this.createEtiquetaCurva(calle, posicion);
             } else {
@@ -99,6 +101,10 @@ class UIRenderer {
 
     // Calcular posición en calle (0 a 1)
     calcularPosicionEnCalle(calle, posicion = 0.5) {
+        if (window.roundaboutStreet?.isRoundabout(calle)) {
+            const indice = Math.max(0, Math.min(calle.tamano - 1, Math.floor(calle.tamano * posicion)));
+            return window.roundaboutStreet.coordinates(calle, calle.carriles - 1, indice);
+        }
         if (calle.esCurva && calle.vertices && calle.vertices.length >= 2 && window.obtenerCoordenadasGlobalesCeldaConCurva) {
             const indice = Math.floor(calle.tamano * posicion);
             const indiceSeguro = Math.max(0, Math.min(calle.tamano - 1, indice));
@@ -149,6 +155,30 @@ class UIRenderer {
                 offsetY: perpY * distanciaTotal
             };
         }
+    }
+
+    // Crear etiqueta para calle recta
+    createEtiquetaRoundabout(calle, posicion) {
+        // A single readable name outside the outer edge, rather than curved
+        // glyphs that can wrap around and overlap on small roundabouts.
+        const point = this.calcularPosicionEnCalle(calle, posicion);
+        const dx = point.x - calle.x, dy = point.y - calle.y;
+        const radius = Math.hypot(dx, dy) || 1;
+        const container = new PIXI.Container();
+        container.x = point.x + dx / radius * 12;
+        container.y = point.y + dy / radius * 12;
+        const text = new PIXI.Text(calle.nombre, {
+            fontFamily: 'Arial', fontSize: 14,
+            fill: this.obtenerColorTextoSegunFondo(), align: 'center'
+        });
+        text.anchor.set(0.5);
+        text.resolution = 2;
+        const bg = new PIXI.Graphics();
+        bg.beginFill(this.obtenerColorFondoTexto(), 0.7);
+        bg.drawRect(-text.width / 2 - 4, -text.height / 2 - 2, text.width + 8, text.height + 4);
+        bg.endFill();
+        container.addChild(bg, text);
+        return container;
     }
 
     // Crear etiqueta para calle recta

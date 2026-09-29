@@ -47,6 +47,14 @@ El Constructor de Mapas es una herramienta integrada en el Simulador de Tráfico
 
 3. La calle aparecerá en el canvas inmediatamente
 
+Los carriles nuevos empiezan en sentido **Adelante**. Al seleccionar una calle en el mapa, el inspector muestra **Sentido por carril** en orden físico (1, 2, …). Pulsa la flecha de un carril para alternar entre adelante y reversa: el cambio pausa la simulación y conserva los vehículos en sus celdas actuales; pulsa Reanudar para seguir. Si aumentas carriles, los existentes conservan su sentido y los nuevos empiezan hacia adelante.
+
+### Dibujar una glorieta
+
+Pulsa **↻ Glorieta** y arrastra en el mapa desde su centro hasta el borde del **radio interior**. El centro se coloca exactamente donde presionas, incluso si hay otro objeto debajo de la isla; comprueba que la calzada no se solape con otras calles. Esc cancela; un radio inválido no crea ninguna calle. La glorieta es de tipo conexión, tiene de 1 a 10 carriles en sentido horario fijo y comienza vacía con un 2 % de probabilidad de cambio de carril. Selecciónala para editar el centro, el radio interior, el número de carriles y la probabilidad en el inspector. El número de celdas se calcula automáticamente a partir del radio y no se puede escribir directamente. En el mapa, arrastra la calzada para moverla o el control del borde derecho interior para cambiar el radio. Las conexiones no se crean automáticamente: usa **Crear enlace** para conectarla con otras calles. Los modos Calle, Glorieta y Crear enlace se excluyen mutuamente.
+
+Al cambiar el radio, vehículos, enlaces, aparcamientos y marcas de escenario se trasladan al sector de ángulo equivalente; si varios ocupan el mismo sector nuevo, no es posible conservarlos todos. Reanuda explícitamente la simulación después de editar.
+
 ### 3. Agregar Conexiones
 
 1. Asegúrate de tener al menos 2 calles creadas
@@ -72,6 +80,8 @@ El Constructor de Mapas es una herramienta integrada en el Simulador de Tráfico
 - Requiere probabilidad (0.0 a 1.0)
 - Los vehículos se transfieren según la probabilidad especificada
 
+Las conexiones nuevas usan por defecto la salida del carril origen y la entrada del carril destino; también admiten celdas interiores. Para conservar mapas antiguos, las conexiones explícitas en carriles hacia adelante pueden usar otras celdas, incluso extremos. En carriles en reversa no se permite salir por su entrada ni entrar por su salida. En el modal anterior las posiciones visibles empiezan en 1, pero el JSON guarda índices físicos desde 0: `posOrigen: -1` siempre significa la **última celda física**, no «salida». Una salida inversa en la primera celda se guarda explícitamente como `0`. Cambiar el sentido de un carril no borra conexiones existentes: **Ver Conexiones Existentes** marca las incompatibles en amarillo y permite editarlas.
+
 ### 4. Editar Calles
 
 1. Selecciona el tipo de objeto "Calle" en el accordion de Configuración
@@ -95,6 +105,8 @@ Para dar forma a una calle seleccionada, pulsa **+ Añadir control** en el inspe
 
 **El archivo JSON incluye:**
 - Todas las calles con sus parámetros
+- `laneDirections` por calle: un número por carril físico (`1` adelante, `-1` reversa). Los archivos antiguos sin este campo y los valores inválidos se cargan hacia adelante.
+- Las glorietas incluyen `geometryType: "roundabout"`, `innerRadius` y `startAngle` (grados desde el eje X). Su tamaño se recalcula al cargar y sus carriles siempre avanzan en sentido horario. Geometrías de glorieta inválidas se omiten; archivos antiguos sin marcador siguen siendo calles normales.
 - Todas las conexiones
 - Vértices de curvas heredadas o extremos y secciones Bézier con controles y anclas (si existen)
 - Edificios (si existen)
@@ -137,6 +149,7 @@ Para dar forma a una calle seleccionada, pulsa **+ Añadir control** en el inspe
       "angulo": 0,
       "probabilidadGeneracion": 0.5,
       "carriles": 3,
+      "laneDirections": [1, -1, 1],
       "probabilidadSaltoDeCarril": 0.02,
       "vertices": [],
       "esCurva": false

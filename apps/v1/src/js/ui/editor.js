@@ -380,6 +380,11 @@ class EditorCalles {
         this.btnAplicarDimensiones?.addEventListener('click', () => {
             if (!window.calleSeleccionada) return;
 
+            if (window.calleSeleccionada.geometryType === 'roundabout') {
+                alert('⚠️ Ajusta el radio interior y los carriles de la glorieta desde el inspector. El número de celdas es automático.');
+                return;
+            }
+
             const nuevoTamano = parseInt(this.inputTamanoEditar.value);
             const nuevosCarriles = parseInt(this.inputCarrilesEditar.value);
 
@@ -735,6 +740,39 @@ class EditorCalles {
     }
 
     aplicarNuevasDimensiones(calle, nuevoTamano, nuevosCarriles) {
+        // On a ring, physical cell positions describe angles, not distances from
+        // an endpoint. Keep annotations and links at their angular positions.
+        if (calle.geometryType === 'roundabout' && calle.tamano !== nuevoTamano && calle.tamano > 0) {
+            const oldSize = calle.tamano;
+            const mapIndex = i => Math.round((i + 0.5) * nuevoTamano / oldSize - 0.5 + nuevoTamano) % nuevoTamano;
+            const remap = (rows, empty) => rows.map(row => {
+                const next = Array(nuevoTamano).fill(empty);
+                row.forEach((value, i) => { if (value !== empty) next[mapIndex(i)] = value; });
+                return next;
+            });
+            calle.arreglo = remap(calle.arreglo || [], 0);
+            calle.celulasEsperando = remap(calle.celulasEsperando || [], false);
+            for (const link of (window.conexiones || [])) {
+                if (link.origen === calle && link.posOrigen >= 0) link.posOrigen = mapIndex(link.posOrigen);
+                if (link.destino === calle && link.posDestino >= 0) link.posDestino = mapIndex(link.posDestino);
+            }
+            for (const building of (window.edificios || [])) {
+                for (const connection of (building.conexiones || [])) {
+                    if ((connection.calleId === calle.id || connection.calleId === calle.nombre) && Number.isInteger(connection.indice) && connection.indice >= 0)
+                        connection.indice = mapIndex(connection.indice);
+                }
+            }
+            const marks = window.estadoEscenarios?.celdasBloqueadas;
+            if (marks instanceof Map) {
+                for (const [key, value] of [...marks]) {
+                    const [id, lane, index] = key.split(':');
+                    if ((id === String(calle.id) || id === String(calle.nombre)) && Number.isInteger(Number(index))) {
+                        marks.delete(key);
+                        marks.set(`${id}:${lane}:${mapIndex(Number(index))}`, value);
+                    }
+                }
+            }
+        }
         console.log(`📏 Redimensionando calle: ${calle.nombre}`);
         console.log(`   Anterior: ${calle.tamano}x${calle.carriles}`);
         console.log(`   Nuevo: ${nuevoTamano}x${nuevosCarriles}`);
@@ -742,9 +780,12 @@ class EditorCalles {
         // Preserve the existing lane/cell state wherever it still fits.
         const arregloAnterior = calle.arreglo || [];
         const esperandoAnterior = calle.celulasEsperando || [];
+        const direccionesAnteriores = calle.laneDirections || [];
         const verticesAnteriores = calle.vertices || [];
         calle.tamano = nuevoTamano;
         calle.carriles = nuevosCarriles;
+        calle.laneDirections = Array.from({ length: nuevosCarriles }, (_, carril) =>
+            calle.geometryType === 'roundabout' ? 1 : direccionesAnteriores[carril] === -1 ? -1 : 1);
         calle.conexionesSalida = Array.from({ length: nuevosCarriles }, (_, carril) => calle.conexionesSalida?.[carril] || []);
         calle.arreglo = Array.from({ length: nuevosCarriles }, (_, carril) =>
             Array.from({ length: nuevoTamano }, (_, celda) => arregloAnterior[carril]?.[celda] ?? 0)
@@ -865,6 +906,8 @@ class EditorCalles {
 
         // Actualizar selectores si es necesario
         this.inicializarSelectores();
+        window.streetInspector?.refresh?.();
+        document.dispatchEvent(new CustomEvent('street-lane-directions-changed', { detail: { calle } }));
 
         // Renderizar canvas
         if (window.renderizarCanvas) {

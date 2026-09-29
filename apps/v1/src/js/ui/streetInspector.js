@@ -14,8 +14,12 @@
 		type: document.getElementById("streetInspectorType"),
 		generation: document.getElementById("streetInspectorGeneration"),
 		laneChange: document.getElementById("streetInspectorLaneChange"),
+		radius: document.getElementById("streetInspectorRadius"),
 	};
+	const radiusRow = document.getElementById("streetInspectorRadiusRow");
+	const isRoundabout = (street) => window.roundaboutStreet?.isRoundabout?.(street) ?? street?.geometryType === "roundabout";
 	const generationRow = document.getElementById("streetInspectorGenerationRow");
+	const directionsHost = document.getElementById("streetInspectorLaneDirections");
 	const endXRow = document.getElementById("streetInspectorEndXRow");
 	const endYRow = document.getElementById("streetInspectorEndYRow");
 	const controlsHost = document.getElementById("streetInspectorBezierControls");
@@ -39,7 +43,7 @@
 	let selectedSegmentIndex = null;
 	let selectedAnchorIndex = null;
 	const isBezier = (street) =>
-		window.streetBezier?.isBezier?.(street) ?? Boolean(
+		!isRoundabout(street) && (window.streetBezier?.isBezier?.(street) ?? Boolean(
 			street &&
 				(street.bezierGeometry === true ||
 					!(
@@ -50,7 +54,7 @@
 				Array.isArray(street.bezierControls) &&
 				Number.isFinite(street.endX) &&
 				Number.isFinite(street.endY),
-		);
+		));
 	const sections = (street) => {
 		if (window.streetBezier?.segments) return window.streetBezier.segments(street);
 		return Array.isArray(street.bezierSegments)
@@ -86,16 +90,58 @@
 		fields.y.value = calle.y ?? "";
 		fields.endX.value = calle.endX ?? "";
 		fields.endY.value = calle.endY ?? "";
+		const roundabout = isRoundabout(calle);
+		document.getElementById('streetInspectorXLabel').textContent = roundabout ? 'Centro X' : 'X';
+		document.getElementById('streetInspectorYLabel').textContent = roundabout ? 'Centro Y' : 'Y';
+		radiusRow.hidden = !roundabout;
+		document.getElementById('streetInspectorAngleRow').hidden = roundabout;
+		document.getElementById('streetInspectorTypeRow').hidden = roundabout;
+		fields.radius.value = roundabout ? calle.innerRadius : "";
 		endXRow.hidden = endYRow.hidden = !isBezier(calle);
 		fields.angle.value = calle.angulo ?? "";
 		fields.cells.value = calle.tamano ?? calle.arreglo?.[0]?.length ?? "";
+		fields.cells.readOnly = roundabout;
+		fields.angle.readOnly = roundabout;
+		fields.type.disabled = roundabout;
 		fields.lanes.value = calle.carriles ?? calle.arreglo?.length ?? "";
+		if (directionsHost) {
+			directionsHost.replaceChildren();
+			for (let lane = 0; lane < calle.carriles; lane++) {
+				const row = document.createElement("div");
+				row.className = "d-flex align-items-center gap-2 mb-1";
+				const number = document.createElement("span");
+				number.textContent = String(lane + 1);
+				const button = document.createElement("button");
+				button.type = "button";
+				button.className = "btn btn-sm btn-outline-secondary";
+				const updateButton = () => {
+					const reversed = calle.laneDirections?.[lane] === -1;
+					button.textContent = roundabout ? "↻" : reversed ? "←" : "→";
+					button.disabled = roundabout;
+					button.setAttribute("aria-pressed", String(reversed));
+					button.setAttribute("aria-label", roundabout ? `Carril ${lane + 1}: sentido horario fijo` : `Carril ${lane + 1}: ${reversed ? "reversa" : "adelante"}. Cambiar sentido`);
+				};
+				updateButton();
+				button.addEventListener("click", () => {
+					if (selected !== calle) return;
+					window.streetEditPause?.();
+					calle.laneDirections = Array.from({ length: calle.carriles }, (_, i) =>
+						i === lane ? (calle.laneDirections?.[i] === -1 ? 1 : -1) : (calle.laneDirections?.[i] === -1 ? -1 : 1));
+					updateButton();
+					// Cars stay at their physical cells; only subsequent movement changes.
+					document.dispatchEvent(new CustomEvent("street-lane-directions-changed", { detail: { calle } }));
+					refresh();
+				});
+				row.append(number, button);
+				directionsHost.append(row);
+			}
+		}
 		fields.type.value = calle.tipo || "conexion";
 		fields.generation.value = Number(calle.probabilidadGeneracion || 0) * 100;
 		fields.laneChange.value =
 			Number(calle.probabilidadSaltoDeCarril || 0) * 100;
 		generationRow.hidden = calle.tipo !== "generador";
-		addControlButton.hidden = calle.esCurva && !isBezier(calle);
+		addControlButton.hidden = roundabout || (calle.esCurva && !isBezier(calle));
 		if (controlsHost) {
 			controlsHost.replaceChildren();
 			controlsHost.hidden = !isBezier(calle);
@@ -209,6 +255,10 @@
 		const value = field.value.trim();
 		const numeric = Number(value);
 		try {
+			if (isRoundabout(selected) && (field === fields.cells || field === fields.angle || field === fields.type)) {
+				readModel(selected);
+				return true;
+			}
 			if (field === fields.name) {
 				if (!value) return fail(field, "El nombre no puede estar vacío.");
 				if (!uniqueName(value))
@@ -289,6 +339,10 @@
 				}
 				const old = selected[prop];
 				selected[prop] = numeric;
+				if (isRoundabout(selected) && !window.roundaboutStreet?.validate?.(selected)?.valid) {
+					selected[prop] = old;
+					return fail(field, "La geometría de la glorieta no es válida.");
+				}
 				if (
 					selected.esCurva &&
 					window.streetBezier?.validate &&
@@ -311,6 +365,15 @@
 					field === fields.lanes ? numeric : Number(selected.carriles);
 				if (field === fields.lanes && numeric > 10)
 					return fail(field, "El número máximo de carriles es 10.");
+				if (isRoundabout(selected)) {
+					const result = window.roundaboutStreet?.validate?.({ ...selected, carriles: lanes });
+					if (!result?.valid) return fail(field, result?.reason || "La geometría de la glorieta no es válida.");
+					window.streetEditPause?.();
+					window.editorCalles?.aplicarNuevasDimensiones?.(selected, result.cells, lanes);
+					readModel(selected);
+					refresh();
+					return true;
+				}
 				if (field === fields.cells && isBezier(selected)) {
 					const currentGeometry = window.streetBezier.validate(selected);
 					if (!currentGeometry.valid || !currentGeometry.cells)
@@ -353,6 +416,7 @@
 											selected.celulasEsperando?.[lane]?.[index] ?? false,
 									),
 							);
+							selected.laneDirections = Array.from({ length: lanes }, (_, lane) => selected.laneDirections?.[lane] === -1 ? -1 : 1);
 						}
 					}
 					selected.tamano = result.cells;
@@ -380,6 +444,16 @@
 							(_, j) => selected.celulasEsperando?.[i]?.[j] ?? false,
 						),
 					);
+					selected.laneDirections = Array.from({ length: lanes }, (_, lane) => selected.laneDirections?.[lane] === -1 ? -1 : 1);
+				}
+			} else if (field === fields.radius) {
+				if (value === "" || !Number.isFinite(numeric)) return fail(field, "Introduce un radio válido.");
+				const result = window.roundaboutStreet?.validate?.({ ...selected, innerRadius: numeric });
+				if (!result?.valid) return fail(field, result?.reason || "El radio interior no es válido.");
+				if (numeric !== selected.innerRadius) {
+					window.streetEditPause?.();
+					window.editorCalles?.aplicarNuevasDimensiones?.(selected, result.cells, selected.carriles);
+					selected.innerRadius = numeric;
 				}
 			} else if (field === fields.type) {
 				if (!["generador", "conexion", "devorador"].includes(value))
@@ -539,6 +613,15 @@
 				"No se puede eliminar el punto: la curva resultante no es válida.";
 	}
 	deleteControlButton?.addEventListener("click", deleteSelectedControl);
+	document.getElementById("streetInspectorDeleteStreet")?.addEventListener("click", () => {
+		if (selected && window.calles?.includes(selected)) {
+			window.calleSeleccionada = selected;
+			window.eliminarObjetoSeleccionado?.();
+		}
+	});
+	document.addEventListener("street-deleted", (event) => {
+		if (selected === event.detail?.calle) show(null);
+	});
 	addControlButton?.addEventListener("click", () => {
 		if (!selected || (selected.esCurva && !isBezier(selected))) return;
 		addChoice.hidden = !addChoice.hidden;

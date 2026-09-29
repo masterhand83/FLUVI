@@ -36,6 +36,8 @@ class ConexionRenderer {
     }
 
     cellCoordinates(calle, carril, indice) {
+        if (window.roundaboutStreet?.isRoundabout(calle))
+            return window.roundaboutStreet.coordinates(calle, carril, indice);
         const curved = calle.esCurva && (calle.bezierGeometry || calle.vertices?.length > 0);
         const coordinates = (curved && window.obtenerCoordenadasGlobalesCeldaConCurva) || window.obtenerCoordenadasGlobalesCelda;
         return coordinates?.(calle, carril, indice);
@@ -152,7 +154,9 @@ class ConexionRenderer {
 
                 // Obtener coordenadas de la celda
                 let coordCelda;
-                if (calle.esCurva && calle.vertices && calle.vertices.length > 0) {
+                if (window.roundaboutStreet?.isRoundabout(calle)) {
+                    coordCelda = window.roundaboutStreet.coordinates(calle, conexion.carril, conexion.indice);
+                } else if (calle.esCurva && calle.vertices && calle.vertices.length > 0) {
                     if (typeof window.obtenerCoordenadasGlobalesCeldaConCurva === 'function') {
                         coordCelda = window.obtenerCoordenadasGlobalesCeldaConCurva(calle, conexion.carril, conexion.indice);
                     } else {

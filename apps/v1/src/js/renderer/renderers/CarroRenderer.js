@@ -15,6 +15,8 @@ class CarroRenderer {
 
         // Dirty tracking: solo actualizar vehículos que cambiaron
         this.lastVehicleState = new Map(); // Map<id, tipo>
+        this.lastLaneDirections = new Map(); // Map<calle, directions by lane>
+        this.lastRoundaboutGeometry = new Map();
         this.updateCounter = 0;
         this.fullUpdateInterval = 60; // Full update cada 60 frames (~1 segundo a 60 FPS)
 
@@ -100,20 +102,39 @@ class CarroRenderer {
                 }
             }
         }
+        this.rememberLaneDirections(calle);
+    }
+
+    getLaneDirection(calle, carril) {
+        return window.getLaneDirection ? window.getLaneDirection(calle, carril) : (calle.laneDirections?.[carril] === -1 ? -1 : 1);
+    }
+
+    rememberLaneDirections(calle) {
+        this.lastLaneDirections.set(calle, Array.from({ length: calle.carriles }, (_, carril) => this.getLaneDirection(calle, carril)));
+        if (window.roundaboutStreet?.isRoundabout(calle))
+            this.lastRoundaboutGeometry.set(calle, this.roundaboutGeometry(calle));
+    }
+
+    roundaboutGeometry(calle) {
+        return [calle.x, calle.y, calle.innerRadius, calle.startAngle, calle.carriles, calle.tamano].join(':');
     }
 
     updateCalleVehiculosIncremental(calle) {
         if (!calle.arreglo) return;
 
+        const geometryChanged = window.roundaboutStreet?.isRoundabout(calle) &&
+            this.lastRoundaboutGeometry.get(calle) !== this.roundaboutGeometry(calle);
+
         // OPTIMIZACIÓN CRÍTICA: Solo actualizar celdas que cambiaron
         for (let carril = 0; carril < calle.carriles; carril++) {
+            const directionChanged = this.lastLaneDirections.get(calle)?.[carril] !== this.getLaneDirection(calle, carril);
             for (let indice = 0; indice < calle.tamano; indice++) {
                 const id = this.getCarroId(calle, carril, indice);
                 const tipoActual = calle.arreglo[carril][indice];
                 const tipoAnterior = this.lastVehicleState.get(id);
 
                 // Solo actualizar si el estado cambió
-                if (tipoActual !== tipoAnterior) {
+                if (tipoActual !== tipoAnterior || (directionChanged && tipoActual > 0 && tipoActual < 7) || (geometryChanged && tipoActual !== 0)) {
                     this.lastVehicleState.set(id, tipoActual);
 
                     if (tipoActual === 0) {
@@ -124,6 +145,7 @@ class CarroRenderer {
                 }
             }
         }
+        this.rememberLaneDirections(calle);
     }
 
     createOrUpdateCarroSprite(calle, carril, indice) {
@@ -137,7 +159,9 @@ class CarroRenderer {
         }
 
         // Obtener coordenadas globales
-        const coords = calle.esCurva && window.obtenerCoordenadasGlobalesCeldaConCurva
+        const coords = window.roundaboutStreet?.isRoundabout(calle)
+            ? window.roundaboutStreet.coordinates(calle, carril, indice)
+            : calle.esCurva && window.obtenerCoordenadasGlobalesCeldaConCurva
             ? window.obtenerCoordenadasGlobalesCeldaConCurva(calle, carril, indice)
             : this.obtenerCoordenadasBasicas(calle, carril, indice);
 
@@ -211,7 +235,7 @@ class CarroRenderer {
         // Actualizar posición y rotación
         sprite.x = coords.x;
         sprite.y = coords.y;
-        sprite.rotation = CoordinateConverter.degreesToRadians(coords.angulo || calle.angulo);
+        sprite.rotation = CoordinateConverter.degreesToRadians((coords.angulo ?? calle.angulo) + (tipo < 7 && this.getLaneDirection(calle, carril) === -1 ? 180 : 0));
 
         // 📱 OPTIMIZACIÓN MÓVIL: Viewport culling
         if (this.viewportCullingEnabled) {
@@ -330,6 +354,7 @@ class CarroRenderer {
             this.releaseSprite(sprite);
         });
         this.scene.carroSprites.clear();
+        this.lastLaneDirections.clear();
     }
 }
 

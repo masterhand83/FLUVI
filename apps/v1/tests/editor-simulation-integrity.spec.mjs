@@ -63,7 +63,9 @@ describe.each([
 				building.conexiones.length === 2 && building.vehiculosActuales === 7 && other.conexionesEstacionamiento.has("0-4") && !other.conexionesEstacionamiento.has("0-2") &&
 				!window.estadoEscenarios.celdasBloqueadas.has(mark) && window.estadoEscenarios.celdasBloqueadas.has(otherMark)
 			const beforeStep = JSON.stringify(window.configuracionTiempo)
-			document.getElementById("btnPauseResume").click()
+			// Deleting a street now pauses editing; step from a paused state
+			// whether that pause came from resize, delete, or this test.
+			if (!window.isPaused) document.getElementById("btnPauseResume").click()
 			document.getElementById("btnPaso").click()
 			return { resized, deleted, stepped: JSON.stringify(window.configuracionTiempo) !== beforeStep, renderer: window.USE_PIXI && window.pixiApp?.sceneManager ? "Pixi" : "Canvas", validState: window.calles.every(c => c.arreglo.length === c.carriles && c.arreglo.every(lane => lane.length === c.tamano)) && window.conexiones.every(c => window.calles.includes(c.origen) && window.calles.includes(c.destino) && c.origen.arreglo[c.carrilOrigen]?.[c.posOrigen === -1 ? c.origen.tamano - 1 : c.posOrigen] !== undefined && c.destino.arreglo[c.carrilDestino]?.[c.posDestino] !== undefined) }
 		})
