@@ -100,7 +100,9 @@ for (const usePixi of [false, true]) {
 			const horizontal = Math.abs(toWorld(screen.width * 0.12, 0).x - toWorld(0, 0).x)
 			const vertical = Math.abs(toWorld(0, screen.height * 0.11).y - toWorld(0, 0).y)
 
-			const street = window.crearCalle("Parking smoke street", 8, window.TIPOS.CONEXION, -10000, -10000, 0, 0, 1, 0)
+			const streetPoint = center(0.45, 0.86)
+			const street = window.crearCalle("Parking smoke street", 8, window.TIPOS.CONEXION, streetPoint.x, streetPoint.y, 0, 0, 1, 0)
+			if (!window.calles.includes(street)) window.calles.push(street)
 			const add = (testId, label, fx, fy, color, imagen) => {
 				const point = center(fx, fy)
 				const building = window.agregarEdificio(label, point.x, point.y, horizontal, vertical, 0)
@@ -126,14 +128,18 @@ for (const usePixi of [false, true]) {
 		let pixels = await visiblePixels(page)
 		const baselinePixels = pixels
 
-		await page.evaluate(() => {
+		const configured = await page.evaluate(() => {
 			const connections = (entry, exit) => [
 				{ tipo: "entrada", calleId: window.__parkingSmoke.street.id, carril: 0, indice: entry },
 				{ tipo: "salida", calleId: window.__parkingSmoke.street.id, carril: 0, indice: exit },
 			]
-			window.configurarEstacionamiento(window.__parkingSmoke.blueFill, connections(0, 1), 20)
-			window.configurarEstacionamiento(window.__parkingSmoke.image, connections(2, 3), 20)
+			return [
+				window.configurarEstacionamiento(window.__parkingSmoke.blueFill, connections(0, 1), 20),
+				window.configurarEstacionamiento(window.__parkingSmoke.image, connections(2, 3), 20),
+			]
 		})
+		assert.deepEqual(configured, [true, true], "functional parking connections are valid")
+		assert.deepEqual(await page.evaluate(() => [window.esEstacionamientoFuncional(window.__parkingSmoke.blueFill), window.esEstacionamientoFuncional(window.__parkingSmoke.image)]), [true, true], "configured buildings are functional parking")
 		await render(page)
 		pixels = await visiblePixels(page)
 		const activePixels = pixels
@@ -150,6 +156,19 @@ for (const usePixi of [false, true]) {
 		pixels = await visiblePixels(page)
 		assert.ok(pixels["blue-fill"].blueOutside > baselinePixels["blue-fill"].blueOutside + 30, "selected functional parking retains its blue outline")
 		assert.ok(pixels["blue-fill"].selection > 20, "selection has a separately visible orange/gold outline")
+
+		await page.$eval("#btnParkingOutlines", button => button.click())
+		await new Promise(resolve => setTimeout(resolve, 80))
+		pixels = await visiblePixels(page)
+		assert.equal(await page.$eval("#btnParkingOutlines", button => button.getAttribute("aria-pressed")), "false", "toolbar reports that functional parking outlines are hidden")
+		assert.ok(pixels["blue-fill"].blueOutside < activePixels["blue-fill"].blueOutside * 0.5, "toolbar hides the functional parking outline")
+		assert.ok(pixels["blue-fill"].selection > 20, "selection remains visible while parking outlines are hidden")
+
+		await page.$eval("#btnParkingOutlines", button => button.click())
+		await new Promise(resolve => setTimeout(resolve, 80))
+		pixels = await visiblePixels(page)
+		assert.equal(await page.$eval("#btnParkingOutlines", button => button.getAttribute("aria-pressed")), "true", "toolbar reports that functional parking outlines are visible")
+		assert.ok(pixels["blue-fill"].blueOutside > baselinePixels["blue-fill"].blueOutside + 30, "toolbar restores the functional parking outline")
 
 		await page.evaluate(() => {
 			window.edificioSeleccionado = null

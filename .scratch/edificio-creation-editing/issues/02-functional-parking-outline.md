@@ -11,3 +11,4 @@ Status: ready-for-agent
 - [x] Decorative buildings with parking-related labels or bundled images, but without functional parking connections, do not gain the blue outline.
 - [x] Existing maps and bundled images retain their appearance; no appearance mode or parking behavior is inferred from a label or image alone.
 - [x] Focused browser tests inspect visible outlined and non-outlined buildings in both graphics modes, including selected and unselected states.
+- [x] Editors can show or hide functional-parking outlines from the canvas toolbar without hiding selection.

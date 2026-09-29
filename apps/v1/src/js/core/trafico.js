@@ -30,6 +30,7 @@ let mostrarConexiones = false; // Variable para controlar visualización de cone
 let mostrarVertices = false; // Variable para controlar visualización de vértices
 let mostrarEtiquetas = isMobile ? false : false; // Desactivado en móviles por defecto
 const mostrarContadores = isMobile ? false : false; // Desactivado en móviles por defecto
+let mostrarContornosEstacionamiento = true;
 const colorFondoCanvas = "#c6cbcd"; // Color de fondo del canvas (almacenado para detección automática)
 
 // Exponer variables globales para PixiJS
@@ -37,6 +38,7 @@ window.mostrarConexiones = mostrarConexiones;
 window.mostrarVertices = mostrarVertices;
 window.mostrarEtiquetas = mostrarEtiquetas;
 window.mostrarContadores = mostrarContadores;
+window.mostrarContornosEstacionamiento = mostrarContornosEstacionamiento;
 
 // 📱 Mensaje informativo en móviles
 if (isMobile) {
@@ -1359,7 +1361,8 @@ function dibujarEdificios() {
         // cualquier imagen o color de relleno. El halo claro hace visible el
         // azul incluso sobre un edificio del mismo color.
         const estacionamientoFuncional = window.esEstacionamientoFuncional?.(edificio) === true;
-        if (estacionamientoFuncional) {
+        const mostrarContornoEstacionamiento = estacionamientoFuncional && window.mostrarContornosEstacionamiento !== false;
+        if (mostrarContornoEstacionamiento) {
             ctx.lineJoin = "round";
             ctx.strokeStyle = "rgba(255, 255, 255, 0.95)";
             ctx.lineWidth = 6 / escala;
@@ -1375,7 +1378,7 @@ function dibujarEdificios() {
             ctx.strokeStyle = window.modoSeleccion === "constructor" ? "#FFA500" : "#FFD700";
             ctx.lineWidth = 4 / escala;
             ctx.setLineDash([10 / escala, 5 / escala]);
-            const separacionSeleccion = estacionamientoFuncional ? 6 / escala : 0;
+            const separacionSeleccion = mostrarContornoEstacionamiento ? 6 / escala : 0;
             ctx.strokeRect(
                 -edificio.width / 2 - separacionSeleccion,
                 -edificio.height / 2 - separacionSeleccion,
@@ -3954,6 +3957,7 @@ function iniciarSimulacion() {
 
     const btnPauseResume = document.getElementById('btnPauseResume');
     const btnConexiones = document.getElementById('btnConexiones');
+    const btnParkingOutlines = document.getElementById('btnParkingOutlines');
 
     const btnPaso = document.getElementById('btnPaso');
     const velocidadSlider = document.getElementById('velocidadSlider');
@@ -4198,6 +4202,20 @@ function iniciarSimulacion() {
                 }
             }
 
+            renderizarCanvas();
+        });
+    }
+
+    if (btnParkingOutlines) {
+        btnParkingOutlines.addEventListener('click', () => {
+            mostrarContornosEstacionamiento = !mostrarContornosEstacionamiento;
+            window.mostrarContornosEstacionamiento = mostrarContornosEstacionamiento;
+            btnParkingOutlines.setAttribute('aria-pressed', String(mostrarContornosEstacionamiento));
+            btnParkingOutlines.textContent = mostrarContornosEstacionamiento ? '🅿️' : '🚫';
+
+            if (window.USE_PIXI && window.pixiApp?.sceneManager?.edificioRenderer) {
+                window.pixiApp.sceneManager.edificioRenderer.renderAll(window.edificios);
+            }
             renderizarCanvas();
         });
     }

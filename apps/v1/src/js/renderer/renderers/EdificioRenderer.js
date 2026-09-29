@@ -283,6 +283,10 @@ class EdificioRenderer {
         return window.esEstacionamientoFuncional?.(edificio) === true;
     }
 
+    isFunctionalParkingOutlineVisible(edificio) {
+        return window.mostrarContornosEstacionamiento !== false && this.isFunctionalParking(edificio);
+    }
+
     getBorderRect(sprite, edificio, margin = 0) {
         if (sprite instanceof PIXI.Sprite && sprite.texture) {
             // Los hijos de Sprite usan coordenadas de la textura y heredan su escala.
@@ -346,7 +350,7 @@ class EdificioRenderer {
             oldBorder.destroy();
         }
 
-        if (this.isFunctionalParking(edificio)) {
+        if (this.isFunctionalParkingOutlineVisible(edificio)) {
             this.addFunctionalParkingBorder(sprite, edificio);
         }
     }
@@ -354,7 +358,7 @@ class EdificioRenderer {
     addSelectionBorder(sprite, edificio) {
         const graphics = new PIXI.Graphics();
 
-        if (this.isFunctionalParking(edificio)) {
+        if (this.isFunctionalParkingOutlineVisible(edificio)) {
             // La selección queda fuera del borde de estacionamiento y conserva su identidad.
             graphics.lineStyle(this.getBorderLineWidth(sprite, 9), 0x000000, 0.8);
             this.drawBorderRect(graphics, sprite, edificio, 7);
