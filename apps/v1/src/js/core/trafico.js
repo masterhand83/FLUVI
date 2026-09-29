@@ -4564,31 +4564,6 @@ function iniciarSimulacion() {
         });
     }
 
-    const btnVertices = document.getElementById('btnVertices');
-    if (btnVertices) {
-        btnVertices.addEventListener('click', () => {
-            mostrarVertices = !mostrarVertices;
-            window.mostrarVertices = mostrarVertices;
-            // Solo emoji, el tooltip ya explica la función
-            btnVertices.textContent = mostrarVertices ? '📍' : '📍';
-
-            // Si usamos PixiJS, forzar renderizado de vértices
-            if (window.USE_PIXI && window.pixiApp && window.pixiApp.sceneManager) {
-                if (mostrarVertices) {
-                    // Renderizar vértices
-                    window.pixiApp.sceneManager.renderAll();
-                } else {
-                    // Limpiar vértices
-                    if (window.pixiApp.sceneManager.uiRenderer) {
-                        window.pixiApp.sceneManager.uiRenderer.clearVertices();
-                    }
-                }
-            }
-
-            renderizarCanvas();
-        });
-    }
-
     const btnEtiquetas = document.getElementById('btnEtiquetas');
     if (btnEtiquetas) {
         btnEtiquetas.addEventListener('click', () => {
