@@ -2168,33 +2168,11 @@ function normalizarDireccionesCarriles(directions, lanes) {
     return Array.from({ length: lanes }, (_, lane) => Array.isArray(directions) && directions[lane] === -1 ? -1 : 1);
 }
 
-function serializarDatoEdificio(value, seen = new WeakSet()) {
-    if (value === null || typeof value === 'string' || typeof value === 'boolean') return value;
-    if (typeof value === 'number') return Number.isFinite(value) ? value : null;
-    if (typeof value !== 'object' || seen.has(value)) return undefined;
-
-    if (Array.isArray(value)) {
-        seen.add(value);
-        return value.map(item => serializarDatoEdificio(item, seen) ?? null);
-    }
-
-    const prototype = Object.getPrototypeOf(value);
-    if (prototype !== Object.prototype && prototype !== null) return undefined;
-
-    seen.add(value);
-    return Object.fromEntries(Object.entries(value)
-        .map(([key, item]) => [key, serializarDatoEdificio(item, seen)])
-        .filter(([, item]) => item !== undefined));
-}
-
 function serializarEdificio(edificio) {
-    const serializable = serializarDatoEdificio(edificio) || {};
-    if (typeof edificio.imageDataUrl === 'string') serializable.imageDataUrl = edificio.imageDataUrl;
-    if (typeof edificio.imageMimeType === 'string') serializable.imageMimeType = edificio.imageMimeType;
-    if (edificio.geometryType !== 'polygon') return serializable;
+    if (edificio.geometryType !== 'polygon') return edificio;
 
     return {
-        ...serializable,
+        ...edificio,
         geometryType: 'polygon',
         vertices: Array.isArray(edificio.vertices)
             ? edificio.vertices.map(vertex => ({ x: vertex.x, y: vertex.y }))

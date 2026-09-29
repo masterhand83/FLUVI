@@ -84,13 +84,12 @@
 		for (const key of ["x", "y", "width", "height"]) fields[key].value = building[key] ?? ""
 		fields.angle.value = building.angle ?? 0
 		const polygon = building.geometryType === "polygon"
-		const image = building.appearanceMode === "image" && Number(building.imageAspectRatio) > 0
 		fields.x.closest("div").hidden = polygon
 		fields.y.closest("div").hidden = polygon
 		fields.width.closest("div").hidden = polygon
 		fields.height.closest("div").hidden = polygon
 		fields.angle.closest("div").hidden = polygon
-		lock.closest("label").hidden = polygon || image
+		lock.closest("label").hidden = polygon
 		vertexEditor.hidden = !polygon
 		if (polygon) vertexText.value = building.vertices.map(point => `${point.x}, ${point.y}`).join("\n")
 		const color = normalizeColor(building.color)
@@ -166,11 +165,7 @@
 			const key = Object.entries(fields).find(([, input]) => input === field)?.[0]
 			if ((key === "width" || key === "height") && value <= 0) return fail(field, "El tamaño debe ser mayor que cero.")
 			selected[key] = key === "angle" ? ((value % 360) + 360) % 360 : value
-			if (selected.appearanceMode === "image" && (key === "width" || key === "height")) {
-				const ratio = Number(selected.imageAspectRatio) || selected.width / selected.height
-				selected[key === "width" ? "height" : "width"] = key === "width" ? value / ratio : value * ratio
-				readModel(selected)
-			} else if (lock.checked && (key === "width" || key === "height")) {
+			if (lock.checked && (key === "width" || key === "height")) {
 				selected[key === "width" ? "height" : "width"] = value
 				readModel(selected)
 			}
@@ -373,7 +368,7 @@
 		button.setAttribute("aria-pressed", "false")
 		polygonButton?.classList.remove("active")
 		polygonButton?.setAttribute("aria-pressed", "false")
-		lock.closest("label").hidden = selected?.geometryType === "polygon" || selected?.appearanceMode === "image"
+		lock.closest("label").hidden = selected?.geometryType === "polygon"
 		canvas.style.cursor = ""
 		document.removeEventListener("pointerdown", onDrawDown, true)
 		document.removeEventListener("pointermove", onDrawMove, true)
@@ -507,11 +502,7 @@
 			const dy = point.y - before.y
 			let width = Math.abs(2 * (dx * Math.cos(angle) - dy * Math.sin(angle)))
 			let height = Math.abs(2 * (dx * Math.sin(angle) + dy * Math.cos(angle)))
-			if (selected.appearanceMode === "image") {
-				const scale = Math.max(1 / before.width, width / before.width, height / before.height)
-				width = before.width * scale
-				height = before.height * scale
-			} else if (lock.checked) width = height = Math.max(width, height)
+			if (lock.checked) width = height = Math.max(width, height)
 			if (width >= 1 && height >= 1) Object.assign(selected, { width, height })
 		}
 		readModel(selected)
@@ -547,5 +538,5 @@
 	}, 100)
 
 	window.drawBuildingTool = { activate, deactivate, isActive: () => active }
-	window.buildingInspector = { show, refresh: () => selected && readModel(selected), worldPoint, nextName }
+	window.buildingInspector = { show, refresh: () => selected && readModel(selected) }
 })()

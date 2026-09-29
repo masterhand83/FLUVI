@@ -2348,9 +2348,6 @@
           <label class="building-proportion-lock small"><input id="buildingProportionLock" type="checkbox"> Cuadrado</label>
           <div class="create-link-anchor">
             <button type="button" id="createLinkButton" class="btn btn-outline-primary btn-sm">🔗 Crear enlace</button>
-            <button type="button" id="uploadImageBuildingButton" class="btn btn-outline-success btn-sm">🖼️ Edificio con imagen</button>
-            <input type="file" id="uploadImageBuildingFile" accept="image/png,image/jpeg,image/webp" hidden>
-            <div id="uploadImageBuildingError" class="small text-danger" role="alert" aria-live="assertive"></div>
             <section id="linkDraftPanel" class="create-link-panel" hidden aria-hidden="true" aria-label="Revisar enlace entre calles">
               <p id="linkDraftStatus" class="small mb-2">Elige la calle de origen en el mapa.</p>
               <div class="mb-2"><label class="form-label" for="linkSourceStreet">Origen</label><select id="linkSourceStreet" class="form-select form-select-sm"></select></div>
@@ -2405,7 +2402,6 @@
   <!-- Motor Gráfico - Utilidades -->
   <script src="src/js/renderer/utils/CoordinateConverter.js"></script>
   <script src="src/js/renderer/utils/AssetLoader.js"></script>
-  <script src="src/js/core/uploadedBuildingImages.js"></script>
 
   <!-- Motor Gráfico - Core -->
   <script src="src/js/renderer/DayNightCycle.js"></script>
@@ -2448,7 +2444,6 @@
   <script src="src/js/ui/drawStreet.js"></script>
   <script src="src/js/ui/drawRoundabout.js"></script>
   <script src="src/js/ui/buildingInspector.js"></script>
-  <script src="src/js/ui/uploadImageBuilding.js"></script>
   <script src="src/js/ui/streetInspector.js"></script>
   <script src="src/js/ui/editStreetGeometry.js"></script>
   <script src="src/js/ui/createLink.js"></script>
