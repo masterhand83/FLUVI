@@ -488,9 +488,6 @@ body {
   box-shadow: 0 2px 8px rgba(0, 0, 0, .3);
 }
 .building-draw-panel[hidden] { display: none; }
-.building-vertex-editor { display: grid; gap: 5px; margin-top: 8px; }
-.building-vertex-editor[hidden] { display: none; }
-.building-vertex-editor textarea { width: 100%; min-width: 170px; font: 12px monospace; }
 .building-vertex-handle { width: 14px; height: 14px; background: #dc3545; cursor: grab; }
 
 .building-proportion-lock { display: inline-flex; align-items: center; gap: 3px; margin: 0 3px; }

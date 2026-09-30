@@ -155,37 +155,7 @@ describe.each([
 			),
 		).toBe(true);
 
-		const before = await sim.page.evaluate(() =>
-			JSON.stringify(window.edificioSeleccionado.vertices),
-		);
-		await sim.page.$eval("#buildingInspectorVertices", (textarea) => {
-			const rows = textarea.value.split("\n");
-			const [x, y] = rows[0].split(", ").map(Number);
-			rows[0] = `${x + 3}, ${y}`;
-			textarea.value = rows.join("\n");
-			textarea.dispatchEvent(new Event("input", { bubbles: true }));
-		});
-		expect(
-			await sim.page.evaluate(
-				() => window.edificioSeleccionado.vertices[0].x,
-			),
-		).not.toBe(JSON.parse(before)[0].x);
-		const beforeInvalid = await sim.page.evaluate(() =>
-			JSON.stringify(window.edificioSeleccionado.vertices),
-		);
-		await sim.page.$eval("#buildingInspectorVertices", (textarea) => {
-			const [a, b, c, d] = textarea.value.split("\n");
-			textarea.value = [a, c, b, d].join("\n");
-			textarea.dispatchEvent(new Event("input", { bubbles: true }));
-		});
-		expect(
-			await sim.page.evaluate(() =>
-				JSON.stringify(window.edificioSeleccionado.vertices),
-			),
-		).toBe(beforeInvalid);
-		expect(
-			await sim.page.$eval("#buildingInspectorError", (el) => el.textContent),
-		).toContain("área");
+		expect(await sim.page.$("#buildingInspectorVertices")).toBeNull();
 
 		const handle = await sim.page.$(".building-vertex-handle:not([hidden])");
 		const box = await handle.boundingBox();
@@ -247,5 +217,11 @@ describe.each([
 					).valid,
 			),
 		).toBe(true);
+		await sim.page.click("#buildingInspectorDeleteBuilding");
+		await sim.page.waitForFunction(() => window.edificios.length === 0);
+		expect(
+			await sim.page.evaluate(() => window.edificioSeleccionado === null),
+		).toBe(true);
+		expect(await sim.page.$eval("#buildingInspector", el => el.hidden)).toBe(true);
 	}, 180000);
 });

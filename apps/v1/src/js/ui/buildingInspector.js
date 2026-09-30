@@ -25,11 +25,6 @@
 	}
 	const palette = [...document.querySelectorAll('[name="buildingColor"]')]
 	for (const swatch of palette) swatch.style.setProperty("--swatch", swatch.value)
-	const vertexEditor = document.createElement("section")
-	vertexEditor.className = "building-vertex-editor"
-	vertexEditor.innerHTML = '<label for="buildingInspectorVertices">Vértices (X, Y por línea; añade o elimina líneas)</label><textarea id="buildingInspectorVertices" rows="5" spellcheck="false"></textarea>'
-	inspector.append(vertexEditor)
-	const vertexText = vertexEditor.querySelector("textarea")
 
 	let active = false
 	let polygonMode = false
@@ -315,8 +310,6 @@
 		document.getElementById("buildingColorPalette").closest("div").hidden = image
 		replaceImageButton.hidden = !image
 		replacementStatus.hidden = !image
-		vertexEditor.hidden = !polygon
-		if (polygon) vertexText.value = building.vertices.map(point => `${point.x}, ${point.y}`).join("\n")
 		const color = normalizeColor(building.color)
 		for (const swatch of palette) swatch.setAttribute("aria-pressed", String(normalizeColor(swatch.value) === color))
 		error.textContent = ""
@@ -358,27 +351,6 @@
 		const center = window.edificioPolygonGeometry.center(building.vertices)
 		Object.assign(building, { x: center.x, y: center.y, width: bounds.maxX - bounds.minX, height: bounds.maxY - bounds.minY })
 	}
-	function applyPolygonVertices(vertices) {
-		if (selected?.geometryType !== "polygon") return false
-		const result = validatePolygon(vertices)
-		if (!result.valid) {
-			error.textContent = polygonReason(result.reason) || `Geometría inválida: ${result.reason}.`
-			return false
-		}
-		selected.vertices = vertices.map(point => ({ x: Number(point.x), y: Number(point.y) }))
-		updatePolygonMetadata(selected)
-		redraw()
-		syncHandles()
-		return true
-	}
-	function readPolygonText() {
-		const vertices = vertexText.value.trim().split(/\n+/).map(line => {
-			const [x, y] = line.split(/[;,\s]+/).filter(Boolean)
-			return { x: Number(x), y: Number(y) }
-		})
-		return vertices
-	}
-	vertexText.addEventListener("input", () => applyPolygonVertices(readPolygonText()))
 	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: One atomic validation path prevents partial numeric edits from reaching the model.
 	function commit(field) {
 		if (!selected || !field) return
@@ -913,6 +885,11 @@
 		if (selector) selector.value = ""
 		show(null)
 		redraw()
+	})
+	document.getElementById("buildingInspectorDeleteBuilding")?.addEventListener("click", () => {
+		if (!selected || !window.edificios?.includes(selected)) return
+		window.edificioSeleccionado = selected
+		window.eliminarObjetoSeleccionado?.()
 	})
 	document.getElementById("selectEdificio")?.addEventListener("change", () => window.setTimeout(() => show(window.edificioSeleccionado), 0))
 	document.addEventListener("building-selected", event => show(event.detail?.building))
