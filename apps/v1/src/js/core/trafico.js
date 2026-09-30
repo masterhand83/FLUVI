@@ -1029,8 +1029,42 @@ function actualizarCalle(calle, calleIndex) {
         if (!calle.arreglo?.[c] || !nuevaCalle?.[c] || calle.arreglo[c].length !== calle.tamano) continue;
         if (calle.tamano <= 1) continue;
         const direction = getLaneDirection(calle, c);
+        const cells = calle.arreglo[c];
+        const waiting = calle.celulasEsperando[c];
+        const consumedSources = new Set();
+        const spawnedDestinations = new Set();
+
+        // Resolver estacionamientos antes del CA, sin modificar el snapshot.
+        // Una fuente absorbida no puede volver a entrar ni copiarse aguas abajo.
+        if (calle.conexionesEstacionamiento) {
+            for (let i = 0; i < calle.tamano; i++) {
+                const conexion = calle.conexionesEstacionamiento.get(`${c}-${i}`);
+                const edificio = conexion?.edificio;
+                if (!edificio?.esEstacionamiento || waiting[i]) continue;
+                const previous = i - direction;
+                const upstream = previous >= 0 && previous < calle.tamano ? cells[previous] : 0;
+                const hour = window.configuracionTiempo?.horaActual || 0;
+
+                if (conexion.tipo === 'entrada') {
+                    const source = cells[i] >= 1 && cells[i] <= 6 ? i :
+                        cells[i] === 0 && upstream >= 1 && upstream <= 6 ? previous : -1;
+                    if (source !== -1 && !waiting[source] && !consumedSources.has(source) &&
+                        window.procesarEntradaVehiculo?.(edificio, cells[source], hour)) {
+                        consumedSources.add(source);
+                        nuevaCalle[c][source] = 0;
+                    }
+                } else if (conexion.tipo === 'salida' && cells[i] === 0 && upstream === 0) {
+                    const vehicle = window.intentarGenerarSalida?.(edificio, hour);
+                    if (vehicle >= 1 && vehicle <= 6) {
+                        spawnedDestinations.add(i);
+                        nuevaCalle[c][i] = vehicle;
+                    }
+                }
+            }
+        }
 
         for (let i = 0; i < calle.tamano; i++) {
+            if (consumedSources.has(i) || spawnedDestinations.has(i)) continue;
             // Si la celda está esperando, NO procesarla
             if (calle.celulasEsperando[c][i]) {
                 nuevaCalle[c][i] = calle.arreglo[c][i];
@@ -1039,90 +1073,6 @@ function actualizarCalle(calle, calleIndex) {
                 }
                 continue;
             }
-
-            // ========== PROCESAMIENTO DE ESTACIONAMIENTOS ==========
-            // Verificar si esta celda tiene una conexión de estacionamiento
-            if (calle.conexionesEstacionamiento) {
-                const claveConexion = `${c}-${i}`;
-                const conexion = calle.conexionesEstacionamiento.get(claveConexion);
-
-                if (conexion) {
-                    const edificio = conexion.edificio;
-
-                    if (conexion.tipo === 'entrada' && edificio && edificio.esEstacionamiento) {
-                        // ENTRADA: Verificar si hay un vehículo en esta celda O en la celda anterior
-                        const vehiculoEnCelda = calle.arreglo[c][i];
-                        const anterior = i - direction;
-                        const vehiculoEnCeldaAnterior = (anterior >= 0 && anterior < calle.tamano) ? calle.arreglo[c][anterior] : 0;
-
-                        // Procesar vehículo en la celda de entrada
-                        if (vehiculoEnCelda >= 1 && vehiculoEnCelda <= 6) {
-                            // console.log(`🔍 ENTRADA DETECTADA: Vehículo tipo ${vehiculoEnCelda} en celda de entrada [${c},${i}] de "${edificio.label}"`);
-
-                            // Obtener hora actual del simulador
-                            const horaActual = window.configuracionTiempo?.horaActual || 0;
-
-                            // Intentar absorber el vehículo con probabilidad
-                            const absorbido = window.procesarEntradaVehiculo?.(edificio, vehiculoEnCelda, horaActual);
-                            // console.log(`🎲 PROBABILIDAD ENTRADA: ${absorbido ? 'ACEPTADO' : 'RECHAZADO'} para "${edificio.label}"`);
-
-                            if (absorbido) {
-                                // Vehículo absorbido - eliminar de la celda actual
-                                nuevaCalle[c][i] = 0;
-                                // console.log(`✅ ENTRADA EXITOSA: Vehículo tipo ${vehiculoEnCelda} absorbido por "${edificio.label}" en [${c},${i}] - Celda eliminada`);
-                                continue;
-                            } else {
-                                // console.log(`❌ ENTRADA RECHAZADA: Vehículo tipo ${vehiculoEnCelda} NO fue absorbido por "${edificio.label}" - sigue su camino`);
-                            }
-                        }
-                        // Procesar vehículo que está LLEGANDO a la entrada (en celda anterior)
-                        else if (vehiculoEnCeldaAnterior >= 1 && vehiculoEnCeldaAnterior <= 6 && vehiculoEnCelda === 0) {
-                            // console.log(`🔍 ENTRADA ANTICIPADA: Vehículo tipo ${vehiculoEnCeldaAnterior} en celda anterior [${c},${i-1}] acercándose a entrada de "${edificio.label}"`);
-
-                            // Obtener hora actual del simulador
-                            const horaActual = window.configuracionTiempo?.horaActual || 0;
-
-                            // Intentar absorber el vehículo con probabilidad
-                            const absorbido = window.procesarEntradaVehiculo?.(edificio, vehiculoEnCeldaAnterior, horaActual);
-                            // console.log(`🎲 PROBABILIDAD ENTRADA ANTICIPADA: ${absorbido ? 'ACEPTADO' : 'RECHAZADO'} para "${edificio.label}"`);
-
-                            if (absorbido) {
-                                // Vehículo absorbido - eliminar de la celda ANTERIOR y marcar entrada como vacía
-                                if (anterior >= 0 && anterior < calle.tamano) {
-                                    nuevaCalle[c][anterior] = 0;
-                                }
-                                nuevaCalle[c][i] = 0;
-                                // console.log(`✅ ENTRADA ANTICIPADA EXITOSA: Vehículo tipo ${vehiculoEnCeldaAnterior} absorbido desde [${c},${i-1}] por "${edificio.label}"`);
-                                continue;
-                            }
-                        }
-                    } else if (conexion.tipo === 'salida' && edificio && edificio.esEstacionamiento) {
-                        // SALIDA: Verificar si la celda de salida Y la celda ANTERIOR están vacías
-                        const celdaSalidaVacia = calle.arreglo[c][i] === 0;
-                        const anterior = i - direction;
-                        const celdaAnteriorVacia = (anterior >= 0 && anterior < calle.tamano) ? calle.arreglo[c][anterior] === 0 : true;
-
-                        // Solo generar vehículo si ambas celdas están vacías (para evitar colisiones)
-                        if (celdaSalidaVacia && celdaAnteriorVacia) {
-                            // Obtener hora actual del simulador
-                            const horaActual = window.configuracionTiempo?.horaActual || 0;
-
-                            // Intentar generar un vehículo con probabilidad
-                            const tipoVehiculo = window.intentarGenerarSalida?.(edificio, horaActual);
-
-                            if (tipoVehiculo !== null) {
-                                // Vehículo generado - colocarlo en esta celda
-                                nuevaCalle[c][i] = tipoVehiculo;
-                                // console.log(`✅ SALIDA EXITOSA: Vehículo tipo ${tipoVehiculo} generado desde "${edificio.label}" en [${c},${i}]`);
-                                continue;
-                            }
-                        } else if (!celdaAnteriorVacia) {
-                            // console.log(`⏸️ SALIDA BLOQUEADA: No se puede generar salida en "${edificio.label}" [${c},${i}] - celda anterior [${i-1}] ocupada`);
-                        }
-                    }
-                }
-            }
-            // ========== FIN PROCESAMIENTO DE ESTACIONAMIENTOS ==========
 
             // Si tiene conexión de salida, no mover
             if (tieneConexionSalida(calle, c, i) && calle.arreglo[c][i] > 0) {
@@ -1138,9 +1088,10 @@ function actualizarCalle(calle, calleIndex) {
             const centro = calle.arreglo[c][i];
             const der = next >= 0 && next < calle.tamano ? calle.arreglo[c][next] : 0;
 
-            // IMPORTANTE: Si la celda izquierda está esperando, tratarla como vacía
+            // IMPORTANTE: Si la fuente está esperando o fue absorbida, tratarla como vacía
             // para evitar que se "copie" el vehículo a la celda actual
-            if (previous >= 0 && previous < calle.tamano && calle.celulasEsperando[c][previous]) {
+            if (previous >= 0 && previous < calle.tamano &&
+                (calle.celulasEsperando[c][previous] || consumedSources.has(previous))) {
                 izq = 0;
             }
 
