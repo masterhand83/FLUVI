@@ -23,7 +23,7 @@ async function prepareScene(page) {
 			? window.pixiApp.cameraController.screenToWorld(x, y)
 			: { x: (x - window.offsetX) / window.escala, y: (y - window.offsetY) / window.escala }
 		const streetId = "parking-smoke-street"
-		window.calles.push(window.crearCalle(streetId, 2, "conexion", 0, 0, 0, 0, 1))
+		window.calles.push(window.crearCalle(streetId, 4, "conexion", 0, 0, 0, 0, 1))
 		const parkingConnections = [
 			{ tipo: "entrada", calleId: streetId, carril: 0, indice: 0, probabilidad: 1 },
 			{ tipo: "salida", calleId: streetId, carril: 0, indice: 1, probabilidad: 1 },
@@ -39,12 +39,14 @@ async function prepareScene(page) {
 		angle: 0,
 		color: "#0066FF",
 		esEstacionamiento: false,
+		capacidadMaxima: 50,
+		vehiculosActuales: 0,
 		conexiones: [],
 		...props,
 	})
 		const buildings = [
 			make("Blue fill functional parking", positions[0], { esEstacionamiento: true, conexiones: parkingConnections }),
-			make("ESCOM", positions[1], { esEstacionamiento: true, conexiones: parkingConnections, color: "#8B4513" }),
+			make("ESCOM", positions[1], { esEstacionamiento: true, conexiones: parkingConnections.map(connection => ({ ...connection, indice: connection.indice + 2 })), color: "#8B4513" }),
 			make("Estacionamiento decorativo", positions[2]),
 			make("ESCOM", positions[3], {
 				imagen: "estacionamiento",

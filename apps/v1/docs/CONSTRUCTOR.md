@@ -12,6 +12,14 @@ Pulsa **Edificio con imagen** y elige un PNG, JPEG o WebP de hasta 5 MB. Los arc
 
 El inspector y los controles del mapa permiten mover, girar y cambiar el tamaño inmediatamente. Cambiar ancho o alto ajusta también la otra dimensión para no deformar la imagen; no hay conversión de modo ni Guardar/Cancelar. Su superficie de selección es rectangular, incluida la zona transparente de la imagen. El archivo JSON incluye los bytes de la imagen y la restaura tanto en Canvas como en Pixi, sin depender del archivo original.
 
+## Estacionamiento funcional
+
+Selecciona un edificio rectangular, poligonal o con imagen y activa **Estacionamiento funcional** en su inspector. Completa al menos un par de entrada/salida con calle, carril y celda válidos; los carriles y las celdas se numeran desde 1 en el inspector. Una celda no puede repetirse ni pertenecer a otro estacionamiento. Si falta información, el inspector explica qué corregir y el edificio no se vuelve funcional.
+
+Los cambios válidos se aplican inmediatamente. Mientras corriges un par incompleto o inválido, las conexiones anteriores siguen activas. La capacidad debe ser un entero positivo y no puede ser menor que la ocupación actual; las probabilidades de entrada y salida se ajustan por hora. Desactivar estacionamiento no pide confirmación: elimina las conexiones y pone la ocupación en cero, sin cambiar la forma, imagen ni selección del edificio.
+
+El borde azul identifica estacionamientos funcionales y permanece visible junto al borde de selección. Un nombre o imagen de estacionamiento por sí solo no activa esta función. Guardar y cargar JSON conserva la configuración válida en Canvas y Pixi.
+
 ## Descripción General
 
 El Constructor de Mapas es una herramienta integrada en el Simulador de Tráfico FLUVI que te permite crear, editar, guardar y cargar simulaciones personalizadas desde cero.

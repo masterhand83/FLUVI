@@ -46,6 +46,196 @@
 	let lastSelection
 	let replacementToken = 0
 	let replacementTarget = null
+	let parkingDraft = null
+	const parking = {
+		toggle: document.getElementById("buildingInspectorParkingToggle"),
+		config: document.getElementById("buildingInspectorParkingConfig"),
+		capacity: document.getElementById("buildingInspectorParkingCapacity"),
+		pairs: document.getElementById("buildingInspectorParkingPairs"),
+		add: document.getElementById("buildingInspectorParkingAddPair"),
+		probabilities: document.getElementById("buildingInspectorParkingProbabilities"),
+		error: document.getElementById("buildingInspectorParkingError"),
+		status: document.getElementById("buildingInspectorParkingStatus"),
+	}
+	function parkingStatus() {
+		if (!parking.status || !selected) return
+		const functional = window.edificioTieneConexionesEstacionamientoFuncionales?.(selected)
+		parking.status.textContent = functional
+			? `Activo: ${selected.vehiculosActuales || 0} / ${selected.capacidadMaxima} vehículos.`
+			: parkingDraft?.enabled ? "Sin activar: completa una entrada y una salida válidas por par." : "Edificio decorativo."
+	}
+	function parkingInput(id, value, min, max) {
+		const input = document.createElement("input")
+		Object.assign(input, { id, type: "number", min: String(min), step: "1", value: String(value) })
+		if (max !== undefined) input.max = String(max)
+		return input
+	}
+	function parkingLabel(text, input) {
+		const label = document.createElement("label")
+		label.className = "street-inspector-field"
+		label.textContent = text
+		label.append(input)
+		return label
+	}
+	function renderParkingPairs() {
+		parking.pairs.replaceChildren()
+		parkingDraft.pairs.forEach((pair, index) => {
+			const row = document.createElement("fieldset")
+			row.id = `buildingInspectorParkingPair${index}`
+			row.className = "building-parking-pair"
+			const legend = document.createElement("legend")
+			legend.textContent = `Par ${index + 1}`
+			row.append(legend)
+			for (const [type, title] of [["entrada", "Entrada"], ["salida", "Salida"]]) {
+				const connection = pair[type]
+				const prefix = `buildingInspectorParkingPair${index}${title}`
+				const road = document.createElement("select")
+				road.id = `${prefix}Road`
+				const placeholder = document.createElement("option")
+				placeholder.value = ""
+				placeholder.textContent = "Selecciona una calle"
+				road.append(placeholder)
+				for (const street of [...(window.calles || [])].sort((a, b) => a.nombre.localeCompare(b.nombre, "es"))) {
+					const option = document.createElement("option")
+					option.value = String(street.id ?? street.nombre)
+					option.textContent = street.nombre
+					road.append(option)
+				}
+				road.value = connection.road
+				const lane = parkingInput(`${prefix}Lane`, connection.lane, 1)
+				const cell = parkingInput(`${prefix}Cell`, connection.cell, 1)
+				row.append(parkingLabel(`${title}: calle`, road))
+				const coordinates = document.createElement("div")
+				coordinates.className = "street-inspector-details"
+				coordinates.append(parkingLabel("Carril", lane), parkingLabel("Celda", cell))
+				row.append(coordinates)
+				for (const [key, input] of [["road", road], ["lane", lane], ["cell", cell]]) {
+					input.addEventListener(key === "road" ? "change" : "input", () => {
+						connection[key] = input.value
+						commitParkingDraft()
+					})
+				}
+			}
+			const remove = document.createElement("button")
+			Object.assign(remove, { id: `buildingInspectorParkingPair${index}Remove`, type: "button", textContent: "Eliminar par", disabled: parkingDraft.pairs.length === 1 })
+			remove.className = "btn btn-sm btn-outline-danger mt-1"
+			remove.addEventListener("click", () => {
+				parkingDraft.pairs.splice(index, 1)
+				renderParkingPairs()
+				commitParkingDraft()
+			})
+			row.append(remove)
+			parking.pairs.append(row)
+		})
+		parking.add.disabled = parkingDraft.pairs.length >= 10
+	}
+	const blankParkingPair = () => ({ entrada: { road: "", lane: "1", cell: "1" }, salida: { road: "", lane: "1", cell: "1" } })
+	function readParking(building) {
+		if (!parking.toggle) return
+		// Geometry/palette refreshes must not discard an unfinished parking draft.
+		if (parkingDraft?.building === building) return parkingStatus()
+		const entries = (building.conexiones || []).filter(connection => connection.tipo === "entrada")
+		const exits = (building.conexiones || []).filter(connection => connection.tipo === "salida")
+		const endpoint = connection => {
+			const street = window.calles?.find(item => item.id === connection?.calleId || item.nombre === connection?.calleId)
+			return { road: String(street?.id ?? street?.nombre ?? connection?.calleId ?? ""), lane: String((connection?.carril ?? 0) + 1), cell: String((connection?.indice ?? 0) + 1) }
+		}
+		parkingDraft = {
+			building,
+			enabled: building.esEstacionamiento === true,
+			pairs: Array.from({ length: Math.min(10, Math.max(1, entries.length, exits.length)) }, (_, index) => ({ entrada: endpoint(entries[index]), salida: endpoint(exits[index]) })),
+			entrada: Array.from({ length: 24 }, (_, hour) => building.probabilidadesEntrada?.[hour] ?? 0.3),
+			salida: Array.from({ length: 24 }, (_, hour) => building.probabilidadesSalida?.[hour] ?? 0.2),
+		}
+		parking.toggle.checked = parkingDraft.enabled
+		parking.config.hidden = !parkingDraft.enabled
+		parking.capacity.value = building.capacidadMaxima ?? 50
+		parking.capacity.removeAttribute("aria-invalid")
+		parking.error.textContent = ""
+		renderParkingPairs()
+		parking.probabilities.replaceChildren()
+		for (let hour = 0; hour < 24; hour++) {
+			const row = document.createElement("div")
+			row.className = "building-parking-hour"
+			const time = document.createElement("span")
+			time.textContent = `${String(hour).padStart(2, "0")}:00`
+			row.append(time)
+			for (const [type, title, property] of [["entrada", "Entrada", "probabilidadesEntrada"], ["salida", "Salida", "probabilidadesSalida"]]) {
+				const input = parkingInput(`buildingInspectorParking${title}${hour}`, Math.round(parkingDraft[type][hour] * 100), 0, 100)
+				input.addEventListener("input", () => {
+					const value = Number(input.value)
+					const valid = input.value !== "" && Number.isFinite(value) && value >= 0 && value <= 100
+					input.setAttribute("aria-invalid", String(!valid))
+					if (!valid) {
+						parking.error.textContent = `${title}, ${hour}:00: introduce una probabilidad entre 0 y 100 %.`
+						return
+					}
+					parkingDraft[type][hour] = value / 100
+					if (selected.esEstacionamiento) selected[property] = [...parkingDraft[type]]
+					commitParkingDraft()
+				})
+				row.append(parkingLabel(title, input))
+			}
+			parking.probabilities.append(row)
+		}
+		parkingStatus()
+	}
+	function commitParkingDraft() {
+		if (!selected || parkingDraft?.building !== selected || !parkingDraft.enabled) return
+		const capacity = Number(parking.capacity.value)
+		if (!parking.capacity.value || !Number.isInteger(capacity) || capacity < 1 || capacity < (selected.vehiculosActuales || 0)) {
+			parking.capacity.setAttribute("aria-invalid", "true")
+			parking.error.textContent = `La capacidad debe ser un entero positivo y al menos ${Math.max(1, selected.vehiculosActuales || 0)} (ocupación actual).`
+			return
+		}
+		parking.capacity.removeAttribute("aria-invalid")
+		// Capacity/probability edits can apply while connection corrections remain drafted.
+		if (selected.esEstacionamiento && selected.capacidadMaxima !== capacity) {
+			selected.capacidadMaxima = capacity
+			if (window.USE_PIXI && window.mostrarContadores) window.pixiApp?.sceneManager?.renderContadores?.()
+			window.renderizarCanvas?.()
+		}
+		const connections = parkingDraft.pairs.flatMap(pair => ["entrada", "salida"].map(type => {
+			const draft = pair[type]
+			const street = window.calles?.find(item => String(item.id ?? item.nombre) === draft.road)
+			return { tipo: type, calleId: street?.id ?? street?.nombre ?? draft.road, carril: Number(draft.lane) - 1, indice: Number(draft.cell) - 1 }
+		}))
+		// The core validator owns overlap, ownership and atomic replacement rules.
+		const reason = window.validarConfiguracionEstacionamiento?.(selected, connections, capacity)
+		if (typeof window.validarConfiguracionEstacionamiento !== "function" || reason) {
+			parking.error.textContent = reason || "No se puede validar el estacionamiento. Intenta de nuevo cuando el mapa termine de cargar."
+			parkingStatus()
+			return
+		}
+		if (!window.configurarEstacionamiento?.(selected, connections, capacity)) {
+			parking.error.textContent = "No se pudieron aplicar las conexiones. Revisa las calles, carriles y celdas de todos los pares."
+			return
+		}
+		selected.probabilidadesEntrada = [...parkingDraft.entrada]
+		selected.probabilidadesSalida = [...parkingDraft.salida]
+		parking.error.textContent = ""
+		parkingStatus()
+		redraw()
+	}
+	parking.toggle?.addEventListener("change", () => {
+		if (!selected || !parkingDraft) return
+		parkingDraft.enabled = parking.toggle.checked
+		parking.config.hidden = !parkingDraft.enabled
+		if (parkingDraft.enabled) commitParkingDraft()
+		else {
+			window.limpiarConexionesEdificio(selected)
+			parking.error.textContent = ""
+			parkingStatus()
+			redraw()
+		}
+	})
+	parking.capacity?.addEventListener("input", commitParkingDraft)
+	parking.add?.addEventListener("click", () => {
+		if (!parkingDraft || parkingDraft.pairs.length >= 10) return
+		parkingDraft.pairs.push(blankParkingPair())
+		renderParkingPairs()
+		commitParkingDraft()
+	})
 
 	const normalizeColor = value => typeof value === "string" && /^#[0-9a-f]{6}$/i.test(value) ? value.toUpperCase() : ""
 	const isUploadedImage = building => building?.appearanceMode === "uploaded-image"
@@ -110,6 +300,7 @@
 	}
 	function readModel(building) {
 		if (!building) return
+		readParking(building)
 		fields.name.value = building.label ?? ""
 		for (const key of ["x", "y", "width", "height"]) fields[key].value = building[key] ?? ""
 		fields.angle.value = building.angle ?? 0
@@ -137,6 +328,7 @@
 	function show(building) {
 		const next = building && window.edificios?.includes(building) ? building : null
 		if (next !== selected) {
+			parkingDraft = null
 			cancelReplacement()
 			handleGesture = null
 		}

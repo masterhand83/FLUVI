@@ -14,8 +14,57 @@ function obtenerCalleConexionEstacionamiento(conexion) {
 }
 
 function conexionEstacionamientoEsValida(conexion, calle = obtenerCalleConexionEstacionamiento(conexion)) {
-    return Number.isInteger(conexion?.carril) && Number.isInteger(conexion?.indice) &&
+    return Number.isInteger(conexion?.carril) && conexion.carril >= 0 &&
+        Number.isInteger(conexion?.indice) && conexion.indice >= 0 &&
         calle?.arreglo?.[conexion.carril]?.[conexion.indice] !== undefined;
+}
+
+// Pure validation: drafts must never change the live building or street maps.
+function validarConfiguracionEstacionamiento(edificio, conexiones, capacidad) {
+    if (!edificio) return 'Selecciona un edificio para configurar el estacionamiento.';
+    if (!Number.isInteger(capacidad) || capacidad <= 0) return 'La capacidad debe ser un entero positivo.';
+    const ocupacion = edificio.vehiculosActuales ?? 0;
+    if (!Number.isInteger(ocupacion) || ocupacion < 0) return 'La ocupación debe ser un entero no negativo.';
+    if (capacidad < ocupacion) return `La capacidad no puede ser menor que la ocupación actual (${ocupacion}).`;
+    if (!Array.isArray(conexiones) || conexiones.length < 2 || conexiones.length > 20) {
+        return 'Configura entre 1 y 10 pares completos de entrada y salida.';
+    }
+    const entradas = conexiones.filter(c => c?.tipo === 'entrada').length;
+    const salidas = conexiones.filter(c => c?.tipo === 'salida').length;
+    if (entradas !== salidas || entradas + salidas !== conexiones.length) {
+        return 'Cada par necesita una entrada y una salida; completa ambos extremos.';
+    }
+    const usados = new Map();
+    for (const conexion of conexiones) {
+        const calle = obtenerCalleConexionEstacionamiento(conexion);
+        if (!calle) return `Selecciona una calle existente para la ${conexion.tipo}.`;
+        if (!conexionEstacionamientoEsValida(conexion, calle)) {
+            return `Revisa el carril y la celda de la ${conexion.tipo} en «${calle.nombre}»: deben ser enteros dentro de la calle.`;
+        }
+        const clave = `${conexion.carril}-${conexion.indice}`;
+        if (!usados.has(calle)) usados.set(calle, new Set());
+        if (usados.get(calle).has(clave)) return 'Cada entrada y salida debe usar una celda diferente.';
+        usados.get(calle).add(clave);
+        const mapping = calle.conexionesEstacionamiento?.get(clave);
+        const otroEdificio = (window.edificios || []).some(otro => otro !== edificio && otro.esEstacionamiento === true &&
+            otro.conexiones?.some(c => obtenerCalleConexionEstacionamiento(c) === calle && c.carril === conexion.carril && c.indice === conexion.indice));
+        if ((mapping && !conexionPerteneceAEdificio(mapping, edificio)) || otroEdificio) {
+            return `La celda ${conexion.indice} del carril ${conexion.carril} en «${calle.nombre}» ya pertenece a otro estacionamiento. Elige otra celda.`;
+        }
+    }
+    return null;
+}
+
+function conexionPerteneceAEdificio(mapping, edificio) {
+    return mapping.edificio ? mapping.edificio === edificio : edificio.id !== undefined && mapping.edificioId === edificio.id;
+}
+
+function quitarMapeosPropiosEstacionamiento(edificio) {
+    for (const calle of window.calles || []) {
+        for (const [clave, mapping] of calle.conexionesEstacionamiento || []) {
+            if (conexionPerteneceAEdificio(mapping, edificio)) calle.conexionesEstacionamiento.delete(clave);
+        }
+    }
 }
 
 function edificioTieneConexionesEstacionamientoFuncionales(edificio) {
@@ -23,12 +72,7 @@ function edificioTieneConexionesEstacionamientoFuncionales(edificio) {
         return false;
     }
 
-    const conexionEsValida = conexion => {
-        return ['entrada', 'salida'].includes(conexion?.tipo) && conexionEstacionamientoEsValida(conexion);
-    };
-
-    return edificio.conexiones.some(conexion => conexion?.tipo === 'entrada' && conexionEsValida(conexion)) &&
-        edificio.conexiones.some(conexion => conexion?.tipo === 'salida' && conexionEsValida(conexion));
+    return validarConfiguracionEstacionamiento(edificio, edificio.conexiones, edificio.capacidadMaxima) === null;
 }
 
 window.edificioTieneConexionesEstacionamientoFuncionales = edificioTieneConexionesEstacionamientoFuncionales;
@@ -40,33 +84,18 @@ window.edificioTieneConexionesEstacionamientoFuncionales = edificioTieneConexion
  * @param {number} capacidad - Capacidad máxima de vehículos
  */
 function configurarEstacionamiento(edificio, conexiones = [], capacidad = 50) {
-    if (!edificio) {
-        console.error('❌ Edificio no válido');
-        return false;
-    }
-
-    // Validar que las conexiones vengan en pares
-    const entradas = conexiones.filter(c => c.tipo === 'entrada');
-    const salidas = conexiones.filter(c => c.tipo === 'salida');
-
-    if (entradas.length !== salidas.length) {
-        console.error(`❌ Las conexiones deben venir en pares: ${entradas.length} entradas vs ${salidas.length} salidas`);
-        return false;
-    }
-
-    if (entradas.length === 0) {
-        console.warn('⚠️ Edificio sin conexiones - será decorativo');
-        edificio.esEstacionamiento = false;
-        edificio.conexiones = [];
-        actualizarVisualizacionEdificioEstacionamiento(edificio);
+    if (edificio && Array.isArray(conexiones) && conexiones.length === 0) {
+        limpiarConexionesEdificio(edificio);
         return true;
     }
-
-    if (entradas.length > 10) {
-        console.error('❌ Máximo 10 pares de conexiones permitidos');
+    const validacion = validarConfiguracionEstacionamiento(edificio, conexiones, capacidad);
+    if (validacion) {
+        console.error(validacion);
         return false;
     }
 
+    const nuevasConexiones = conexiones.map(conexion => ({ ...conexion, edificioId: edificio.id }));
+    quitarMapeosPropiosEstacionamiento(edificio);
     // Configurar edificio como estacionamiento
     edificio.esEstacionamiento = true;
     edificio.capacidadMaxima = capacidad;
@@ -76,7 +105,7 @@ function configurarEstacionamiento(edificio, conexiones = [], capacidad = 50) {
         edificio.vehiculosActuales = 0;
     }
 
-    edificio.conexiones = conexiones;
+    edificio.conexiones = nuevasConexiones;
 
     // Inicializar probabilidades por defecto SOLO si no existen
     // (para no sobrescribir valores configurados por el usuario)
@@ -89,31 +118,9 @@ function configurarEstacionamiento(edificio, conexiones = [], capacidad = 50) {
     }
 
     // Marcar las celdas en las calles
-    conexiones.forEach(conexion => {
+    nuevasConexiones.forEach(conexion => {
         const calle = obtenerCalleConexionEstacionamiento(conexion);
-        if (!calle) {
-            console.error(`❌ Calle "${conexion.calleId}" no encontrada`);
-            return;
-        }
-
         const { carril, indice } = conexion;
-
-        // Debugging: mostrar información de la calle
-        console.log(`🔍 Verificando celda en calle "${calle.nombre}":`, {
-            carril: carril,
-            indice: indice,
-            totalCarriles: calle.carriles,
-            tamanoCalle: calle.tamano,
-            tieneArreglo: !!calle.arreglo,
-            existeCarril: !!calle.arreglo[carril],
-            longitudCarril: calle.arreglo[carril]?.length
-        });
-
-        if (!conexionEstacionamientoEsValida(conexion, calle)) {
-            console.error(`❌ Celda inválida: ${conexion.calleId}[${carril}][${indice}]`);
-            console.error(`   Calle tiene ${calle.carriles} carriles (0-${calle.carriles-1}) y tamaño ${calle.tamano} (0-${calle.tamano-1})`);
-            return;
-        }
 
         // NO marcar la celda en el arreglo - debe permanecer transitable (0)
         // La celda debe permitir que vehículos pasen normalmente
@@ -140,14 +147,26 @@ function configurarEstacionamiento(edificio, conexiones = [], capacidad = 50) {
         console.log(`✅ Conexión ${conexion.tipo} configurada: ${calle.nombre}[${carril}][${indice}] (celda transitable)`);
     });
 
-    console.log(`🏢 Estacionamiento "${edificio.label}" configurado: ${entradas.length} pares, capacidad ${capacidad}`);
+    console.log(`🏢 Estacionamiento "${edificio.label}" configurado: ${nuevasConexiones.length / 2} pares, capacidad ${capacidad}`);
     actualizarVisualizacionEdificioEstacionamiento(edificio);
     return true;
 }
 
 function actualizarVisualizacionEdificioEstacionamiento(edificio) {
-    if (window.USE_PIXI && window.pixiApp?.sceneManager?.edificioRenderer) {
-        window.pixiApp.sceneManager.edificioRenderer.updateEdificioSprite(edificio);
+    const scene = window.pixiApp?.sceneManager;
+    if (window.USE_PIXI && scene) {
+        scene.edificioRenderer?.updateEdificioSprite(edificio);
+        // renderEstacionamientos appends graphics; clear its previous generation
+        // without touching ordinary road links before rebuilding parking links.
+        for (const [clave, graphics] of scene.conexionGraphics || []) {
+            if (typeof clave === 'string' && clave.startsWith('estacionamiento_')) {
+                graphics.destroy();
+                scene.conexionGraphics.delete(clave);
+            }
+        }
+        scene.conexionRenderer?.renderEstacionamientos();
+        if (window.mostrarContadores) scene.renderContadores?.();
+        else scene.clearContadores?.();
     }
     window.renderizarCanvas?.();
 }
@@ -300,25 +319,19 @@ function resetearEstacionamiento(edificio) {
  * @param {Object} edificio - El edificio
  */
 function limpiarConexionesEdificio(edificio) {
-    if (!edificio || !edificio.conexiones) return;
-
-    edificio.conexiones.forEach(conexion => {
-        const calle = window.calles.find(c => c.id === conexion.calleId || c.nombre === conexion.calleId);
-        if (calle && calle.conexionesEstacionamiento) {
-            // Eliminar del mapa de conexiones
-            const claveConexion = `${conexion.carril}-${conexion.indice}`;
-            calle.conexionesEstacionamiento.delete(claveConexion);
-        }
-    });
-
+    if (!edificio) return;
+    quitarMapeosPropiosEstacionamiento(edificio);
     edificio.conexiones = [];
     edificio.esEstacionamiento = false;
+    edificio.vehiculosActuales = 0;
+    actualizarVisualizacionEdificioEstacionamiento(edificio);
 
     console.log(`🧹 Conexiones de "${edificio.label}" eliminadas`);
 }
 
 // Exponer funciones globalmente
 window.configurarEstacionamiento = configurarEstacionamiento;
+window.validarConfiguracionEstacionamiento = validarConfiguracionEstacionamiento;
 window.procesarEntradaVehiculo = procesarEntradaVehiculo;
 window.intentarGenerarSalida = intentarGenerarSalida;
 window.obtenerEdificioPorCelda = obtenerEdificioPorCelda;

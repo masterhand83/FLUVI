@@ -1560,7 +1560,7 @@ function mostrarDialogoNuevoEdificio() {
             // Configurar como estacionamiento si está marcado
             const esEstacionamiento = document.getElementById('checkEstacionamiento').checked;
             if (esEstacionamiento) {
-                const capacidad = parseInt(document.getElementById('inputCapacidad').value) || 50;
+                const capacidad = Number(document.getElementById('inputCapacidad').value);
                 const conexiones = window.recolectarConexiones();
                 const { probEntrada, probSalida } = window.recolectarProbabilidades();
 
@@ -1568,15 +1568,13 @@ function mostrarDialogoNuevoEdificio() {
                     mostrarToast('Sin conexiones, el edificio será decorativo', 'warning');
                 } else {
                     // Configurar estacionamiento
-                    edificio.capacidadMaxima = capacidad;
-                    edificio.probabilidadesEntrada = probEntrada;
-                    edificio.probabilidadesSalida = probSalida;
-
                     const exito = window.configurarEstacionamiento(edificio, conexiones, capacidad);
                     if (exito) {
+                        edificio.probabilidadesEntrada = probEntrada;
+                        edificio.probabilidadesSalida = probSalida;
                         console.log('✅ Edificio configurado como estacionamiento');
                     } else {
-                        mostrarToast('Error al configurar estacionamiento. Verifica las conexiones.', 'danger');
+                        mostrarToast(window.validarConfiguracionEstacionamiento(edificio, conexiones, capacidad), 'danger');
                     }
                 }
             }
@@ -1856,30 +1854,19 @@ function editarEdificioSeleccionado() {
 
             // Actualizar configuración de estacionamiento
             const esEstacionamiento = document.getElementById('checkEstacionamiento').checked;
-            edificio.esEstacionamiento = esEstacionamiento;
-
             if (esEstacionamiento) {
-                const capacidad = parseInt(document.getElementById('inputCapacidad').value) || 50;
+                const capacidad = Number(document.getElementById('inputCapacidad').value);
                 const conexiones = window.recolectarConexiones();
                 const { probEntrada, probSalida } = window.recolectarProbabilidades();
 
-                // Limpiar conexiones antiguas del mapa
-                if (window.limpiarConexionesEdificio) {
-                    window.limpiarConexionesEdificio(edificio);
+                const error = window.validarConfiguracionEstacionamiento(edificio, conexiones, capacidad);
+                if (error) {
+                    mostrarToast(error, 'danger');
+                    return;
                 }
-
-                // Actualizar propiedades
-                edificio.capacidadMaxima = capacidad;
+                window.configurarEstacionamiento(edificio, conexiones, capacidad);
                 edificio.probabilidadesEntrada = probEntrada;
                 edificio.probabilidadesSalida = probSalida;
-
-                // Reconfigurar como estacionamiento
-                if (conexiones.length > 0) {
-                    window.configurarEstacionamiento(edificio, conexiones, capacidad);
-                } else {
-                    edificio.conexiones = [];
-                    mostrarToast('Sin conexiones, el edificio será decorativo', 'warning');
-                }
             } else {
                 // Desactivar estacionamiento
                 if (window.limpiarConexionesEdificio) {
@@ -1895,11 +1882,6 @@ function editarEdificioSeleccionado() {
             if (window.USE_PIXI && window.pixiApp && window.pixiApp.sceneManager) {
                 // Re-renderizar el edificio actualizado
                 window.pixiApp.sceneManager.edificioRenderer?.renderAll(window.edificios);
-
-                // Re-renderizar conexiones de estacionamiento si aplica
-                if (edificio.esEstacionamiento) {
-                    window.pixiApp.sceneManager.conexionRenderer?.renderEstacionamientos();
-                }
 
                 // Re-renderizar contadores si están visibles
                 if (window.mostrarContadores) {
@@ -2171,17 +2153,18 @@ function normalizarDireccionesCarriles(directions, lanes) {
 }
 
 function serializarEdificio(edificio) {
+    // A name or artwork never implies functionality. Invalid live parking is
+    // exported as decorative, without connections that could be revived later.
+    const funcional = edificio.esEstacionamiento === true &&
+        window.validarConfiguracionEstacionamiento?.(edificio, edificio.conexiones, edificio.capacidadMaxima) === null;
+    edificio = { ...edificio, esEstacionamiento: funcional,
+        conexiones: funcional ? edificio.conexiones.map(conexion => ({ ...conexion,
+            // Streets are persisted by name, not their transient runtime IDs.
+            calleId: (window.calles || []).find(calle => calle.id === conexion.calleId || calle.nombre === conexion.calleId)?.nombre
+        })) : [],
+        vehiculosActuales: funcional ? (edificio.vehiculosActuales ?? 0) : 0 };
     if (edificio.appearanceMode === 'uploaded-image') {
-        // Only persistent data: never copy decoded images or renderer resources.
-        const fields = ['id', 'label', 'x', 'y', 'width', 'height', 'angle', 'color',
-            'layer', 'interactive', 'esEstacionamiento', 'capacidadMaxima', 'vehiculosActuales',
-            'conexiones', 'probabilidadesEntrada', 'probabilidadesSalida',
-            'imageData', 'imageNaturalWidth', 'imageNaturalHeight', 'imageRotationConvention'];
-        const saved = { appearanceMode: 'uploaded-image' };
-        fields.forEach(field => {
-            if (edificio[field] !== undefined) saved[field] = edificio[field];
-        });
-        return saved;
+        return copiarCamposImagenEdificio(edificio);
     }
     if (edificio.geometryType !== 'polygon') return edificio;
 
@@ -2193,6 +2176,20 @@ function serializarEdificio(edificio) {
             : [],
         appearanceMode: 'polygon'
     };
+}
+
+function copiarCamposImagenEdificio(edificio) {
+    // Copy persistent image data without consulting live roads. Import decodes
+    // images before restoring roads; parking is validated after roads exist.
+    const fields = ['id', 'label', 'x', 'y', 'width', 'height', 'angle', 'color',
+        'layer', 'interactive', 'esEstacionamiento', 'capacidadMaxima', 'vehiculosActuales',
+        'conexiones', 'probabilidadesEntrada', 'probabilidadesSalida',
+        'imageData', 'imageNaturalWidth', 'imageNaturalHeight', 'imageRotationConvention'];
+    const saved = { appearanceMode: 'uploaded-image' };
+    fields.forEach(field => {
+        if (edificio[field] !== undefined) saved[field] = edificio[field];
+    });
+    return saved;
 }
 
 async function decodificarImagenEdificio(imageData) {
@@ -2229,7 +2226,7 @@ function validarImagenEdificioGuardada(saved) {
 
 async function restaurarImagenEdificio(edificio) {
     try {
-        const saved = serializarEdificio(edificio);
+        const saved = copiarCamposImagenEdificio(edificio);
         validarImagenEdificioGuardada(saved);
         const image = await window.buildingImageCodec.decode(saved.imageData);
         return { ...saved, imageElement: image,
@@ -2459,6 +2456,30 @@ function cargarSimulacion(event) {
             // Cargar edificios si existen
             if (datosSimulacion.edificios && Array.isArray(datosSimulacion.edificios)) {
                 window.edificios = edificiosRestaurados;
+
+                // Restore only explicit, fully valid parking after current roads
+                // exist. Disable all candidates first so invalid saved buildings
+                // cannot reserve cells or leave partial mappings behind.
+                const parkingGuardado = window.edificios.map(edificio => ({
+                    edificio, activo: edificio.esEstacionamiento === true,
+                    conexiones: edificio.conexiones, ocupacion: edificio.vehiculosActuales ?? 0
+                }));
+                parkingGuardado.forEach(({ edificio }) => {
+                    edificio.esEstacionamiento = false;
+                    edificio.conexiones = [];
+                    edificio.vehiculosActuales = 0;
+                });
+                parkingGuardado.forEach(({ edificio, activo, conexiones, ocupacion }) => {
+                    if (!activo) return;
+                    const candidato = { ...edificio, vehiculosActuales: ocupacion };
+                    const error = window.validarConfiguracionEstacionamiento(candidato, conexiones, edificio.capacidadMaxima);
+                    if (error) {
+                        console.warn(`Estacionamiento «${edificio.label}» omitido: ${error}`);
+                        return;
+                    }
+                    edificio.vehiculosActuales = ocupacion;
+                    window.configurarEstacionamiento(edificio, conexiones, edificio.capacidadMaxima);
+                });
 
                 // IMPORTANTE: Actualizar selector de edificios después de cargar
                 actualizarSelectorEdificios();

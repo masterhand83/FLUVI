@@ -443,10 +443,14 @@ class EdificioRenderer {
 
         if (edificio.geometryType === 'polygon') {
             const points = edificio.vertices.flatMap(point => [point.x, point.y]);
-            graphics.lineStyle(4, 0x0066FF, 1);
+            graphics.lineStyle(6, 0x0066FF, 1);
             graphics.drawPolygon(points);
             graphics.name = 'functionalParkingBorder';
             sprite.addChild(graphics);
+            // The wider blue polygon stroke surrounds, rather than covers,
+            // the gold selection stroke on the same footprint.
+            const selection = sprite.getChildByName('selectionBorder');
+            if (selection) sprite.setChildIndex(selection, sprite.children.length - 1);
             return;
         }
 

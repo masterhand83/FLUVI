@@ -2325,6 +2325,21 @@
         <button type="button" id="buildingInspectorReplaceImage" class="btn btn-sm btn-outline-success mt-2" hidden>Reemplazar imagen</button>
         <input id="buildingInspectorImageInput" type="file" accept="image/png,image/jpeg,image/webp" hidden>
         <small id="buildingInspectorImageStatus" role="status" aria-live="polite" hidden></small>
+        <section id="buildingInspectorParking" class="building-inspector-parking mt-2" aria-label="Estacionamiento funcional">
+          <label><input id="buildingInspectorParkingToggle" type="checkbox"> Estacionamiento funcional</label>
+          <small id="buildingInspectorParkingStatus" role="status" aria-live="polite"></small>
+          <div id="buildingInspectorParkingConfig" hidden>
+            <label class="street-inspector-field">Capacidad <input id="buildingInspectorParkingCapacity" type="number" min="1" step="1" value="50"></label>
+            <small>Carril y celda: numeración desde 1. Completa todos los pares para aplicar las conexiones.</small>
+            <div id="buildingInspectorParkingPairs"></div>
+            <button id="buildingInspectorParkingAddPair" type="button" class="btn btn-sm btn-outline-primary mt-1">Añadir par (máximo 10)</button>
+            <details class="mt-2">
+              <summary>Probabilidades por hora (%)</summary>
+              <div id="buildingInspectorParkingProbabilities"></div>
+            </details>
+          </div>
+          <div id="buildingInspectorParkingError" class="street-inspector-error" role="alert" aria-live="assertive"></div>
+        </section>
         <div id="buildingInspectorError" class="street-inspector-error" role="alert" aria-live="assertive"></div>
       </aside>
 
