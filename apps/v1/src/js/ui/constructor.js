@@ -1845,7 +1845,9 @@ function editarEdificioSeleccionado() {
         // Agregar nuevo listener para modo edición
         nuevoBtn.addEventListener('click', () => {
             // Recolectar valores del formulario
-            edificio.label = document.getElementById('inputNombreEdificio').value || 'Edificio';
+            const label = document.getElementById('inputNombreEdificio').value || 'Edificio';
+            if (label !== edificio.label) window.buildingImageAppearance?.preserveBundledIdentity(edificio);
+            edificio.label = label;
             edificio.x = parseFloat(document.getElementById('inputXEdificio').value) || 0;
             edificio.y = parseFloat(document.getElementById('inputYEdificio').value) || 0;
             edificio.width = parseFloat(document.getElementById('inputWidthEdificio').value) || 50;
@@ -2174,7 +2176,7 @@ function serializarEdificio(edificio) {
         const fields = ['id', 'label', 'x', 'y', 'width', 'height', 'angle', 'color',
             'layer', 'interactive', 'esEstacionamiento', 'capacidadMaxima', 'vehiculosActuales',
             'conexiones', 'probabilidadesEntrada', 'probabilidadesSalida',
-            'imageData', 'imageNaturalWidth', 'imageNaturalHeight'];
+            'imageData', 'imageNaturalWidth', 'imageNaturalHeight', 'imageRotationConvention'];
         const saved = { appearanceMode: 'uploaded-image' };
         fields.forEach(field => {
             if (edificio[field] !== undefined) saved[field] = edificio[field];

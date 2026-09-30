@@ -7,6 +7,9 @@
 	const imageInput = document.getElementById("buildingImageInput")
 	const imageStatus = document.getElementById("buildingImageStatus")
 	const imageCancel = document.getElementById("buildingImageCancel")
+	const replaceImageButton = document.getElementById("buildingInspectorReplaceImage")
+	const replacementInput = document.getElementById("buildingInspectorImageInput")
+	const replacementStatus = document.getElementById("buildingInspectorImageStatus")
 	const inspector = document.getElementById("buildingInspector")
 	if (!canvas || !button || !inspector) return
 
@@ -41,10 +44,24 @@
 	let selected = null
 	let handleGesture = null
 	let lastSelection
+	let replacementToken = 0
+	let replacementTarget = null
 
 	const normalizeColor = value => typeof value === "string" && /^#[0-9a-f]{6}$/i.test(value) ? value.toUpperCase() : ""
 	const isUploadedImage = building => building?.appearanceMode === "uploaded-image"
+	const isImageBuilding = building => !!window.buildingImageAppearance?.isImage(building)
+	function replacementRotation(building) {
+		return !isUploadedImage(building) || building.imageRotationConvention === "legacy"
+			? { imageRotationConvention: "legacy" } : {}
+	}
+	function imageRotationSign(building) {
+		if (!window.USE_PIXI || !isImageBuilding(building)) return 1
+		return !isUploadedImage(building) || building.imageRotationConvention === "legacy" ? -1 : 1
+	}
 	function imageRatio(building) {
+		// Bundled artwork historically filled stretched bounds. Preserve that
+		// displayed ratio rather than snapping old maps to the source image.
+		if (!isUploadedImage(building)) return building.width / building.height
 		const width = building.imageElement?.naturalWidth || building.imageNaturalWidth
 		const height = building.imageElement?.naturalHeight || building.imageNaturalHeight
 		return width > 0 && height > 0 ? width / height : building.width / building.height
@@ -102,8 +119,11 @@
 		fields.width.closest("div").hidden = polygon
 		fields.height.closest("div").hidden = polygon
 		fields.angle.closest("div").hidden = polygon
-		lock.closest("label").hidden = polygon || isUploadedImage(building)
-		document.getElementById("buildingColorPalette").closest("div").hidden = isUploadedImage(building)
+		const image = isImageBuilding(building)
+		lock.closest("label").hidden = polygon || image
+		document.getElementById("buildingColorPalette").closest("div").hidden = image
+		replaceImageButton.hidden = !image
+		replacementStatus.hidden = !image
 		vertexEditor.hidden = !polygon
 		if (polygon) vertexText.value = building.vertices.map(point => `${point.x}, ${point.y}`).join("\n")
 		const color = normalizeColor(building.color)
@@ -115,7 +135,12 @@
 		}
 	}
 	function show(building) {
-		selected = building && window.edificios?.includes(building) ? building : null
+		const next = building && window.edificios?.includes(building) ? building : null
+		if (next !== selected) {
+			cancelReplacement()
+			handleGesture = null
+		}
+		selected = next
 		lastSelection = selected
 		inspector.hidden = !selected
 		if (selected) readModel(selected)
@@ -171,6 +196,7 @@
 		if (field === fields.name) {
 			const value = field.value.trim()
 			if (!value) return fail(field, "El nombre no puede estar vacío.")
+			if (value !== selected.label) window.buildingImageAppearance?.preserveBundledIdentity(selected)
 			selected.label = value
 			window.actualizarSelectorEdificios?.()
 		} else {
@@ -178,15 +204,15 @@
 			if (field.value.trim() === "" || !Number.isFinite(value)) return fail(field, "Introduce un número válido.")
 			const key = Object.entries(fields).find(([, input]) => input === field)?.[0]
 			if ((key === "width" || key === "height") && value <= 0) return fail(field, "El tamaño debe ser mayor que cero.")
-			if (isUploadedImage(selected) && (key === "width" || key === "height")) {
+			if (isImageBuilding(selected) && (key === "width" || key === "height")) {
 				const ratio = imageRatio(selected)
 				const other = key === "width" ? value / ratio : value * ratio
 				if (!Number.isFinite(other) || other <= 0) return fail(field, "Introduce un tamaño proporcional válido.")
 				selected[key === "width" ? "height" : "width"] = other
 			}
 			selected[key] = key === "angle" ? ((value % 360) + 360) % 360 : value
-			if ((lock.checked || isUploadedImage(selected)) && (key === "width" || key === "height")) {
-				if (!isUploadedImage(selected)) selected[key === "width" ? "height" : "width"] = value
+			if ((lock.checked || isImageBuilding(selected)) && (key === "width" || key === "height")) {
+				if (!isImageBuilding(selected)) selected[key === "width" ? "height" : "width"] = value
 				readModel(selected)
 			}
 		}
@@ -195,7 +221,7 @@
 	}
 	for (const field of Object.values(fields)) field.addEventListener("input", () => commit(field))
 	for (const swatch of palette) swatch.addEventListener("click", () => {
-		if (!selected || isUploadedImage(selected)) return
+		if (!selected || isImageBuilding(selected)) return
 		selected.color = swatch.value
 		readModel(selected)
 		redraw()
@@ -410,6 +436,7 @@
 	}
 	function deactivate() {
 		// Reset must invalidate decoding even before placement has been armed.
+		cancelReplacement()
 		uploadToken++
 		uploadPending = false
 		placementImage = null
@@ -426,7 +453,7 @@
 		button.setAttribute("aria-pressed", "false")
 		polygonButton?.classList.remove("active")
 		polygonButton?.setAttribute("aria-pressed", "false")
-		lock.closest("label").hidden = selected?.geometryType === "polygon" || isUploadedImage(selected)
+		lock.closest("label").hidden = selected?.geometryType === "polygon" || isImageBuilding(selected)
 		canvas.style.cursor = ""
 		document.removeEventListener("pointerdown", onDrawDown, true)
 		document.removeEventListener("pointermove", onDrawMove, true)
@@ -448,16 +475,84 @@
 		imageInput.click()
 	})
 	imageCancel?.addEventListener("click", deactivate)
+	function cancelReplacement() {
+		replacementToken++
+		replacementTarget = null
+		if (replacementStatus) replacementStatus.textContent = ""
+	}
+	function readImageFile(file) {
+		return new Promise((resolve, reject) => {
+			const reader = new FileReader()
+			reader.onload = () => resolve(reader.result)
+			reader.onerror = reject
+			reader.onabort = reject
+			reader.readAsDataURL(file)
+		})
+	}
+	function imageFileError(file) {
+		if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) return "Formato no admitido. Usa PNG, JPEG o WebP."
+		if (file.size > window.buildingImageCodec.maxBytes) return "La imagen no puede superar 5 MB."
+		return ""
+	}
+	function replacementIsCurrent(token, building, buildings) {
+		return token === replacementToken && selected === building &&
+			window.edificioSeleccionado === building && window.edificios === buildings && buildings.includes(building)
+	}
+	function replacementFailed(token, building, buildings) {
+		if (replacementIsCurrent(token, building, buildings)) {
+			replacementStatus.textContent = "No se pudo leer la imagen. Elige un PNG, JPEG o WebP válido."
+		}
+	}
+	replaceImageButton?.addEventListener("click", () => {
+		if (!selected || !isImageBuilding(selected) || !window.edificios?.includes(selected)) return
+		deactivate()
+		replacementTarget = selected
+		replacementInput.value = ""
+		replacementInput.click()
+	})
+	replacementInput?.addEventListener("change", async () => {
+		const building = replacementTarget
+		const file = replacementInput.files?.[0]
+		if (!building || !file) return
+		const token = ++replacementToken
+		const buildings = window.edificios
+		const current = () => replacementIsCurrent(token, building, buildings)
+		if (!current()) return
+		const message = imageFileError(file)
+		if (message) {
+			replacementStatus.textContent = message
+			return
+		}
+		replacementStatus.textContent = "Comprobando imagen…"
+		try {
+			const imageData = await readImageFile(file)
+			if (!current()) return
+			const imageElement = await window.buildingImageCodec.decode(imageData)
+			if (!current()) return
+			// Publish only after validation and decoding: failures keep all old state.
+			const scale = 120 / Math.max(imageElement.naturalWidth, imageElement.naturalHeight)
+			handleGesture = null
+			Object.assign(building, {
+				...replacementRotation(building),
+				appearanceMode: "uploaded-image", imageData, imageElement,
+				imageNaturalWidth: imageElement.naturalWidth, imageNaturalHeight: imageElement.naturalHeight,
+				width: imageElement.naturalWidth * scale, height: imageElement.naturalHeight * scale,
+			})
+			readModel(building)
+			redraw(building)
+			syncHandles()
+			replacementStatus.textContent = "Imagen reemplazada."
+		} catch {
+			replacementFailed(token, building, buildings)
+		}
+	})
 	imageInput?.addEventListener("change", async () => {
 		deactivate()
 		const file = imageInput.files?.[0]
 		if (!file) return
-		if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
-			imageStatus.textContent = "Formato no admitido. Usa PNG, JPEG o WebP."
-			return
-		}
-		if (file.size > window.buildingImageCodec.maxBytes) {
-			imageStatus.textContent = "La imagen no puede superar 5 MB."
+		const message = imageFileError(file)
+		if (message) {
+			imageStatus.textContent = message
 			return
 		}
 		const token = ++uploadToken
@@ -465,13 +560,7 @@
 		imageCancel.hidden = false
 		imageStatus.textContent = "Comprobando imagen…"
 		try {
-			const imageData = await new Promise((resolve, reject) => {
-				const reader = new FileReader()
-				reader.onload = () => resolve(reader.result)
-				reader.onerror = reject
-				reader.onabort = reject
-				reader.readAsDataURL(file)
-			})
+			const imageData = await readImageFile(file)
 			if (token !== uploadToken) return
 			const imageElement = await window.buildingImageCodec.decode(imageData)
 			if (token !== uploadToken) return
@@ -487,6 +576,7 @@
 	})
 	document.addEventListener("keydown", event => {
 		if ((active || uploadPending) && event.key === "Escape") deactivate()
+		if (replacementTarget && event.key === "Escape") cancelReplacement()
 	})
 
 	const handles = ["move", "resize", "rotate"].map(kind => {
@@ -501,7 +591,7 @@
 	})
 	const vertexHandles = []
 	function rotatedPoint(building, localX, localY) {
-		const angle = (building.angle || 0) * Math.PI / 180
+		const angle = imageRotationSign(building) * (building.angle || 0) * Math.PI / 180
 		return { x: building.x + localX * Math.cos(angle) - localY * Math.sin(angle), y: building.y + localX * Math.sin(angle) + localY * Math.cos(angle) }
 	}
 	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: One placement pass keeps the three shared handles and the variable polygon vertex handles synchronized.
@@ -552,6 +642,7 @@
 		event.stopImmediatePropagation()
 		const point = worldPoint(event)
 		handleGesture = { kind, index: Number(handle.dataset.vertexIndex), pointerId: event.pointerId, start: point, before: { x: selected.x, y: selected.y, width: selected.width, height: selected.height, angle: selected.angle || 0, vertices: selected.vertices?.map(vertex => ({ ...vertex })) } }
+		handleGesture.rotationSign = imageRotationSign(selected)
 		handleGesture.lastValidVertices = handleGesture.before.vertices?.map(vertex => ({ ...vertex }))
 		handle.setPointerCapture?.(event.pointerId)
 	}
@@ -596,14 +687,15 @@
 			selected.x = before.x + point.x - handleGesture.start.x
 			selected.y = before.y + point.y - handleGesture.start.y
 		} else if (handleGesture.kind === "rotate") {
-			selected.angle = ((Math.atan2(point.y - before.y, point.x - before.x) * 180 / Math.PI + 90) % 360 + 360) % 360
+			const visualAngle = Math.atan2(point.y - before.y, point.x - before.x) * 180 / Math.PI + 90
+			selected.angle = ((visualAngle * handleGesture.rotationSign) % 360 + 360) % 360
 		} else {
-			const angle = -before.angle * Math.PI / 180
+			const angle = -before.angle * handleGesture.rotationSign * Math.PI / 180
 			const dx = point.x - before.x
 			const dy = point.y - before.y
 			let width = Math.abs(2 * (dx * Math.cos(angle) - dy * Math.sin(angle)))
 			let height = Math.abs(2 * (dx * Math.sin(angle) + dy * Math.cos(angle)))
-			if (isUploadedImage(selected)) {
+			if (isImageBuilding(selected)) {
 				const ratio = imageRatio(selected)
 				height = Math.max(width / ratio, height)
 				width = height * ratio
@@ -636,7 +728,7 @@
 		if (window.edificioSeleccionado !== selected) show(window.edificioSeleccionado)
 	}, 0), true)
 	window.setInterval(() => {
-		if (window.edificioSeleccionado !== lastSelection) {
+		if (window.edificioSeleccionado !== lastSelection || (selected && !window.edificios?.includes(selected))) {
 			lastSelection = window.edificioSeleccionado
 			show(lastSelection)
 		} else syncHandles()

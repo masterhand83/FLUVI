@@ -275,6 +275,40 @@ const buildingImageMap = {
     "ciclovía": cicloviaImg
 };
 
+// Recognition must not depend on which renderer (or its asset loader) is active.
+// Pixi has additional bundled assets; Canvas historically draws those as colors.
+window.buildingImageAppearance = (() => {
+    const bundledKeys = new Set([
+        ...Object.keys(buildingImageMap).map(key => key.toLowerCase()),
+        'campo tiro con arco', 'gimnasio', 'cenlex', 'cidetec', 'dae',
+        'cendi', 'biblioteca', 'estacionamiento', 'est',
+        'bache', 'trabajador', 'arbol', 'inundacion'
+    ]);
+    function bundledKey(building) {
+        if (!building || building.geometryType === 'polygon' || building.appearanceMode === 'uploaded-image') return null;
+        const key = building.imagen || building.label;
+        if (typeof key === 'string' && bundledKeys.has(key.toLowerCase())) return key;
+        return Object.prototype.hasOwnProperty.call(buildingImageMap, building.label) ? building.label : null;
+    }
+    function preserveBundledIdentity(building) {
+        const key = bundledKey(building);
+        if (!key) return;
+        // Called before a name edit, never merely on selection/load. Preserve
+        // even Canvas's historical color fallback for Pixi-only bundled images.
+        if (!Object.prototype.hasOwnProperty.call(building, 'canvasImageKey')) {
+            building.canvasImageKey = Object.prototype.hasOwnProperty.call(buildingImageMap, building.label)
+                ? building.label : null;
+        }
+        if (!building.imagen) building.imagen = key;
+    }
+    return {
+        isImage: building => building?.geometryType !== 'polygon' &&
+            (building?.appearanceMode === 'uploaded-image' || bundledKey(building) !== null),
+        bundledKey,
+        preserveBundledIdentity
+    };
+})();
+
 // ========== ÁREAS DE FONDO (RENDERIZADAS CON PIXI.GRAPHICS) ==========
 // Estas áreas se renderizan DEBAJO de todos los edificios y calles
 // OPTIMIZADO: Convierte Graphics a textura estática (Sprite) y se renderiza UNA SOLA VEZ
@@ -1599,7 +1633,10 @@ function dibujarEdificios() {
 
         // Buscar si existe una imagen para este edificio
         const img = edificio.appearanceMode === 'uploaded-image'
-            ? edificio.imageElement : buildingImageMap[edificio.label];
+            ? edificio.imageElement : buildingImageMap[
+                Object.prototype.hasOwnProperty.call(edificio, 'canvasImageKey')
+                    ? edificio.canvasImageKey : edificio.label
+            ];
 
         // Si existe una imagen y está cargada, dibujarla
         if (img && img.complete && img.naturalHeight !== 0) {

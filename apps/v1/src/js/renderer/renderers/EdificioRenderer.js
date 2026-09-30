@@ -94,6 +94,8 @@ class EdificioRenderer {
                 sprite.width = edificio.width || 100;
                 sprite.height = edificio.height || 100;
                 sprite.anchor.set(0.5);
+                sprite._bundledImageKey = imagenLower;
+                sprite.hitArea = new PIXI.Rectangle(-texture.width / 2, -texture.height / 2, texture.width, texture.height);
             }
         }
 
@@ -161,7 +163,7 @@ class EdificioRenderer {
         sprite.y = isPolygon ? 0 : edificio.y;
 
         if (!isPolygon && edificio.angle) {
-            sprite.rotation = edificio.appearanceMode === 'uploaded-image'
+            sprite.rotation = edificio.appearanceMode === 'uploaded-image' && edificio.imageRotationConvention !== 'legacy'
                 ? edificio.angle * Math.PI / 180 : CoordinateConverter.degreesToRadians(edificio.angle);
         }
 
@@ -178,6 +180,7 @@ class EdificioRenderer {
         if (edificio.label && edificio.label !== "CONO") {
             this.addBuildingLabel(sprite, edificio);
         }
+        sprite._buildingLabel = edificio.label;
 
         // Agregar borde si está seleccionado
         if (window.edificioSeleccionado === edificio) {
@@ -216,13 +219,19 @@ class EdificioRenderer {
         const sprite = this.scene.edificioSprites.get(edificio);
         if (!sprite) return;
 
-        if (edificio.appearanceMode === 'uploaded-image' && edificio.imageElement?.naturalWidth) {
-            if (sprite._uploadedImage !== edificio.imageElement) {
-                this.removeEdificioSprite(edificio);
-                return this.renderEdificio(edificio);
-            }
+        const uploadedImage = edificio.appearanceMode === 'uploaded-image' && edificio.imageElement?.naturalWidth
+            ? edificio.imageElement : null;
+        const imageKey = edificio.imagen || edificio.label;
+        const bundledImageKey = edificio.geometryType !== 'polygon' && edificio.appearanceMode !== 'uploaded-image' &&
+            typeof imageKey === 'string' && this.assets.hasTexture(imageKey.toLowerCase())
+            ? imageKey.toLowerCase() : null;
+        if ((sprite._uploadedImage || null) !== uploadedImage || (sprite._bundledImageKey || null) !== bundledImageKey) {
+            this.removeEdificioSprite(edificio);
+            return this.renderEdificio(edificio);
+        }
+        if (uploadedImage || bundledImageKey) {
             // Labels/outlines must not affect image sizing or its rectangular hit area.
-            sprite.scale.set(edificio.width / sprite.texture.width, edificio.height / sprite.texture.height);
+            sprite.scale.set((edificio.width || 100) / sprite.texture.width, (edificio.height || 100) / sprite.texture.height);
         }
 
         const isPolygon = edificio.geometryType === 'polygon';
@@ -260,7 +269,7 @@ class EdificioRenderer {
         }
 
         if (!isPolygon && edificio.angle !== undefined) {
-            sprite.rotation = edificio.appearanceMode === 'uploaded-image'
+            sprite.rotation = edificio.appearanceMode === 'uploaded-image' && edificio.imageRotationConvention !== 'legacy'
                 ? edificio.angle * Math.PI / 180 : CoordinateConverter.degreesToRadians(edificio.angle);
         }
 
@@ -274,6 +283,15 @@ class EdificioRenderer {
         }
 
         // Actualizar posición de la etiqueta (si existe)
+        if (sprite._buildingLabel !== edificio.label) {
+            const oldLabel = this.etiquetasEdificios.get(edificio);
+            if (oldLabel) {
+                oldLabel.destroy({ children: true });
+                this.etiquetasEdificios.delete(edificio);
+            }
+            if (edificio.label && edificio.label !== 'CONO') this.addBuildingLabel(sprite, edificio);
+            sprite._buildingLabel = edificio.label;
+        }
         const etiqueta = this.etiquetasEdificios.get(edificio);
         if (etiqueta) {
             const center = isPolygon
