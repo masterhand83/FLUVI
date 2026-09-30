@@ -5,22 +5,36 @@ import { runInNewContext } from 'node:vm';
 const core = name => readFileSync(new URL(`../src/js/core/${name}.js`, import.meta.url), 'utf8');
 const traffic = core('trafico');
 
-function simulation(direction = 1, lanes = 1, length = 9) {
-    const window = { configuracionTiempo: { horaActual: 12 } };
+function simulation(direction = 1, lanes = 1, length = 9, roundabout = false) {
+    const window = { configuracionTiempo: { horaActual: 12 }, celda_tamano: 10 };
     const math = Object.create(Math);
     math.random = () => 0;
     runInNewContext(`const TIPOS = { GENERADOR: 'generador', CONEXION: 'conexion', DEVORADOR: 'devorador' };
+        const TIPOS_CONEXION = { LINEAL: 'lineal', INCORPORACION: 'incorporacion', PROBABILISTICA: 'probabilistica' };
         let buildingInitialMap = false;
         ${core('reglas')}
         ${core('estacionamientos')}
+        ${core('roundaboutStreet')}
         ${traffic.slice(traffic.indexOf('function crearCalle('), traffic.indexOf('// Clase para conexiones multi-carril'))}
+        ${traffic.slice(traffic.indexOf('class ConexionCA {'), traffic.indexOf('// Calcula las coordenadas globales del CENTRO'))}
         ${traffic.slice(traffic.indexOf('function marcarCelulaEsperando('), traffic.indexOf('// ========== EXPONER VARIABLES GLOBALES PARA EL EDITOR'))}
         window.actualizarCalle = actualizarCalle;
+        window.cambioCarril = cambioCarril;
+        window.ConexionCA = ConexionCA;
         window.crearCalle = crearCalle;`, {
         window, calles: [], Math: math, console: { log() {} }, inicializarVertices() {},
     });
-    const street = window.crearCalle('test', length, 'conexion', 0, 0, 0, 0, lanes, 0);
-    street.laneDirections.fill(direction);
+    const roads = [];
+    const road = () => {
+        const result = roundabout
+            ? window.roundaboutStreet.createStreet({ nombre: `test-${roads.length}`, x: 0, y: 0,
+                innerRadius: 20, carriles: lanes, probabilidadSaltoDeCarril: 0 })
+            : window.crearCalle(`test-${roads.length}`, length, 'conexion', 0, 0, 0, 0, lanes, 0);
+        result.laneDirections.fill(direction);
+        roads.push(result);
+        return result;
+    };
+    const street = road();
     street.conexionesEstacionamiento = new Map();
     const buildings = [];
     const building = (options = {}) => {
@@ -33,10 +47,23 @@ function simulation(direction = 1, lanes = 1, length = 9) {
     const endpoint = (parking, index, tipo = 'entrada', lane = 0) => {
         street.conexionesEstacionamiento.set(`${lane}-${index}`, { tipo, edificio: parking });
     };
-    const total = () => street.arreglo.reduce((sum, lane) =>
-        sum + lane.filter(value => value >= 1 && value <= 6).length, 0) +
+    const total = () => roads.reduce((count, current) => count + current.arreglo.reduce((sum, lane) =>
+        sum + lane.filter(value => value >= 1 && value <= 6).length, 0), 0) +
         buildings.reduce((sum, parking) => sum + parking.vehiculosActuales, 0);
-    return { street, building, endpoint, total, update: () => window.actualizarCalle(street) };
+    const connect = (target, source, destination = 4) => {
+        const link = new window.ConexionCA(street, target, 0, 0, source, destination);
+        street.conexionesSalida[0].push(link);
+        return link;
+    };
+    // Relevant tick phases in paso order; generation is disabled for these connection streets.
+    const tick = link => {
+        const transferred = link.transferir();
+        roads.forEach(window.cambioCarril);
+        roads.forEach(window.actualizarCalle);
+        return transferred;
+    };
+    return { street, building, endpoint, total, road, connect, tick,
+        update: () => window.actualizarCalle(street) };
 }
 
 describe.each([1, -1])('parking conservation in lane direction %i', direction => {
@@ -98,6 +125,80 @@ describe.each([1, -1])('parking conservation in lane direction %i', direction =>
         expect(first.vehiculosActuales + second.vehiculosActuales).toBe(1);
         // Physical-index traversal determines which entrance gets the vehicle.
         expect(first.vehiculosActuales).toBe(direction === 1 ? 1 : 0);
+        expect(Array.from(street.arreglo[0])).toEqual(Array(9).fill(0));
+        expect(total()).toBe(1);
+    });
+
+    it('counts adjacent entrances for the same building only once', () => {
+        const { street, building, endpoint, total, update } = simulation(direction);
+        const parking = building();
+        endpoint(parking, 4);
+        endpoint(parking, 4 + direction);
+        street.arreglo[0][4] = 5;
+        update();
+        expect(parking.vehiculosActuales).toBe(1);
+        expect(Array.from(street.arreglo[0])).toEqual(Array(9).fill(0));
+        expect(total()).toBe(1);
+    });
+
+    it('uses physical-index precedence regardless of map insertion order', () => {
+        const { street, building, endpoint, total, update } = simulation(direction);
+        const first = building();
+        const second = building();
+        endpoint(second, 4 + direction);
+        endpoint(first, 4);
+        street.arreglo[0][4] = 5;
+        update();
+        expect(first.vehiculosActuales).toBe(direction === 1 ? 1 : 0);
+        expect(second.vehiculosActuales).toBe(direction === 1 ? 0 : 1);
+        expect(Array.from(street.arreglo[0])).toEqual(Array(9).fill(0));
+        expect(total()).toBe(1);
+    });
+
+    it('leaves a rejected source eligible for a later entrance', () => {
+        const { street, building, endpoint, total, update } = simulation(direction);
+        const rejected = building({ probabilidadesEntrada: Array(24).fill(0) });
+        const accepted = building();
+        // Both entrances see the source at 4; the lower physical index is attempted first.
+        endpoint(rejected, Math.min(4, 4 + direction));
+        endpoint(accepted, Math.max(4, 4 + direction));
+        street.arreglo[0][4] = 5;
+        update();
+        expect(rejected.vehiculosActuales).toBe(0);
+        expect(accepted.vehiculosActuales).toBe(1);
+        expect(Array.from(street.arreglo[0])).toEqual(Array(9).fill(0));
+        expect(total()).toBe(1);
+    });
+
+    it('does not accept anticipated entry at a waiting entrance cell', () => {
+        const { street, building, endpoint, total, update, road, connect } = simulation(direction);
+        const parking = building();
+        endpoint(parking, 4);
+        street.arreglo[0][4 - direction] = 3;
+        // An outgoing link holds the non-waiting source during CA movement.
+        connect(road(), 4 - direction);
+        street.celulasEsperando[0][4] = true;
+        update();
+        expect(parking.vehiculosActuales).toBe(0);
+        const expected = Array(9).fill(0);
+        expected[4 - direction] = 3;
+        expect(Array.from(street.arreglo[0])).toEqual(expected);
+        expect(Array.from(street.celulasEsperando[0])).toEqual(Array(9).fill(false));
+        expect(total()).toBe(1);
+    });
+
+    it('allows entry on the update after a source waiting flag is cleared', () => {
+        const { street, building, endpoint, total, update } = simulation(direction);
+        const parking = building();
+        endpoint(parking, 4);
+        street.arreglo[0][4 - direction] = 3;
+        street.celulasEsperando[0][4 - direction] = true;
+        update();
+        expect(parking.vehiculosActuales).toBe(0);
+        expect(street.arreglo[0][4 - direction]).toBe(3);
+        expect(total()).toBe(1);
+        update();
+        expect(parking.vehiculosActuales).toBe(1);
         expect(Array.from(street.arreglo[0])).toEqual(Array(9).fill(0));
         expect(total()).toBe(1);
     });
@@ -211,4 +312,103 @@ it('keeps consumed sources local to their lane on a mixed-direction street', () 
     expect(Array.from(street.arreglo[1])).toEqual([0, 0, 0, 6, 0, 0, 0, 0, 0]);
     expect(parking.vehiculosActuales).toBe(1);
     expect(total()).toBe(2);
+});
+
+it('allows the same source index to be consumed independently in separate lanes', () => {
+    const { street, building, endpoint, total, update } = simulation(1, 2);
+    street.laneDirections[1] = -1;
+    const parking = building();
+    endpoint(parking, 4, 'entrada', 0);
+    endpoint(parking, 4, 'entrada', 1);
+    street.arreglo[0][4] = 2;
+    street.arreglo[1][4] = 6;
+    update();
+    expect(street.arreglo.map(lane => Array.from(lane))).toEqual([Array(9).fill(0), Array(9).fill(0)]);
+    expect(parking.vehiculosActuales).toBe(2);
+    expect(total()).toBe(2);
+});
+
+describe('roundabout parking conservation at the wrap seam', () => {
+    it.each([false, true])('absorbs once across adjacent entrances (shared building: %s)', shared => {
+        const { street, building, endpoint, total, update } = simulation(1, 1, 9, true);
+        const direct = building();
+        const anticipated = shared ? direct : building();
+        const source = street.tamano - 1;
+        endpoint(direct, source);
+        endpoint(anticipated, 0);
+        street.arreglo[0][source] = 6;
+        update();
+        // Cell zero is inspected before the last physical cell, independent of insertion order.
+        expect(anticipated.vehiculosActuales).toBe(1);
+        expect(direct.vehiculosActuales).toBe(shared ? 1 : 0);
+        expect(Array.from(street.arreglo[0])).toEqual(Array(street.tamano).fill(0));
+        expect(total()).toBe(1);
+    });
+
+    it.each(['source', 'entrance'])('respects a waiting %s at a seam entrance', waitingCell => {
+        const { street, building, endpoint, total, update } = simulation(1, 1, 9, true);
+        const parking = building();
+        const source = street.tamano - 1;
+        endpoint(parking, 0);
+        street.arreglo[0][source] = 3;
+        street.celulasEsperando[0][waitingCell === 'source' ? source : 0] = true;
+        update();
+        expect(parking.vehiculosActuales).toBe(0);
+        const expected = Array(street.tamano).fill(0);
+        expected[source] = 3;
+        expect(Array.from(street.arreglo[0])).toEqual(expected);
+        expect(Array.from(street.celulasEsperando[0])).toEqual(Array(street.tamano).fill(false));
+        expect(total()).toBe(1);
+        update();
+        expect(parking.vehiculosActuales).toBe(1);
+        expect(Array.from(street.arreglo[0])).toEqual(Array(street.tamano).fill(0));
+        expect(total()).toBe(1);
+    });
+});
+
+describe.each([
+    ['forward street', 1, false],
+    ['reverse street', -1, false],
+    ['roundabout seam', 1, true],
+])('street-transfer precedence on a %s', (_name, direction, roundabout) => {
+    it('protects a source reserved by a real blocked transfer from anticipated entry', () => {
+        const { street, building, endpoint, total, road, connect, tick } = simulation(direction, 1, 9, roundabout);
+        const parking = building();
+        const source = roundabout ? street.tamano - 1 : 4;
+        endpoint(parking, roundabout ? 0 : source + direction);
+        street.arreglo[0][source] = 5;
+        const target = road();
+        target.arreglo[0][4] = 2;
+        const link = connect(target, source);
+        expect(total()).toBe(2);
+        expect(tick(link)).toBe(false);
+        expect(link.bloqueada).toBe(true);
+        expect(parking.vehiculosActuales).toBe(0);
+        const expected = Array(street.tamano).fill(0);
+        expected[source] = 5;
+        expect(Array.from(street.arreglo[0])).toEqual(expected);
+        expect(target.arreglo[0][4 + direction]).toBe(2);
+        expect(street.celulasEsperando[0][source]).toBe(false);
+        expect(total()).toBe(2);
+    });
+
+    it('does not park a vehicle already moved by a successful transfer', () => {
+        const { street, building, endpoint, total, road, connect, tick } = simulation(direction, 1, 9, roundabout);
+        const parking = building();
+        const source = roundabout ? street.tamano - 1 : 4;
+        endpoint(parking, source);
+        endpoint(parking, roundabout ? 0 : source + direction);
+        street.arreglo[0][source] = 5;
+        const target = road();
+        const link = connect(target, source);
+        expect(total()).toBe(1);
+        expect(tick(link)).toBe(true);
+        expect(link.bloqueada).toBe(false);
+        expect(parking.vehiculosActuales).toBe(0);
+        expect(Array.from(street.arreglo[0])).toEqual(Array(street.tamano).fill(0));
+        const expected = Array(target.tamano).fill(0);
+        expected[4 + direction] = 5;
+        expect(Array.from(target.arreglo[0])).toEqual(expected);
+        expect(total()).toBe(1);
+    });
 });
