@@ -962,11 +962,41 @@ function tieneConexionSalida(calle, carril, posicion) {
     });
 }
 
+// Override de generación: conserva las probabilidades individuales de las calles.
+const generacionGlobal = { activa: false, probabilidad: 0.5 };
+
+function inicializarGeneracionGlobal() {
+    const input = document.getElementById('inputGeneracionGlobal');
+    const toggle = document.getElementById('toggleGeneracionGlobal');
+    if (!input || !toggle) return;
+
+    input.value = generacionGlobal.probabilidad * 100;
+    toggle.checked = generacionGlobal.activa;
+    const validar = () => {
+        const valor = Number(input.value);
+        const valido = input.value.trim() !== '' && Number.isFinite(valor) && valor >= 0 && valor <= 100;
+        input.classList.toggle('is-invalid', !valido);
+        input.setAttribute('aria-invalid', String(!valido));
+        if (valido) generacionGlobal.probabilidad = valor / 100;
+        return valido;
+    };
+    input.addEventListener('input', validar);
+    toggle.addEventListener('change', () => {
+        if (toggle.checked && !validar()) {
+            toggle.checked = false;
+            input.focus();
+        }
+        generacionGlobal.activa = toggle.checked;
+    });
+}
+
 // Función para generar células en arreglos GENERADOR
 function generarCelulas(calle) {
     if (calle.tipo === TIPOS.GENERADOR) {
         // Aplicar multiplicador de tiempo si está activo
-        let probEfectiva = calle.probabilidadGeneracion;
+        let probEfectiva = generacionGlobal.activa
+            ? generacionGlobal.probabilidad
+            : calle.probabilidadGeneracion;
         if (window.configuracionTiempo?.usarPerfiles && window.obtenerMultiplicadorTrafico) {
             const multiplicador = window.obtenerMultiplicadorTrafico();
             probEfectiva *= multiplicador;
@@ -4380,6 +4410,8 @@ function iniciarSimulacion() {
     }
 
     intervaloDeseado = calcularIntervaloDesdeSlider(50);
+
+    inicializarGeneracionGlobal();
 
     btnActualizarCalle.addEventListener("click", () => {
         const calleIndex = selectCalle.value;
