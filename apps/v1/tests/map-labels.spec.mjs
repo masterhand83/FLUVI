@@ -77,6 +77,13 @@ describe.each([false, true])('map labels (Pixi=%s)', (usePixi) => {
                 value: select.value,
                 options: [...select.options].map(option => option.textContent),
             }))).toEqual({ value: 'off', options: ['Sin etiquetas', 'Calles', 'Edificios', 'Ambos'] })
+            expect(await page.$eval('#labelVisibility', select => select.closest('#collapseMapDrawingTools') !== null)).toBe(true)
+            expect(await page.$eval('#collapseMapDrawingTools #labelFontSize', input => ({
+                value: input.value, type: input.type, min: input.min, step: input.step,
+            }))).toEqual({ value: '14', type: 'number', min: '1', step: '1' })
+            expect(await page.$$eval('#labelVisibility, #labelFontSize', controls =>
+                controls.length === 2 && controls.every(control => control.closest('#controlBar') === null))).toBe(true)
+            await page.$eval('#labelFontSize', input => { input.value = '23'; input.dispatchEvent(new Event('input', { bubbles: true })) })
             await page.select('#labelVisibility', 'both')
             await page.evaluate(() => {
                 window.confirm = () => true
@@ -84,6 +91,7 @@ describe.each([false, true])('map labels (Pixi=%s)', (usePixi) => {
             })
             await page.waitForFunction(() => window.calles.length === 0)
             expect(await page.$eval('#labelVisibility', select => select.value)).toBe('both')
+            expect(await page.$eval('#labelFontSize', input => input.value)).toBe('23')
             const json = await page.evaluate(async () => {
                 window.crearCalle('Saved street', 8, 'conexion', 100, 100, 0, 0, 1)
                 window.agregarEdificio('Saved building', 250, 240, 40, 40, 0)
@@ -98,6 +106,7 @@ describe.each([false, true])('map labels (Pixi=%s)', (usePixi) => {
             const saved = JSON.parse(json)
             expect(saved).not.toHaveProperty('labelVisibility')
             expect(saved).not.toHaveProperty('mostrarEtiquetas')
+            expect(saved).not.toHaveProperty('labelFontSize')
             expect(saved.calles[0].nombre).toBe('Saved street')
             expect(saved.edificios[0].label).toBe('Saved building')
             await page.select('#labelVisibility', 'buildings')
@@ -106,8 +115,10 @@ describe.each([false, true])('map labels (Pixi=%s)', (usePixi) => {
             }, json)
             await page.waitForFunction(() => window.calles[0]?.nombre === 'Saved street')
             expect(await page.$eval('#labelVisibility', select => select.value)).toBe('buildings')
+            expect(await page.$eval('#labelFontSize', input => input.value)).toBe('23')
             await page.reload({ waitUntil: 'domcontentloaded' })
             expect(await page.$eval('#labelVisibility', select => select.value)).toBe('off')
+            expect(await page.$eval('#labelFontSize', input => input.value)).toBe('14')
         } finally { await sim.close() }
     }, 60000)
 
@@ -233,7 +244,7 @@ describe.each([false, true])('map labels (Pixi=%s)', (usePixi) => {
         } finally { await sim.close() }
     }, 120000)
 
-    it('updates visibility while paused and uses capped inverse screen-space zoom sizing', async () => {
+    it('updates visibility while paused and keeps the selected screen-space size at every zoom', async () => {
         const sim = await openSimulator({ usePixi, freezeFrames: false })
         try {
             const { page } = sim
@@ -255,10 +266,19 @@ describe.each([false, true])('map labels (Pixi=%s)', (usePixi) => {
                 }
             }
             const sizes = []
+            const streetSizes = []
+            await page.select('#labelVisibility', 'both')
+            const defaultStreet = await pixels(page, regions[0])
+            const defaultBuilding = await pixels(page, regions[1])
+            await page.$eval('#labelFontSize', input => { input.value = '23'; input.dispatchEvent(new Event('input', { bubbles: true })) })
+            expect(difference(defaultStreet, await pixels(page, regions[0])).count).toBeGreaterThan(30)
+            expect(difference(defaultBuilding, await pixels(page, regions[1])).count).toBeGreaterThan(30)
             for (const zoom of [0.25, 0.5, 1, 2]) {
                 await page.evaluate(zoom => {
                     window.edificios[0].x = 250 / zoom
                     window.edificios[0].y = 240 / zoom
+                    window.calles[0].x = 100 / zoom
+                    window.calles[0].y = 100 / zoom
                     window.pixiApp?.sceneManager?.renderAll()
                 }, zoom)
                 await camera(page, zoom)
@@ -272,12 +292,34 @@ describe.each([false, true])('map labels (Pixi=%s)', (usePixi) => {
                 expect(Math.abs(diff.x - 110)).toBeLessThan(3)
                 expect(Math.abs(diff.y - 20)).toBeLessThan(3)
                 sizes.push(diff)
+                const streetRegion = [90, 80, 230, 60]
+                await page.select('#labelVisibility', 'off')
+                const streetBefore = await pixels(page, streetRegion)
+                await page.select('#labelVisibility', 'streets')
+                streetSizes.push(difference(streetBefore, await pixels(page, streetRegion)))
             }
-            expect(sizes[0].width / sizes[2].width).toBeCloseTo(20 / 14, 1)
-            expect(sizes[1].width / sizes[2].width).toBeCloseTo(20 / 14, 1)
-            expect(sizes[3].width / sizes[2].width).toBeCloseTo(0.5, 1)
-            expect(sizes[2].height).toBeLessThan(18)
+            for (const size of sizes) expect(size.width).toBeGreaterThan(60)
+            expect(sizes[0].width / sizes[2].width).toBeCloseTo(1, 1)
+            expect(sizes[1].width / sizes[2].width).toBeCloseTo(1, 1)
+            expect(sizes[3].width / sizes[2].width).toBeCloseTo(1, 1)
+            for (const size of streetSizes) expect(size.width).toBeGreaterThan(20)
+            // Raster bounds can vary by a few pixels as glyph antialiasing lands
+            // differently at the shifted camera positions; inverse zoom sizing
+            // would still produce a much larger ratio change.
+            expect(streetSizes[0].width / streetSizes[2].width).toBeCloseTo(1, 0)
+            expect(streetSizes[1].width / streetSizes[2].width).toBeCloseTo(1, 0)
+            expect(streetSizes[3].width / streetSizes[2].width).toBeCloseTo(1, 0)
+            expect(sizes[2].height).toBeGreaterThanOrEqual(19)
+            expect(sizes[2].height).toBeLessThan(30)
             expect(sizes[2].width).toBeGreaterThan(40) // full name beyond its building
+            await page.select('#labelVisibility', 'buildings')
+            const selected = await pixels(page, [140, 215, 220, 50])
+            for (const invalid of ['', '0', '-2', '1.5', 'Infinity']) {
+                await page.$eval('#labelFontSize', (input, value) => {
+                    input.value = value; input.dispatchEvent(new Event('input', { bubbles: true }))
+                }, invalid)
+                expect(difference(selected, await pixels(page, [140, 215, 220, 50])).count, invalid).toBe(0)
+            }
             expect(sim.pageErrors).toEqual([])
         } finally { await sim.close() }
     }, 60000)
@@ -319,8 +361,9 @@ describe.each([false, true])('map labels (Pixi=%s)', (usePixi) => {
                 expect(diff.width).toBeGreaterThan(120)
                 expect(diff.height).toBeLessThan(18)
             }
-            // Establish the unlabeled view first, then leave labels enabled
-            // throughout a continuous camera change (no toggle to mask a bug).
+            const zoomOneSize = difference(off[1], await pixels(page, regions[1]))
+            // Establish the unlabeled view at zoom 2, then leave labels enabled
+            // throughout a continuous camera change and compare with zoom 1.
             await camera(page, 2)
             await page.select('#labelVisibility', 'off')
             const zoomRegion = [480, 580, 240, 40]
@@ -330,9 +373,8 @@ describe.each([false, true])('map labels (Pixi=%s)', (usePixi) => {
             await camera(page, 1.5)
             await camera(page, 2)
             const diff = difference(before, await pixels(page, zoomRegion))
-            expect(diff.width).toBeGreaterThan(65)
-            expect(diff.width).toBeLessThan(100)
-            expect(diff.height).toBeLessThan(12)
+            expect(diff.width).toBeCloseTo(zoomOneSize.width, -1)
+            expect(Math.abs(diff.height - zoomOneSize.height)).toBeLessThanOrEqual(2)
             expect(sim.pageErrors).toEqual([])
         } finally { await sim.close() }
     }, 120000)

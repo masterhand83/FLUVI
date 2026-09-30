@@ -673,6 +673,16 @@
               <input id="buildingImageInput" type="file" accept="image/png,image/jpeg,image/webp" hidden>
               <small id="buildingImageStatus" role="status" aria-live="polite">PNG, JPEG o WebP, hasta 5 MB. Después, haz clic en el centro del edificio.</small>
               <button type="button" id="buildingImageCancel" class="btn btn-outline-secondary btn-sm" hidden>Cancelar imagen</button>
+              <label for="labelVisibility">Etiquetas del mapa</label>
+              <select id="labelVisibility" class="form-select form-select-sm" aria-label="Etiquetas del mapa">
+                <option value="off">Sin etiquetas</option>
+                <option value="streets">Calles</option>
+                <option value="buildings">Edificios</option>
+                <option value="both">Ambos</option>
+              </select>
+              <label for="labelFontSize">Tamaño de etiqueta (px)</label>
+              <input id="labelFontSize" class="form-control form-control-sm" type="number" min="1" step="1" value="14" aria-describedby="labelFontSizeError">
+              <small id="labelFontSizeError" role="alert" aria-live="polite"></small>
             </div>
           </div>
         </div>
@@ -2391,12 +2401,6 @@
           <!-- Grupo de controles de visualización -->
           <div class="btn-group">
             <button type="button" id="btnConexiones" class="btn btn-info btn-sm" data-bs-toggle="tooltip" data-bs-title="Mostrar/ocultar las conexiones entre calles en el canvas">🔗</button>
-             <select id="labelVisibility" class="form-select form-select-sm w-auto" aria-label="Etiquetas del mapa">
-               <option value="off">Sin etiquetas</option>
-               <option value="streets">Calles</option>
-               <option value="buildings">Edificios</option>
-               <option value="both">Ambos</option>
-             </select>
              <button type="button" id="btnContadores" class="btn btn-info btn-sm" data-bs-toggle="tooltip" data-bs-title="Mostrar/ocultar contadores de ocupación de estacionamientos">🔢</button>
           </div>
 

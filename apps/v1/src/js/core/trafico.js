@@ -29,6 +29,7 @@ console.log(`ℹ️ USE_PIXI = ${window.USE_PIXI} (isMobile: ${isMobile})`);
 let mostrarConexiones = false; // Variable para controlar visualización de conexiones
 let mostrarVertices = false; // Variable para controlar visualización de vértices
 window.labelVisibility = 'off'; // Preferencia de esta sesión; no se guarda en el mapa.
+window.labelFontSize = 14; // Tamaño en píxeles CSS; preferencia de esta sesión.
 const mostrarContadores = isMobile ? false : false; // Desactivado en móviles por defecto
 const colorFondoCanvas = "#c6cbcd"; // Color de fondo del canvas (almacenado para detección automática)
 
@@ -4576,6 +4577,19 @@ function iniciarSimulacion() {
     const labelVisibility = document.getElementById('labelVisibility');
     labelVisibility?.addEventListener('change', () => {
         window.labelVisibility = labelVisibility.value;
+        window.pixiApp?.sceneManager?.refreshEtiquetas();
+        renderizarCanvas();
+    });
+
+    const labelFontSize = document.getElementById('labelFontSize');
+    const labelFontSizeError = document.getElementById('labelFontSizeError');
+    labelFontSize?.addEventListener('input', () => {
+        const value = labelFontSize.valueAsNumber;
+        const valid = Number.isFinite(value) && Number.isInteger(value) && value >= 1;
+        labelFontSize.setCustomValidity(valid ? '' : 'Ingresa un número entero de al menos 1 píxel.');
+        labelFontSizeError.textContent = valid ? '' : labelFontSize.validationMessage;
+        if (!valid) return;
+        window.labelFontSize = value;
         window.pixiApp?.sceneManager?.refreshEtiquetas();
         renderizarCanvas();
     });

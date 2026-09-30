@@ -5,11 +5,11 @@ function etiquetasVisibles(category) {
 
 function estiloEtiqueta() {
     const zoom = window.escala || 1;
-    const sizeScale = Math.min(20 / 14, 1 / zoom) / zoom;
+    const sizeScale = (window.labelFontSize || 14) / zoom;
     return {
         fontFamily: 'Arial', fontWeight: 'normal',
-        fontSize: 14 * sizeScale,
-        fill: '#222222', stroke: '#FFFFFF', strokeThickness: 2 * sizeScale,
+        fontSize: sizeScale,
+        fill: '#222222', stroke: '#FFFFFF', strokeThickness: 2 / zoom,
         lineJoin: 'round', align: 'center',
     };
 }
