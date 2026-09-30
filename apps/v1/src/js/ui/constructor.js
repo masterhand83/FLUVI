@@ -2114,6 +2114,9 @@ function eliminarObjetoSeleccionado() {
 
         const index = window.edificios.findIndex(e => e === edificio);
         if (index !== -1) {
+            // Deactivate parking and release all owned street mappings before removal.
+            window.limpiarConexionesEdificio(edificio);
+
             // Eliminar edificio
             window.edificios.splice(index, 1);
 

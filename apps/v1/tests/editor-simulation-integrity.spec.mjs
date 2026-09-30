@@ -72,4 +72,67 @@ describe.each([
 		expect(result).toEqual({ resized: { occupancy: true, transfer: true, parking: true, marks: true, other: true }, deleted: true, stepped: true, renderer: _mode, validState: true })
 		expect(sim.pageErrors).toEqual([])
 	}, 180000)
+
+	it("deleting a parking building releases its endpoints and removes parking visuals before the next step", async () => {
+		const fixture = await sim.page.evaluateHandle(() => {
+			// Isolate the probe from external generation, sinks and street transfers.
+			const street = window.crearCalle("Parking deletion probe", 20, "conexion", 20, 20, 0, 0, 1, 0)
+			window.calles.push(street)
+			const building = window.agregarEdificio("Parking deletion regression", street.x + 50, street.y + 100, 40, 30, 0)
+			const pair = [
+				{ tipo: "entrada", calleId: street.id, carril: 0, indice: 12 },
+				{ tipo: "salida", calleId: street.id, carril: 0, indice: 14 },
+			]
+			window.mostrarContadores = true
+			const configured = window.configurarEstacionamiento(building, pair, 20)
+			building.vehiculosActuales = 7
+			building.probabilidadesEntrada.fill(1)
+			building.probabilidadesSalida.fill(1)
+			const scene = window.USE_PIXI ? window.pixiApp.sceneManager : null
+			scene?.renderContadores()
+			const prefix = `estacionamiento_${building.id}_`
+			const isParkingGraphic = key => typeof key === "string" && key.startsWith(prefix)
+			const parkingGraphics = scene ? [...scene.conexionGraphics]
+				.filter(([key]) => isParkingGraphic(key)).map(([, graphic]) => graphic) : []
+			const sprite = scene?.edificioSprites.get(building)
+			const counter = scene?.uiRenderer.contadores.get(building.id)
+			const before = scene ? !!sprite && !!counter && parkingGraphics.length === 2 : configured
+			return { street, building, scene, parkingGraphics, sprite, counter, isParkingGraphic, configured, before }
+		})
+		const result = await sim.page.evaluate(({ street, building, scene, parkingGraphics, sprite, counter, isParkingGraphic, configured, before }) => {
+			window.calleSeleccionada = null
+			window.edificioSeleccionado = building
+			window.confirm = () => true
+			document.getElementById("btnEliminarObjeto").click()
+			const released = !window.calles.some(c => [...(c.conexionesEstacionamiento?.values() || [])]
+				.some(mapping => mapping.edificio === building))
+			const pixiVisualsRemoved = () => [
+				!scene.edificioSprites.has(building), sprite.destroyed,
+				!scene.uiRenderer.contadores.has(building.id), counter.destroyed,
+				parkingGraphics.every(graphic => graphic.destroyed),
+				![...scene.conexionGraphics.keys()].some(isParkingGraphic),
+			].every(Boolean)
+			const removedBeforeStep = scene ? pixiVisualsRemoved() : !window.edificios.includes(building)
+			if (!window.isPaused) document.getElementById("btnPauseResume").click()
+			street.arreglo[0][12] = 1
+			const beforeStep = JSON.stringify(window.configuracionTiempo)
+			document.getElementById("btnPaso").click()
+			return {
+				configured, before, released, visualsRemoved: removedBeforeStep,
+				deleted: !window.edificios.includes(building) && window.edificioSeleccionado === null,
+				inactive: building.esEstacionamiento === false,
+				connectionsAfterStep: building.conexiones.length,
+				occupancyAfterStep: building.vehiculosActuales,
+				vehiclesAfterStep: street.arreglo[0].filter(value => value >= 1 && value <= 6).length,
+				mappingsAfterStep: street.conexionesEstacionamiento.size,
+				stepped: JSON.stringify(window.configuracionTiempo) !== beforeStep,
+				renderer: scene ? "Pixi" : "Canvas",
+			}
+		}, fixture)
+		await fixture.dispose()
+		expect(result).toEqual({ configured: true, before: true, released: true, visualsRemoved: true,
+			deleted: true, inactive: true, connectionsAfterStep: 0, occupancyAfterStep: 0,
+			vehiclesAfterStep: 1, mappingsAfterStep: 0, stepped: true, renderer: _mode })
+		expect(sim.pageErrors).toEqual([])
+	}, 180000)
 })
