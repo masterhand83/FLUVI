@@ -2391,7 +2391,12 @@
           <!-- Grupo de controles de visualización -->
           <div class="btn-group">
             <button type="button" id="btnConexiones" class="btn btn-info btn-sm" data-bs-toggle="tooltip" data-bs-title="Mostrar/ocultar las conexiones entre calles en el canvas">🔗</button>
-             <button type="button" id="btnEtiquetas" class="btn btn-info btn-sm" data-bs-toggle="tooltip" data-bs-title="Mostrar/ocultar las etiquetas con nombres de calles y edificios">🏷️</button>
+             <select id="labelVisibility" class="form-select form-select-sm w-auto" aria-label="Etiquetas del mapa">
+               <option value="off">Sin etiquetas</option>
+               <option value="streets">Calles</option>
+               <option value="buildings">Edificios</option>
+               <option value="both">Ambos</option>
+             </select>
              <button type="button" id="btnContadores" class="btn btn-info btn-sm" data-bs-toggle="tooltip" data-bs-title="Mostrar/ocultar contadores de ocupación de estacionamientos">🔢</button>
           </div>
 

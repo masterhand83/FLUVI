@@ -2590,7 +2590,7 @@ function cargarSimulacion(event) {
                         window.pixiApp.sceneManager.renderAll();
 
                         // Forzar actualización de etiquetas si están habilitadas
-                        if (window.mostrarEtiquetas && window.pixiApp.sceneManager.uiRenderer) {
+                        if (window.pixiApp.sceneManager.uiRenderer) {
                             console.log('🏷️ Actualizando etiquetas después de cargar simulación');
                             window.pixiApp.sceneManager.uiRenderer.updateEtiquetas(window.calles);
                         }

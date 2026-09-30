@@ -28,14 +28,13 @@ console.log(`ℹ️ USE_PIXI = ${window.USE_PIXI} (isMobile: ${isMobile})`);
 // 📱 OPTIMIZACIÓN MÓVIL: Desactivar funciones avanzadas por defecto
 let mostrarConexiones = false; // Variable para controlar visualización de conexiones
 let mostrarVertices = false; // Variable para controlar visualización de vértices
-let mostrarEtiquetas = isMobile ? false : false; // Desactivado en móviles por defecto
+window.labelVisibility = 'off'; // Preferencia de esta sesión; no se guarda en el mapa.
 const mostrarContadores = isMobile ? false : false; // Desactivado en móviles por defecto
 const colorFondoCanvas = "#c6cbcd"; // Color de fondo del canvas (almacenado para detección automática)
 
 // Exponer variables globales para PixiJS
 window.mostrarConexiones = mostrarConexiones;
 window.mostrarVertices = mostrarVertices;
-window.mostrarEtiquetas = mostrarEtiquetas;
 window.mostrarContadores = mostrarContadores;
 
 // 📱 Mensaje informativo en móviles
@@ -1599,13 +1598,6 @@ function dibujarEdificios() {
                 ctx.stroke();
                 ctx.setLineDash([]);
             }
-            if (edificio.label && edificio.label !== 'CONO') {
-                const labelCenter = edificioPolygonGeometry.center(vertices);
-                ctx.fillStyle = 'white';
-                ctx.font = `${12 / escala}px Arial`;
-                ctx.textAlign = 'center';
-                ctx.fillText(edificio.label, labelCenter.x, labelCenter.y);
-            }
             ctx.restore();
             return;
         }
@@ -1655,14 +1647,6 @@ function dibujarEdificios() {
                 edificio.height - 8 / escala
             );
             ctx.setLineDash([]);
-        }
-
-        // Etiqueta del edificio (opcional, puedes comentar esta sección si no quieres el texto)
-        if (edificio.label && edificio.label !== "CONO") {
-            ctx.fillStyle = "white";
-            ctx.font = `${12 / escala}px Arial`;
-            ctx.textAlign = "center";
-            ctx.fillText(edificio.label, 0, 0);
         }
 
         ctx.restore();
@@ -2156,6 +2140,9 @@ function renderizarCanvas() {
     }
 
     // Fallback completo a Canvas 2D nativo si PixiJS no está disponible
+    // Publish the active zoom before drawing names, including every wheel/pinch
+    // event while paused (the camera's later listeners must not lag one frame).
+    window.escala = escala;
     ctx.fillStyle = "#c6cbcd";
 
     ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -2172,6 +2159,7 @@ function renderizarCanvas() {
     dibujarConexionesDetectadas();
     dibujarVertices();
     dibujarEtiquetasCalles();
+    dibujarEtiquetasEdificios();
     dibujarMinimapa();
 }
 
@@ -4585,34 +4573,12 @@ function iniciarSimulacion() {
         });
     }
 
-    const btnEtiquetas = document.getElementById('btnEtiquetas');
-    if (btnEtiquetas) {
-        btnEtiquetas.addEventListener('click', () => {
-            mostrarEtiquetas = !mostrarEtiquetas;
-            window.mostrarEtiquetas = mostrarEtiquetas; // Sincronizar con window
-            // Cambiar entre etiqueta visible y etiqueta tachada
-            btnEtiquetas.textContent = mostrarEtiquetas ? '🏷️' : '🚫';
-
-            // Actualizar etiquetas en PixiJS
-            if (window.pixiApp && window.pixiApp.sceneManager) {
-                // Actualizar etiquetas de edificios
-                if (window.pixiApp.sceneManager.edificioRenderer) {
-                    window.pixiApp.sceneManager.edificioRenderer.updateLabelsVisibility(mostrarEtiquetas);
-                }
-
-                // Actualizar etiquetas de calles
-                if (window.pixiApp.sceneManager.uiRenderer) {
-                    if (mostrarEtiquetas) {
-                        window.pixiApp.sceneManager.uiRenderer.updateEtiquetas(calles);
-                    } else {
-                        window.pixiApp.sceneManager.uiRenderer.clearEtiquetas();
-                    }
-                }
-            }
-
-            renderizarCanvas();
-        });
-    }
+    const labelVisibility = document.getElementById('labelVisibility');
+    labelVisibility?.addEventListener('change', () => {
+        window.labelVisibility = labelVisibility.value;
+        window.pixiApp?.sceneManager?.refreshEtiquetas();
+        renderizarCanvas();
+    });
 
     const btnContadores = document.getElementById('btnContadores');
     if (btnContadores) {

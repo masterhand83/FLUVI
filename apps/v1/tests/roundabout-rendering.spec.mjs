@@ -26,17 +26,15 @@ function setup() {
         lineTo(x, y) { this.lines.push([this.start, [x, y]]); }
     }
     class Sprite extends Container { anchor = { set() {} }; }
-    class Text extends Sprite { constructor(value) { super(); this.width = value.length * 8; this.height = 14; } }
     class TilingSprite extends Sprite { tileScale = { set() {} }; }
-    const window = { celda_tamano: 5, mostrarEtiquetas: true };
+    const window = { celda_tamano: 5 };
     const layer = new Container();
     const scene = { calleSprites: new Map(), carroSprites: new Map(), conexionGraphics: new Map(),
         getLayer: () => layer };
-    const context = { window, console, PIXI: { Container, Graphics, Sprite, Text, TilingSprite },
+    const context = { window, console, PIXI: { Container, Graphics, Sprite, TilingSprite },
         CoordinateConverter: { degreesToRadians: value => -value * Math.PI / 180 } };
     for (const file of ['core/roundaboutStreet.js', 'renderer/renderers/CalleRenderer.js',
-        'renderer/renderers/CarroRenderer.js', 'renderer/renderers/ConexionRenderer.js',
-        'renderer/renderers/UIRenderer.js']) {
+        'renderer/renderers/CarroRenderer.js', 'renderer/renderers/ConexionRenderer.js']) {
         runInNewContext(readFileSync(new URL(`../src/js/${file}`, import.meta.url), 'utf8'), context);
     }
     const road = window.roundaboutStreet.createStreet({ nombre: 'Rotonda', x: 100, y: 120,
@@ -45,8 +43,7 @@ function setup() {
     return { window, scene, road, layer,
         streets: new window.CalleRenderer(scene, assets),
         cars: new window.CarroRenderer(scene, assets),
-        links: new window.ConexionRenderer(scene, assets),
-        labels: new window.UIRenderer(scene, assets) };
+        links: new window.ConexionRenderer(scene, assets) };
 }
 
 describe('roundabout Pixi integration', () => {
@@ -75,8 +72,9 @@ describe('roundabout Pixi integration', () => {
         expect(scene.calleSprites.get(road).children[0].holes).toEqual([[0, 0, 25]]);
     });
 
-    it('places cars and links on exact sectors and puts the label outside the ring', () => {
-        const { window, scene, road, cars, links, labels } = setup();
+    // Name placement is now covered through rendered pixels in map-labels.spec.mjs.
+    it('places cars and links on exact sectors', () => {
+        const { window, scene, road, cars, links } = setup();
         road.arreglo[0][0] = 2;
         cars.updateCell(road, 0, 0);
         const sprite = scene.carroSprites.get('Rotonda_0_0');
@@ -89,7 +87,5 @@ describe('roundabout Pixi integration', () => {
         expect(sprite.x).not.toBeCloseTo(point.x);
         expect(sprite.rotation).toBeCloseTo(Math.PI + (Math.PI / road.tamano));
         expect(links.cellCoordinates(road, 1, 4).x).toBeCloseTo(window.roundaboutStreet.coordinates(road, 1, 4).x);
-        const label = labels.createEtiquetaRoundabout(road, 0.5);
-        expect(Math.hypot(label.x - road.x, label.y - road.y)).toBeGreaterThan(road.innerRadius + road.carriles * 5);
     });
 });

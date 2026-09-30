@@ -1,338 +1,51 @@
-/**
- * UIRenderer.js - Renderizador de UI
- * Maneja la visualización de elementos de interfaz como etiquetas y vértices
- * Sistema avanzado de etiquetas estilo Google Maps
- */
-
+/** UIRenderer.js - Etiquetas, vértices y contadores de estacionamiento. */
 class UIRenderer {
     constructor(sceneManager, assetLoader) {
         this.scene = sceneManager;
         this.assets = assetLoader;
-        this.etiquetas = new Map(); // Map<calle, Array<Container>> - múltiples etiquetas por calle
-        this.celda_tamano = window.celda_tamano || 5;
-    }
-
-    // Función auxiliar para detectar contraste del fondo
-    esColorOscuro(colorHex) {
-        const hex = colorHex.replace('#', '');
-        const r = parseInt(hex.substr(0, 2), 16);
-        const g = parseInt(hex.substr(2, 2), 16);
-        const b = parseInt(hex.substr(4, 2), 16);
-        const luminosidad = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-        return luminosidad < 0.5;
-    }
-
-    // Obtener color de texto según fondo del canvas
-    obtenerColorTextoSegunFondo() {
-        const colorFondo = window.colorFondoCanvas || '#1a1a1a';
-        return this.esColorOscuro(colorFondo) ? 0xFFFFFF : 0x000000;
-    }
-
-    // Obtener color de fondo del texto (inverso del texto)
-    obtenerColorFondoTexto() {
-        const colorFondo = window.colorFondoCanvas || '#1a1a1a';
-        return this.esColorOscuro(colorFondo) ? 0x000000 : 0xFFFFFF;
+        this.etiquetas = new Map(); // Map<calle, Text>
     }
 
     updateEtiquetas(calles) {
-        if (!calles || !window.mostrarEtiquetas) {
+        if (!calles || !etiquetasVisibles('streets')) {
             this.clearEtiquetas();
             return;
         }
-
-        // Limpiar etiquetas anteriores
-        this.clearEtiquetas();
-
-        // Crear nuevas etiquetas para cada calle
-        calles.forEach(calle => {
-            this.createEtiquetasParaCalle(calle);
-        });
-    }
-
-    createEtiquetasParaCalle(calle) {
-        // CONDICIÓN: No renderizar etiquetas para calles de tipo CONEXION menores a 8 celdas
-        // (Son retornos y no necesitan mostrar su nombre)
-        if (calle.tipo === 'conexion' && calle.tamano < 8 && !window.roundaboutStreet?.isRoundabout(calle)) {
-            return; // Salir sin crear etiquetas
-        }
-
-        // Calcular número de repeticiones según el tamaño de la calle
-        const umbralRepeticion = 200;
-        const numRepeticiones = Math.max(1, Math.ceil(calle.tamano / umbralRepeticion));
-
-        // Calcular posiciones donde dibujar las etiquetas
-        const posiciones = [];
-        if (numRepeticiones === 1) {
-            posiciones.push(0.5); // Centro
-        } else {
-            // Distribuir uniformemente
-            for (let i = 0; i < numRepeticiones; i++) {
-                const posicion = (i + 1) / (numRepeticiones + 1);
-                posiciones.push(posicion);
-            }
-        }
-
-        // Crear array de containers para esta calle
-        const etiquetasArray = [];
-
-        // Crear etiqueta en cada posición
-        posiciones.forEach(posicion => {
-            let etiquetaContainer;
-
-            if (window.roundaboutStreet?.isRoundabout(calle)) {
-                etiquetaContainer = this.createEtiquetaRoundabout(calle, posicion);
-            } else if (calle.esCurva && calle.vertices && calle.vertices.length >= 2) {
-                // Para calles curvas: crear texto siguiendo la curva
-                etiquetaContainer = this.createEtiquetaCurva(calle, posicion);
-            } else {
-                // Para calles rectas: crear texto simple
-                etiquetaContainer = this.createEtiquetaRecta(calle, posicion);
-            }
-
-            if (etiquetaContainer) {
-                etiquetasArray.push(etiquetaContainer);
-                this.scene.getLayer('ui').addChild(etiquetaContainer);
+        const current = new Set(calles);
+        this.etiquetas.forEach((text, calle) => {
+            if (!current.has(calle)) {
+                text.destroy();
+                this.etiquetas.delete(calle);
             }
         });
-
-        // Guardar referencia
-        this.etiquetas.set(calle, etiquetasArray);
+        calles.forEach(calle => this.updateEtiqueta(calle));
     }
 
-    // Calcular posición en calle (0 a 1)
-    calcularPosicionEnCalle(calle, posicion = 0.5) {
-        if (window.roundaboutStreet?.isRoundabout(calle)) {
-            const indice = Math.max(0, Math.min(calle.tamano - 1, Math.floor(calle.tamano * posicion)));
-            return window.roundaboutStreet.coordinates(calle, calle.carriles - 1, indice);
+    updateEtiqueta(calle) {
+        let text = this.etiquetas.get(calle);
+        if (!calle.nombre || !etiquetasVisibles('streets')) {
+            text?.destroy();
+            this.etiquetas.delete(calle);
+            return;
         }
-        if (calle.esCurva && calle.vertices && calle.vertices.length >= 2 && window.obtenerCoordenadasGlobalesCeldaConCurva) {
-            const indice = Math.floor(calle.tamano * posicion);
-            const indiceSeguro = Math.max(0, Math.min(calle.tamano - 1, indice));
-            const carrilCentral = Math.floor(calle.carriles / 2);
-            const coordenadas = window.obtenerCoordenadasGlobalesCeldaConCurva(calle, carrilCentral, indiceSeguro);
-            return {
-                x: coordenadas.x,
-                y: coordenadas.y,
-                angulo: coordenadas.angulo
-            };
-        } else {
-            const angle = -calle.angulo * Math.PI / 180;
-            const cos = Math.cos(angle);
-            const sin = Math.sin(angle);
-
-            const posX = (calle.tamano * this.celda_tamano) * posicion;
-            const centroY = (calle.carriles * this.celda_tamano) / 2;
-
-            return {
-                x: calle.x + (posX * cos - centroY * sin),
-                y: calle.y + (posX * sin + centroY * cos),
-                angulo: calle.angulo
-            };
-        }
-    }
-
-    // Calcular offset perpendicular para posicionar texto al lado de la calle
-    // Ahora con opción de alinear a lo largo o perpendicular
-    calcularOffsetExterno(calle, anguloEnGrados, alinearALoLargo = false) {
-        const distanciaDesdeCalleBase = 8;
-        const anchoCallePixels = calle.carriles * this.celda_tamano;
-        const distanciaTotal = (anchoCallePixels / 2) + distanciaDesdeCalleBase;
-
-        if (alinearALoLargo) {
-            // Sin offset - la etiqueta se alinea con el centro de la calle
-            return {
-                offsetX: 0,
-                offsetY: 0
-            };
-        } else {
-            // Offset perpendicular (antiguo comportamiento)
-            const anguloRad = -anguloEnGrados * Math.PI / 180;
-            const perpX = -Math.sin(anguloRad);
-            const perpY = Math.cos(anguloRad);
-
-            return {
-                offsetX: perpX * distanciaTotal,
-                offsetY: perpY * distanciaTotal
-            };
-        }
-    }
-
-    // Crear etiqueta para calle recta
-    createEtiquetaRoundabout(calle, posicion) {
-        // A single readable name outside the outer edge, rather than curved
-        // glyphs that can wrap around and overlap on small roundabouts.
-        const point = this.calcularPosicionEnCalle(calle, posicion);
-        const dx = point.x - calle.x, dy = point.y - calle.y;
-        const radius = Math.hypot(dx, dy) || 1;
-        const container = new PIXI.Container();
-        container.x = point.x + dx / radius * 12;
-        container.y = point.y + dy / radius * 12;
-        const text = new PIXI.Text(calle.nombre, {
-            fontFamily: 'Arial', fontSize: 14,
-            fill: this.obtenerColorTextoSegunFondo(), align: 'center'
-        });
-        text.anchor.set(0.5);
-        text.resolution = 2;
-        const bg = new PIXI.Graphics();
-        bg.beginFill(this.obtenerColorFondoTexto(), 0.7);
-        bg.drawRect(-text.width / 2 - 4, -text.height / 2 - 2, text.width + 8, text.height + 4);
-        bg.endFill();
-        container.addChild(bg, text);
-        return container;
-    }
-
-    // Crear etiqueta para calle recta
-    createEtiquetaRecta(calle, posicionRelativa = 0.5) {
-        const posicion = this.calcularPosicionEnCalle(calle, posicionRelativa);
-        // Mantener offset perpendicular para posicionar al lado de la calle
-        const offset = this.calcularOffsetExterno(calle, posicion.angulo, false);
-
-        const x = posicion.x + offset.offsetX;
-        const y = posicion.y + offset.offsetY;
-
-        // Crear container para la etiqueta
-        const container = new PIXI.Container();
-        container.x = x;
-        container.y = y;
-
-        // Ajustar rotación del texto para que siga la dirección de la calle
-        // CoordinateConverter.degreesToRadians ya incluye el negativo
-        let anguloTexto = CoordinateConverter.degreesToRadians(posicion.angulo);
-
-        // Evitar texto al revés (entre 90 y 270 grados)
-        if (posicion.angulo > 90 && posicion.angulo < 270) {
-            anguloTexto += Math.PI;
-        }
-
-        container.rotation = anguloTexto;
-
-        // Obtener colores
-        const colorTexto = this.obtenerColorTextoSegunFondo();
-        const colorFondo = this.obtenerColorFondoTexto();
-
-        // Crear texto con mayor resolución para evitar pixelación
-        const text = new PIXI.Text(calle.nombre, {
-            fontFamily: 'Arial',
-            fontSize: 14,
-            fill: colorTexto,
-            align: 'center'
-        });
-        text.anchor.set(0.5);
-        text.resolution = 2; // Doble resolución para mayor calidad
-
-        // Crear fondo semi-transparente
-        const padding = 4;
-        const bg = new PIXI.Graphics();
-        bg.beginFill(colorFondo, 0.7);
-        bg.drawRect(
-            -text.width / 2 - padding,
-            -text.height / 2 - padding / 2,
-            text.width + padding * 2,
-            text.height + padding
-        );
-        bg.endFill();
-
-        container.addChild(bg);
-        container.addChild(text);
-
-        return container;
-    }
-
-    // Crear etiqueta para calle curva (texto siguiendo la curva)
-    createEtiquetaCurva(calle, posicionRelativa = 0.5) {
-        if (!window.obtenerCoordenadasGlobalesCeldaConCurva) {
-            // Fallback a etiqueta recta si no hay función de curvas
-            return this.createEtiquetaRecta(calle, posicionRelativa);
-        }
-
-        const container = new PIXI.Container();
-
-        const indiceCentro = Math.floor(calle.tamano * posicionRelativa);
-        const carrilCentral = Math.floor(calle.carriles / 2);
-
-        // Estimar cuántas celdas ocupa el texto
-        const longitudEstimadaPorLetra = 8; // píxeles aproximados por letra
-        const celdasPorLetra = longitudEstimadaPorLetra / this.celda_tamano;
-        const indiceInicio = Math.max(0, Math.floor(indiceCentro - celdasPorLetra * calle.nombre.length / 2));
-
-        // Determinar dirección del texto
-        const coordenadasInicio = window.obtenerCoordenadasGlobalesCeldaConCurva(calle, carrilCentral, Math.max(0, indiceInicio));
-        const debeInvertir = coordenadasInicio.angulo > 90 && coordenadasInicio.angulo < 270;
-        const textoADibujar = debeInvertir ? calle.nombre.split('').reverse().join('') : calle.nombre;
-
-        // Obtener colores
-        const colorTexto = this.obtenerColorTextoSegunFondo();
-        const colorFondo = this.obtenerColorFondoTexto();
-
-        // Dibujar cada letra siguiendo la curva
-        let distanciaAcumulada = 0;
-        const espaciado = longitudEstimadaPorLetra;
-
-        for (let i = 0; i < textoADibujar.length; i++) {
-            const letra = textoADibujar[i];
-
-            // Calcular índice de celda para esta letra
-            const factorAvance = distanciaAcumulada / (longitudEstimadaPorLetra * calle.nombre.length);
-            const indiceActual = Math.min(
-                calle.tamano - 1,
-                Math.floor(indiceInicio + factorAvance * calle.nombre.length * 2)
-            );
-
-            const coordenadas = window.obtenerCoordenadasGlobalesCeldaConCurva(calle, carrilCentral, indiceActual);
-            // Mantener offset perpendicular para posicionar al lado de la calle
-            const offset = this.calcularOffsetExterno(calle, coordenadas.angulo, false);
-
-            // Crear container para esta letra
-            const letraContainer = new PIXI.Container();
-            letraContainer.x = coordenadas.x + offset.offsetX;
-            letraContainer.y = coordenadas.y + offset.offsetY;
-
-            // Ajustar rotación para que siga la dirección de la calle
-            // CoordinateConverter.degreesToRadians ya incluye el negativo
-            let anguloTexto = CoordinateConverter.degreesToRadians(coordenadas.angulo);
-            if (debeInvertir) {
-                anguloTexto += Math.PI;
-            }
-            letraContainer.rotation = anguloTexto;
-
-            // Crear texto de la letra con mayor resolución para evitar pixelación
-            const text = new PIXI.Text(letra, {
-                fontFamily: 'Arial',
-                fontSize: 14,
-                fill: colorTexto,
-                align: 'center'
-            });
+        if (!text) {
+            text = new PIXI.Text(calle.nombre, estiloEtiqueta());
             text.anchor.set(0.5);
-            text.resolution = 2; // Doble resolución para mayor calidad
-
-            // Crear fondo semi-transparente para la letra
-            const padding = 2;
-            const bg = new PIXI.Graphics();
-            bg.beginFill(colorFondo, 0.7);
-            bg.drawRect(
-                -text.width / 2 - padding,
-                -text.height / 2 - padding / 2,
-                text.width + padding * 2,
-                text.height + padding
-            );
-            bg.endFill();
-
-            letraContainer.addChild(bg);
-            letraContainer.addChild(text);
-            container.addChild(letraContainer);
-
-            distanciaAcumulada += espaciado;
+            text.resolution = Math.max(2, window.devicePixelRatio || 1);
+            this.scene.getLayer('ui').addChild(text);
+            this.etiquetas.set(calle, text);
         }
-
-        return container;
+        const point = calcularPosicionEnCalle(calle);
+        text.text = calle.nombre;
+        text.style = estiloEtiqueta();
+        text.position.set(point.x, point.y);
+        text.rotation = anguloEtiqueta(point.angulo);
     }
 
     clearEtiquetas() {
-        this.etiquetas.forEach((etiquetasArray, calle) => {
-            // Cada calle puede tener múltiples etiquetas (repeticiones)
-            etiquetasArray.forEach(container => {
-                container.destroy({ children: true });
-            });
+        this.etiquetas.forEach(text => {
+            text.parent?.removeChild(text);
+            text.destroy();
         });
         this.etiquetas.clear();
     }

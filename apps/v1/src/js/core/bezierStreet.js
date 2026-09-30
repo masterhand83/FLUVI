@@ -43,6 +43,11 @@
                 { controls: right, end: copyPoint(section.end) });
             return sections;
         },
+        centerlinePosition(street, fraction) {
+            const geometry = geometryFor(street);
+            const position = atDistance(geometry.samples, fraction * geometry.length);
+            return { x: position.x, y: position.y, angulo: position.angle };
+        },
         coordinates(street, lane, index) {
             const geometry = geometryFor(street);
             const target = Math.max(0, (index + 0.5) * cellSize());

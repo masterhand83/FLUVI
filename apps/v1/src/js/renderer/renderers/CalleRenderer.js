@@ -46,6 +46,7 @@ class CalleRenderer {
     }
 
     renderCalleRecta(calle) {
+        this.scene.uiRenderer?.updateEtiqueta(calle);
         // Si ya existe, actualizar
         if (this.scene.calleSprites.has(calle)) {
             if (this.scene.calleSprites.get(calle)._geometryKind === 'curved') this.removeCalleSprite(calle);
@@ -127,6 +128,7 @@ class CalleRenderer {
     }
 
     renderRoundabout(calle) {
+        this.scene.uiRenderer?.updateEtiqueta(calle);
         const signature = [calle.x, calle.y, calle.innerRadius, calle.carriles, calle.tamano, calle.startAngle, this.celda_tamano].join(':');
         const existing = this.scene.calleSprites.get(calle);
         if (existing?._geometryKind === 'roundabout' && existing._geometrySignature === signature) return existing;
@@ -179,6 +181,7 @@ class CalleRenderer {
     }
 
     renderCalleCurva(calle) {
+        this.scene.uiRenderer?.updateEtiqueta(calle);
         // Para calles curvas, crear múltiples sprites siguiendo vértices
         if (this.scene.calleSprites.has(calle)) {
             const existing = this.scene.calleSprites.get(calle);
@@ -357,6 +360,7 @@ class CalleRenderer {
     }
 
     updateCalleSprite(calle) {
+        this.scene.uiRenderer?.updateEtiqueta(calle);
         const container = this.scene.calleSprites.get(calle);
         if (!container) return;
 

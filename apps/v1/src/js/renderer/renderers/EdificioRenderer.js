@@ -299,6 +299,8 @@ class EdificioRenderer {
                 : { x: edificio.x, y: edificio.y };
             etiqueta.x = center.x;
             etiqueta.y = center.y;
+            etiqueta.visible = etiquetasVisibles('buildings');
+            etiqueta.children[0].style = estiloEtiqueta();
         }
 
         // Actualizar borde de selección
@@ -327,43 +329,11 @@ class EdificioRenderer {
         // NO aplicar rotación - mantener siempre horizontal
         container.rotation = 0;
 
-        // Determinar color del texto basándose en el color de fondo del edificio
-        const backgroundColor = edificio.color || 0x808080;
-        const esOscuro = this.esColorOscuro(backgroundColor);
-        const colorTexto = esOscuro ? 0xFFFFFF : 0x000000; // Blanco para fondos oscuros, negro para claros
-
-        // Crear texto del label con tamaño más grande
-        const text = new PIXI.Text(edificio.label, {
-            fontFamily: 'Arial',
-            fontSize: 14,
-            fill: colorTexto,
-            align: 'center',
-            fontWeight: 'bold'
-        });
-
+        const text = new PIXI.Text(edificio.label, estiloEtiqueta());
         text.anchor.set(0.5);
-        text.resolution = 1; // Resolución normal para mantener rendimiento
-
-        // Crear fondo gris semi-transparente (como las etiquetas de calles)
-        const padding = 4;
-        const colorFondo = 0x808080; // Gris
-        const bg = new PIXI.Graphics();
-        bg.beginFill(colorFondo, 0.8); // 0.8 de opacidad
-        bg.drawRoundedRect(
-            -text.width / 2 - padding,
-            -text.height / 2 - padding / 2,
-            text.width + padding * 2,
-            text.height + padding,
-            3 // radio de esquinas redondeadas
-        );
-        bg.endFill();
-
-        // Agregar fondo y texto al container
-        container.addChild(bg);
+        text.resolution = Math.max(2, window.devicePixelRatio || 1);
         container.addChild(text);
-
-        // Controlar visibilidad según configuración global
-        container.visible = window.mostrarEtiquetas !== false;
+        container.visible = etiquetasVisibles('buildings');
 
         // Agregar a la capa UI (no al sprite del edificio)
         this.scene.getLayer('ui').addChild(container);
@@ -504,9 +474,10 @@ class EdificioRenderer {
     }
 
     // Actualizar visibilidad de etiquetas de todos los edificios
-    updateLabelsVisibility(visible) {
+    updateLabelsVisibility() {
         this.etiquetasEdificios.forEach((container) => {
-            container.visible = visible;
+            container.visible = etiquetasVisibles('buildings');
+            container.children[0].style = estiloEtiqueta();
         });
     }
 

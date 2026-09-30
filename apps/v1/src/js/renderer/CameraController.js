@@ -194,6 +194,10 @@ class CameraController {
         window.escala = this.scale;
         window.offsetX = this.offsetX;
         window.offsetY = this.offsetY;
+        if (this.lastLabelScale !== this.scale) {
+            this.lastLabelScale = this.scale;
+            this.scene.refreshEtiquetas();
+        }
 
         // Actualizar handles del editor si está disponible y en modo edición
         if (window.editorCalles && window.editorCalles.modoEdicion) {

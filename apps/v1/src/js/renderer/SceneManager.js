@@ -132,16 +132,8 @@ class SceneManager {
         this.frameCount = (this.frameCount || 0) + 1;
 
         // Actualizar etiquetas solo cuando cambie el estado
-        if (window.mostrarEtiquetas !== this.lastMostrarEtiquetas) {
-            this.lastMostrarEtiquetas = window.mostrarEtiquetas;
-
-            if (window.mostrarEtiquetas && this.uiRenderer && window.calles) {
-                // Renderizar etiquetas solo una vez al activar
-                this.uiRenderer.updateEtiquetas(window.calles);
-            } else if (this.uiRenderer) {
-                // Limpiar etiquetas al desactivar
-                this.uiRenderer.clearEtiquetas();
-            }
+        if (window.labelVisibility !== this.lastMostrarEtiquetas) {
+            this.refreshEtiquetas();
         }
 
         // Actualizar conexiones solo cuando cambie el estado
@@ -198,9 +190,9 @@ class SceneManager {
 
     // Método para forzar actualización de etiquetas cuando cambien las calles
     refreshEtiquetas() {
-        if (window.mostrarEtiquetas && this.uiRenderer && window.calles) {
-            this.uiRenderer.updateEtiquetas(window.calles);
-        }
+        this.lastMostrarEtiquetas = window.labelVisibility;
+        this.uiRenderer?.updateEtiquetas(window.calles);
+        this.edificioRenderer?.updateLabelsVisibility();
     }
 
     renderAll() {
@@ -261,7 +253,7 @@ class SceneManager {
         }
 
         // Renderizar etiquetas si están visibles
-        if (window.mostrarEtiquetas && this.uiRenderer && window.calles && window.calles.length > 0) {
+        if (this.uiRenderer && window.calles) {
             this.uiRenderer.updateEtiquetas(window.calles);
         }
 
