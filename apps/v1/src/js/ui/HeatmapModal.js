@@ -77,11 +77,11 @@ class HeatmapModal {
     /**
      * Renderiza el mapa de calor usando Canvas2D simple
      */
-    render() {
+    render({ canvas: exportCanvas, maxWidth: exportWidth, maxHeight: exportHeight } = {}) {
         const startTime = performance.now();
         console.log('🌡️ Generando mapa de calor...');
 
-        const canvas = document.getElementById('heatmapCanvas');
+        const canvas = exportCanvas || document.getElementById('heatmapCanvas');
         const canvasContainer = document.getElementById('heatmapCanvasContainer');
         const loadingDiv = document.getElementById('heatmapLoading');
 
@@ -100,15 +100,10 @@ class HeatmapModal {
         window.calles.forEach(calle => {
             if (!calle || !calle.arreglo || !window.obtenerCoordenadasGlobalesCeldaConCurva) return;
 
-            // Revisar solo las esquinas para ser rápido
-            const corners = [
-                [0, 0],
-                [0, calle.tamano - 1],
-                [calle.carriles - 1, 0],
-                [calle.carriles - 1, calle.tamano - 1]
-            ];
-
-            corners.forEach(([c, i]) => {
+            // Incluir el recorrido completo: las curvas y glorietas pueden
+            // extenderse mucho más allá de sus celdas inicial y final.
+            for (let c = 0; c < calle.carriles; c++) {
+              for (let i = 0; i < calle.tamano; i++) {
                 const coords = window.obtenerCoordenadasGlobalesCeldaConCurva(calle, c, i);
                 if (coords && isFinite(coords.x) && isFinite(coords.y)) {
                     minX = Math.min(minX, coords.x);
@@ -116,10 +111,12 @@ class HeatmapModal {
                     maxX = Math.max(maxX, coords.x);
                     maxY = Math.max(maxY, coords.y);
                 }
-            });
+              }
+            }
         });
 
         if (!isFinite(minX) || !isFinite(maxX)) {
+            if (exportCanvas) throw new Error('No se pudo calcular las dimensiones del mapa');
             console.error('❌ No se pudo calcular el bounding box');
             mostrarError('Error', 'No se pudo calcular las dimensiones del mapa');
             loadingDiv.style.display = 'none';
@@ -137,12 +134,12 @@ class HeatmapModal {
         const worldHeight = maxY - minY;
 
         // Calcular tamaño del canvas que cabe en el modal
-        const maxWidth = window.innerWidth * 0.85;
-        const maxHeight = window.innerHeight * 0.6;
+        const maxWidth = exportWidth || window.innerWidth * 0.85;
+        const maxHeight = exportHeight || window.innerHeight * 0.6;
 
         const scaleX = maxWidth / worldWidth;
         const scaleY = maxHeight / worldHeight;
-        const scale = Math.min(scaleX, scaleY, 1);
+        const scale = Math.min(scaleX, scaleY, exportCanvas ? Infinity : 1);
 
         canvas.width = Math.floor(worldWidth * scale);
         canvas.height = Math.floor(worldHeight * scale);
@@ -204,6 +201,8 @@ class HeatmapModal {
         });
 
         ctx.restore();
+
+        if (exportCanvas) return canvas;
 
         // Mostrar canvas, ocultar loading
         loadingDiv.style.display = 'none';
