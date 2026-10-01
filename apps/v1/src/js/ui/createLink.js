@@ -115,15 +115,6 @@
 			}),
 		);
 	}
-	function linealMappings(source, destination) {
-		if (explicitCells()) return draft.rows.map((mapping) => ({ ...mapping }));
-		if (draft.linealExplicit)
-			return draft.rows.map((mapping) => ({ ...mapping }));
-		return Array.from(
-			{ length: Math.min(source.carriles, destination.carriles) },
-			(_, lane) => defaultMapping(source, destination, lane, lane),
-		);
-	}
 	function input(row, key, label, value, min, max, step = "1") {
 		const wrap = document.createElement("label");
 		wrap.textContent = label;
@@ -171,7 +162,7 @@
 		const summary = document.createElement("div");
 		summary.className = "small";
 		summary.dataset.testid = "link-lineal-summary";
-		summary.textContent = `Correspondencia fija: ${linealMappings(draft.source, draft.destination).map((m) => {
+		summary.textContent = `Correspondencias: ${mappings().map((m) => {
 			const sourceCell = effective(m["source-cell"], draft.source.tamano),
 				destinationCell = m["destination-cell"];
 			const sourceEnd = sourceCell === draft.source.tamano - 1 ? "última celda" : sourceCell === 0 ? "primera celda" : "celda";
@@ -179,11 +170,9 @@
 			return `carril ${m["source-lane"] + 1}: ${sourceEnd} de origen (${sourceCell}) → carril ${m["destination-lane"] + 1}, ${destinationEnd} de destino (${destinationCell})`;
 		}).join("; ")}.`;
 		rowsElement.append(summary);
-		for (
-			let lane = draft.destination.carriles;
-			lane < draft.source.carriles;
-			lane++
-		) {
+		const matched = new Set(mappings().map((m) => m["source-lane"]));
+		for (let lane = 0; lane < draft.source.carriles; lane++) {
+			if (matched.has(lane)) continue;
 			const el = document.createElement("div");
 			el.className = "link-unmatched small";
 			el.dataset.testid = "link-unmatched-lane";
@@ -192,6 +181,8 @@
 		}
 	}
 	function renderMappingRow(m, index) {
+		const sourceCells = draft.type === types.PROBABILISTICA || explicitCells(),
+			linealEndpoints = draft.type === types.LINEAL && !explicitCells();
 		const row = document.createElement("div");
 		row.className = "link-mapping-row";
 		row.dataset.testid = "link-mapping-row";
@@ -199,7 +190,7 @@
 		origin.className = "d-flex flex-column gap-1";
 		const destination = document.createElement("div");
 		destination.className = "d-flex flex-column gap-1";
-		if (draft.type === types.PROBABILISTICA || explicitCells())
+		if (sourceCells)
 			pickButton(origin, row, index, "source");
 		input(
 			origin,
@@ -209,29 +200,13 @@
 			0,
 			draft.source.carriles - 1,
 		);
-		if (draft.type === types.PROBABILISTICA || explicitCells())
-			input(
-				origin,
-				"source-cell",
-				"Celda origen",
-				m["source-cell"] ?? "",
-				roundabout(draft.source) ? 0 : -1,
-				draft.source.tamano - 1,
-			);
+		if (sourceCells)
+			cellInput(origin, "source", m["source-cell"]);
 		else {
-			const fixed = document.createElement("span");
-			fixed.className = "small";
-			fixed.dataset.testid = "link-fixed-source-cell";
-			const physicalCell = effective(m["source-cell"], draft.source.tamano);
-			fixed.textContent = `Celda origen: ${physicalCell === draft.source.tamano - 1 ? "última" : "primera"} salida del carril ${m["source-lane"] + 1} (${physicalCell})`;
-			origin.append(fixed);
-			origin.querySelector("[data-testid='source-lane']").addEventListener("input", () => {
-				const lane = Number(origin.querySelector("[data-testid='source-lane']").value);
-				const cell = exit(draft.source, lane);
-				fixed.textContent = `Celda origen: ${cell === draft.source.tamano - 1 ? "última" : "primera"} salida del carril ${lane + 1} (${cell})`;
-			});
+			fixedCell(origin, "source", m["source-cell"]);
 		}
-		pickButton(destination, row, index, "destination");
+		if (!linealEndpoints)
+			pickButton(destination, row, index, "destination");
 		input(
 			destination,
 			"destination-lane",
@@ -240,40 +215,61 @@
 			0,
 			draft.destination.carriles - 1,
 		);
-		input(
-			destination,
-			"destination-cell",
-			"Celda destino",
-			m["destination-cell"] ?? "",
-			0,
-			draft.destination.tamano - 1,
-		);
+		if (linealEndpoints) {
+			fixedCell(destination, "destination", m["destination-cell"]);
+		} else cellInput(destination, "destination", m["destination-cell"]);
 		row.append(origin, destination);
 		if (draft.type === types.PROBABILISTICA)
 			input(row, "chance", "Probabilidad (%)", m.chance, 0, 100, "any");
-		if (draft.type === types.PROBABILISTICA) {
-			const remove = document.createElement("button");
-			remove.type = "button";
-			remove.textContent = "×";
-			remove.setAttribute("aria-label", "Eliminar salida");
-			remove.addEventListener("click", () => {
-				const index = [...rowsElement.children].indexOf(row);
-				draft.rows = mappings();
-				draft.rows.splice(index, 1);
-				renderRows();
-			});
-			row.append(remove);
-		}
+		if (draft.type !== types.INCORPORACION) removeMappingButton(row);
 		rowsElement.append(row);
+	}
+	function cellInput(container, phase, cell) {
+		const street = draft[phase];
+		input(container, `${phase}-cell`, phase === "source" ? "Celda origen" : "Celda destino",
+			cell ?? "", phase === "source" && !roundabout(street) ? -1 : 0, street.tamano - 1);
+	}
+	function removeMappingButton(row) {
+		const remove = document.createElement("button");
+		remove.type = "button";
+		remove.textContent = "×";
+		remove.setAttribute("aria-label", draft.type === types.LINEAL ? "Eliminar correspondencia" : "Eliminar salida");
+		remove.addEventListener("click", () => {
+			const index = [...rowsElement.querySelectorAll("[data-testid='link-mapping-row']")].indexOf(row);
+			draft.rows = mappings();
+			draft.rows.splice(index, 1);
+			renderRows();
+		});
+		row.append(remove);
+	}
+	function fixedCell(container, phase, savedCell) {
+		const street = draft[phase],
+			laneInput = container.querySelector(`[data-testid='${phase}-lane']`),
+			endpoint = phase === "source" ? exit : entry;
+		const fixed = document.createElement("span");
+		fixed.className = "small";
+		fixed.dataset.testid = `link-fixed-${phase}-cell`;
+		// Retain saved explicit cells until the corresponding lane changes.
+		fixed.dataset.cell = savedCell;
+		const update = () => {
+			const cell = effective(fixed.dataset.cell, street.tamano);
+			const end = cell === street.tamano - 1 ? "última" : cell === 0 ? "primera" : "celda";
+			fixed.textContent = `Celda ${phase === "source" ? "origen" : "destino"}: ${end} del carril ${Number(laneInput.value) + 1} (${cell})`;
+		};
+		update();
+		container.append(fixed);
+		laneInput.addEventListener("input", () => {
+			fixed.dataset.cell = endpoint(street, Number(laneInput.value));
+			update();
+			updateNotice();
+		});
 	}
 	function renderRows() {
 		stopRowPick();
 		rowsElement.replaceChildren();
 		if (!draft?.source || !draft.destination) return;
-		if (draft.type === types.LINEAL && !explicitCells()) renderLinealSummary();
-		else
-			for (const [index, mapping] of draft.rows.entries())
-				renderMappingRow(mapping, index);
+		for (const [index, mapping] of draft.rows.entries())
+			renderMappingRow(mapping, index);
 		updateNotice();
 	}
 	function cellPoint(street, lane, cell) {
@@ -422,7 +418,6 @@
 						? types.PROBABILISTICA
 						: types.LINEAL,
 			editing: link,
-			linealExplicit: !!link && link.tipo === types.LINEAL,
 			rows: link
 				? [
 						{
@@ -440,14 +435,12 @@
 		panel.removeAttribute("aria-invalid");
 		button.classList.add("active");
 		status.textContent = link
-			? draft.type === types.LINEAL
-				? "Revisa la correspondencia fija y guarda los cambios."
-				: "Edita la correspondencia y guarda los cambios."
+			? "Edita la correspondencia y guarda los cambios."
 			: "Elige la calle de origen en el mapa.";
 		message.textContent = notice.textContent = "";
 		typeSelect.value =
 			Object.keys(types).find((k) => types[k] === draft.type) || "LINEAL";
-		addExit.hidden = draft.type !== types.PROBABILISTICA;
+		updateAddButton();
 		selectors();
 		renderRows();
 		previewFrame = requestAnimationFrame(drawPreview);
@@ -565,10 +558,7 @@
 		);
 	}
 	function mappings() {
-		if (draft?.type === types.LINEAL)
-			return draft.source && draft.destination
-				? (explicitCells() ? readRows() : linealMappings(draft.source, draft.destination))
-				: [];
+		if (!draft?.source || !draft.destination) return [];
 		return readRows();
 	}
 	function readRows() {
@@ -580,23 +570,26 @@
 			...rowsElement.querySelectorAll("[data-testid='link-mapping-row']"),
 		].map((row) => ({
 			"source-lane": value(row, "source-lane"),
-			"source-cell":
-				draft.type === types.INCORPORACION && !explicitCells()
-					? draft.editing?.tipo === types.INCORPORACION &&
-						draft.source === draft.editing.origen &&
-						value(row, "source-lane") === draft.editing.carrilOrigen &&
-						effective(draft.editing.posOrigen, draft.source.tamano) === exit(draft.source, draft.editing.carrilOrigen)
-						? draft.editing.posOrigen
-					: exit(draft.source, value(row, "source-lane"))
-					: draft.type === types.LINEAL && !explicitCells()
-						? exit(draft.source, value(row, "source-lane"))
-						: value(row, "source-cell"),
+			"source-cell": readSourceCell(row, value),
 			"destination-lane": value(row, "destination-lane"),
-			"destination-cell": value(row, "destination-cell"),
+			"destination-cell": draft.type === types.LINEAL && !explicitCells()
+				? Number(row.querySelector("[data-testid='link-fixed-destination-cell']").dataset.cell)
+				: value(row, "destination-cell"),
 			...(draft.type === types.PROBABILISTICA
 				? { chance: value(row, "chance") }
 				: {}),
 		}));
+	}
+	function readSourceCell(row, value) {
+		if (explicitCells() || draft.type === types.PROBABILISTICA)
+			return value(row, "source-cell");
+		if (draft.type === types.LINEAL)
+			return Number(row.querySelector("[data-testid='link-fixed-source-cell']").dataset.cell);
+		const lane = value(row, "source-lane"), saved = draft.editing;
+		if (saved?.tipo === types.INCORPORACION && draft.source === saved.origen &&
+			lane === saved.carrilOrigen && effective(saved.posOrigen, draft.source.tamano) === exit(draft.source, lane))
+			return saved.posOrigen;
+		return exit(draft.source, lane);
 	}
 	function mappingKey(mapping, source) {
 		return [
@@ -652,6 +645,7 @@
 	function updateNotice() {
 		notice.textContent = "";
 		if (!draft?.source || !draft.destination) return;
+		updateLinealSummary();
 		const ms = mappings();
 		if (
 			ms.some((mapping) =>
@@ -682,6 +676,10 @@
 		if (overlap)
 			notice.textContent =
 				"Existe un solapamiento no idéntico; puedes guardarlo.";
+	}
+	function updateLinealSummary() {
+		for (const el of rowsElement.querySelectorAll("[data-testid='link-lineal-summary'], [data-testid='link-unmatched-lane']")) el.remove();
+		if (draft.type === types.LINEAL && !explicitCells()) renderLinealSummary();
 	}
 	function validate(ms, s, d) {
 		if (!s || !d || s === d) return "Selecciona dos calles distintas.";
@@ -852,7 +850,6 @@
 			draft[key] = picked;
 			if (draft.source && draft.destination)
 				draft.rows = defaults();
-			draft.linealExplicit = false;
 			status.textContent = explicitCells()
 				? "Elige celdas de origen y destino en el mapa o escribe sus índices antes de guardar."
 				: "Revisa las correspondencias antes de guardar.";
@@ -861,20 +858,27 @@
 	typeSelect.addEventListener("change", () => {
 		if (!draft) return;
 		draft.type = types[typeSelect.value];
-		draft.linealExplicit = false;
 		draft.rows = defaults();
-		addExit.hidden = draft.type !== types.PROBABILISTICA;
+		updateAddButton();
 		renderRows();
 	});
+	function updateAddButton() {
+		addExit.hidden = draft.type === types.INCORPORACION;
+		addExit.textContent = draft.type === types.LINEAL ? "＋ Añadir correspondencia" : "＋ Añadir salida";
+	}
 	addExit.addEventListener("click", () => {
 		if (
-			draft?.type === types.PROBABILISTICA &&
+			(draft?.type === types.PROBABILISTICA || draft?.type === types.LINEAL) &&
 			draft.source &&
 			draft.destination
 		) {
 			draft.rows = mappings();
+			const used = new Set(draft.rows.map((m) => m["source-lane"]));
+			const lane = draft.type === types.LINEAL
+				? Array.from({ length: draft.source.carriles }, (_, i) => i).find((i) => !used.has(i)) ?? 0
+				: 0;
 			draft.rows.push({
-				...defaultMapping(draft.source, draft.destination, 0, 0),
+				...defaultMapping(draft.source, draft.destination, lane, Math.min(lane, draft.destination.carriles - 1)),
 				chance: 100,
 			});
 			renderRows();
@@ -885,7 +889,6 @@
 		.addEventListener("click", () => {
 			if (!draft?.source || !draft.destination) return;
 			[draft.source, draft.destination] = [draft.destination, draft.source];
-			draft.linealExplicit = false;
 			draft.rows = defaults();
 			selectors();
 			renderRows();

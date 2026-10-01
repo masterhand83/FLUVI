@@ -81,7 +81,9 @@ Al cambiar el radio, vehículos, enlaces, aparcamientos y marcas de escenario se
 #### Tipos de Conexión
 
 **LINEAL**: Conexión 1 a 1 entre carriles
-- Los carriles se conectan directamente (carril 0 → carril 0, carril 1 → carril 1, etc.)
+- En **Crear enlace**, elige las calles de origen y destino y selecciona **Lineal**. Cada correspondencia permite escribir **Carril origen** y **Carril destino** (índices desde 0). Las parejas iniciales son carril 0 → carril 0, carril 1 → carril 1, etc., pero puedes cambiarlas.
+- Usa **Añadir correspondencia** para conectar más carriles y **×** para quitar una pareja. En calles ordinarias se conecta la salida del carril de origen con la entrada del carril de destino según sus sentidos; en glorietas debes elegir las celdas explícitamente.
+- Las flechas muestran las parejas antes de guardar. **Guardar** aplica todas las correspondencias válidas; **Cancelar** o Escape descartan el borrador. Puedes reabrir un enlace guardado desde la lista y cambiar sus carriles.
 - No requiere parámetros adicionales
 
 **INCORPORACION**: Múltiples carriles convergen en uno

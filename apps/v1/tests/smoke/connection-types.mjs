@@ -217,7 +217,8 @@ for (const usePixi of [false, true]) {
 
 		const linealSource = await makeStreet(page, `Issue 06 lineal source ${usePixi}`, .45, .20, 3, 16)
 		await openDraft(page, linealSource, target, "LINEAL")
-		assert.equal(await page.$$eval(rowsSelector, elements => elements.filter(row => [...row.querySelectorAll('input, select, textarea')].some(el => !el.disabled && !el.readOnly) || row.querySelector('[data-testid="link-pick-source"], [data-testid="link-pick-destination"], [data-testid="link-pick-map"]')).length), 0, "Lineal mapping cannot be edited or picked")
+		assert.equal(await page.$$eval(rowsSelector, elements => elements.filter(row => row.querySelector('[data-testid="source-lane"]') && row.querySelector('[data-testid="destination-lane"]')).length), 3, "Lineal lane pairs can be edited")
+		assert.equal(await page.$$eval(rowsSelector, elements => elements.filter(row => row.querySelector('[data-testid="link-pick-source"], [data-testid="link-pick-destination"]')).length), 0, "ordinary Lineal cells remain fixed directional endpoints")
 		await page.click(ui.save)
 		await waitForCount(page, count + 3)
 		count += 3

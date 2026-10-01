@@ -1,8 +1,7 @@
 import assert from "node:assert/strict"
 import { openSimulator } from "../helpers/simulator.mjs"
 
-// Lineal is a read-only last-cell → first-cell review. Its lane-count mismatch
-// is visible, but cell correction and map picking belong to the other types.
+// Lineal lets users choose lane pairs, keeping directional endpoint cells.
 
 const TEST_IDS = {
 	start: "#createLinkButton",
@@ -90,7 +89,7 @@ for (const usePixi of [false, true]) {
 		// the interaction itself still uses the user's Create link + map clicks.
 		const streets = {
 			source: await addStreet(page, "Link test source", 0.25, 0.2, 2),
-			destination: await addStreet(page, "Link test destination", 0.25, 0.7, 1),
+			destination: await addStreet(page, "Link test destination", 0.25, 0.4, 1),
 		}
 		const initialLinks = await page.evaluate(() => window.conexiones.length)
 		const alternative = await addStreet(page, "Link correction", 0.7, 0.2, 2)
@@ -127,16 +126,25 @@ for (const usePixi of [false, true]) {
 			else window.offsetX -= 20
 		}, usePixi)
 		assert.equal(await page.evaluate(() => window.conexiones.length), initialLinks, "map picks do not connect streets before Save")
-		assert.equal((await rows(page)).length, 0, "Lineal has no configurable mapping rows")
+		assert.equal((await rows(page)).length, 1, "Lineal starts with matching lane pairs")
 		assert.match(await page.$eval('[data-testid="link-lineal-summary"]', el => el.textContent), /última celda.*15.*primera celda.*0/i, "Lineal visibly reviews canonical last-to-first cell mapping")
 		const linealControls = await page.$$eval(`${TEST_IDS.rows} [data-testid="link-mapping-row"]`, elements => elements.map(row => ({
 			pickers: row.querySelectorAll('[data-testid="link-pick-source"], [data-testid="link-pick-destination"], [data-testid="link-pick-map"]').length,
 			editable: [...row.querySelectorAll('input, select, textarea')].filter(el => !el.disabled && !el.readOnly).length,
 		})))
-		assert.deepEqual(linealControls, [], "Lineal review has no editable mapping config or map picks")
+		assert.deepEqual(linealControls, [{ pickers: 0, editable: 2 }], "Lineal exposes both lanes without editable endpoint cells")
 		assert.ok(await page.$(`${TEST_IDS.rows} [data-testid="link-unmatched-lane"]`), "the unmatched source lane is visible")
 		const visibleReview = await page.$eval('[data-testid="link-lineal-summary"]', (el) => getComputedStyle(el).display !== "none" && el.getBoundingClientRect().height > 0)
 		assert.ok(visibleReview, "mapping rows are visibly reviewable")
+		await page.click("#linkAddExit")
+		assert.equal((await rows(page)).length, 2, "extra source lanes can be connected explicitly")
+		assert.equal((await rows(page))[1]["source-lane"], "1")
+		await page.click(`${TEST_IDS.rows} [data-testid="link-mapping-row"]:nth-child(1) button`)
+		assert.equal((await rows(page))[0]["source-lane"], "1", "removing a pair preserves the other lane choice")
+		await page.$eval(`${TEST_IDS.rows} [data-testid="source-lane"]`, el => {
+			el.value = "0"
+			el.dispatchEvent(new Event("input", { bubbles: true }))
+		})
 		const panelBounds = await page.$eval(TEST_IDS.panel, (el) => ({
 			top: el.getBoundingClientRect().top,
 			bottom: el.getBoundingClientRect().bottom,
@@ -220,7 +228,7 @@ for (const usePixi of [false, true]) {
 		await page.click(TEST_IDS.start)
 		await page.select("#linkSourceStreet", longReview[0])
 		await page.select("#linkDestinationStreet", longReview[1])
-		await page.select("#linkTypeSelect", "INCORPORACION")
+		await page.select("#linkTypeSelect", "LINEAL")
 		await page.setViewport({ width: 900, height: 600 })
 		const compactLayout = await page.$eval(TEST_IDS.panel, (el) => {
 			const rect = el.getBoundingClientRect()
