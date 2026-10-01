@@ -781,11 +781,14 @@ class EditorCalles {
         const arregloAnterior = calle.arreglo || [];
         const esperandoAnterior = calle.celulasEsperando || [];
         const direccionesAnteriores = calle.laneDirections || [];
+        const generacionAnterior = calle.laneGenerationEnabled || [];
         const verticesAnteriores = calle.vertices || [];
         calle.tamano = nuevoTamano;
         calle.carriles = nuevosCarriles;
         calle.laneDirections = Array.from({ length: nuevosCarriles }, (_, carril) =>
             direccionesAnteriores[carril] === -1 ? -1 : 1);
+        calle.laneGenerationEnabled = Array.from({ length: nuevosCarriles }, (_, carril) =>
+            generacionAnterior[carril] !== false);
         calle.conexionesSalida = Array.from({ length: nuevosCarriles }, (_, carril) => calle.conexionesSalida?.[carril] || []);
         calle.arreglo = Array.from({ length: nuevosCarriles }, (_, carril) =>
             Array.from({ length: nuevoTamano }, (_, celda) => arregloAnterior[carril]?.[celda] ?? 0)

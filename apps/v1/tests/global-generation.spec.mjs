@@ -31,6 +31,25 @@ function setup() {
 }
 
 describe('global generator percentage', () => {
+    it('respects per-lane switches before global overrides and allows re-enabling reversed lanes', () => {
+        const { context, setValue, activate, road } = setup();
+        const street = road(1);
+        street.laneGenerationEnabled = [true, false];
+        setValue(100);
+        activate(true);
+        context.generate(street);
+        expect(street.arreglo[0][0]).toBeGreaterThan(0);
+        expect(street.arreglo[1]).toEqual([0, 0, 0]);
+        street.laneGenerationEnabled = [false, true];
+        context.generate(street);
+        expect(street.arreglo[0][0]).toBeGreaterThan(0); // existing vehicles stay
+        expect(street.arreglo[1][2]).toBeGreaterThan(0);
+        street.arreglo.forEach(lane => lane.fill(0));
+        street.laneGenerationEnabled = [false, false];
+        context.generate(street);
+        expect(street.arreglo).toEqual([[0, 0, 0], [0, 0, 0]]);
+    });
+
     it('wires the real sidebar controls to generation in the running app', async () => {
         const simulator = await openSimulator();
         try {

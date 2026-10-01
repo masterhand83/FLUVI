@@ -2279,6 +2279,7 @@ function guardarSimulacion() {
             probabilidadGeneracion: calle.probabilidadGeneracion,
             carriles: calle.carriles,
             laneDirections: normalizarDireccionesCarriles(calle.laneDirections, calle.carriles),
+            laneGenerationEnabled: Array.from({ length: calle.carriles }, (_, lane) => calle.laneGenerationEnabled?.[lane] !== false),
             probabilidadSaltoDeCarril: calle.probabilidadSaltoDeCarril,
             // Guardar vértices si existen
             vertices: calle.vertices || [],
@@ -2419,6 +2420,7 @@ function cargarSimulacion(event) {
                     const calleCreada = window.calles[window.calles.length - 1];
                     callesPorIndiceGuardado[savedIndex] = calleCreada;
                     calleCreada.laneDirections = normalizarDireccionesCarriles(calleData.laneDirections, calleCreada.carriles);
+                    calleCreada.laneGenerationEnabled = Array.from({ length: calleCreada.carriles }, (_, lane) => calleData.laneGenerationEnabled?.[lane] !== false);
                     if (roundabout) {
                         Object.assign(calleCreada, { geometryType: 'roundabout', innerRadius: calleData.innerRadius,
                             startAngle: calleData.startAngle, tamano: geometry.cells, vertices: [], esCurva: false });

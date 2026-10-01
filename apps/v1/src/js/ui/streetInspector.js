@@ -132,6 +132,23 @@
 					refresh();
 				});
 				row.append(number, button);
+				if (calle.tipo === "generador") {
+					const label = document.createElement("label");
+					label.className = "d-flex align-items-center gap-1";
+					const checkbox = document.createElement("input");
+					checkbox.type = "checkbox";
+					checkbox.className = "form-check-input";
+					checkbox.checked = calle.laneGenerationEnabled?.[lane] !== false;
+					checkbox.setAttribute("aria-label", `Generar vehículos en carril ${lane + 1}`);
+					checkbox.addEventListener("change", () => {
+						if (selected !== calle) return;
+						window.streetEditPause?.();
+						calle.laneGenerationEnabled = Array.from({ length: calle.carriles }, (_, i) =>
+							i === lane ? checkbox.checked : calle.laneGenerationEnabled?.[i] !== false);
+					});
+					label.append(checkbox, "Generar vehículos");
+					row.append(label);
+				}
 				directionsHost.append(row);
 			}
 		}
@@ -416,6 +433,7 @@
 									),
 							);
 							selected.laneDirections = Array.from({ length: lanes }, (_, lane) => selected.laneDirections?.[lane] === -1 ? -1 : 1);
+							selected.laneGenerationEnabled = Array.from({ length: lanes }, (_, lane) => selected.laneGenerationEnabled?.[lane] !== false);
 						}
 					}
 					selected.tamano = result.cells;
@@ -444,6 +462,7 @@
 						),
 					);
 					selected.laneDirections = Array.from({ length: lanes }, (_, lane) => selected.laneDirections?.[lane] === -1 ? -1 : 1);
+					selected.laneGenerationEnabled = Array.from({ length: lanes }, (_, lane) => selected.laneGenerationEnabled?.[lane] !== false);
 				}
 			} else if (field === fields.radius) {
 				if (value === "" || !Number.isFinite(numeric)) return fail(field, "Introduce un radio válido.");

@@ -653,6 +653,7 @@ function crearCalle(nombre, tamano, tipo, x, y, angulo, probabilidadGeneracion, 
         carriles: carriles,
         // Physical lane order and cell indexes never change when a lane reverses.
         laneDirections: new Array(carriles).fill(1),
+        laneGenerationEnabled: new Array(carriles).fill(true),
         probabilidadSaltoDeCarril: probabilidadSaltoDeCarril,
         // NUEVAS PROPIEDADES PARA CURVAS
         vertices: [],  // Array de vértices para crear curvas
@@ -1003,6 +1004,7 @@ function generarCelulas(calle) {
         }
 
         for (let carril = 0; carril < calle.carriles; carril++) {
+            if (calle.laneGenerationEnabled?.[carril] === false) continue;
             const entry = getLaneEntryCell(calle, carril);
             if (calle.arreglo[carril][entry] === 0 && Math.random() < probEfectiva) {
                 // Generar tipo aleatorio de vehículo (1-6)
