@@ -235,14 +235,8 @@ function abrirModalGuardar() {
         inputDescripcionEscenario.value = '';
     }
 
-    // Verificar si hay celdas bloqueadas
-    const celdasBloqueadas = window.estadoEscenarios?.celdasBloqueadas;
-    if (!celdasBloqueadas || celdasBloqueadas.size === 0) {
-        mostrarNotificacion('warning', 'Escenario Vacío',
-            'No hay obstáculos, inundaciones ni bloqueos configurados.\n' +
-            'Configura al menos un elemento antes de guardar.');
-        return;
-    }
+    // Un escenario también puede guardar solo la probabilidad de lluvia,
+    // antes de iniciar el experimento o de que ocurra la primera inundación.
 
     // Mostrar modal
     if (modalGuardarEscenario) {

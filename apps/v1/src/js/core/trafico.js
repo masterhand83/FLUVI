@@ -169,6 +169,18 @@ carreteraImg.src = "assets/images/roads/carretera.png";
 const conoImg = new Image();
 conoImg.src = "assets/images/objects/cono.png";
 
+const inundacionImg = new Image();
+inundacionImg.src = "assets/images/objects/Inundacion.png";
+
+function obtenerImagenCelda(calle, carril, indice) {
+    const tipo = calle.arreglo[carril][indice];
+    if (tipo === 7) {
+        const key = `${calle.id || calle.nombre}:${carril}:${indice}`;
+        if (window.estadoEscenarios?.celdasBloqueadas.get(key)?.tipo === 'inundacion') return inundacionImg;
+    }
+    return obtenerImagenVehiculo(tipo);
+}
+
 // Cargar la imagen de ESCOM
 const escomImg = new Image();
 escomImg.src = "assets/images/buildings/ESCOM.png";
@@ -744,7 +756,8 @@ class ConexionCA {
 
         const vehiculoOrigen = this.origen.arreglo[this.carrilOrigen][posOrig];
 
-        if (vehiculoOrigen > 0) {
+        // Solo transferir vehículos: los bloqueos (7) y marcadores no se mueven.
+        if (vehiculoOrigen >= 1 && vehiculoOrigen <= 6) {
 
             // Para conexiones probabilísticas, aplicar probabilidad
             if (this.tipo === TIPOS_CONEXION.PROBABILISTICA) {
@@ -1143,10 +1156,10 @@ function actualizarCalle(calle, calleIndex) {
         for (let c = 0; c < calle.carriles; c++) {
             const exit = getLaneExitCell(calle, c);
             const vehiculoEliminado = calle.arreglo[c][exit];
-            if (vehiculoEliminado > 0) {
+            if (vehiculoEliminado >= 1 && vehiculoEliminado <= 6) {
                 // console.log(`🗑️ CA: [${calle.nombre}][Carril ${c}, Pos ${calle.tamano - 1}] DEVORADOR elimina vehículo tipo ${vehiculoEliminado}`);
+                calle.arreglo[c][exit] = 0;
             }
-            calle.arreglo[c][exit] = 0;
         }
     }
 }
@@ -2044,7 +2057,7 @@ function dibujarCarros() {
                         ctx.rotate(-coords.angulo * Math.PI / 180 + (getLaneDirection(calle, c) === -1 ? Math.PI : 0));
 
                         // Obtener la imagen según el tipo de vehículo
-                        const imgVehiculo = obtenerImagenVehiculo(celda);
+                        const imgVehiculo = obtenerImagenCelda(calle, c, i);
                         // Dibujar imagen o rectángulo de color como fallback
                         if (imgVehiculo && imgVehiculo.complete && imgVehiculo.naturalHeight !== 0) {
                             ctx.drawImage(imgVehiculo, -celda_tamano / 2, -celda_tamano / 2, celda_tamano, celda_tamano);
@@ -2065,7 +2078,7 @@ function dibujarCarros() {
                 calle.arreglo[c].forEach((celda, i) => {
                     if (celda > 0) {
                         // Obtener la imagen según el tipo de vehículo
-                        const imgVehiculo = obtenerImagenVehiculo(celda);
+                        const imgVehiculo = obtenerImagenCelda(calle, c, i);
                         // Dibujar imagen o rectángulo de color como fallback
                         if (imgVehiculo && imgVehiculo.complete && imgVehiculo.naturalHeight !== 0) {
                             if (getLaneDirection(calle, c) === -1) {
@@ -4481,6 +4494,9 @@ function iniciarSimulacion() {
         calles.forEach((calle, index) => {
             actualizarCalle(calle, index);
         });
+
+        // Lluvia aleatoria: una tirada por paso completado, también en pasos manuales.
+        window.aplicarLluviaAleatoria?.();
 
         // Avanzar tiempo virtual (función definida en tiempo.js)
         if (window.avanzarTiempo) {

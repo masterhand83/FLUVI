@@ -10,9 +10,86 @@ const estadoEscenarios = {
     modoBloqueoActivo: false,
     tipoEscenarioActivo: null, // 'bloqueo', 'inundacion', 'obstaculo'
     emojiObstaculoSeleccionado: 'bache', // Textura por defecto para obstáculos
+    lluviaAleatoria: { activa: false, probabilidad: 10 }, // Porcentaje por paso
     isPainting: false,
     celdasBloqueadas: new Map() // key: "calleId:carril:indice", value: { tipo: string, texture?: string }
 };
+
+function inicializarLluviaAleatoria() {
+    const toggle = document.getElementById('toggleLluviaAleatoria');
+    const input = document.getElementById('probabilidadLluvia');
+    toggle?.addEventListener('change', () => {
+        estadoEscenarios.lluviaAleatoria.activa = toggle.checked;
+    });
+    input?.addEventListener('input', () => {
+        const value = Number(input.value);
+        if (Number.isFinite(value) && value >= 0 && value <= 100) {
+            estadoEscenarios.lluviaAleatoria.probabilidad = value;
+            document.getElementById('probabilidadLluviaValor').textContent = `${value}%`;
+        }
+    });
+    actualizarControlesLluvia();
+}
+
+function actualizarControlesLluvia() {
+    const lluvia = estadoEscenarios.lluviaAleatoria;
+    const toggle = document.getElementById('toggleLluviaAleatoria');
+    const input = document.getElementById('probabilidadLluvia');
+    const output = document.getElementById('probabilidadLluviaValor');
+    if (toggle) toggle.checked = lluvia.activa;
+    if (input) input.value = lluvia.probabilidad;
+    if (output) output.textContent = `${lluvia.probabilidad}%`;
+}
+
+function lluviaAleatoriaToJSON() {
+    return { probabilidad: estadoEscenarios.lluviaAleatoria.probabilidad };
+}
+
+/** Cargar nunca inicia lluvia; los archivos antiguos usan el valor por defecto. */
+function lluviaAleatoriaFromJSON(configuracion) {
+    const value = configuracion?.probabilidad;
+    estadoEscenarios.lluviaAleatoria.probabilidad = typeof value === 'number' &&
+        Number.isFinite(value) && value >= 0 && value <= 100 ? value : 10;
+    estadoEscenarios.lluviaAleatoria.activa = false;
+    actualizarControlesLluvia();
+}
+
+function contarCeldasVacias(calle) {
+    let vacias = 0;
+    for (const carril of calle.arreglo || []) {
+        for (const valor of carril) if (valor === 0) vacias++;
+    }
+    return vacias;
+}
+
+function encontrarCeldaVacia(calle, objetivo) {
+    for (let carril = 0; carril < calle.arreglo.length; carril++) {
+        for (let indice = 0; indice < calle.arreglo[carril].length; indice++) {
+            if (calle.arreglo[carril][indice] !== 0) continue;
+            if (objetivo-- !== 0) continue;
+            return { carril, indice };
+        }
+    }
+}
+
+/** Una tirada por paso; calles elegibles equiprobables, luego sus celdas vacías. */
+function aplicarLluviaAleatoria() {
+    const lluvia = estadoEscenarios.lluviaAleatoria;
+    if (!lluvia.activa || lluvia.probabilidad <= 0 || Math.random() >= lluvia.probabilidad / 100) return;
+
+    const elegibles = (window.calles || []).map(calle => ({ calle, vacias: contarCeldasVacias(calle) }))
+        .filter(({ vacias }) => vacias > 0);
+    if (elegibles.length === 0) return;
+
+    const { calle, vacias } = elegibles[Math.floor(Math.random() * elegibles.length)];
+    const { carril, indice } = encontrarCeldaVacia(calle, Math.floor(Math.random() * vacias));
+    calle.arreglo[carril][indice] = 7;
+    const key = `${calle.id || calle.nombre}:${carril}:${indice}`;
+    estadoEscenarios.celdasBloqueadas.set(key, { tipo: 'inundacion', texture: 'inundacion' });
+    const renderer = window.pixiApp?.sceneManager?.carroRenderer;
+    renderer?.updateCell(calle, carril, indice);
+    if (window.isPaused) window.pixiApp?.app?.render();
+}
 
 /**
  * Muestra una alerta Bootstrap temporal
@@ -69,6 +146,7 @@ let canvasEscenarios;
  */
 function inicializarEscenarios() {
     console.log('🎬 Inicializando módulo de escenarios...');
+    inicializarLluviaAleatoria();
 
     // Obtener referencias a elementos del DOM
     toggleBloqueoCarril = document.getElementById('toggleBloqueoCarril');
@@ -332,6 +410,7 @@ function restablecerSesionEscenarios() {
     // repainting all of their cells or rebuilding sprites just to remove them.
     estadoEscenarios.celdasBloqueadas.clear();
     desactivarEscenario();
+    lluviaAleatoriaFromJSON();
 
     // También funciona si se invoca antes de inicializar los listeners del UI.
     [toggleBloqueoCarril, toggleInundacion, toggleObstaculo].forEach(toggle => {
@@ -434,7 +513,10 @@ function crearEscenarioJSON(nombre, descripcion = '') {
         // Capturar todas las celdas bloqueadas
         const celdasBloqueadasArray = [];
         estadoEscenarios.celdasBloqueadas.forEach((valor, key) => {
-            const [calleId, carril, indice] = key.split(':');
+            const partes = key.split(':');
+            const indice = partes.pop();
+            const carril = partes.pop();
+            const calleId = partes.join(':');
 
             // Encontrar la calle correspondiente (buscar por id o nombre)
             const calle = window.calles.find(c => c.id === calleId || c.nombre === calleId);
@@ -458,6 +540,7 @@ function crearEscenarioJSON(nombre, descripcion = '') {
             descripcion: descripcion.trim(),
             fechaCreacion: new Date().toISOString(),
             callesConfig: callesConfig,
+            lluviaAleatoria: lluviaAleatoriaToJSON(),
             celdasBloqueadas: celdasBloqueadasArray,
             estadisticas: {
                 totalBloqueos: celdasBloqueadasArray.filter(c => c.tipo === 'bloqueo').length,
@@ -551,6 +634,8 @@ function cargarEscenarioDesdeJSON(escenario) {
 
         // Limpiar todos los bloqueos actuales (silenciosamente, sin confirmación)
         limpiarTodosLosBloqueosSilencioso();
+
+        lluviaAleatoriaFromJSON(escenario.lluviaAleatoria);
 
         // Cargar celdas bloqueadas
         let celdasCargadas = 0;
@@ -955,6 +1040,9 @@ function cargarEscenarioBase(tipoEscenario) {
 
 // Exponer funciones globalmente
 window.inicializarEscenarios = inicializarEscenarios;
+window.aplicarLluviaAleatoria = aplicarLluviaAleatoria;
+window.lluviaAleatoriaToJSON = lluviaAleatoriaToJSON;
+window.lluviaAleatoriaFromJSON = lluviaAleatoriaFromJSON;
 window.exportarBloqueos = exportarBloqueos;
 window.importarBloqueos = importarBloqueos;
 window.estadoEscenarios = estadoEscenarios;

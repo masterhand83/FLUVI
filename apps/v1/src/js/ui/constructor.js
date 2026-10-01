@@ -2329,7 +2329,8 @@ function guardarSimulacion() {
             locked: window.referenceImage.locked
         } : null,
         // Guardar configuración de tiempo virtual si está disponible
-        configuracionTiempo: window.tiempoToJSON ? window.tiempoToJSON() : null
+        configuracionTiempo: window.tiempoToJSON ? window.tiempoToJSON() : null,
+        lluviaAleatoria: window.lluviaAleatoriaToJSON?.()
     };
 
     // Convertir a JSON
@@ -2495,6 +2496,8 @@ function cargarSimulacion(event) {
 
                 console.log(`✅ ${window.edificios.length} edificios cargados, selector actualizado y renderizados`);
             }
+
+            window.lluviaAleatoriaFromJSON?.(datosSimulacion.lluviaAleatoria);
 
             // Cargar configuración de tiempo virtual si existe
             if (datosSimulacion.configuracionTiempo && window.tiempoFromJSON) {

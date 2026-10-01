@@ -558,6 +558,26 @@
               </div>
             </div>
 
+            <!-- Lluvia automática, independiente del pincel de escenarios -->
+            <div class="scenario-card scenario-active mb-3">
+              <div class="scenario-header">
+                <div class="scenario-icon">🌧️</div>
+                <div class="scenario-info">
+                  <h6 class="scenario-title mb-1">Lluvia aleatoria</h6>
+                  <p class="scenario-desc mb-2">Inunda celdas vacías al azar mientras avanza la simulación</p>
+                </div>
+              </div>
+              <div class="scenario-controls">
+                <div class="form-check form-switch mb-2">
+                  <input class="form-check-input" type="checkbox" id="toggleLluviaAleatoria">
+                  <label class="form-check-label" for="toggleLluviaAleatoria"><strong>Activar lluvia aleatoria</strong></label>
+                </div>
+                <label class="form-label small" for="probabilidadLluvia">Probabilidad de inundación por paso: <output id="probabilidadLluviaValor" for="probabilidadLluvia">10%</output></label>
+                <input class="form-range" type="range" id="probabilidadLluvia" min="0" max="100" step="1" value="10">
+                <p class="small text-muted mb-0">Cada paso (2 segundos simulados) puede inundar una celda. 0%: sin inundaciones; 100%: una por paso. La pausa detiene la lluvia; al apagarla, las inundaciones permanecen hasta limpiarlas.</p>
+              </div>
+            </div>
+
             <!-- Obstáculo (ACTIVO) -->
             <div class="scenario-card scenario-active mb-3">
               <div class="scenario-header">
