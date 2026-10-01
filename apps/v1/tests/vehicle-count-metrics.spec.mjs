@@ -10,6 +10,7 @@ function measure(streets, included = null) {
     runInNewContext(`let metricsUpdateCounter = 1, ENTROPY_UPDATE_INTERVAL = 60;
         let callesIncluidasEnMetricas = included, previousStreetStates = new Map();
         let lastEntropyValue = 0, lastFlowMeasure = null, lastFlowValue = 0, previousCarCount = 0;
+        let elapsedMetricSeconds = 0, previousMetricStreets = [];
         ${calculate}
         window.calculateMetricsForTest = calculateMetrics;`, { window, included, console });
     return window.calculateMetricsForTest();

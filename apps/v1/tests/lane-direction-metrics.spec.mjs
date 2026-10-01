@@ -12,6 +12,7 @@ it('measures free space in the travel direction of each lane', () => {
     runInNewContext(`let metricsUpdateCounter = 1, ENTROPY_UPDATE_INTERVAL = 60;
         let callesIncluidasEnMetricas = null, previousStreetStates = new Map();
         let lastEntropyValue = 0, lastFlowMeasure = null, lastFlowValue = 0, previousCarCount = 0;
+        let elapsedMetricSeconds = 0, previousMetricStreets = [];
         ${calculate}
         window.calculateMetricsForTest = calculateMetrics;`, context);
 

@@ -25,9 +25,10 @@ const completeMetricsHistory = {
     entropy: []
 };
 
-// Variables auxiliares para el cálculo de flujo vehicular
+// Cambio neto de población por segundo simulado, independiente del reloj editable.
 let previousCarCount = 0;
-const flowMeasureInterval = 1000;
+let elapsedMetricSeconds = 0;
+let previousMetricStreets = [];
 let lastFlowMeasure = null; // Inicializar como null, se establecerá en primera medición
 let lastFlowValue = 0; // Almacena el último flujo calculado para evitar parpadeos
 
@@ -178,7 +179,7 @@ function interpretarMetricas(metrics) {
             `Densidad alta (${density.toFixed(0)}%)`,
             `Velocidad reducida (${speed.toFixed(0)}%)`,
             `Flujo vehicular: ${throughput.toFixed(1)} veh/s - ${getThroughputLabel(throughput)}`,
-            netGeneration > 2 ? `⚠ Población creciendo (${netGeneration.toFixed(1)} veh/s)` : 'Población estable',
+            `Tasa cambio: ${netGeneration.toFixed(1)} veh/s - ${getNetGenerationLabel(netGeneration)}`,
             'Riesgo de colapso si aumenta densidad'
         ];
     } else if (density < 25) {
@@ -193,7 +194,7 @@ function interpretarMetricas(metrics) {
             `Densidad muy baja (${density.toFixed(0)}%)`,
             `Flujo vehicular bajo: ${throughput.toFixed(1)} veh/s`,
             `Velocidad: ${speed.toFixed(0)}% - ${getSpeedLabel(speed)}`,
-            netGeneration > 1 ? `Creciendo lentamente (${netGeneration.toFixed(1)} veh/s)` : 'Población estable',
+            `Tasa cambio: ${netGeneration.toFixed(1)} veh/s - ${getNetGenerationLabel(netGeneration)}`,
             'Considerar aumentar generación para aprovechar capacidad'
         ];
     } else {
@@ -291,8 +292,8 @@ function getDensityLabel(density) {
  */
 function getNetGenerationLabel(netGen) {
     if (netGen < -3) return 'Decrecimiento rápido';
-    if (netGen < -1) return 'Decrecimiento lento';
-    if (netGen >= -1 && netGen <= 1) return 'Estable';
+    if (netGen < 0) return 'Decrecimiento lento';
+    if (netGen === 0) return 'Estable';
     if (netGen < 3) return 'Crecimiento lento';
     if (netGen < 6) return 'Crecimiento moderado';
     return 'Crecimiento rápido';
@@ -361,6 +362,16 @@ function calculateMetrics() {
             entropy: 0,
             totalCars: 0
         };
+    }
+
+    // Comparar identidades, no solo índices: borrar o reemplazar calles cambia la región.
+    const metricStreets = window.calles.filter((calle, idx) =>
+        callesIncluidasEnMetricas === null || callesIncluidasEnMetricas.has(idx));
+    if (metricStreets.length !== previousMetricStreets.length ||
+        metricStreets.some((calle, idx) => calle !== previousMetricStreets[idx])) {
+        lastFlowMeasure = null;
+        lastFlowValue = 0;
+        previousMetricStreets = metricStreets;
     }
 
     // Guardar estado actual y calcular transiciones
@@ -442,20 +453,21 @@ function calculateMetrics() {
         lastEntropyValue = entropy; // Cachear el nuevo valor
     }
 
-    // Calcular tasa de cambio neta de población (antes llamado "flujo")
-    // Usar tiempo virtual si está disponible, de lo contrario usar tiempo real
-    const now = window.obtenerMillisVirtuales ? window.obtenerMillisVirtuales() : Date.now();
+    // Cada updateMetrics representa un paso completado, incluso en avance manual.
+    // El calendario, las pausas y los FPS no definen el intervalo de esta tasa.
+    const now = elapsedMetricSeconds;
 
     // Inicializar en primera medición
     if (lastFlowMeasure === null) {
         lastFlowMeasure = now;
+        previousCarCount = totalCars;
     }
 
-    const timeDiff = (now - lastFlowMeasure) / 1000;
+    const timeDiff = now - lastFlowMeasure;
 
-    // Solo actualizar cada segundo, pero mantener el último valor calculado
-    if (timeDiff >= 1) {
-        lastFlowValue = Math.abs(totalCars - previousCarCount) / timeDiff;
+    // Mantener el último valor si no ha ocurrido otro paso.
+    if (timeDiff > 0) {
+        lastFlowValue = (totalCars - previousCarCount) / timeDiff;
         previousCarCount = totalCars;
         lastFlowMeasure = now;
     }
@@ -534,6 +546,7 @@ function updateMetricsHistory(metrics) {
  * Esta función debe ser llamada desde el loop de simulación
  */
 function updateMetrics() {
+    elapsedMetricSeconds += SEGUNDOS_POR_PASO;
     metricsUpdateCounter++;
 
     if (metricsUpdateCounter % METRICS_UPDATE_INTERVAL === 0) {
@@ -560,6 +573,8 @@ function resetSimulationMetrics() {
     clearMetricHistories();
 
     previousCarCount = 0;
+    elapsedMetricSeconds = 0;
+    previousMetricStreets = [];
     lastFlowMeasure = null;
     lastFlowValue = 0;
     previousStreetStates.clear();
@@ -798,13 +813,14 @@ function initializeCharts() {
                             label: (context) => {
                                 const value = context.parsed.y;
                                 return [
-                                    `${value.toFixed(1)} vehículos/seg`,
+                                    `${value.toFixed(1)} vehículos/seg simulado`,
                                     '',
                                     getNetGenerationLabel(value),
                                     '',
-                                    'Cambio neto de población',
+                                    'Cambio neto en calles seleccionadas',
                                     '>6 veh/s = Crecimiento rápido',
-                                    '<1 veh/s = Estable'
+                                    '<0 veh/s = Decrecimiento',
+                                    '0 veh/s = Estable'
                                 ];
                             }
                         }
@@ -814,7 +830,7 @@ function initializeCharts() {
                     ...commonOptions.scales,
                     y: {
                         ...commonOptions.scales.y,
-                        min: 0,
+                        beginAtZero: true,
                         suggestedMax: 10
                     }
                 }
