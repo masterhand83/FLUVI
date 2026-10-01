@@ -17,6 +17,10 @@ for (const usePixi of [false, true]) {
 			destination.laneDirections = [-1, 1, -1]
 		})
 		async function open(type) {
+			if (!await page.$eval('#collapseMapDrawingTools', el => el.classList.contains('show'))) {
+				await page.click('[data-bs-target="#collapseMapDrawingTools"]')
+				await page.waitForSelector('#collapseMapDrawingTools.show', { visible: true })
+			}
 			await page.click("#createLinkButton")
 			await page.select("#linkSourceStreet", "Draft mixed source")
 			await page.select("#linkDestinationStreet", "Draft mixed destination")

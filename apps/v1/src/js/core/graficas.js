@@ -604,7 +604,9 @@ function resetSimulationMetrics() {
 // ==================== FUNCIONES DE INICIALIZACIÓN Y ACTUALIZACIÓN DE GRÁFICAS ====================
 
 /**
- * Inicializa las tres gráficas de Chart.js (densidad, flujo, velocidad)
+ * Inicializa las cinco gráficas de Chart.js.
+ * Los tooltips muestran sólo la muestra y su etiqueta; las explicaciones largas
+ * no caben en los lienzos de 180px y desplazan el recuadro lejos del punto.
  */
 function initializeCharts() {
     if (!window.Chart) {
@@ -689,16 +691,12 @@ function initializeCharts() {
                         titleFont: { size: 13, weight: 'bold' },
                         bodyFont: { size: 11 },
                         callbacks: {
-                            title: (context) => 'Densidad de Tráfico',
+                            title: (context) => ['Densidad de Tráfico', context[0].label],
                             label: (context) => {
                                 const value = context.parsed.y;
                                 return [
                                     `${value.toFixed(1)}% de ocupación`,
-                                    '',
-                                    getDensityLabel(value),
-                                    '',
-                                    'Ideal: 30-60%',
-                                    '>80% = Congestión'
+                                    getDensityLabel(value)
                                 ];
                             }
                         }
@@ -750,18 +748,12 @@ function initializeCharts() {
                         titleFont: { size: 13, weight: 'bold' },
                         bodyFont: { size: 11 },
                         callbacks: {
-                            title: (context) => 'Flujo vehicular',
+                            title: (context) => ['Flujo vehicular', context[0].label],
                             label: (context) => {
                                 const value = context.parsed.y;
                                 return [
                                     `${value.toFixed(1)} vehículos/seg`,
-                                    '',
-                                    getThroughputLabel(value),
-                                    '',
-                                    'Flujo = Densidad% × Velocidad%',
-                                    '≥4.5 veh/s = Excelente',
-                                    '2.5-4 veh/s = Óptimo',
-                                    '<2 veh/s = Bajo'
+                                    getThroughputLabel(value)
                                 ];
                             }
                         }
@@ -809,18 +801,12 @@ function initializeCharts() {
                         titleFont: { size: 13, weight: 'bold' },
                         bodyFont: { size: 11 },
                         callbacks: {
-                            title: (context) => 'Tasa de Cambio',
+                            title: (context) => ['Tasa de Cambio', context[0].label],
                             label: (context) => {
                                 const value = context.parsed.y;
                                 return [
                                     `${value.toFixed(1)} vehículos/seg simulado`,
-                                    '',
-                                    getNetGenerationLabel(value),
-                                    '',
-                                    'Cambio neto en calles seleccionadas',
-                                    '>6 veh/s = Crecimiento rápido',
-                                    '<0 veh/s = Decrecimiento',
-                                    '0 veh/s = Estable'
+                                    getNetGenerationLabel(value)
                                 ];
                             }
                         }
@@ -868,16 +854,12 @@ function initializeCharts() {
                         titleFont: { size: 13, weight: 'bold' },
                         bodyFont: { size: 11 },
                         callbacks: {
-                            title: (context) => 'Velocidad Promedio',
+                            title: (context) => ['Velocidad Promedio', context[0].label],
                             label: (context) => {
                                 const value = context.parsed.y;
                                 return [
                                     `${value.toFixed(1)}% en movimiento`,
-                                    '',
-                                    getSpeedLabel(value),
-                                    '',
-                                    '>60% = Fluido',
-                                    '<30% = Casi detenido'
+                                    getSpeedLabel(value)
                                 ];
                             }
                         }
@@ -929,25 +911,11 @@ function initializeCharts() {
                         titleFont: { size: 13, weight: 'bold' },
                         bodyFont: { size: 11 },
                         callbacks: {
-                            title: (context) => 'Entropía de Shannon (AC)',
+                            title: (context) => ['Entropía de Shannon (AC)', context[0].label],
                             label: (context) => {
                                 const value = context.parsed.y;
                                 return [
-                                    `${value.toFixed(3)} bits`,
-                                    '',
-                                    'Mide la diversidad de las',
-                                    '8 TRANSICIONES del autómata',
-                                    'basadas en vecindario (L-C-R)',
-                                    '',
-                                    'Transiciones medidas:',
-                                    '• 000, 001, 010, 011',
-                                    '• 100, 101, 110, 111',
-                                    '',
-                                    'Estado binario: 0=vacío, 1=carro',
-                                    '',
-                                    'Máximo: 3.000 bits (8 reglas)',
-                                    '0 bits = Una sola transición',
-                                    'Alto = Transiciones variadas'
+                                    `${value.toFixed(3)} bits`
                                 ];
                             }
                         }

@@ -155,7 +155,272 @@
         </div>
       </div>
 
-      <!-- Accordion 2: Configuración de Calles -->
+      <!-- Herramientas del mapa -->
+      <div class="accordion-item">
+        <h2 class="accordion-header" id="headingMapDrawingTools">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseMapDrawingTools" aria-expanded="false" aria-controls="collapseMapDrawingTools">
+            ✏️ Herramientas
+          </button>
+        </h2>
+        <div id="collapseMapDrawingTools" class="accordion-collapse collapse" data-bs-parent="#controlPanelAccordion" aria-labelledby="headingMapDrawingTools">
+          <div class="accordion-body">
+            <div class="d-grid gap-2">
+              <button type="button" id="drawStreetButton" class="btn btn-outline-primary btn-sm" data-bs-toggle="tooltip" data-bs-title="Dibujar una calle">✏️ Calle</button>
+              <button type="button" id="drawRoundaboutButton" class="btn btn-outline-primary btn-sm" aria-pressed="false" data-bs-toggle="tooltip" data-bs-title="Arrastra del centro al radio interior">↻ Glorieta</button>
+              <button type="button" id="createLinkButton" class="btn btn-outline-primary btn-sm">🔗 Crear enlace</button>
+              <button type="button" id="drawBuildingButton" class="btn btn-outline-success btn-sm" aria-pressed="false" data-bs-toggle="tooltip" data-bs-title="Arrastra dos esquinas para crear un edificio rectangular">▭ Edificio</button>
+              <label class="building-proportion-lock small"><input id="buildingProportionLock" type="checkbox"> Cuadrado</label>
+              <button type="button" id="drawPolygonBuildingButton" class="btn btn-outline-success btn-sm" aria-pressed="false" data-bs-toggle="tooltip" data-bs-title="Coloca vértices en el mapa; cierra el polígono para terminar">⬠ Polígono</button>
+              <button type="button" id="uploadBuildingImageButton" class="btn btn-outline-success btn-sm" aria-pressed="false">🖼️ Edificio con imagen</button>
+              <input id="buildingImageInput" type="file" accept="image/png,image/jpeg,image/webp" hidden>
+              <small id="buildingImageStatus" role="status" aria-live="polite">PNG, JPEG o WebP, hasta 5 MB. Después, haz clic en el centro del edificio.</small>
+              <button type="button" id="buildingImageCancel" class="btn btn-outline-secondary btn-sm" hidden>Cancelar imagen</button>
+              <label for="labelVisibility">Etiquetas del mapa</label>
+              <select id="labelVisibility" class="form-select form-select-sm" aria-label="Etiquetas del mapa">
+                <option value="off">Sin etiquetas</option>
+                <option value="streets">Calles</option>
+                <option value="buildings">Edificios</option>
+                <option value="both">Ambos</option>
+              </select>
+              <label for="labelFontSize">Tamaño de etiqueta (px)</label>
+              <input id="labelFontSize" class="form-control form-control-sm" type="number" min="1" step="1" value="14" aria-describedby="labelFontSizeError">
+              <small id="labelFontSizeError" role="alert" aria-live="polite"></small>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Constructor de Mapas -->
+      <div class="accordion-item">
+        <h2 class="accordion-header" id="headingConstructor">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseConstructor" aria-expanded="false" aria-controls="collapseConstructor">
+            🏗️ Constructor de Mapas
+          </button>
+        </h2>
+        <div id="collapseConstructor" class="accordion-collapse collapse" data-bs-parent="#controlPanelAccordion">
+          <div class="accordion-body">
+            <h6 class="mb-3">🗺️ Gestión de Simulación</h6>
+
+
+            <!-- Botones de gestión de archivo -->
+            <div class="d-grid gap-2 mb-3">
+              <button type="button" id="btnNuevaSimulacion" class="btn btn-success btn-sm" data-bs-toggle="tooltip" data-bs-title="Crear una nueva simulación desde cero, borrando todo el contenido actual">
+                ➕ Nueva Simulación
+              </button>
+              <button type="button" id="btnGuardarSimulacion" class="btn btn-primary btn-sm" data-bs-toggle="tooltip" data-bs-title="Guardar la simulación actual como archivo JSON">
+                💾 Guardar Simulación
+              </button>
+              <button type="button" id="btnCargarSimulacion" class="btn btn-info btn-sm" data-bs-toggle="tooltip" data-bs-title="Cargar una simulación desde un archivo JSON guardado previamente">
+                📂 Cargar Simulación
+              </button>
+              <input type="file" id="inputCargarSimulacion" accept=".json" style="display: none;">
+            </div>
+
+            <hr class="my-3">
+            <h6 class="mb-2">🖼️ Imagen de referencia</h6>
+            <p class="small text-muted">Añade una imagen local o enlaza una URL como guía del mapa. Se ajusta inicialmente a la vista y queda alineada al mover o ampliar el mapa.</p>
+            <div class="d-grid gap-2 mb-3">
+              <label for="inputImagenReferencia" class="btn btn-outline-primary btn-sm mb-0">📷 Cargar o reemplazar imagen</label>
+              <input type="file" id="inputImagenReferencia" accept="image/*" class="form-control form-control-sm">
+              <label for="inputUrlImagenReferencia" class="form-label mb-0">URL de la imagen</label>
+              <input type="url" id="inputUrlImagenReferencia" class="form-control form-control-sm" placeholder="https://ejemplo.org/mapa.png">
+              <button type="button" id="btnAgregarUrlImagenReferencia" class="btn btn-outline-primary btn-sm">🔗 Enlazar o reemplazar imagen</button>
+              <button type="button" id="btnEliminarImagenReferencia" class="btn btn-outline-danger btn-sm">🗑️ Quitar imagen</button>
+            </div>
+            <button type="button" id="btnBloquearImagenReferencia" class="btn btn-outline-secondary btn-sm mb-2" aria-pressed="false">🔓 Bloquear imagen para editar el mapa</button>
+            <div class="form-check mb-2">
+              <input class="form-check-input" type="checkbox" id="mostrarImagenReferencia" checked>
+              <label class="form-check-label" for="mostrarImagenReferencia">Mostrar imagen de referencia</label>
+            </div>
+            <label for="opacidadImagenReferencia" class="form-label">Opacidad: <output id="valorOpacidadImagenReferencia" for="opacidadImagenReferencia">70%</output></label>
+            <input type="range" id="opacidadImagenReferencia" class="form-range mb-2" min="0" max="100" value="70">
+            <p class="small text-muted">Arrastra la imagen para moverla, la esquina para cambiar su tamaño y el círculo para girarla. Bloquéala para seleccionar objetos bajo ella. Las imágenes locales se incluyen en el JSON; las enlazadas guardan solo la URL y sus ajustes y dependen de que la fuente siga disponible. Si falla el enlace, aparece «Image unavailable» en su posición y puedes reemplazarlo.</p>
+
+            <hr class="my-3">
+
+            <h6 class="mb-3">🛠️ Modo Edición Visual</h6>
+
+            <!-- Selector de tipo de objeto -->
+            <label for="selectTipoObjeto" class="form-label">Tipo de Objeto:</label>
+            <select id="selectTipoObjeto" class="form-select mb-3">
+              <option value="">Selecciona tipo...</option>
+              <option value="calle">🛣️ Calle</option>
+              <option value="edificio">🏢 Edificio</option>
+            </select>
+
+            <!-- Selector de Calle -->
+            <div id="calleEditorSelector" style="display: none;">
+              <label for="selectCalleEditor" class="form-label">Calle:</label>
+              <select id="selectCalleEditor" class="form-select mb-3">
+                <option value="">Seleccione una calle...</option>
+              </select>
+            </div>
+
+            <!-- Selector de Edificio -->
+            <div id="edificioSelector" style="display: none;">
+              <label for="selectEdificio" class="form-label">Edificio:</label>
+              <select id="selectEdificio" class="form-select mb-3">
+                <option value="">Seleccione un edificio...</option>
+              </select>
+            </div>
+
+            <!-- Botón de modo edición -->
+            <button type="button" id="btnModoEdicion" class="btn btn-warning w-100 mb-2" disabled data-bs-toggle="tooltip" data-bs-title="Activar modo edición para mover y rotar el objeto seleccionado visualmente">
+              ✏️ Modo Edición
+            </button>
+
+            <!-- Botones de guardar/cancelar (solo visibles en modo edición) -->
+            <div id="editActionButtons" style="display: none;">
+              <div class="d-flex gap-2 mb-2">
+                <button type="button" id="btnGuardarEdicion" class="btn btn-success flex-fill" data-bs-toggle="tooltip" data-bs-title="Guardar los cambios realizados en el modo edición">
+                  💾 Guardar
+                </button>
+                <button type="button" id="btnCancelarEdicion" class="btn btn-secondary flex-fill" data-bs-toggle="tooltip" data-bs-title="Cancelar los cambios y restaurar la posición original">
+                  ❌ Cancelar
+                </button>
+              </div>
+            </div>
+
+            <!-- Dropdown de Ajustes Avanzados -->
+            <div class="mt-3">
+              <button class="btn btn-outline-primary w-100" type="button" id="btnAjustesAvanzados" data-bs-toggle="tooltip" data-bs-title="Mostrar/ocultar ajustes avanzados de posición, rotación y dimensiones">
+                🔧 Ajustes Avanzados <span id="advancedArrow">▼</span>
+              </button>
+
+              <div class="advanced-settings" id="advancedSettings">
+                <div class="mt-3">
+                  <h6>📍 Posición y Rotación Manual</h6>
+
+                  <div class="coordinate-input">
+                    <label for="inputPosX">X:</label>
+                    <input type="number" id="inputPosX" class="form-control" step="1" placeholder="Posición X">
+                  </div>
+
+                  <div class="coordinate-input">
+                    <label for="inputPosY">Y:</label>
+                    <input type="number" id="inputPosY" class="form-control" step="1" placeholder="Posición Y">
+                  </div>
+
+                  <div class="coordinate-input">
+                    <label for="inputAngulo">Ángulo:</label>
+                    <input type="number" id="inputAngulo" class="form-control" min="0" max="360" step="1" placeholder="0-360°">
+                    <span>°</span>
+                  </div>
+
+                  <!-- Nuevos campos para dimensiones de calles -->
+                  <div id="dimensionesCalleSection" style="display: none;">
+                    <hr class="my-3">
+                    <h6>📏 Dimensiones de Calle</h6>
+
+                    <div class="coordinate-input">
+                      <label for="inputTamanoEditar">Tamaño:</label>
+                      <input type="number" id="inputTamanoEditar" class="form-control" min="10" max="500" step="1" placeholder="Tamaño en celdas">
+                      <span>celdas</span>
+                    </div>
+
+                    <div class="coordinate-input">
+                      <label for="inputCarrilesEditar">Carriles:</label>
+                      <input type="number" id="inputCarrilesEditar" class="form-control" min="1" max="10" step="1" placeholder="Número de carriles">
+                      <span>carriles</span>
+                    </div>
+
+                    <button type="button" id="btnAplicarDimensiones" class="btn btn-sm btn-warning mt-2 w-100" data-bs-toggle="tooltip" data-bs-title="Aplicar cambios de tamaño y número de carriles (elimina vehículos)">
+                      📏 Aplicar Dimensiones
+                    </button>
+
+                    <div class="alert alert-warning p-2 small mt-2">
+                      <strong>⚠️ Advertencia:</strong> Cambiar las dimensiones reiniciará el contenido de la calle (elimina vehículos existentes).
+                    </div>
+                  </div>
+
+                  <button type="button" id="btnAplicarPosicion" class="btn btn-sm btn-success mt-2 w-100" data-bs-toggle="tooltip" data-bs-title="Aplicar la posición (X, Y) y ángulo de rotación ingresados manualmente">
+                    ✓ Aplicar Posición
+                  </button>
+
+                  <div class="mt-3 p-2 bg-light rounded">
+                    <small class="text-muted">
+                      <strong>💡 Consejo:</strong> Usa el modo edición para arrastrar y rotar visualmente el objeto.
+                    </small>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- NUEVO: Sección de Modo Curva (solo para calles) -->
+            <div id="curvaModeSection" style="display: none;">
+              <div class="mt-3 border-top pt-3">
+                <h6>🌊 Modo Curva</h6>
+                <small class="text-muted d-block mt-2">
+                  ⌨️ <strong>Presiona la tecla Z</strong> para activar/desactivar el modo de edición de vértices
+                </small>
+                <small class="text-muted d-block mt-1">
+                  💡 <strong>Haz clic en un vértice</strong> y arrástralo perpendicular a la calle para curvarlo (máx ±40°)
+                </small>
+                <small class="text-muted d-block mt-1">
+                  🎯 Aparecerá una guía visual azul mostrando la dirección de arrastre
+                </small>
+              </div>
+            </div>
+
+            <hr class="my-3">
+
+            <h6 class="mb-3">🛣️ Agregar Elementos</h6>
+
+            <!-- Botones de agregar -->
+            <div class="d-grid gap-2 mb-3">
+              <button type="button" id="btnAgregarCalle" class="btn btn-outline-primary btn-sm" data-bs-toggle="tooltip" data-bs-title="Abrir formulario para crear una nueva calle en el mapa">
+                ➕ Agregar Calle
+              </button>
+              <button type="button" id="btnAgregarEdificio" class="btn btn-outline-success btn-sm" data-bs-toggle="tooltip" data-bs-title="Arrastrar un edificio rectangular en el mapa">
+                🏢 Agregar Edificio
+              </button>
+              <button type="button" id="btnEditarEdificio" class="btn btn-outline-warning btn-sm" style="display: none;" data-bs-toggle="tooltip" data-bs-title="Editar configuración del edificio seleccionado (Ctrl+Click para seleccionar)">
+                ✏️ Editar Edificio
+              </button>
+              <button type="button" id="btnAgregarConexion" class="btn btn-outline-secondary btn-sm" data-bs-toggle="tooltip" data-bs-title="Crear una conexión entre dos calles para flujo de tráfico">
+                🔗 Agregar Conexión
+              </button>
+              <button type="button" id="btnEliminarObjeto" class="btn btn-outline-danger btn-sm" data-bs-toggle="tooltip" data-bs-title="Eliminar permanentemente la calle o edificio seleccionado">
+                🗑️ Eliminar Objeto Seleccionado
+              </button>
+            </div>
+
+            <hr class="my-3">
+
+            <h6 class="mb-3">🔗 Gestión de Conexiones</h6>
+
+            <!-- Botón para mostrar lista de conexiones -->
+            <button type="button" id="btnMostrarListaConexiones" class="btn btn-outline-info w-100 mb-2" data-bs-toggle="tooltip" data-bs-title="Mostrar/ocultar lista de todas las conexiones entre calles creadas">
+              📋 Ver Conexiones Existentes
+            </button>
+
+            <!-- Lista de conexiones (inicialmente oculta) -->
+            <div id="listaConexionesContainer" style="display: none;" class="mt-2">
+              <input id="linkSearchInput" type="search" class="form-control form-control-sm mb-2" placeholder="Buscar conexiones..." aria-label="Buscar conexiones">
+              <div id="listaConexiones" class="list-group small" style="max-height: 300px; overflow-y: auto;">
+                <!-- Las conexiones se insertarán aquí dinámicamente -->
+              </div>
+            </div>
+
+            <hr class="my-3">
+
+            <div class="alert alert-info p-2 small mb-0">
+              <strong>💡 Cómo usar:</strong>
+              <ul class="mb-0 mt-1 ps-3">
+                <li>Crea calles y edificios con los botones</li>
+                <li><kbd>Ctrl</kbd>+Clic en el canvas para seleccionar objetos rápidamente</li>
+                <li>Usa el modo edición para posicionarlos</li>
+                <li>Conecta calles con "Agregar Conexión"</li>
+                <li>Gestiona conexiones existentes con "Ver Conexiones"</li>
+                <li>Guarda tu mapa como archivo JSON</li>
+                <li>Carga mapas guardados anteriormente</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Configuración de Calles -->
       <div class="accordion-item">
         <h2 class="accordion-header" id="headingConfig">
           <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseConfig" aria-expanded="false" aria-controls="collapseConfig">
@@ -436,270 +701,6 @@
                   📊 Configurar Multiplicador de Gen.
                 </button>
               </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Accordion 4: Constructor de Mapas -->
-      <div class="accordion-item">
-        <h2 class="accordion-header" id="headingConstructor">
-          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseConstructor" aria-expanded="false" aria-controls="collapseConstructor">
-            🏗️ Constructor de Mapas
-          </button>
-        </h2>
-        <div id="collapseConstructor" class="accordion-collapse collapse" data-bs-parent="#controlPanelAccordion">
-          <div class="accordion-body">
-            <h6 class="mb-3">🗺️ Gestión de Simulación</h6>
-
-
-            <!-- Botones de gestión de archivo -->
-            <div class="d-grid gap-2 mb-3">
-              <button type="button" id="btnNuevaSimulacion" class="btn btn-success btn-sm" data-bs-toggle="tooltip" data-bs-title="Crear una nueva simulación desde cero, borrando todo el contenido actual">
-                ➕ Nueva Simulación
-              </button>
-              <button type="button" id="btnGuardarSimulacion" class="btn btn-primary btn-sm" data-bs-toggle="tooltip" data-bs-title="Guardar la simulación actual como archivo JSON">
-                💾 Guardar Simulación
-              </button>
-              <button type="button" id="btnCargarSimulacion" class="btn btn-info btn-sm" data-bs-toggle="tooltip" data-bs-title="Cargar una simulación desde un archivo JSON guardado previamente">
-                📂 Cargar Simulación
-              </button>
-              <input type="file" id="inputCargarSimulacion" accept=".json" style="display: none;">
-            </div>
-
-            <hr class="my-3">
-            <h6 class="mb-2">🖼️ Imagen de referencia</h6>
-            <p class="small text-muted">Añade una imagen local o enlaza una URL como guía del mapa. Se ajusta inicialmente a la vista y queda alineada al mover o ampliar el mapa.</p>
-            <div class="d-grid gap-2 mb-3">
-              <label for="inputImagenReferencia" class="btn btn-outline-primary btn-sm mb-0">📷 Cargar o reemplazar imagen</label>
-              <input type="file" id="inputImagenReferencia" accept="image/*" class="form-control form-control-sm">
-              <label for="inputUrlImagenReferencia" class="form-label mb-0">URL de la imagen</label>
-              <input type="url" id="inputUrlImagenReferencia" class="form-control form-control-sm" placeholder="https://ejemplo.org/mapa.png">
-              <button type="button" id="btnAgregarUrlImagenReferencia" class="btn btn-outline-primary btn-sm">🔗 Enlazar o reemplazar imagen</button>
-              <button type="button" id="btnEliminarImagenReferencia" class="btn btn-outline-danger btn-sm">🗑️ Quitar imagen</button>
-            </div>
-            <button type="button" id="btnBloquearImagenReferencia" class="btn btn-outline-secondary btn-sm mb-2" aria-pressed="false">🔓 Bloquear imagen para editar el mapa</button>
-            <div class="form-check mb-2">
-              <input class="form-check-input" type="checkbox" id="mostrarImagenReferencia" checked>
-              <label class="form-check-label" for="mostrarImagenReferencia">Mostrar imagen de referencia</label>
-            </div>
-            <label for="opacidadImagenReferencia" class="form-label">Opacidad: <output id="valorOpacidadImagenReferencia" for="opacidadImagenReferencia">70%</output></label>
-            <input type="range" id="opacidadImagenReferencia" class="form-range mb-2" min="0" max="100" value="70">
-            <p class="small text-muted">Arrastra la imagen para moverla, la esquina para cambiar su tamaño y el círculo para girarla. Bloquéala para seleccionar objetos bajo ella. Las imágenes locales se incluyen en el JSON; las enlazadas guardan solo la URL y sus ajustes y dependen de que la fuente siga disponible. Si falla el enlace, aparece «Image unavailable» en su posición y puedes reemplazarlo.</p>
-
-            <hr class="my-3">
-
-            <h6 class="mb-3">🛠️ Modo Edición Visual</h6>
-
-            <!-- Selector de tipo de objeto -->
-            <label for="selectTipoObjeto" class="form-label">Tipo de Objeto:</label>
-            <select id="selectTipoObjeto" class="form-select mb-3">
-              <option value="">Selecciona tipo...</option>
-              <option value="calle">🛣️ Calle</option>
-              <option value="edificio">🏢 Edificio</option>
-            </select>
-
-            <!-- Selector de Calle -->
-            <div id="calleEditorSelector" style="display: none;">
-              <label for="selectCalleEditor" class="form-label">Calle:</label>
-              <select id="selectCalleEditor" class="form-select mb-3">
-                <option value="">Seleccione una calle...</option>
-              </select>
-            </div>
-
-            <!-- Selector de Edificio -->
-            <div id="edificioSelector" style="display: none;">
-              <label for="selectEdificio" class="form-label">Edificio:</label>
-              <select id="selectEdificio" class="form-select mb-3">
-                <option value="">Seleccione un edificio...</option>
-              </select>
-            </div>
-
-            <!-- Botón de modo edición -->
-            <button type="button" id="btnModoEdicion" class="btn btn-warning w-100 mb-2" disabled data-bs-toggle="tooltip" data-bs-title="Activar modo edición para mover y rotar el objeto seleccionado visualmente">
-              ✏️ Modo Edición
-            </button>
-
-            <!-- Botones de guardar/cancelar (solo visibles en modo edición) -->
-            <div id="editActionButtons" style="display: none;">
-              <div class="d-flex gap-2 mb-2">
-                <button type="button" id="btnGuardarEdicion" class="btn btn-success flex-fill" data-bs-toggle="tooltip" data-bs-title="Guardar los cambios realizados en el modo edición">
-                  💾 Guardar
-                </button>
-                <button type="button" id="btnCancelarEdicion" class="btn btn-secondary flex-fill" data-bs-toggle="tooltip" data-bs-title="Cancelar los cambios y restaurar la posición original">
-                  ❌ Cancelar
-                </button>
-              </div>
-            </div>
-
-            <!-- Dropdown de Ajustes Avanzados -->
-            <div class="mt-3">
-              <button class="btn btn-outline-primary w-100" type="button" id="btnAjustesAvanzados" data-bs-toggle="tooltip" data-bs-title="Mostrar/ocultar ajustes avanzados de posición, rotación y dimensiones">
-                🔧 Ajustes Avanzados <span id="advancedArrow">▼</span>
-              </button>
-
-              <div class="advanced-settings" id="advancedSettings">
-                <div class="mt-3">
-                  <h6>📍 Posición y Rotación Manual</h6>
-
-                  <div class="coordinate-input">
-                    <label for="inputPosX">X:</label>
-                    <input type="number" id="inputPosX" class="form-control" step="1" placeholder="Posición X">
-                  </div>
-
-                  <div class="coordinate-input">
-                    <label for="inputPosY">Y:</label>
-                    <input type="number" id="inputPosY" class="form-control" step="1" placeholder="Posición Y">
-                  </div>
-
-                  <div class="coordinate-input">
-                    <label for="inputAngulo">Ángulo:</label>
-                    <input type="number" id="inputAngulo" class="form-control" min="0" max="360" step="1" placeholder="0-360°">
-                    <span>°</span>
-                  </div>
-
-                  <!-- Nuevos campos para dimensiones de calles -->
-                  <div id="dimensionesCalleSection" style="display: none;">
-                    <hr class="my-3">
-                    <h6>📏 Dimensiones de Calle</h6>
-
-                    <div class="coordinate-input">
-                      <label for="inputTamanoEditar">Tamaño:</label>
-                      <input type="number" id="inputTamanoEditar" class="form-control" min="10" max="500" step="1" placeholder="Tamaño en celdas">
-                      <span>celdas</span>
-                    </div>
-
-                    <div class="coordinate-input">
-                      <label for="inputCarrilesEditar">Carriles:</label>
-                      <input type="number" id="inputCarrilesEditar" class="form-control" min="1" max="10" step="1" placeholder="Número de carriles">
-                      <span>carriles</span>
-                    </div>
-
-                    <button type="button" id="btnAplicarDimensiones" class="btn btn-sm btn-warning mt-2 w-100" data-bs-toggle="tooltip" data-bs-title="Aplicar cambios de tamaño y número de carriles (elimina vehículos)">
-                      📏 Aplicar Dimensiones
-                    </button>
-
-                    <div class="alert alert-warning p-2 small mt-2">
-                      <strong>⚠️ Advertencia:</strong> Cambiar las dimensiones reiniciará el contenido de la calle (elimina vehículos existentes).
-                    </div>
-                  </div>
-
-                  <button type="button" id="btnAplicarPosicion" class="btn btn-sm btn-success mt-2 w-100" data-bs-toggle="tooltip" data-bs-title="Aplicar la posición (X, Y) y ángulo de rotación ingresados manualmente">
-                    ✓ Aplicar Posición
-                  </button>
-
-                  <div class="mt-3 p-2 bg-light rounded">
-                    <small class="text-muted">
-                      <strong>💡 Consejo:</strong> Usa el modo edición para arrastrar y rotar visualmente el objeto.
-                    </small>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- NUEVO: Sección de Modo Curva (solo para calles) -->
-            <div id="curvaModeSection" style="display: none;">
-              <div class="mt-3 border-top pt-3">
-                <h6>🌊 Modo Curva</h6>
-                <small class="text-muted d-block mt-2">
-                  ⌨️ <strong>Presiona la tecla Z</strong> para activar/desactivar el modo de edición de vértices
-                </small>
-                <small class="text-muted d-block mt-1">
-                  💡 <strong>Haz clic en un vértice</strong> y arrástralo perpendicular a la calle para curvarlo (máx ±40°)
-                </small>
-                <small class="text-muted d-block mt-1">
-                  🎯 Aparecerá una guía visual azul mostrando la dirección de arrastre
-                </small>
-              </div>
-            </div>
-
-            <hr class="my-3">
-
-            <h6 class="mb-3">🛣️ Agregar Elementos</h6>
-
-            <!-- Botones de agregar -->
-            <div class="d-grid gap-2 mb-3">
-              <button type="button" id="btnAgregarCalle" class="btn btn-outline-primary btn-sm" data-bs-toggle="tooltip" data-bs-title="Abrir formulario para crear una nueva calle en el mapa">
-                ➕ Agregar Calle
-              </button>
-              <button type="button" id="btnAgregarEdificio" class="btn btn-outline-success btn-sm" data-bs-toggle="tooltip" data-bs-title="Arrastrar un edificio rectangular en el mapa">
-                🏢 Agregar Edificio
-              </button>
-              <button type="button" id="btnEditarEdificio" class="btn btn-outline-warning btn-sm" style="display: none;" data-bs-toggle="tooltip" data-bs-title="Editar configuración del edificio seleccionado (Ctrl+Click para seleccionar)">
-                ✏️ Editar Edificio
-              </button>
-              <button type="button" id="btnAgregarConexion" class="btn btn-outline-secondary btn-sm" data-bs-toggle="tooltip" data-bs-title="Crear una conexión entre dos calles para flujo de tráfico">
-                🔗 Agregar Conexión
-              </button>
-              <button type="button" id="btnEliminarObjeto" class="btn btn-outline-danger btn-sm" data-bs-toggle="tooltip" data-bs-title="Eliminar permanentemente la calle o edificio seleccionado">
-                🗑️ Eliminar Objeto Seleccionado
-              </button>
-            </div>
-
-            <hr class="my-3">
-
-            <h6 class="mb-3">🔗 Gestión de Conexiones</h6>
-
-            <!-- Botón para mostrar lista de conexiones -->
-            <button type="button" id="btnMostrarListaConexiones" class="btn btn-outline-info w-100 mb-2" data-bs-toggle="tooltip" data-bs-title="Mostrar/ocultar lista de todas las conexiones entre calles creadas">
-              📋 Ver Conexiones Existentes
-            </button>
-
-            <!-- Lista de conexiones (inicialmente oculta) -->
-            <div id="listaConexionesContainer" style="display: none;" class="mt-2">
-              <input id="linkSearchInput" type="search" class="form-control form-control-sm mb-2" placeholder="Buscar conexiones..." aria-label="Buscar conexiones">
-              <div id="listaConexiones" class="list-group small" style="max-height: 300px; overflow-y: auto;">
-                <!-- Las conexiones se insertarán aquí dinámicamente -->
-              </div>
-            </div>
-
-            <hr class="my-3">
-
-            <div class="alert alert-info p-2 small mb-0">
-              <strong>💡 Cómo usar:</strong>
-              <ul class="mb-0 mt-1 ps-3">
-                <li>Crea calles y edificios con los botones</li>
-                <li><kbd>Ctrl</kbd>+Clic en el canvas para seleccionar objetos rápidamente</li>
-                <li>Usa el modo edición para posicionarlos</li>
-                <li>Conecta calles con "Agregar Conexión"</li>
-                <li>Gestiona conexiones existentes con "Ver Conexiones"</li>
-                <li>Guarda tu mapa como archivo JSON</li>
-                <li>Carga mapas guardados anteriormente</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Herramientas de dibujo del mapa -->
-      <div class="accordion-item">
-        <h2 class="accordion-header" id="headingMapDrawingTools">
-          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseMapDrawingTools" aria-expanded="false" aria-controls="collapseMapDrawingTools">
-            ✏️ Herramientas de Dibujo
-          </button>
-        </h2>
-        <div id="collapseMapDrawingTools" class="accordion-collapse collapse" data-bs-parent="#controlPanelAccordion">
-          <div class="accordion-body">
-            <div class="d-grid gap-2">
-              <button type="button" id="drawStreetButton" class="btn btn-outline-primary btn-sm" data-bs-toggle="tooltip" data-bs-title="Dibujar una calle">✏️ Calle</button>
-              <button type="button" id="drawRoundaboutButton" class="btn btn-outline-primary btn-sm" aria-pressed="false" data-bs-toggle="tooltip" data-bs-title="Arrastra del centro al radio interior">↻ Glorieta</button>
-              <button type="button" id="drawBuildingButton" class="btn btn-outline-success btn-sm" aria-pressed="false" data-bs-toggle="tooltip" data-bs-title="Arrastra dos esquinas para crear un edificio rectangular">▭ Edificio</button>
-              <label class="building-proportion-lock small"><input id="buildingProportionLock" type="checkbox"> Cuadrado</label>
-              <button type="button" id="drawPolygonBuildingButton" class="btn btn-outline-success btn-sm" aria-pressed="false" data-bs-toggle="tooltip" data-bs-title="Coloca vértices en el mapa; cierra el polígono para terminar">⬠ Polígono</button>
-              <button type="button" id="uploadBuildingImageButton" class="btn btn-outline-success btn-sm" aria-pressed="false">🖼️ Edificio con imagen</button>
-              <input id="buildingImageInput" type="file" accept="image/png,image/jpeg,image/webp" hidden>
-              <small id="buildingImageStatus" role="status" aria-live="polite">PNG, JPEG o WebP, hasta 5 MB. Después, haz clic en el centro del edificio.</small>
-              <button type="button" id="buildingImageCancel" class="btn btn-outline-secondary btn-sm" hidden>Cancelar imagen</button>
-              <label for="labelVisibility">Etiquetas del mapa</label>
-              <select id="labelVisibility" class="form-select form-select-sm" aria-label="Etiquetas del mapa">
-                <option value="off">Sin etiquetas</option>
-                <option value="streets">Calles</option>
-                <option value="buildings">Edificios</option>
-                <option value="both">Ambos</option>
-              </select>
-              <label for="labelFontSize">Tamaño de etiqueta (px)</label>
-              <input id="labelFontSize" class="form-control form-control-sm" type="number" min="1" step="1" value="14" aria-describedby="labelFontSizeError">
-              <small id="labelFontSizeError" role="alert" aria-live="polite"></small>
             </div>
           </div>
         </div>
@@ -2254,7 +2255,7 @@
         <div class="modal-footer heatmap-footer">
           <div class="footer-info">
             <small class="text-muted">
-              💡 Este análisis representa un snapshot instantáneo del estado actual del tráfico
+              💡 Snapshot de todas las calles. El color de cada vehículo indica la ocupación de hasta 5 celdas de su carril (2 a cada lado); los obstáculos no cuentan como vehículos, pero sí como celdas. La ventana se recorta en extremos y se envuelve en glorietas sin repetir celdas.
             </small>
           </div>
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
@@ -2305,6 +2306,20 @@
     <div class="canvas-wrapper">
       <canvas id="simuladorCanvas"></canvas>
       <canvas id="minimapa"></canvas>
+
+      <section id="linkDraftPanel" class="create-link-panel" hidden aria-hidden="true" aria-label="Revisar enlace entre calles">
+        <p id="linkDraftStatus" class="small mb-2">Elige la calle de origen en el mapa.</p>
+        <div class="mb-2"><label class="form-label" for="linkSourceStreet">Origen</label><select id="linkSourceStreet" class="form-select form-select-sm"></select></div>
+        <div class="mb-2"><label class="form-label" for="linkDestinationStreet">Destino</label><select id="linkDestinationStreet" class="form-select form-select-sm"></select></div>
+        <button type="button" id="linkDirectionReverse" class="btn btn-outline-secondary btn-sm mb-2">↔ Invertir dirección</button>
+        <div class="mb-2"><label class="form-label" for="linkTypeSelect">Tipo de conexión</label><select id="linkTypeSelect" class="form-select form-select-sm"><option value="LINEAL">Lineal</option><option value="INCORPORACION">Incorporación</option><option value="PROBABILISTICA">Probabilística</option></select></div>
+        <button type="button" id="linkAddExit" class="btn btn-outline-secondary btn-sm mb-2" hidden>＋ Añadir salida</button>
+        <p id="linkMapPickStatus" role="status" aria-live="polite" class="small mb-2" hidden></p>
+        <div id="linkMappingRows" class="create-link-rows"></div>
+        <div id="linkDraftNotice" role="status" class="small text-info mt-2"></div>
+        <div id="linkDraftMessage" role="alert" class="small text-danger mt-2"></div>
+        <div class="d-flex gap-2 mt-2"><button type="button" id="linkSaveButton" class="btn btn-primary btn-sm">Guardar enlace</button><button type="button" id="linkCancelButton" class="btn btn-outline-secondary btn-sm">Cancelar</button></div>
+      </section>
 
       <aside id="streetInspector" class="street-inspector" aria-live="polite" hidden>
         <div class="street-inspector-heading">
@@ -2396,23 +2411,6 @@
           <div class="btn-group">
             <button type="button" id="btnConexiones" class="btn btn-info btn-sm" data-bs-toggle="tooltip" data-bs-title="Mostrar/ocultar las conexiones entre calles en el canvas">🔗</button>
              <button type="button" id="btnContadores" class="btn btn-info btn-sm" data-bs-toggle="tooltip" data-bs-title="Mostrar/ocultar contadores de ocupación de estacionamientos">🔢</button>
-          </div>
-
-          <div class="create-link-anchor">
-            <button type="button" id="createLinkButton" class="btn btn-outline-primary btn-sm">🔗 Crear enlace</button>
-            <section id="linkDraftPanel" class="create-link-panel" hidden aria-hidden="true" aria-label="Revisar enlace entre calles">
-              <p id="linkDraftStatus" class="small mb-2">Elige la calle de origen en el mapa.</p>
-              <div class="mb-2"><label class="form-label" for="linkSourceStreet">Origen</label><select id="linkSourceStreet" class="form-select form-select-sm"></select></div>
-              <div class="mb-2"><label class="form-label" for="linkDestinationStreet">Destino</label><select id="linkDestinationStreet" class="form-select form-select-sm"></select></div>
-              <button type="button" id="linkDirectionReverse" class="btn btn-outline-secondary btn-sm mb-2">↔ Invertir dirección</button>
-              <div class="mb-2"><label class="form-label" for="linkTypeSelect">Tipo de conexión</label><select id="linkTypeSelect" class="form-select form-select-sm"><option value="LINEAL">Lineal</option><option value="INCORPORACION">Incorporación</option><option value="PROBABILISTICA">Probabilística</option></select></div>
-              <button type="button" id="linkAddExit" class="btn btn-outline-secondary btn-sm mb-2" hidden>＋ Añadir salida</button>
-              <p id="linkMapPickStatus" role="status" aria-live="polite" class="small mb-2" hidden></p>
-              <div id="linkMappingRows" class="create-link-rows"></div>
-              <div id="linkDraftNotice" role="status" class="small text-info mt-2"></div>
-              <div id="linkDraftMessage" role="alert" class="small text-danger mt-2"></div>
-              <div class="d-flex gap-2 mt-2"><button type="button" id="linkSaveButton" class="btn btn-primary btn-sm">Guardar enlace</button><button type="button" id="linkCancelButton" class="btn btn-outline-secondary btn-sm">Cancelar</button></div>
-            </section>
           </div>
 
           <!-- Grupo de acciones -->

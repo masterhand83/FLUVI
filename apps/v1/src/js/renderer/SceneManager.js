@@ -393,6 +393,9 @@ class SceneManager {
         // background renderer's clearAll also destroys textures. Keep disposal
         // here so shared AssetLoader textures are never touched.
         if (this.referenceImageRenderer) this.referenceImageRenderer.clear();
+        if (this.calleRenderer?.tooltipContainer) {
+            this.calleRenderer.onCalleOut(null, this.calleRenderer.tooltipContainer);
+        }
 
         // Background areas use textures generated exclusively from their own
         // canvases (not AssetLoader assets), so dispose those to release memory.

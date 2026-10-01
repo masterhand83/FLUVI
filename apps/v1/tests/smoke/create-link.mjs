@@ -15,6 +15,7 @@ const TEST_IDS = {
 
 async function waitForUI(page) {
 	await page.evaluate(() => { document.getElementById("loadingScreen").style.display = "none" })
+	await page.click('[data-bs-target="#collapseMapDrawingTools"]')
 	await page.waitForSelector(TEST_IDS.start, { visible: true, timeout: 10000 })
 }
 
@@ -89,11 +90,11 @@ for (const usePixi of [false, true]) {
 		// Put two deliberately separated test streets into the public map model;
 		// the interaction itself still uses the user's Create link + map clicks.
 		const streets = {
-			source: await addStreet(page, "Link test source", 0.25, 0.2, 2),
-			destination: await addStreet(page, "Link test destination", 0.25, 0.7, 1),
+			source: await addStreet(page, "Link test source", 0.6, 0.2, 2),
+			destination: await addStreet(page, "Link test destination", 0.6, 0.7, 1),
 		}
 		const initialLinks = await page.evaluate(() => window.conexiones.length)
-		const alternative = await addStreet(page, "Link correction", 0.7, 0.2, 2)
+		const alternative = await addStreet(page, "Link correction", 0.7, 0.45, 2)
 		await page.click(TEST_IDS.start)
 		await clickStreet(page, streets.source.id)
 		assert.equal(await page.$$eval('#linkDraftPreview path', paths => paths.length), 0, "no ghost connection without a destination")

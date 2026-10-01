@@ -89,6 +89,8 @@ Al cambiar el radio, vehículos, enlaces, aparcamientos y marcas de escenario se
 - Requiere posición inicial en el destino
 - Ideal para fusiones de tráfico
 
+En **Crear enlace**, cada correspondencia de Incorporación tiene una casilla **Conectar este carril**. Desmárcala para excluir ese carril de la previsualización y del guardado; vuelve a marcarla para recuperar sus ajustes de destino. Debe quedar al menos una correspondencia activa. Los carriles excluidos no crean conexiones.
+
 **PROBABILISTICA**: Conexión con probabilidad de transferencia
 - Requiere especificar carril origen y destino
 - Requiere probabilidad (0.0 a 1.0)

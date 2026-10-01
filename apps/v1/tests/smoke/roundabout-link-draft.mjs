@@ -25,6 +25,8 @@ for (const usePixi of [false, true]) {
         }
 
         const rows = '#linkMappingRows [data-testid="link-mapping-row"]';
+        await page.click('[data-bs-target="#collapseMapDrawingTools"]');
+        await page.waitForSelector('#collapseMapDrawingTools.show', { visible: true });
         async function set(row, key, value) {
             await page.$eval(`${rows}:nth-child(${row}) [data-testid="${key}"]`, (el, next) => {
                 el.value = next;

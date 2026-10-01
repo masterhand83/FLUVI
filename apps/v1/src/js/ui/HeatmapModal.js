@@ -175,7 +175,7 @@ class HeatmapModal {
                     // Determinar color
                     let color, alpha;
                     if (valor >= 1 && valor <= 6) {
-                        const density = (7 - valor) / 6;
+                        const density = this.getLocalDensity(calle, c, i);
                         color = this.getColorForDensity(density);
                         alpha = 0.8;
                     } else {
@@ -217,6 +217,30 @@ class HeatmapModal {
 
         // Actualizar estadísticas en el modal
         this.updateStats(cellsRendered, callesConCeldas, renderTime);
+    }
+
+    /**
+     * Ocupación vehicular en hasta cinco celdas del mismo carril.
+     * El denominador incluye las celdas físicas, también los obstáculos.
+     * Se recorta en extremos abiertos y se envuelve sin repetir celdas en glorietas.
+     */
+    getLocalDensity(calle, carril, indice) {
+        const lane = calle.arreglo[carril];
+        let vehicles = 0;
+        let cells = 0;
+        const periodic = calle.geometryType === 'roundabout';
+        const windowSize = periodic ? Math.min(5, calle.tamano) : 5;
+        for (let offset = -2; offset < windowSize - 2; offset++) {
+            let i = indice + offset;
+            if (periodic) {
+                i = ((i % calle.tamano) + calle.tamano) % calle.tamano;
+            } else if (i < 0 || i >= calle.tamano) {
+                continue;
+            }
+            if (lane[i] >= 1 && lane[i] <= 6) vehicles++;
+            cells++;
+        }
+        return cells > 0 ? vehicles / cells : 0;
     }
 
     /**

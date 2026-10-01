@@ -102,7 +102,7 @@ class CalleRenderer {
         container.eventMode = 'static';
         container.cursor = 'pointer';
         container.on('pointerdown', (e) => this.onCalleClick(calle, e));
-        container.on('pointerover', () => this.onCalleHover(calle, container));
+        container.on('pointerover', (event) => this.onCalleHover(calle, container, event));
         container.on('pointerout', () => this.onCalleOut(calle, container));
 
         return container;
@@ -161,7 +161,7 @@ class CalleRenderer {
             }
         };
         road.on('pointerdown', e => this.onCalleClick(calle, e));
-        road.on('pointerover', () => this.onCalleHover(calle, container));
+        road.on('pointerover', (event) => this.onCalleHover(calle, container, event));
         road.on('pointerout', () => this.onCalleOut(calle, container));
         container.addChild(road);
         this.updateLaneDirectionArrows(container, calle);
@@ -221,7 +221,7 @@ class CalleRenderer {
                 sprite.eventMode = 'static';
                 sprite.cursor = 'pointer';
                 sprite.on('pointerdown', (e) => this.onCalleClick(calle, e));
-                sprite.on('pointerover', () => this.onCalleHover(calle, container));
+                sprite.on('pointerover', (event) => this.onCalleHover(calle, container, event));
                 sprite.on('pointerout', () => this.onCalleOut(calle, container));
 
                 container.addChild(sprite);
@@ -550,6 +550,7 @@ class CalleRenderer {
     removeCalleSprite(calle) {
         const container = this.scene.calleSprites.get(calle);
         if (container) {
+            if (this.tooltipContainer === container) this.onCalleOut(calle, container);
             if (container.parent) container.parent.removeChild(container);
             container.destroy({ children: true });
             this.scene.calleSprites.delete(calle);
@@ -846,7 +847,11 @@ class CalleRenderer {
         }
     }
 
-    onCalleHover(calle, container) {
+    onCalleHover(calle, container, event) {
+        // Pointerover can repeat/bubble from road children. Only one street
+        // may own the shared tooltip and its movement listener at a time.
+        if (this.tooltipContainer) this.onCalleOut(null, this.tooltipContainer);
+        this.tooltipContainer = container;
         container.alpha = 0.9;
 
         // Mostrar tooltip con el nombre de la calle
@@ -869,16 +874,14 @@ class CalleRenderer {
 
                 // Agregar listener de movimiento del mouse (DOM)
                 document.addEventListener('mousemove', updateTooltipPosition);
+                const originalEvent = event?.data?.originalEvent || event?.nativeEvent;
+                if (originalEvent) updateTooltipPosition(originalEvent);
                 return;
             }
 
             // MODO 2: Detección de celdas ACTIVADA (con optimizaciones)
             // Guardar referencia al stage para eventos PixiJS
             const stage = this.scene.app.stage;
-
-            // Variables para throttling (optimización de rendimiento)
-            let lastUpdateTime = 0;
-            const throttleDelay = 50; // Actualizar celda cada 50ms (20 veces por segundo)
 
             // Función optimizada para encontrar celda solo en la calle actual
             const encontrarCeldaEnCalle = (calle, worldX, worldY) => {
@@ -891,7 +894,8 @@ class CalleRenderer {
                     for (let indice = 0; indice < calle.tamano; indice++) {
                         // Usar función correcta según si la calle tiene curvas
                         let centroCelda;
-                        if (calle.esCurva && calle.vertices && calle.vertices.length > 0) {
+                        if (calle.geometryType === 'roundabout' ||
+                            (calle.esCurva && (calle.bezierSegments || calle.bezierControls || calle.vertices?.length))) {
                             if (typeof window.obtenerCoordenadasGlobalesCeldaConCurva === 'function') {
                                 centroCelda = window.obtenerCoordenadasGlobalesCeldaConCurva(calle, carril, indice);
                             } else {
@@ -931,22 +935,18 @@ class CalleRenderer {
             // Actualizar posición del tooltip y contenido siguiendo el mouse (con detección de celda)
             const updateTooltipPositionWithCell = (pixiEvent) => {
                 // Obtener coordenadas de pantalla para posicionar el tooltip
-                const clientX = pixiEvent.data.global.x;
-                const clientY = pixiEvent.data.global.y;
+                const globalPos = pixiEvent.data?.global || pixiEvent.global;
+                const originalEvent = pixiEvent.data?.originalEvent || pixiEvent.nativeEvent;
+                const canvas = this.scene.app.view;
+                const rect = canvas?.getBoundingClientRect();
+                const clientX = originalEvent?.clientX ?? (rect ? rect.left + globalPos.x * rect.width / this.scene.app.screen.width : globalPos.x);
+                const clientY = originalEvent?.clientY ?? (rect ? rect.top + globalPos.y * rect.height / this.scene.app.screen.height : globalPos.y);
 
                 // SIEMPRE actualizar posición del tooltip (sin throttle, es muy ligero)
                 tooltip.style.left = (clientX + 15) + 'px';
                 tooltip.style.top = (clientY + 15) + 'px';
 
-                // Throttling: solo actualizar el número de celda cada X ms
-                const currentTime = performance.now();
-                if (currentTime - lastUpdateTime < throttleDelay) {
-                    return; // Salir temprano, no actualizar contenido aún
-                }
-                lastUpdateTime = currentTime;
-
                 // Convertir a coordenadas del mundo para detectar la celda
-                const globalPos = pixiEvent.data.global;
                 const worldX = (globalPos.x - window.offsetX) / window.escala;
                 const worldY = (globalPos.y - window.offsetY) / window.escala;
 
@@ -954,11 +954,7 @@ class CalleRenderer {
                 const celdaObjetivo = encontrarCeldaEnCalle(calle, worldX, worldY);
 
                 if (celdaObjetivo) {
-                    const { carril, indice } = celdaObjetivo;
-                    // El número de celda es el índice dentro del carril + 1 (para contar desde 1)
-                    // Todos los carriles comparten la misma numeración de posiciones
-                    const numeroCelda = indice + 1;
-                    tooltip.textContent = `${calle.nombre} : ${numeroCelda}`;
+                    tooltip.textContent = `${calle.nombre} : ${celdaObjetivo.indice}`;
                 } else {
                     // Si no se encuentra celda, solo mostrar el nombre de la calle
                     tooltip.textContent = calle.nombre;
@@ -975,11 +971,16 @@ class CalleRenderer {
 
             // Agregar listener de movimiento del mouse al stage (eventos PixiJS)
             stage.on('pointermove', updateTooltipPositionWithCell);
+            if (event) updateTooltipPositionWithCell(event);
         }
     }
 
     onCalleOut(calle, container) {
         container.alpha = 1.0;
+
+        // A delayed exit from a previous street must not hide the current one.
+        if (this.tooltipContainer !== container) return;
+        this.tooltipContainer = null;
 
         // Ocultar tooltip
         const tooltip = document.getElementById('canvasTooltip');

@@ -7,6 +7,7 @@ const canonicalType = { LINEAL: "lineal", INCORPORACION: "incorporacion", PROBAB
 
 async function setup(page) {
 	await page.evaluate(() => { document.getElementById("loadingScreen").style.display = "none" })
+	await page.click('[data-bs-target="#collapseMapDrawingTools"]')
 	await page.waitForSelector(ui.start, { visible: true, timeout: 10000 })
 }
 
@@ -136,6 +137,38 @@ for (const usePixi of [false, true]) {
 		await page.keyboard.press("Escape")
 		await page.waitForFunction(() => document.querySelector("#linkDraftPanel")?.hidden)
 		assert.equal(await connectionCount(page), incorporationCount, "Escape discards armed incorporation pick")
+
+		// Incorporation can connect only selected lanes without losing disabled rows.
+		const selectiveSource = await makeStreet(page, `Selective source ${usePixi}`, .35, .35, 3, 16)
+		await openDraft(page, selectiveSource, short, "INCORPORACION")
+		const laneToggle = index => `${rowsSelector}:nth-child(${index + 1}) [data-testid="link-lane-enabled"]`
+		for (const index of [0, 1, 2]) await page.click(laneToggle(index))
+		await page.click(ui.save)
+		assert.equal(await connectionCount(page), incorporationCount, "all-disabled draft creates no connections")
+		assert.match(await page.$eval("#linkDraftMessage", el => el.textContent), /al menos una/i)
+		await page.click(laneToggle(1))
+		await setRow(page, 1, "destination-cell", 0)
+		await page.click(laneToggle(1))
+		assert.equal(await page.$eval(`${rowsSelector}:nth-child(2) [data-testid="destination-cell"]`, input => input.disabled && input.value === "0"), true, "disabled row retains its edited destination")
+		await page.click(laneToggle(1))
+		await pickRow(page, 1, "destination")
+		await page.click(laneToggle(1))
+		assert.equal(await page.$eval("#linkMapPickStatus", el => el.hidden), true, "disabling an armed row cancels map picking")
+		await page.click(laneToggle(1))
+		await pickRow(page, 1, "destination")
+		await clickCell(page, short.id, 1, 1)
+		assert.equal(await page.$$eval('[data-testid="link-lane-enabled"]', inputs => inputs.filter(input => input.checked).length), 1, "map picking preserves disabled lanes")
+		await page.waitForFunction(() => document.querySelectorAll('#linkDraftPreview [data-testid="link-preview-arrow"]').length === 1)
+		await page.click(ui.save)
+		await waitForCount(page, incorporationCount + 1)
+		const selectedLinks = await page.evaluate(id => {
+			const street = window.calles.find(street => street.id === id)
+			return {
+				lanes: window.conexiones.filter(link => link.origen === street).map(link => link.carrilOrigen),
+				registered: street.conexionesSalida.map(links => links.length),
+			}
+		}, selectiveSource.id)
+		assert.deepEqual(selectedLinks, { lanes: [1], registered: [0, 1, 0] }, "only the selected lane is saved and registered; invalid disabled rows are ignored")
 
 		// A probabilistic draft starts with one 100% exit. Additional exits are
 		// explicitly added and retain independent, non-normalized percentages.

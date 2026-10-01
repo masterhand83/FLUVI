@@ -249,6 +249,30 @@
 			draft.destination.tamano - 1,
 		);
 		row.append(origin, destination);
+		if (draft.type === types.INCORPORACION) {
+			const label = document.createElement("label");
+			label.className = "small d-flex align-items-center gap-1";
+			const enabled = document.createElement("input");
+			enabled.type = "checkbox";
+			enabled.className = "form-check-input";
+			enabled.dataset.testid = "link-lane-enabled";
+			enabled.checked = m.enabled !== false;
+			label.append(enabled, "Conectar este carril");
+			origin.prepend(label);
+			const toggle = () => {
+				if (pickRow === row) stopRowPick();
+				for (const control of row.querySelectorAll("input, button"))
+					if (control !== enabled) control.disabled = !enabled.checked;
+				row.classList.toggle("text-muted", !enabled.checked);
+				row.classList.remove("is-invalid");
+				updateNotice();
+			};
+			enabled.addEventListener("change", toggle);
+			// Initialize controls before the row is added to the draft DOM.
+			for (const control of row.querySelectorAll("input, button"))
+				if (control !== enabled) control.disabled = !enabled.checked;
+			row.classList.toggle("text-muted", !enabled.checked);
+		}
 		if (draft.type === types.PROBABILISTICA)
 			input(row, "chance", "Probabilidad (%)", m.chance, 0, 100, "any");
 		if (draft.type === types.PROBABILISTICA) {
@@ -546,7 +570,7 @@
 		const position = row.querySelector(`[data-testid='${phase}-cell']`);
 		lane.value = cell.carril;
 		position.value = cell.indice;
-		draft.rows = mappings();
+		draft.rows = readRows();
 		updateNotice();
 		stopRowPick();
 		setPickStatus(
@@ -569,7 +593,7 @@
 			return draft.source && draft.destination
 				? (explicitCells() ? readRows() : linealMappings(draft.source, draft.destination))
 				: [];
-		return readRows();
+		return readRows().filter((mapping) => mapping.enabled !== false);
 	}
 	function readRows() {
 		const value = (row, key) => {
@@ -579,6 +603,9 @@
 		return [
 			...rowsElement.querySelectorAll("[data-testid='link-mapping-row']"),
 		].map((row) => ({
+			...(draft.type === types.INCORPORACION
+				? { enabled: row.querySelector('[data-testid="link-lane-enabled"]').checked }
+				: {}),
 			"source-lane": value(row, "source-lane"),
 			"source-cell":
 				draft.type === types.INCORPORACION && !explicitCells()
@@ -687,7 +714,8 @@
 		if (!s || !d || s === d) return "Selecciona dos calles distintas.";
 		const rows = [
 				...rowsElement.querySelectorAll("[data-testid='link-mapping-row']"),
-			],
+			].filter((row) => !row.querySelector('[data-testid="link-lane-enabled"]') ||
+				row.querySelector('[data-testid="link-lane-enabled"]').checked),
 			keys = new Set();
 		let bad = false,
 			duplicateFound = false;
