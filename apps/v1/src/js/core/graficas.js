@@ -384,8 +384,8 @@ function calculateMetrics() {
                 // Guardar estado actual
                 currentStates.set(cellKey, cellValue);
 
-                // Contar vehículos
-                if (cellValue > 0) {
+                // Contar solo vehículos (1–6); el valor 7 es un obstáculo inmóvil.
+                if (cellValue >= 1 && cellValue <= 6) {
                     totalCars++;
                     const nextIndex = (i + direction + calle.tamano) % calle.tamano;
                     if (calle.arreglo[c][nextIndex] === 0) {
@@ -423,7 +423,7 @@ function calculateMetrics() {
         previousStreetStates = currentStates;
     }
 
-    // Calcular densidad como porcentaje de ocupación
+    // Ocupación vehicular sobre todas las celdas físicas, incluidas las bloqueadas.
     const density = totalCells > 0 ? (totalCars / totalCells) * 100 : 0;
 
     // ⚡ OPTIMIZACIÓN: Calcular Entropía de Shannon solo cada 60 frames
