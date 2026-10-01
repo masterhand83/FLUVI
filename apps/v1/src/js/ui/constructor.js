@@ -2421,8 +2421,7 @@ function cargarSimulacion(event) {
                     calleCreada.laneDirections = normalizarDireccionesCarriles(calleData.laneDirections, calleCreada.carriles);
                     if (roundabout) {
                         Object.assign(calleCreada, { geometryType: 'roundabout', innerRadius: calleData.innerRadius,
-                            startAngle: calleData.startAngle, tamano: geometry.cells, vertices: [], esCurva: false,
-                            laneDirections: Array(calleCreada.carriles).fill(1) });
+                            startAngle: calleData.startAngle, tamano: geometry.cells, vertices: [], esCurva: false });
                         window.cellGeometryIndex?.invalidate?.(calleCreada);
                     } else if (calleCreada && calleData.bezierGeometry &&
                         (Array.isArray(calleData.bezierSegments) || Array.isArray(calleData.bezierControls))) {

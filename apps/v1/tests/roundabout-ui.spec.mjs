@@ -5,7 +5,21 @@ let sim
 beforeAll(async () => { sim = await openSimulator({ usePixi: false, freezeFrames: true }) }, 180000)
 afterAll(async () => sim?.close())
 
-it('keeps roundabout dimensions derived, clockwise, and remaps existing indexes by angle', async () => {
+it('allows changing a roundabout lane from clockwise to counterclockwise', async () => {
+    const result = await sim.page.evaluate(() => {
+        const street = window.roundaboutStreet.createStreet({ nombre: 'Direction test', x: 100, y: 100, innerRadius: 20 })
+        window.calles.push(street)
+        document.dispatchEvent(new CustomEvent('street-drawn', { detail: { calle: street } }))
+        const button = document.querySelector('#streetInspectorLaneDirections button')
+        button.click()
+        const result = { enabled: !button.disabled, direction: street.laneDirections[0], label: button.textContent }
+        window.calles.splice(window.calles.indexOf(street), 1)
+        return result
+    })
+    expect(result).toEqual({ enabled: true, direction: -1, label: '↺' })
+})
+
+it('keeps roundabout dimensions derived, preserves direction, and remaps existing indexes by angle', async () => {
     const result = await sim.page.evaluate(() => {
         const street = window.crearCalle('Roundabout UI test', 26, window.TIPOS.CONEXION, 300, 300, 0, 0, 1, 0.02)
         Object.assign(street, { geometryType: 'roundabout', innerRadius: 18, startAngle: 0, esCurva: false, vertices: [] })
@@ -21,16 +35,18 @@ it('keeps roundabout dimensions derived, clockwise, and remaps existing indexes 
         const radius = document.getElementById('streetInspectorRadius')
         const before = street.tamano
         const readonly = document.getElementById('streetInspectorCells').readOnly
-        const fixed = document.querySelector('#streetInspectorLaneDirections button').disabled
+        const directionButton = document.querySelector('#streetInspectorLaneDirections button')
+        directionButton.click()
+        const editableDirection = !directionButton.disabled && street.laneDirections[0] === -1
         radius.value = '30'
         radius.dispatchEvent(new Event('blur'))
         const mapped = Math.round((3.5 * street.tamano / before) - 0.5 + street.tamano) % street.tamano
         const resized = street.innerRadius === 30 && street.tamano === window.roundaboutStreet.validate(street).cells && street.arreglo[0][mapped] === 2 && link.posOrigen === mapped
         radius.value = '-1'
         radius.dispatchEvent(new Event('blur'))
-        return { readonly, fixed, resized, invalidRejected: street.innerRadius === 30, error: document.getElementById('streetInspectorError').textContent }
+        return { readonly, editableDirection, direction: street.laneDirections[0], resized, invalidRejected: street.innerRadius === 30, error: document.getElementById('streetInspectorError').textContent }
     })
-    expect(result).toMatchObject({ readonly: true, fixed: true, resized: true, invalidRejected: true })
+    expect(result).toMatchObject({ readonly: true, editableDirection: true, direction: -1, resized: true, invalidRejected: true })
     expect(result.error).toBeTruthy()
     expect(sim.pageErrors).toEqual([])
 }, 180000)
@@ -45,7 +61,7 @@ it('round-trips circular geometry and ignores malformed roundabouts without shif
         finally { window.prompt = oldPrompt; URL.createObjectURL = oldCreate }
     })
     const original = saved.calles.find(street => street.nombre === 'Roundabout UI test')
-    expect(original).toMatchObject({ geometryType: 'roundabout', innerRadius: 30, startAngle: 0, carriles: 1 })
+    expect(original).toMatchObject({ geometryType: 'roundabout', innerRadius: 30, startAngle: 0, carriles: 1, laneDirections: [-1] })
     expect(saved.conexiones.some(link => link.origenIdx === saved.calles.indexOf(original))).toBe(true)
     const invalid = { ...original, nombre: 'Invalid ring', innerRadius: -10 }
     const index = saved.calles.findIndex(street => street.nombre === 'Roundabout UI test')
@@ -76,5 +92,5 @@ it('round-trips circular geometry and ignores malformed roundabouts without shif
     })
     expect(restored).toMatchObject({ geometryType: 'roundabout', radius: 30, invalidExists: false, sourceLinked: true })
     expect(restored.cells).toBe(restored.expectedCells)
-    expect(restored.directions).toEqual([1])
+    expect(restored.directions).toEqual([-1])
 }, 180000)

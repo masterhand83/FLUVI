@@ -75,6 +75,53 @@ describe('closed roundabout street', () => {
         expect(street.arreglo[0][0]).toBe(6);
     });
 
+    it('moves counterclockwise across the seam and respects blockers and parking upstream', () => {
+        const w = setup();
+        const street = make(w, { carriles: 1 });
+        street.laneDirections = [-1];
+        street.arreglo[0][0] = 6;
+        w.actualizarCalle(street);
+        expect(street.arreglo[0][street.tamano - 1]).toBe(6);
+        expect(street.arreglo[0][0]).toBe(0);
+        street.arreglo[0][street.tamano - 2] = 7;
+        w.actualizarCalle(street);
+        expect(street.arreglo[0][street.tamano - 1]).toBe(6);
+        street.arreglo[0].fill(0);
+        street.arreglo[0][0] = 2;
+        const building = { esEstacionamiento: true };
+        street.conexionesEstacionamiento = new Map([[`0-${street.tamano - 1}`, { tipo: 'entrada', edificio: building }]]);
+        w.procesarEntradaVehiculo = (_building, vehicle) => vehicle === 2;
+        w.actualizarCalle(street);
+        expect(street.arreglo[0].every(value => value === 0)).toBe(true);
+    });
+
+    it('changes lanes counterclockwise but never into opposing traffic', () => {
+        const w = setup();
+        const street = make(w, { probabilidadSaltoDeCarril: 1 });
+        street.laneDirections = [-1, 1];
+        street.arreglo[0][0] = 4;
+        const original = Math.random;
+        Math.random = () => 0;
+        try {
+            w.cambioCarril(street);
+            expect(street.arreglo[0][0]).toBe(4);
+            street.laneDirections[1] = -1;
+            w.cambioCarril(street);
+            expect(street.arreglo[1][street.tamano - 1]).toBe(4);
+            expect(street.arreglo[0][0]).toBe(0);
+        } finally { Math.random = original; }
+    });
+
+    it('allows counterclockwise explicit links at the periodic seam', () => {
+        const w = setup();
+        const street = make(w), target = make(w);
+        street.laneDirections[0] = target.laneDirections[0] = -1;
+        street.arreglo[0][street.tamano - 1] = 5;
+        const link = new w.ConexionCA(street, target, 0, 0, -1, 0);
+        expect(link.transferir()).toBe(true);
+        expect(target.arreglo[0][0]).toBe(5);
+    });
+
     it('handles explicit links, blocked destinations, seam parking and diagonal lane changes', () => {
         const w = setup();
         const street = make(w, { probabilidadSaltoDeCarril: 1 });

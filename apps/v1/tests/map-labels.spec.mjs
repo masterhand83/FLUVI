@@ -28,6 +28,60 @@ async function camera(page, zoom) {
     }, zoom)
 }
 
+async function wheelZoom(page, canvas, afterWheel) {
+    await page.mouse.move(canvas.x + 300, canvas.y + 300)
+    const scales = []
+    for (let i = 0; i < 4; i++) {
+        await page.mouse.wheel({ deltaY: -100 })
+        await new Promise(resolve => setTimeout(resolve, 140))
+        scales.push(await page.evaluate(() => window.USE_PIXI ? window.pixiApp.cameraController.scale : window.escala))
+        await afterWheel?.()
+    }
+    return scales
+}
+
+async function wheelZoomSamples(page, canvas) {
+    await page.mouse.move(canvas.x + 300, canvas.y + 300)
+    const targetZooms = [1, 2, 4, 8, 16, 20]
+    let targetIndex = 0
+    const zoom = () => page.evaluate(() => window.USE_PIXI ? window.pixiApp.cameraController.scale : window.escala)
+    const samples = []
+    let current = await zoom()
+    const capture = async () => {
+        await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))))
+        // The single visible name is anchored at map point (300, 300), under
+        // the wheel pointer; this viewport crop also bounds pixel transfer.
+        return { zoom: await zoom(), image: await pixels(page, [0, 0, 600, 500]) }
+    }
+    samples.push(await capture())
+    while (current < 19.99) {
+        const previous = current
+        await page.mouse.wheel({ deltaY: -100 })
+        await page.waitForFunction(previousScale => {
+            const scale = window.USE_PIXI ? window.pixiApp.cameraController.scale : window.escala
+            return scale > previousScale + 0.0001 || scale >= 19.99
+        }, { polling: 20, timeout: 1500 }, previous)
+        current = await zoom()
+        while (targetIndex + 1 < targetZooms.length && current >= targetZooms[targetIndex + 1]) {
+            targetIndex++
+            samples.push(await capture())
+        }
+    }
+    return samples
+}
+
+async function screenLabelFrame(page, worldCenter) {
+    const { zoom, offset } = await page.evaluate(() => ({
+        zoom: window.USE_PIXI ? window.pixiApp.cameraController.scale : window.escala,
+        offset: window.USE_PIXI
+            ? { x: window.pixiApp.cameraController.offsetX, y: window.pixiApp.cameraController.offsetY }
+            : { x: window.offsetX, y: window.offsetY },
+    }))
+    const center = [worldCenter[0] * zoom + offset.x, worldCenter[1] * zoom + offset.y]
+    const region = [center[0] - 150, center[1] - 20, 300, 40]
+    return { zoom, image: await pixels(page, region) }
+}
+
 // Read the rendered framebuffer, never renderer label caches or text objects.
 async function pixels(page, region) {
     return page.evaluate(region => {
@@ -67,6 +121,165 @@ function difference(before, after) {
 }
 
 describe.each([false, true])('map labels (Pixi=%s)', (usePixi) => {
+    it('renders a subtle transparent dark backdrop behind names', async () => {
+        const sim = await openSimulator({ usePixi, freezeFrames: false })
+        try {
+            const { page } = sim
+            await prepare(page, usePixi)
+            await page.evaluate(() => {
+                const building = window.agregarEdificio('Backdrop', 300, 300, 200, 100, 0)
+                building.appearanceMode = 'rectangular'; building.color = '#FFFFFF'
+                window.pixiApp?.sceneManager?.edificioRenderer.removeEdificioSprite(building)
+                window.pixiApp?.sceneManager?.renderAll()
+            })
+            await camera(page, 1)
+            await page.select('#labelVisibility', 'off')
+            const region = await page.evaluate(() => {
+                const context = document.createElement('canvas').getContext('2d')
+                context.font = `${window.labelFontSize}px Arial`
+                return [300 + context.measureText('Backdrop').width / 2 + 3, 300, 1, 1]
+            })
+            const off = await pixels(page, region)
+            await page.select('#labelVisibility', 'buildings')
+            const on = await pixels(page, region)
+            for (let channel = 0; channel < 3; channel++) {
+                const darkening = off.data[channel] - on.data[channel]
+                expect(darkening).toBeGreaterThan(5)
+                expect(darkening).toBeLessThan(35)
+            }
+            expect(sim.pageErrors).toEqual([])
+        } finally { await sim.close() }
+    }, 60000)
+
+    it.skipIf(!usePixi)('keeps 20px labels fixed through wheel high zooms', async () => {
+        const sim = await openSimulator({ usePixi, freezeFrames: false })
+        try {
+            const { page } = sim
+            await prepare(page, usePixi)
+            await page.evaluate(() => {
+                if (!window.isPaused) document.getElementById('btnPauseResume').click()
+                window.crearCalle('', 400, 'conexion', 0, 0, 0, 0, 1)
+                window.crearCalle('', 400, 'conexion', 0, 0, -90, 0, 1)
+                window.crearCalle('High zoom street label', 40, 'conexion', 200, 297.5, 0, 0, 1)
+                window.agregarEdificio('High zoom building label', 300, 300, 40, 40, 0)
+                window.pixiApp?.sceneManager?.renderAll()
+            })
+            expect(await page.evaluate(() => window.isPaused)).toBe(true)
+            const canvas = await page.$eval('#simuladorCanvas', element => {
+                const rect = element.getBoundingClientRect()
+                return { x: rect.x, y: rect.y, width: rect.width, height: rect.height }
+            })
+            const measurements = []
+            await camera(page, 1)
+            await page.select('#labelVisibility', 'off')
+            const off = await wheelZoomSamples(page, canvas)
+            for (const [category, visibility] of [['street', 'streets'], ['building', 'buildings']]) {
+                await camera(page, 1)
+                await page.$eval('#labelFontSize', input => {
+                    input.value = '20'; input.dispatchEvent(new Event('input', { bubbles: true }))
+                })
+                await page.select('#labelVisibility', visibility)
+                const on = await wheelZoomSamples(page, canvas)
+                expect(on.map(frame => frame.zoom)).toEqual(off.map(frame => frame.zoom))
+                expect(on.at(-1).zoom).toBeGreaterThanOrEqual(19.99)
+                for (let i = 0; i < on.length; i++) {
+                    const diff = difference(off[i].image, on[i].image)
+                    measurements.push({ category, size: 20, zoom: on[i].zoom, width: diff.width, height: diff.height })
+                }
+            }
+            expect(sim.pageErrors).toEqual([])
+            for (const category of ['street', 'building']) {
+                const group = measurements.filter(item => item.category === category)
+                const sampledZooms = group.map(({ zoom }) => zoom)
+                expect(sampledZooms[0]).toBe(1)
+                expect(sampledZooms[1]).toBeCloseTo(2.14, 1)
+                expect(sampledZooms[2]).toBeCloseTo(4.18, 1)
+                expect(sampledZooms[3]).toBeCloseTo(8.14, 1)
+                expect(sampledZooms[4]).toBeCloseTo(17.45, 1)
+                expect(sampledZooms[5]).toBe(20)
+            }
+            const violations = measurements.filter(sample => {
+                const baseline = measurements.find(item => item.category === sample.category && item.zoom === 1)
+                return Math.abs(sample.width - baseline.width) > 2 || Math.abs(sample.height - baseline.height) > 2
+            })
+            expect(violations, JSON.stringify({ measurements, violations })).toEqual([])
+        } finally { await sim.close() }
+    }, 120000)
+
+    it('keeps both label categories fixed-sized during real wheel zooms', async () => {
+        const sim = await openSimulator({ usePixi, freezeFrames: false })
+        try {
+            const { page } = sim
+            await prepare(page, usePixi)
+            await page.evaluate(() => {
+                if (!window.isPaused) document.getElementById('btnPauseResume').click()
+                // Wide unnamed roads keep the camera limits broad without adding
+                // extra names near the two measured labels.
+                window.crearCalle('', 400, 'conexion', 0, 0, 0, 0, 1)
+                window.crearCalle('', 400, 'conexion', 0, 0, -90, 0, 1)
+                window.crearCalle('Wheel street label', 40, 'conexion', 200, 280, 0, 0, 1)
+                window.agregarEdificio('Wheel building label', 300, 330, 40, 40, 0)
+                window.pixiApp?.sceneManager?.renderAll()
+            })
+            expect(await page.evaluate(() => window.isPaused)).toBe(true)
+            const canvas = await page.$eval('#simuladorCanvas', element => {
+                const rect = element.getBoundingClientRect()
+                return { x: rect.x, y: rect.y, width: rect.width, height: rect.height }
+            })
+            expect(canvas.width).toBeGreaterThan(600)
+            const centers = [[300, 282.5], [300, 330]]
+            const captureSequence = async () => {
+                const frames = [await Promise.all(centers.map(center => screenLabelFrame(page, center)))]
+                const zooms = await wheelZoom(page, canvas, async () => {
+                    frames.push(await Promise.all(centers.map(center => screenLabelFrame(page, center))))
+                })
+                return { frames, zooms }
+            }
+
+            // Build rendered-pixel baselines with labels off through the exact
+            // wheel sequence; then replay that sequence with both labels enabled.
+            await camera(page, 1)
+            await page.select('#labelVisibility', 'off')
+            const off14 = await captureSequence()
+            await camera(page, 1)
+            await page.$eval('#labelFontSize', input => { input.value = '14'; input.dispatchEvent(new Event('input', { bubbles: true })) })
+            await page.select('#labelVisibility', 'both')
+            const on14 = await captureSequence()
+
+            const measureSequence = (off, on, size) => {
+                expect(on.zooms).toEqual(off.zooms)
+                const measurements = []
+                for (let frame = 0; frame < on.frames.length; frame++) {
+                    for (let category = 0; category < centers.length; category++) {
+                        const diff = difference(off.frames[frame][category].image, on.frames[frame][category].image)
+                        expect(diff.count, `font ${size}, zoom ${on.frames[frame][category].zoom}, category ${category}`).toBeGreaterThan(20)
+                        measurements.push({ size, zoom: on.frames[frame][category].zoom, category, width: diff.width, height: diff.height })
+                    }
+                }
+                for (const category of [0, 1]) {
+                    const categoryMeasures = measurements.filter(item => item.category === category)
+                    const reference = categoryMeasures[0]
+                    for (const item of categoryMeasures.slice(1)) {
+                        expect(Math.abs(item.width - reference.width), `width ${JSON.stringify(item)}`).toBeLessThanOrEqual(2)
+                        expect(Math.abs(item.height - reference.height), `height ${JSON.stringify(item)}`).toBeLessThanOrEqual(4)
+                    }
+                }
+                return measurements
+            }
+            const measurements14 = measureSequence(off14, on14, 14)
+
+            // Change to 23px with labels still enabled, then use actual wheel
+            // zooms again. No label-visibility toggle follows any zoom event.
+            await page.$eval('#labelFontSize', input => { input.value = '23'; input.dispatchEvent(new Event('input', { bubbles: true })) })
+            await camera(page, 1)
+            const off23 = { frames: off14.frames, zooms: off14.zooms }
+            const on23 = await captureSequence()
+            const measurements23 = measureSequence(off23, on23, 23)
+            expect(measurements23[0].height).toBeGreaterThan(measurements14[0].height)
+            expect(sim.pageErrors).toEqual([])
+        } finally { await sim.close() }
+    }, 60000)
+
     it('offers one session-only Spanish visibility choice, initially Off', async () => {
         const sim = await openSimulator({ usePixi, freezeFrames: false })
         try {

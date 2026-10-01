@@ -116,10 +116,9 @@
 				button.className = "btn btn-sm btn-outline-secondary";
 				const updateButton = () => {
 					const reversed = calle.laneDirections?.[lane] === -1;
-					button.textContent = roundabout ? "↻" : reversed ? "←" : "→";
-					button.disabled = roundabout;
+					button.textContent = roundabout ? (reversed ? "↺" : "↻") : reversed ? "←" : "→";
 					button.setAttribute("aria-pressed", String(reversed));
-					button.setAttribute("aria-label", roundabout ? `Carril ${lane + 1}: sentido horario fijo` : `Carril ${lane + 1}: ${reversed ? "reversa" : "adelante"}. Cambiar sentido`);
+					button.setAttribute("aria-label", `Carril ${lane + 1}: ${roundabout ? (reversed ? "sentido antihorario" : "sentido horario") : (reversed ? "reversa" : "adelante")}. Cambiar sentido`);
 				};
 				updateButton();
 				button.addEventListener("click", () => {

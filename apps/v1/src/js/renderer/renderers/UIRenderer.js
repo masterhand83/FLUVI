@@ -3,7 +3,7 @@ class UIRenderer {
     constructor(sceneManager, assetLoader) {
         this.scene = sceneManager;
         this.assets = assetLoader;
-        this.etiquetas = new Map(); // Map<calle, Text>
+        this.etiquetas = new Map(); // Map<calle, Container>
     }
 
     updateEtiquetas(calles) {
@@ -14,7 +14,7 @@ class UIRenderer {
         const current = new Set(calles);
         this.etiquetas.forEach((text, calle) => {
             if (!current.has(calle)) {
-                text.destroy();
+                text.destroy({ children: true });
                 this.etiquetas.delete(calle);
             }
         });
@@ -24,28 +24,28 @@ class UIRenderer {
     updateEtiqueta(calle) {
         let text = this.etiquetas.get(calle);
         if (!calle.nombre || !etiquetasVisibles('streets')) {
-            text?.destroy();
+            text?.destroy({ children: true });
             this.etiquetas.delete(calle);
             return;
         }
         if (!text) {
-            text = new PIXI.Text(calle.nombre, estiloEtiqueta());
-            text.anchor.set(0.5);
-            text.resolution = Math.max(2, window.devicePixelRatio || 1);
+            text = crearEtiquetaPixi(calle.nombre);
             this.scene.getLayer('ui').addChild(text);
             this.etiquetas.set(calle, text);
         }
         const point = calcularPosicionEnCalle(calle);
-        text.text = calle.nombre;
-        text.style = estiloEtiqueta();
+        text.labelText.text = calle.nombre;
+        text.labelText.style = estiloEtiqueta();
+        actualizarFondoEtiqueta(text);
         text.position.set(point.x, point.y);
+        text.scale.set(1 / (window.escala || 1));
         text.rotation = anguloEtiqueta(point.angulo);
     }
 
     clearEtiquetas() {
         this.etiquetas.forEach(text => {
             text.parent?.removeChild(text);
-            text.destroy();
+            text.destroy({ children: true });
         });
         this.etiquetas.clear();
     }

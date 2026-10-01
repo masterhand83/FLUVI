@@ -299,8 +299,10 @@ class EdificioRenderer {
                 : { x: edificio.x, y: edificio.y };
             etiqueta.x = center.x;
             etiqueta.y = center.y;
+            etiqueta.scale.set(1 / (window.escala || 1));
             etiqueta.visible = etiquetasVisibles('buildings');
-            etiqueta.children[0].style = estiloEtiqueta();
+            etiqueta.labelText.style = estiloEtiqueta();
+            actualizarFondoEtiqueta(etiqueta);
         }
 
         // Actualizar borde de selección
@@ -317,7 +319,7 @@ class EdificioRenderer {
         }
 
         // Crear container para la etiqueta (en capa UI, no como hijo del sprite)
-        const container = new PIXI.Container();
+        const container = crearEtiquetaPixi(edificio.label);
 
         // Posicionar en el centro del edificio (coordenadas globales)
         const center = edificio.geometryType === 'polygon'
@@ -325,14 +327,11 @@ class EdificioRenderer {
             : { x: edificio.x, y: edificio.y };
         container.x = center.x;
         container.y = center.y;
+        container.scale.set(1 / (window.escala || 1));
 
         // NO aplicar rotación - mantener siempre horizontal
         container.rotation = 0;
 
-        const text = new PIXI.Text(edificio.label, estiloEtiqueta());
-        text.anchor.set(0.5);
-        text.resolution = Math.max(2, window.devicePixelRatio || 1);
-        container.addChild(text);
         container.visible = etiquetasVisibles('buildings');
 
         // Agregar a la capa UI (no al sprite del edificio)
@@ -477,7 +476,9 @@ class EdificioRenderer {
     updateLabelsVisibility() {
         this.etiquetasEdificios.forEach((container) => {
             container.visible = etiquetasVisibles('buildings');
-            container.children[0].style = estiloEtiqueta();
+            container.labelText.style = estiloEtiqueta();
+            actualizarFondoEtiqueta(container);
+            container.scale.set(1 / (window.escala || 1));
         });
     }
 

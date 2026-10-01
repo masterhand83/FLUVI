@@ -687,7 +687,6 @@ function crearCalle(nombre, tamano, tipo, x, y, angulo, probabilidadGeneracion, 
 // A missing direction on an older map is forward. -1 runs from the last
 // physical cell to cell 0; +1 runs from cell 0 to the last physical cell.
 function getLaneDirection(street, lane) {
-    if (street.geometryType === 'roundabout') return 1;
     return street.laneDirections?.[lane] === -1 ? -1 : 1;
 }
 
@@ -715,8 +714,9 @@ function isConnectionDirectionCompatible(connection) {
     // Preserve all formerly valid forward-lane taps, including incorporation
     // into the final cell of a short street. After reversing a lane, however,
     // its old source/destination boundary would feed traffic against the flow.
-    return (getLaneDirection(origen, carrilOrigen) !== -1 || source !== origen.tamano - 1 || origen.tamano === 1) &&
-        (getLaneDirection(destino, carrilDestino) !== -1 || posDestino !== 0 || destino.tamano === 1);
+    // A roundabout is periodic, so neither physical end is a boundary.
+    return (origen.geometryType === 'roundabout' || getLaneDirection(origen, carrilOrigen) !== -1 || source !== origen.tamano - 1 || origen.tamano === 1) &&
+        (destino.geometryType === 'roundabout' || getLaneDirection(destino, carrilDestino) !== -1 || posDestino !== 0 || destino.tamano === 1);
 }
 
 
@@ -1156,6 +1156,7 @@ function actualizarGlorieta(calle) {
     const wrap = index => window.roundaboutStreet.neighbor(calle, index, 0);
     for (let lane = 0; lane < calle.carriles; lane++) {
         const cells = calle.arreglo[lane];
+        const direction = getLaneDirection(calle, lane);
         const waiting = calle.celulasEsperando[lane];
         const removed = new Set();
         const added = new Set();
@@ -1165,7 +1166,7 @@ function actualizarGlorieta(calle) {
                 const connection = parking.get(`${lane}-${i}`);
                 const building = connection?.edificio;
                 if (!building?.esEstacionamiento || waiting[i]) continue;
-                const previous = wrap(i - 1);
+                const previous = wrap(i - direction);
                 const hour = window.configuracionTiempo?.horaActual || 0;
                 if (connection.tipo === 'entrada') {
                     const source = cells[i] >= 1 && cells[i] <= 6 ? i :
@@ -1188,7 +1189,7 @@ function actualizarGlorieta(calle) {
         for (let i = 0; i < calle.tamano; i++) {
             const vehicle = cells[i];
             if (vehicle < 1 || vehicle > 6 || waiting[i] || removed.has(i)) continue;
-            const destination = wrap(i + 1);
+            const destination = wrap(i + direction);
             if (cells[destination] !== 0 || waiting[destination] || added.has(destination) ||
                 tieneConexionSalida(calle, lane, i)) continue;
             next[lane][i] = 0;
@@ -1231,7 +1232,7 @@ function cambioCarril(calle) {
                 for (let offset = 1; offset <= distanciaDeteccion &&
                     (calle.geometryType === 'roundabout' || (i + offset * direction >= 0 && i + offset * direction < calle.tamano)); offset++) {
                     const ahead = calle.geometryType === 'roundabout'
-                        ? window.roundaboutStreet.neighbor(calle, i, offset) : i + offset * direction;
+                        ? window.roundaboutStreet.neighbor(calle, i, offset * direction) : i + offset * direction;
                     if (calle.arreglo[c][ahead] === 7) {
                         hayObstruccionAdelante = true;
                         break;
@@ -1248,7 +1249,7 @@ function cambioCarril(calle) {
                     // CAMBIO DIAGONAL SUPERIOR: carril-1, posición+1
                     if (c > 0 && getLaneDirection(calle, c - 1) === direction) {
                         const posDestino = calle.geometryType === 'roundabout'
-                            ? window.roundaboutStreet.neighbor(calle, i) : i + direction;
+                            ? window.roundaboutStreet.neighbor(calle, i, direction) : i + direction;
                         const claveDestino = `${c - 1},${posDestino}`;
 
                         // Verificar que destino esté vacío Y no reservado
@@ -1268,7 +1269,7 @@ function cambioCarril(calle) {
                     // CAMBIO DIAGONAL INFERIOR: carril+1, posición+1
                     if (c < calle.carriles - 1 && getLaneDirection(calle, c + 1) === direction) {
                         const posDestino = calle.geometryType === 'roundabout'
-                            ? window.roundaboutStreet.neighbor(calle, i) : i + direction;
+                            ? window.roundaboutStreet.neighbor(calle, i, direction) : i + direction;
                         const claveDestino = `${c + 1},${posDestino}`;
 
                         // Verificar que destino esté vacío Y no reservado
@@ -1437,7 +1438,7 @@ function cambioCarril(calle) {
         // Solo marcamos el vecino siguiente para evitar que avance sobre el vehículo que acaba de llegar
         const direction = getLaneDirection(calle, cambio.hacia.carril);
         const nextDestination = calle.geometryType === 'roundabout'
-            ? window.roundaboutStreet.neighbor(calle, cambio.hacia.posicion) : cambio.hacia.posicion + direction;
+            ? window.roundaboutStreet.neighbor(calle, cambio.hacia.posicion, direction) : cambio.hacia.posicion + direction;
         if (nextDestination >= 0 && nextDestination < calle.tamano) {
             calle.celulasEsperando[cambio.hacia.carril][nextDestination] = true;
         }
@@ -1450,7 +1451,7 @@ function cambioCarril(calle) {
         // Marcar el vecino siguiente para evitar que el vehículo siguiente avance
         // inmediatamente al espacio que quedó vacío
         const nextSource = calle.geometryType === 'roundabout'
-            ? window.roundaboutStreet.neighbor(calle, cambio.desde.posicion) : cambio.desde.posicion + direction;
+            ? window.roundaboutStreet.neighbor(calle, cambio.desde.posicion, direction) : cambio.desde.posicion + direction;
         if (nextSource >= 0 && nextSource < calle.tamano) {
             calle.celulasEsperando[cambio.desde.carril][nextSource] = true;
         }
@@ -1686,7 +1687,7 @@ function dibujarCalles() {
         ctx.restore();
         // Draw in world coordinates, after restoring the straight road's
         // local translation/rotation (curved roads are already world-space).
-        if (calle.laneDirections?.some((_, lane) => getLaneDirection(calle, lane) === -1)) {
+        if (calle.geometryType !== 'roundabout' && calle.laneDirections?.some((_, lane) => getLaneDirection(calle, lane) === -1)) {
             dibujarDireccionesCarriles(calle);
         }
     });
@@ -1723,6 +1724,7 @@ function dibujarGlorieta(calle) {
             ctx.save();
             ctx.translate(point.x, point.y);
             ctx.rotate(-point.angulo * Math.PI / 180);
+            if (getLaneDirection(calle, lane) === -1) ctx.rotate(Math.PI);
             ctx.strokeStyle = '#f5fcff';
             ctx.lineWidth = 0.4;
             ctx.beginPath();

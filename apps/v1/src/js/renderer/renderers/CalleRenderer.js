@@ -131,7 +131,10 @@ class CalleRenderer {
         this.scene.uiRenderer?.updateEtiqueta(calle);
         const signature = [calle.x, calle.y, calle.innerRadius, calle.carriles, calle.tamano, calle.startAngle, this.celda_tamano].join(':');
         const existing = this.scene.calleSprites.get(calle);
-        if (existing?._geometryKind === 'roundabout' && existing._geometrySignature === signature) return existing;
+        if (existing?._geometryKind === 'roundabout' && existing._geometrySignature === signature) {
+            this.updateLaneDirectionArrows(existing, calle);
+            return existing;
+        }
         if (this.scene.calleSprites.has(calle)) this.removeCalleSprite(calle);
         const container = new PIXI.Container();
         container._geometryKind = 'roundabout';

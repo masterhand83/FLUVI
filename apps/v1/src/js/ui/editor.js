@@ -785,7 +785,7 @@ class EditorCalles {
         calle.tamano = nuevoTamano;
         calle.carriles = nuevosCarriles;
         calle.laneDirections = Array.from({ length: nuevosCarriles }, (_, carril) =>
-            calle.geometryType === 'roundabout' ? 1 : direccionesAnteriores[carril] === -1 ? -1 : 1);
+            direccionesAnteriores[carril] === -1 ? -1 : 1);
         calle.conexionesSalida = Array.from({ length: nuevosCarriles }, (_, carril) => calle.conexionesSalida?.[carril] || []);
         calle.arreglo = Array.from({ length: nuevosCarriles }, (_, carril) =>
             Array.from({ length: nuevoTamano }, (_, celda) => arregloAnterior[carril]?.[celda] ?? 0)

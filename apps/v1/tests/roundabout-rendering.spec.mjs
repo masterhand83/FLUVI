@@ -73,6 +73,42 @@ describe('roundabout Pixi integration', () => {
     });
 
     // Name placement is now covered through rendered pixels in map-labels.spec.mjs.
+    it('refreshes direction cues and vehicle facing without moving physical cells', () => {
+        const { scene, road, streets, cars } = setup();
+        road.arreglo[0][0] = 2;
+        streets.renderAll([road]);
+        cars.updateAll([road]);
+        const container = scene.calleSprites.get(road);
+        const cues = container.getChildByName('laneDirectionArrows');
+        const sprite = scene.carroSprites.get('Rotonda_0_0');
+        const before = { x: sprite.x, y: sprite.y, rotation: sprite.rotation };
+        road.laneDirections[0] = -1;
+        streets.renderAll([road]);
+        cars.updateAll([road]);
+        expect(scene.calleSprites.get(road)).toBe(container);
+        expect(container.getChildByName('laneDirectionArrows').lines).not.toEqual(cues.lines);
+        expect(sprite.x).toBe(before.x);
+        expect(sprite.y).toBe(before.y);
+        expect(sprite.rotation).toBeCloseTo(before.rotation - Math.PI);
+    });
+
+    it('reverses Canvas direction cues on counterclockwise lanes', () => {
+        const { window, road } = setup();
+        const source = readFileSync(new URL('../src/js/core/trafico.js', import.meta.url), 'utf8');
+        const rotations = [];
+        const ctx = { beginPath() {}, arc() {}, fill() {}, stroke() {}, save() {}, restore() {},
+            translate() {}, moveTo() {}, lineTo() {}, rotate(angle) { rotations.push(angle); } };
+        const context = { window, ctx, celda_tamano: 5,
+            getLaneDirection: (street, lane) => street.laneDirections[lane] };
+        runInNewContext(source.slice(source.indexOf('function dibujarGlorieta('), source.indexOf('function dibujarDireccionesCarriles(')), context);
+        runInNewContext('dibujarGlorieta(window.road)', { ...context, window: { ...window, road } });
+        expect(rotations.filter(angle => angle === Math.PI)).toHaveLength(0);
+        rotations.length = 0;
+        road.laneDirections[0] = -1;
+        runInNewContext('dibujarGlorieta(window.road)', { ...context, window: { ...window, road } });
+        expect(rotations.filter(angle => angle === Math.PI)).toHaveLength(4);
+    });
+
     it('places cars and links on exact sectors', () => {
         const { window, scene, road, cars, links } = setup();
         road.arreglo[0][0] = 2;

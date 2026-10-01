@@ -776,6 +776,7 @@
 				vertexHandles.push(handle)
 			}
 			vertexHandles.forEach((handle, index) => {
+				if (index >= building.vertices.length) return
 				handle.hidden = false
 				handle.dataset.vertexIndex = String(index)
 				const point = screenPoint(building.vertices[index])

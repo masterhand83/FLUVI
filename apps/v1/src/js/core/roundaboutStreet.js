@@ -1,4 +1,5 @@
-// Closed, clockwise street geometry and topology. The center and radii are
+// Closed street geometry with clockwise physical indexes; laneDirections
+// controls travel direction independently. The center and radii are
 // world-space units; sector zero begins at startAngle (degrees from +X).
 (function (root) {
     const MAX_CELLS = 2500;

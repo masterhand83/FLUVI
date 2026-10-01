@@ -1,15 +1,34 @@
-// Attached object names share visibility, world-space sizing and halo styling.
+// Attached object names share visibility, screen-space sizing and halo styling.
+const fondoEtiqueta = { color: 0x111827, alpha: 0.12, paddingX: 4, paddingY: 2, radius: 3 };
+
+function actualizarFondoEtiqueta(container) {
+    const bounds = container.labelText.getLocalBounds();
+    const { color, alpha, paddingX, paddingY, radius } = fondoEtiqueta;
+    container.labelBackground.clear().beginFill(color, alpha)
+        .drawRoundedRect(bounds.x - paddingX, bounds.y - paddingY,
+            bounds.width + paddingX * 2, bounds.height + paddingY * 2, radius).endFill();
+}
+
+function crearEtiquetaPixi(nombre) {
+    const container = new PIXI.Container();
+    container.eventMode = 'none';
+    container.labelBackground = new PIXI.Graphics();
+    container.labelText = new PIXI.Text(nombre, estiloEtiqueta());
+    container.labelText.anchor.set(0.5);
+    container.labelText.resolution = Math.max(2, window.devicePixelRatio || 1);
+    container.addChild(container.labelBackground, container.labelText);
+    actualizarFondoEtiqueta(container);
+    return container;
+}
 function etiquetasVisibles(category) {
     return window.labelVisibility === 'both' || window.labelVisibility === category;
 }
 
 function estiloEtiqueta() {
-    const zoom = window.escala || 1;
-    const sizeScale = (window.labelFontSize || 14) / zoom;
     return {
         fontFamily: 'Arial', fontWeight: 'normal',
-        fontSize: sizeScale,
-        fill: '#222222', stroke: '#FFFFFF', strokeThickness: 2 / zoom,
+        fontSize: window.labelFontSize || 14,
+        fill: '#222222', stroke: '#FFFFFF', strokeThickness: 2,
         lineJoin: 'round', align: 'center',
     };
 }
@@ -51,9 +70,22 @@ function dibujarEtiqueta(nombre, center, rotation = 0) {
     ctx.save();
     ctx.translate(center.x, center.y);
     ctx.rotate(rotation);
+    const zoom = window.escala || 1;
+    ctx.scale(1 / zoom, 1 / zoom);
     ctx.font = `${style.fontSize}px ${style.fontFamily}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
+    const metrics = ctx.measureText(nombre);
+    const ascent = metrics.actualBoundingBoxAscent;
+    const descent = metrics.actualBoundingBoxDescent;
+    const { paddingX, paddingY, radius, alpha } = fondoEtiqueta;
+    ctx.fillStyle = `rgba(17, 24, 39, ${alpha})`;
+    ctx.beginPath();
+    ctx.roundRect(-metrics.width / 2 - paddingX - style.strokeThickness / 2,
+        -ascent - paddingY - style.strokeThickness / 2,
+        metrics.width + paddingX * 2 + style.strokeThickness,
+        ascent + descent + paddingY * 2 + style.strokeThickness, radius);
+    ctx.fill();
     ctx.fillStyle = style.fill;
     ctx.strokeStyle = style.stroke;
     ctx.lineWidth = style.strokeThickness;
