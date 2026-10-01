@@ -2,11 +2,11 @@
 (() => {
     const WIDTH = 1600;
     const chartDefinitions = [
-        ['densidad', 'Densidad (%)', () => densityChartInstance],
-        ['flujo_vehicular', 'Flujo (veh/s)', () => throughputChartInstance],
-        ['velocidad', 'Velocidad (% movimiento)', () => speedChartInstance],
-        ['tasa_de_cambio', 'Cambio neto (veh/s)', () => netGenerationChartInstance],
-        ['entropia', 'Entropía (bits)', () => entropyChartInstance]
+        ['densidad', 'Densidad (%)', () => densityChartInstance, 'density'],
+        ['flujo_vehicular', 'Flujo (veh/s)', () => throughputChartInstance, 'throughput'],
+        ['velocidad', 'Velocidad (% movimiento)', () => speedChartInstance, 'speed'],
+        ['tasa_de_cambio', 'Cambio neto (veh/s)', () => netGenerationChartInstance, 'netGeneration'],
+        ['entropia', 'Entropía (bits)', () => entropyChartInstance, 'entropy']
     ];
 
     function reportCanvas(height) {
@@ -29,7 +29,7 @@
         return value;
     }
 
-    function chartImage(source, name, unit) {
+    function chartImage(source, name, unit, metric) {
         if (!source) throw new Error('Las gráficas todavía no están disponibles');
         const plot = document.createElement('canvas');
         plot.width = WIDTH - 96;
@@ -47,9 +47,13 @@
             axis.title = { ...axis.title, color: '#334155', font: { ...axis.title?.font, size: 28 } };
         }
         if (options.plugins?.legend?.labels) options.plugins.legend.labels.color = '#334155';
+        // Usar el mismo historial completo que CSV sin modificar las gráficas en vivo.
+        const data = clone(source.data);
+        data.labels = [...completeMetricsHistory.timestamps];
+        data.datasets[0].data = [...completeMetricsHistory[metric]];
         const chart = new Chart(plot, {
             type: source.config.type,
-            data: clone(source.data),
+            data,
             options
         });
         try {
@@ -91,7 +95,8 @@
             .map(item => wrap(text(item).replace(/^•\s*/, ''), WIDTH - 216));
         if (!observations.length) observations.push(['Sin observaciones adicionales.']);
         const notes = [
-            `Gráficas: últimas ${metricsHistory.timestamps.length} mediciones (máximo ${metricsHistory.maxDataPoints}).`,
+            `Gráficas: historial completo (${completeMetricsHistory.timestamps.length} mediciones desde la última limpieza o reinicio).`,
+            'Resumen: última medición disponible, no un promedio histórico.',
             `Calles incluidas en métricas: ${window.calles.filter((_, index) => callesIncluidasEnMetricas === null || callesIncluidasEnMetricas.has(index)).length}/${window.calles.length}.`,
             'Mapa de calor: estado actual de todas las calles. La escala verde–rojo representa menor–mayor congestión.'
         ].flatMap(note => wrap(note, WIDTH - 160));
@@ -166,7 +171,7 @@
 
     async function exportImages(button) {
         if (button.disabled) return;
-        if (!metricsHistory.timestamps.length) {
+        if (!completeMetricsHistory.timestamps.length) {
             mostrarAdvertencia('Sin métricas', 'Ejecuta la simulación antes de exportar imágenes.');
             return;
         }
@@ -176,7 +181,7 @@
         try {
             if (!window.JSZip || !window.heatmapModal) throw new Error('No se cargaron los módulos de exportación');
             // Capturar todo antes del primer await: la simulación puede seguir corriendo.
-            const images = chartDefinitions.map(([name, unit, source]) => [name, chartImage(source(), name, unit)]);
+            const images = chartDefinitions.map(([name, unit, source, metric]) => [name, chartImage(source(), name, unit, metric)]);
             images.push(['resumen', summaryImage()]);
             const map = window.heatmapModal.render({ canvas: document.createElement('canvas'), maxWidth: WIDTH - 96, maxHeight: 1100 });
             const heatmap = reportCanvas(map.height + 170);
