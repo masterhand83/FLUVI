@@ -8,6 +8,44 @@ let pyodideInitialized = false;
 let currentFileContent = null;
 let currentFileType = 'csv'; // 'csv' o 'json'
 let currentImagenes = null;
+let pyodideInitialization = null;
+let analysisGeneration = 0;
+let analysisQueue = Promise.resolve();
+
+function limpiarResultadosAnalisis() {
+  currentImagenes = null;
+  document.getElementById('resultadosAnalisis').style.display = 'none';
+  for (const id of ['imgAnalisisTemporal', 'imgDiagramaFundamental', 'imgDistribuciones']) {
+    document.getElementById(id).src = '';
+  }
+  document.getElementById('btnDescargarImagenActual').disabled = true;
+  document.getElementById('btnDescargarTodasImagenes').disabled = true;
+}
+
+function resetearAnalizadorMetricas() {
+  analysisGeneration++;
+  currentFileContent = null;
+  currentFileType = 'csv';
+  limpiarResultadosAnalisis();
+  document.getElementById('inputCSVAnalizador').value = '';
+  document.getElementById('nombreArchivoCSV').textContent = 'Ningún archivo seleccionado (CSV o JSON de métricas)';
+  const estado = document.getElementById('estadoCargaPython');
+  estado.style.display = 'none';
+  estado.classList.remove('alert-danger');
+  estado.classList.add('alert-info');
+  document.getElementById('mensajeEstadoPython').textContent = 'Inicializando Python (Pyodide)...';
+  document.getElementById('progressBarPython').style.width = '0%';
+  for (const tab of document.querySelectorAll('#tabsImagenes [role="tab"]')) {
+    const active = tab.id === 'tab-temporal';
+    tab.classList.toggle('active', active);
+    tab.setAttribute('aria-selected', String(active));
+  }
+  for (const panel of document.querySelectorAll('#tabsImagenesContent .tab-pane')) {
+    const active = panel.id === 'img-temporal';
+    panel.classList.toggle('active', active);
+    panel.classList.toggle('show', active);
+  }
+}
 
 /**
  * Inicializa Pyodide (Python en el navegador)
@@ -17,64 +55,43 @@ async function inicializarPyodide() {
     return pyodideInstance;
   }
 
-  try {
-    // Mostrar estado de carga
-    document.getElementById('estadoCargaPython').style.display = 'block';
-    document.getElementById('mensajeEstadoPython').textContent = 'Cargando Pyodide...';
-    document.getElementById('progressBarPython').style.width = '10%';
-
-    // Cargar Pyodide desde CDN (versión más reciente)
-    pyodideInstance = await loadPyodide({
+  if (pyodideInitialization) return pyodideInitialization;
+  pyodideInitialization = (async () => {
+    // Cargar la versión de Pyodide fijada por la aplicación.
+    const instance = await loadPyodide({
       indexURL: "https://cdn.jsdelivr.net/pyodide/v0.25.0/full/"
     });
 
-    document.getElementById('progressBarPython').style.width = '30%';
-    document.getElementById('mensajeEstadoPython').textContent = 'Instalando paquetes Python básicos...';
-
     // Instalar paquetes esenciales
-    await pyodideInstance.loadPackage(['numpy', 'pandas', 'matplotlib', 'scipy', 'scikit-learn']);
-
-    document.getElementById('progressBarPython').style.width = '60%';
-    document.getElementById('mensajeEstadoPython').textContent = 'Configurando paquetes adicionales...';
+    await instance.loadPackage(['numpy', 'pandas', 'matplotlib', 'scipy', 'scikit-learn']);
 
     // Intentar instalar seaborn, pero continuar si falla
     try {
-      await pyodideInstance.loadPackage('seaborn');
+      await instance.loadPackage('seaborn');
       console.log('✅ Seaborn instalado correctamente');
     } catch (error) {
       console.warn('⚠️ Seaborn no disponible, continuando sin él:', error);
       // No es crítico, el script funcionará sin seaborn
     }
 
-    document.getElementById('progressBarPython').style.width = '80%';
-    document.getElementById('mensajeEstadoPython').textContent = 'Cargando script de análisis...';
-
     // Cargar el script del analizador
     const response = await fetch('src/python/analizador.py');
+    if (!response.ok) throw new Error('No se pudo cargar el script de análisis');
     const analizadorScript = await response.text();
 
     // Ejecutar el script en Pyodide
-    await pyodideInstance.runPythonAsync(analizadorScript);
-
-    document.getElementById('progressBarPython').style.width = '100%';
-    document.getElementById('mensajeEstadoPython').textContent = '¡Python listo! ✓';
-
+    await instance.runPythonAsync(analizadorScript);
+    pyodideInstance = instance;
     pyodideInitialized = true;
-
-    // Ocultar barra de progreso después de 1 segundo
-    setTimeout(() => {
-      document.getElementById('estadoCargaPython').style.display = 'none';
-    }, 1000);
 
     console.log('✅ Pyodide inicializado correctamente');
     return pyodideInstance;
 
-  } catch (error) {
-    console.error('❌ Error al inicializar Pyodide:', error);
-    document.getElementById('mensajeEstadoPython').textContent = '❌ Error al cargar Python: ' + error.message;
-    document.getElementById('estadoCargaPython').classList.remove('alert-info');
-    document.getElementById('estadoCargaPython').classList.add('alert-danger');
-    throw error;
+  })();
+  try {
+    return await pyodideInitialization;
+  } finally {
+    pyodideInitialization = null;
   }
 }
 
@@ -84,6 +101,14 @@ async function inicializarPyodide() {
 async function cargarArchivoParaAnalisis(event) {
   const file = event.target.files[0];
   if (!file) return;
+  // Permitir seleccionar de nuevo el mismo archivo después de un error.
+  event.target.value = '';
+  const generation = ++analysisGeneration;
+  currentFileContent = null;
+  limpiarResultadosAnalisis();
+  document.getElementById('estadoCargaPython').style.display = 'none';
+  document.getElementById('progressBarPython').style.width = '0%';
+  document.getElementById('nombreArchivoCSV').textContent = 'Ningún archivo seleccionado (CSV o JSON de métricas)';
 
   // Determinar tipo de archivo por extensión
   const extension = file.name.split('.').pop().toLowerCase();
@@ -99,15 +124,23 @@ async function cargarArchivoParaAnalisis(event) {
   // Actualizar nombre del archivo
   const iconoArchivo = currentFileType === 'json' ? '📋' : '📄';
   document.getElementById('nombreArchivoCSV').textContent = `${iconoArchivo} ${file.name}`;
+  const type = currentFileType;
 
   try {
     // Leer el contenido del archivo
     const reader = new FileReader();
     reader.onload = async (e) => {
+      if (generation !== analysisGeneration) return;
       currentFileContent = e.target.result;
 
       // Ejecutar análisis automáticamente
-      await ejecutarAnalisis();
+      await ejecutarAnalisis({ content: e.target.result, type, generation });
+    };
+    reader.onerror = () => {
+      if (generation !== analysisGeneration) return;
+      document.getElementById('estadoCargaPython').style.display = 'block';
+      document.getElementById('estadoCargaPython').classList.replace('alert-info', 'alert-danger');
+      document.getElementById('mensajeEstadoPython').textContent = '❌ Error al leer el archivo';
     };
     reader.readAsText(file);
 
@@ -125,24 +158,32 @@ async function cargarCSVParaAnalisis(event) {
 /**
  * Ejecuta el análisis del archivo (CSV o JSON) usando Python
  */
-async function ejecutarAnalisis() {
-  if (!currentFileContent) {
-    alert('Por favor, carga un archivo primero.');
+async function ejecutarAnalisis(job = null) {
+  const { content, type, generation } = job || {
+    content: currentFileContent, type: currentFileType, generation: ++analysisGeneration
+  };
+  if (!content) {
+    document.getElementById('estadoCargaPython').style.display = 'block';
+    document.getElementById('estadoCargaPython').classList.remove('alert-info');
+    document.getElementById('estadoCargaPython').classList.add('alert-danger');
+    document.getElementById('mensajeEstadoPython').textContent = '❌ El archivo está vacío. Carga un archivo de métricas.';
     return;
   }
 
   try {
+    limpiarResultadosAnalisis();
     // Mostrar estado de carga
     document.getElementById('estadoCargaPython').style.display = 'block';
     document.getElementById('estadoCargaPython').classList.remove('alert-danger');
     document.getElementById('estadoCargaPython').classList.add('alert-info');
-    document.getElementById('mensajeEstadoPython').textContent = `Procesando ${currentFileType.toUpperCase()}...`;
+    document.getElementById('mensajeEstadoPython').textContent = `Procesando ${type.toUpperCase()}...`;
     document.getElementById('progressBarPython').style.width = '20%';
 
     // Inicializar Pyodide si no está inicializado
     if (!pyodideInitialized) {
       await inicializarPyodide();
     }
+    if (generation !== analysisGeneration) return;
 
     document.getElementById('progressBarPython').style.width = '40%';
     document.getElementById('mensajeEstadoPython').textContent = 'Analizando métricas...';
@@ -151,7 +192,7 @@ async function ejecutarAnalisis() {
     document.getElementById('mensajeEstadoPython').textContent = 'Generando visualizaciones...';
 
     // Escapar el contenido para Python
-    const contenidoEscapado = currentFileContent
+    const contenidoEscapado = content
       .replace(/\\/g, '\\\\')
       .replace(/"/g, '\\"')
       .replace(/\n/g, '\\n')
@@ -159,7 +200,7 @@ async function ejecutarAnalisis() {
 
     // Ejecutar el análisis según el tipo de archivo
     let pythonCode;
-    if (currentFileType === 'json') {
+    if (type === 'json') {
       pythonCode = `
 import json
 
@@ -182,13 +223,28 @@ resultados['imagenes']
       `;
     }
 
-    const resultado = await pyodideInstance.runPythonAsync(pythonCode);
+    // Pyodide comparte globals: nunca ejecutar dos análisis simultáneamente.
+    const pending = analysisQueue.then(async () => {
+      if (generation !== analysisGeneration) return null;
+      return pyodideInstance.runPythonAsync(pythonCode);
+    });
+    analysisQueue = pending.catch(() => {});
+    const resultado = await pending;
+    if (!resultado) return;
+    if (generation !== analysisGeneration) {
+      resultado.destroy();
+      return;
+    }
 
     document.getElementById('progressBarPython').style.width = '90%';
     document.getElementById('mensajeEstadoPython').textContent = 'Renderizando imágenes...';
 
     // Convertir el resultado de Python a JavaScript
-    currentImagenes = resultado.toJs();
+    try {
+      currentImagenes = resultado.toJs();
+    } finally {
+      resultado.destroy();
+    }
 
     // Mostrar las imágenes
     mostrarImagenes(currentImagenes);
@@ -196,15 +252,16 @@ resultados['imagenes']
     document.getElementById('progressBarPython').style.width = '100%';
     document.getElementById('mensajeEstadoPython').textContent = '¡Análisis completado! ✓';
 
-    // Ocultar barra de progreso y mostrar resultados
-    setTimeout(() => {
-      document.getElementById('estadoCargaPython').style.display = 'none';
-      document.getElementById('resultadosAnalisis').style.display = 'block';
-    }, 1000);
+    document.getElementById('estadoCargaPython').style.display = 'none';
+    document.getElementById('resultadosAnalisis').style.display = 'block';
+    document.getElementById('btnDescargarImagenActual').disabled = false;
+    document.getElementById('btnDescargarTodasImagenes').disabled = false;
 
-    console.log(`✅ Análisis de ${currentFileType.toUpperCase()} completado exitosamente`);
+    console.log(`✅ Análisis de ${type.toUpperCase()} completado exitosamente`);
 
   } catch (error) {
+    if (generation !== analysisGeneration) return;
+    limpiarResultadosAnalisis();
     console.error('❌ Error durante el análisis:', error);
     document.getElementById('mensajeEstadoPython').textContent = '❌ Error durante el análisis: ' + error.message;
     document.getElementById('estadoCargaPython').classList.remove('alert-info');
@@ -239,6 +296,7 @@ function mostrarImagenes(imagenes) {
  * Descarga la imagen actualmente visible
  */
 function descargarImagenActual() {
+  if (!currentImagenes) return;
   // Determinar qué tab está activo
   const tabTemporal = document.getElementById('tab-temporal');
   const tabFundamental = document.getElementById('tab-fundamental');
@@ -271,19 +329,15 @@ async function descargarTodasImagenes() {
     alert('No hay imágenes para descargar');
     return;
   }
+  const generation = analysisGeneration;
+  const imagenes = currentImagenes;
 
   // Usar JSZip para crear el archivo ZIP
   // Nota: Necesitarás incluir la librería JSZip en tu HTML
   if (typeof JSZip === 'undefined') {
     // Si no está disponible JSZip, descargar una por una
     alert('Descargando imágenes individualmente...');
-    descargarImagenBase64(document.getElementById('imgAnalisisTemporal').src, 'analisis_temporal.png');
-    setTimeout(() => {
-      descargarImagenBase64(document.getElementById('imgDiagramaFundamental').src, 'diagrama_fundamental.png');
-    }, 500);
-    setTimeout(() => {
-      descargarImagenBase64(document.getElementById('imgDistribuciones').src, 'distribuciones_correlaciones.png');
-    }, 1000);
+    descargarTodasImagenesSeparadas();
     return;
   }
 
@@ -293,7 +347,7 @@ async function descargarTodasImagenes() {
 
     // Convertir las imágenes base64 a blobs
     const imagenesObj = {};
-    for (const [key, value] of currentImagenes.entries()) {
+    for (const [key, value] of imagenes.entries()) {
       imagenesObj[key] = value;
     }
 
@@ -309,13 +363,16 @@ async function descargarTodasImagenes() {
 
     // Generar y descargar el ZIP
     const content = await zip.generateAsync({type: "blob"});
+    if (generation !== analysisGeneration) return;
     const link = document.createElement('a');
     link.href = URL.createObjectURL(content);
     link.download = 'analisis_metricas.zip';
     link.click();
+    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
 
     console.log('✅ ZIP descargado exitosamente');
   } catch (error) {
+    if (generation !== analysisGeneration) return;
     console.error('❌ Error al crear ZIP:', error);
     alert('Error al crear el archivo ZIP. Descargando imágenes individualmente...');
     descargarTodasImagenesSeparadas();
@@ -326,11 +383,14 @@ async function descargarTodasImagenes() {
  * Descarga todas las imágenes por separado (fallback)
  */
 function descargarTodasImagenesSeparadas() {
+  const generation = analysisGeneration;
   descargarImagenBase64(document.getElementById('imgAnalisisTemporal').src, 'analisis_temporal.png');
   setTimeout(() => {
+    if (generation !== analysisGeneration) return;
     descargarImagenBase64(document.getElementById('imgDiagramaFundamental').src, 'diagrama_fundamental.png');
   }, 500);
   setTimeout(() => {
+    if (generation !== analysisGeneration) return;
     descargarImagenBase64(document.getElementById('imgDistribuciones').src, 'distribuciones_correlaciones.png');
   }, 1000);
 }
@@ -350,9 +410,13 @@ function descargarImagenBase64(base64Data, nombreArchivo) {
  * Inicializa los event listeners
  */
 function inicializarAnalizadorMetricas() {
+  const modalElement = document.getElementById('modalAnalizadorMetricas');
+  resetearAnalizadorMetricas();
+  modalElement.addEventListener('hide.bs.modal', () => { analysisGeneration++; });
+  modalElement.addEventListener('hidden.bs.modal', resetearAnalizadorMetricas);
   // Botón para abrir el modal
   document.getElementById('btnAnalizarMetricas').addEventListener('click', () => {
-    const modal = new bootstrap.Modal(document.getElementById('modalAnalizadorMetricas'));
+    const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
     modal.show();
   });
 
