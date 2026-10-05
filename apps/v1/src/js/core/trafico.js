@@ -2498,6 +2498,23 @@ function limpiarCeldas(){
     });
 }
 
+// Restart traffic without changing the map, scenario blockers or generation settings.
+window.resetScenarioTraffic = function () {
+    calles.forEach(calle => {
+        calle.arreglo.forEach(lane => {
+            for (let i = 0; i < lane.length; i++) {
+                if (lane[i] >= 1 && lane[i] <= 6) lane[i] = 0;
+            }
+        });
+        calle.celulasEsperando.forEach(lane => lane.fill(false));
+    });
+    conexiones.forEach(conexion => { conexion.bloqueada = false; });
+    (window.edificios || edificios).forEach(edificio => window.resetearEstacionamiento?.(edificio));
+    window.resetSimulationMetrics?.();
+    window.resetSimulationInfo?.();
+    renderizarCanvas();
+};
+
 function crearConexionLineal(origen, destino, numCarriles = null, probabilidad = 1.0) {
     const carriles = numCarriles || Math.min(origen.carriles, destino.carriles);
     const conexionesCreadas = [];

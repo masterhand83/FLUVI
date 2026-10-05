@@ -1,34 +1,36 @@
 {
-  "name": "FLUVI",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "build": "turbo run build",
-    "dev": "alchemy dev infra/alchemy.run.ts",
-    "lint": "turbo run lint --output-logs=errors-only",
-    "lint:fix": "turbo run lint:fix --output-logs=errors-only",
-    "test": "turbo run test --output-logs=errors-only"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "devEngines": {
-    "packageManager": {
-      "name": "pnpm",
-      "version": "^11.10.0",
-      "onFail": "download"
-    }
-  },
-  "devDependencies": {
-    "@biomejs/biome": "2.5.10",
-    "alchemy": "2.0.0-beta.74",
-    "turbo": "2.10.4"
-  },
-  "type": "module",
-  "dependencies": {
-    "@effect/platform-bun": "4.0.0-rc.111",
-    "@effect/platform-node": "4.0.0-rc.111",
-    "effect": "4.0.0-beta.107"
-  }
+	"name": "FLUVI",
+	"version": "1.0.0",
+	"description": "",
+	"main": "index.js",
+	"scripts": {
+		"build": "turbo run build",
+		"dev": "alchemy dev infra/alchemy.run.ts",
+		"lint": "turbo run lint --output-logs=errors-only",
+		"lint:fix": "turbo run lint:fix --output-logs=errors-only",
+		"test": "turbo run test --output-logs=errors-only",
+		"deploy": "alchemy deploy infra/alchemy.run.ts --stage prod",
+		"destroy": "alchemy destroy infra/alchemy.run.ts "
+	},
+	"keywords": [],
+	"author": "",
+	"license": "ISC",
+	"devEngines": {
+		"packageManager": {
+			"name": "pnpm",
+			"version": "^11.10.0",
+			"onFail": "download"
+		}
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.5.10",
+		"alchemy": "2.0.0-beta.74",
+		"turbo": "2.10.4"
+	},
+	"type": "module",
+	"dependencies": {
+		"@effect/platform-bun": "4.0.0-rc.111",
+		"@effect/platform-node": "4.0.0-rc.111",
+		"effect": "4.0.0-beta.107"
+	}
 }

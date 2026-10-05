@@ -1,0 +1,105 @@
+========================================================================
+CHANGELOG DE FLUVI v1
+========================================================================
+
+Todos los cambios relevantes de FLUVI v1, ordenados por versión.
+
+
+------------------------------------------------------------------------
+[v1] - 2026-10-01
+------------------------------------------------------------------------
+
+AÑADIDO
+
+  Calles y glorietas
+    - Dibujo de calles rectas sobre el mapa, con edición directa de sus
+      extremos y dimensiones. Las ediciones estructurales pausan la
+      simulación de forma automática.
+    - Creación de calles curvas Bézier, con puntos de control y anclajes
+      ajustables para suavizar las esquinas.
+    - Dibujo y edición de glorietas, con control del radio y del sentido
+      de circulación de cada carril. También disponible en calles
+      convencionales.
+
+  Conexiones entre calles
+    - Enlaces lineales, de incorporación y probabilísticos: se crean y
+      editan seleccionando calles y celdas sobre el mapa, con flechas de
+      previsualización antes de guardar.
+    - Selección de los carriles que se conectan en los enlaces de
+      incorporación.
+
+  Edificios y estacionamientos
+    - Creación de edificios rectangulares y poligonales, con edición de
+      posición, tamaño, rotación y color directamente en el mapa.
+    - Uso de imágenes propias como edificios: se pueden reemplazar y
+      guardar dentro del archivo del mapa, manteniendo la compatibilidad
+      con las imágenes originales.
+    - Configuración de estacionamientos desde el inspector de edificios,
+      con distinción visual de los edificios que tienen conexiones de
+      estacionamiento funcionales.
+
+  Generación de vehículos
+    - Activación y desactivación de la generación de vehículos por
+      carril, conservando la configuración al guardar el mapa.
+    - Porcentaje global de generación de vehículos, que se aplica sin
+      modificar los porcentajes individuales de las calles.
+
+  Escenarios y lluvia
+    - Lluvia aleatoria, con una probabilidad ajustable de inundar celdas
+      vacías sin sobrescribir vehículos ni obstáculos.
+
+  Métricas, análisis y exportación
+    - Métricas que distinguen vehículos de obstáculos, junto con una tasa
+      neta de población que refleja aumentos y disminuciones según el
+      tiempo simulado.
+    - Mapa de calor basado en la densidad local de vehículos, sin contar
+      los obstáculos como automóviles.
+    - Exportación de un ZIP con las imágenes de las gráficas, un resumen
+      del estado del tráfico y el mapa de calor.
+
+  Imágenes de referencia
+    - Imagen de referencia desde archivo o URL, alineable mediante
+      desplazamiento, escala y rotación.
+    - Control de visibilidad y opacidad de la imagen de referencia,
+      bloqueo durante la edición y detección de enlaces no disponibles.
+
+  Interfaz y gestión de mapas
+    - Sección dedicada en la barra lateral para las herramientas de
+      dibujo, con listas de calles ordenadas alfabéticamente.
+    - Visualización de los nombres de calles y edificios, con tamaño
+      ajustable y legible al cambiar el zoom.
+    - Visualización de los FPS medidos de la simulación en la barra de
+      información.
+
+  Desarrollo y pruebas
+    - Incorporación de la aplicación v1 al repositorio y preparación de
+      la configuración de desarrollo.
+    - Pruebas de referencia del comportamiento del tráfico.
+
+
+CAMBIADO
+
+  Métricas, análisis y exportación
+    - La exportación de las gráficas como imágenes ahora incluye todo el
+      historial registrado, en lugar de limitarse a las últimas
+      mediciones.
+
+  Interfaz y gestión de mapas
+    - Información más clara al pasar el cursor sobre celdas y gráficas.
+    - Mejora de la accesibilidad de botones y ventanas de diálogo.
+
+
+CORREGIDO
+
+  Edificios y estacionamientos
+    - La eliminación de edificios ya no deja conexiones de estacionamiento
+      huérfanas.
+    - Al simular entradas al estacionamiento ya no se duplican vehículos.
+
+  Métricas, análisis y exportación
+    - El analizador de métricas ya no arrastra resultados de sesiones
+      anteriores y permite cambiar correctamente entre sus pestañas.
+
+  Interfaz y gestión de mapas
+    - La creación y la carga de un mapa ya no conservan vehículos,
+      métricas, escenarios ni zonas de fondo de la sesión anterior.

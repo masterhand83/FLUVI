@@ -78,6 +78,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const { hora, minutos } = validarEntrada();
 
     if (window.configuracionTiempo) {
+      // Reset the run first: resetSimulationInfo also restores the default clock.
+      // Apply the selected clock afterward, keeping pause and scenario settings.
+      window.resetScenarioTraffic?.();
+
       // Actualizar la configuración de tiempo
       window.configuracionTiempo.diaActual = dia;
       window.configuracionTiempo.horaActual = hora;
@@ -90,9 +94,14 @@ document.addEventListener('DOMContentLoaded', () => {
         window.multiplicadorCache.ultimaHora = -1;
       }
 
-      // Actualizar la visualización
-      if (window.updateSimulationInfo) {
-        window.updateSimulationInfo();
+      // Refresh the clock without counting a simulation generation.
+      const infoDateTime = document.getElementById('infoSimulatedDateTime');
+      if (infoDateTime && window.obtenerTimestampVirtual) {
+        infoDateTime.textContent = window.obtenerTimestampVirtual();
+      }
+      const infoMultiplier = document.getElementById('infoTrafficMultiplier');
+      if (infoMultiplier && window.obtenerMultiplicadorTrafico) {
+        infoMultiplier.textContent = window.obtenerMultiplicadorTrafico().toFixed(1) + '×';
       }
 
       // Actualizar el display del tiempo actual

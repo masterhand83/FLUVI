@@ -1,0 +1,51 @@
+Asunto: Resumen de cambios en FLUVI v1
+
+Buen día:
+
+A continuación, se presenta un resumen de los cambios de FLUVI v1:
+
+Calles y glorietas
+- Dibujo y edición de calles rectas, con pausa de la simulación durante cambios estructurales.
+- Creación de curvas Bézier y ajuste de puntos para suavizar esquinas.
+- Edición de glorietas y configuración del sentido por carril, también en calles convencionales.
+
+Conexiones entre calles
+- Creación y edición de enlaces lineales, de incorporación y probabilísticos con previsualización en el mapa.
+- Selección de carriles en los enlaces de incorporación.
+
+Edificios y estacionamientos
+- Creación de edificios rectangulares o poligonales y edición de su forma y apariencia.
+- Carga y reemplazo de imágenes propias, guardadas en el mapa y compatibles con las imágenes originales.
+- Configuración de estacionamientos desde el inspector e identificación de conexiones funcionales.
+- Eliminación de edificios sin conexiones huérfanas y corrección de vehículos duplicados al ingresar al estacionamiento.
+
+Generación de vehículos
+- Activación o desactivación de la generación por carril, con configuración guardada en el mapa.
+- Aplicación de un porcentaje global sin modificar los porcentajes de cada calle.
+
+Escenarios y lluvia
+- Activación de lluvia aleatoria con probabilidad ajustable, sin sobrescribir vehículos ni obstáculos.
+
+Métricas, análisis y exportación
+- Métricas con distinción entre vehículos y obstáculos, y tasa neta de población basada en el tiempo simulado.
+- Mapa de calor basado en la densidad local, sin contar obstáculos como vehículos.
+- Exportación de un ZIP con gráficas, resumen del tráfico y mapa de calor.
+- Exportación de imágenes de las gráficas con todo el historial registrado.
+- Corrección de la navegación entre pestañas y eliminación de resultados anteriores al cargar archivos en el analizador.
+
+Imágenes de referencia
+- Carga de imágenes desde archivos o URL, con ajuste de posición, escala y rotación.
+- Control de visibilidad y opacidad, bloqueo durante la edición e identificación de enlaces no disponibles.
+
+Interfaz y gestión de mapas
+- Sección dedicada a herramientas de dibujo y listas de calles ordenadas alfabéticamente.
+- Ajuste del tamaño de los nombres de calles y edificios, con legibilidad al cambiar el zoom.
+- Información más clara sobre celdas y gráficas, y visualización de los FPS medidos.
+- Creación y carga de mapas sin conservar vehículos, métricas, escenarios ni fondos de sesiones anteriores.
+- Mejoras de accesibilidad en botones y ventanas de diálogo.
+
+Desarrollo y pruebas
+- Integración de v1 al repositorio y preparación de la configuración de desarrollo.
+- Incorporación de pruebas de referencia del comportamiento del tráfico.
+
+Saludos cordiales.

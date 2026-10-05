@@ -23,7 +23,7 @@ const configuracionTiempo = {
 const multiplicadorCache = {
     valor: 1.0,
     ultimaHora: -1,
-    ultimoDia: -1
+    ultimaDia: -1
 };
 
 // ==================== PERFILES DE TRÁFICO POR DÍA Y HORA ====================
@@ -193,7 +193,7 @@ function avanzarTiempo() {
         configuracionTiempo.diaActual = (configuracionTiempo.diaActual + diasExtras) % 7;
 
         // Invalidar cache al cambiar de día
-        multiplicadorCache.ultimoDia = -1;
+        multiplicadorCache.ultimaDia = -1;
     }
 }
 
@@ -293,6 +293,8 @@ function obtenerMillisVirtuales() {
  * @returns {Object} {horaProxima, multiplicadorProximo, minutosRestantes, descripcion}
  */
 function obtenerProximoCambio() {
+    if (!configuracionTiempo.usarPerfiles) return null;
+
     const dia = configuracionTiempo.diaActual;
     const horaActual = Math.floor(configuracionTiempo.horaActual);
     const perfil = MULTIPLICADORES_POR_DIA_HORA[dia];
@@ -369,6 +371,7 @@ function reiniciarTiempo() {
 function togglePerfiles(usar) {
     configuracionTiempo.usarPerfiles = usar;
     multiplicadorCache.ultimaDia = -1; // Invalidar cache
+    sincronizarPerfilesUI();
     console.log(`⏰ Perfiles de tráfico: ${usar ? 'ACTIVADOS' : 'DESACTIVADOS'}`);
 /* 
     // Controlar el estado del slider de generación
@@ -400,6 +403,14 @@ function togglePerfiles(usar) {
             console.log('🔓 Slider de generación habilitado (control manual)');
         }
     } */
+}
+
+// Refresh controls without advancing the clock or counting a simulation step.
+function sincronizarPerfilesUI() {
+    const toggle = document.getElementById('togglePerfilesDinamicos');
+    if (toggle) toggle.checked = configuracionTiempo.usarPerfiles;
+    const multiplier = document.getElementById('infoTrafficMultiplier');
+    if (multiplier) multiplier.textContent = obtenerMultiplicadorTrafico().toFixed(1) + '×';
 }
 
 /**
@@ -557,11 +568,12 @@ function tiempoFromJSON(data) {
     }
 
     configuracionTiempo.activo = data.activo !== undefined ? data.activo : true;
-    configuracionTiempo.diaActual = data.diaActual || 1;
-    configuracionTiempo.horaActual = data.horaActual || 7;
-    configuracionTiempo.minutoActual = data.minutoActual || 0;
-    configuracionTiempo.segundoActual = data.segundoActual || 0;
-    configuracionTiempo.usarPerfiles = data.usarPerfiles !== undefined ? data.usarPerfiles : true;
+    configuracionTiempo.diaActual = data.diaActual ?? 1;
+    configuracionTiempo.horaActual = data.horaActual ?? 7;
+    configuracionTiempo.minutoActual = data.minutoActual ?? 0;
+    configuracionTiempo.segundoActual = data.segundoActual ?? 0;
+    // Older maps do not declare a profile preference; preserve the current switch.
+    configuracionTiempo.usarPerfiles = data.usarPerfiles ?? configuracionTiempo.usarPerfiles;
 
     // Cargar multiplicadores personalizados por día y hora si existen
     if (data.multiplicadoresPorDiaHora && typeof data.multiplicadoresPorDiaHora === 'object') {
@@ -582,6 +594,8 @@ function tiempoFromJSON(data) {
     // Invalidar cache
     multiplicadorCache.ultimaDia = -1;
     multiplicadorCache.ultimaHora = -1;
+
+    sincronizarPerfilesUI();
 
     console.log(`⏰ Configuración de tiempo cargada: ${obtenerTimestampVirtual()}`);
     console.log(`⏰ Cada paso de simulación = ${SEGUNDOS_POR_PASO} segundo(s) simulado(s)`);
