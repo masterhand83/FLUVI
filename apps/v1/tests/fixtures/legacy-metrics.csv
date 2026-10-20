@@ -1,0 +1,18 @@
+FLUVI - Simulador de Trafico - Exportacion de Metricas
+Tiempo Virtual: Martes 00:00:02
+Perfiles Dinamicos Activos: Si
+Tiempo por Paso: 2 segundo(s) simulados
+Total de Mediciones: 3
+
+Marca de Tiempo,Densidad (%),Flujo (veh/s),Generacion Neta (veh/s),Velocidad (% movimiento),Entropia (bits)
+23:59:58,12.34,1.25,-0.50,75.00,1.75
+00:00:00,13.00,1.30,-0.25,74.50,1.80
+00:00:02,13.50,1.35,0.00,74.00,1.85
+
+ESTADISTICAS
+Metrica,Promedio,Minimo,Maximo
+Densidad (%),12.95,12.34,13.50
+Flujo (veh/s),1.30,1.25,1.35
+Generacion Neta (veh/s),-0.25,-0.50,0.00
+Velocidad (% movimiento),74.50,74.00,75.00
+Entropia (bits),1.80,1.75,1.85

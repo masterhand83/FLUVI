@@ -154,8 +154,16 @@ const PERFILES_TRAFICO = {
     ]
 };
 
-// Nombres de los días para display
-const NOMBRES_DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+// Nombres de los días del formato de exportación compatible con el lector Python.
+// Este arreglo es deliberadamente independiente del display: una futura traducción
+// de la interfaz no debe alterar los archivos CSV/JSON ya consumidos por terceros.
+const NOMBRES_DIAS_EXPORTACION = Object.freeze([
+    'Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'
+]);
+
+// Nombres de los días para display (copia independiente del formato de exportación).
+// Aquí puede cambiarse el idioma de la interfaz sin afectar las exportaciones.
+const NOMBRES_DIAS = [...NOMBRES_DIAS_EXPORTACION];
 
 // ==================== FUNCIONES DE TIEMPO ====================
 
@@ -243,23 +251,10 @@ function obtenerDiaString() {
 }
 
 /**
- * Obtiene timestamp virtual completo para display
- * @returns {string} Formato: "Lunes 14:35:42"
- */
-function obtenerTimestampVirtual() {
-    const dia = obtenerDiaString();
-    const horas = Math.floor(configuracionTiempo.horaActual).toString().padStart(2, '0');
-    const minutos = Math.floor(configuracionTiempo.minutoActual).toString().padStart(2, '0');
-    const segundos = Math.floor(configuracionTiempo.segundoActual).toString().padStart(2, '0');
-
-    return `${dia} ${horas}:${minutos}:${segundos}`;
-}
-
-/**
- * Obtiene timestamp virtual corto para gráficas
+ * Formatea la hora virtual actual con ceros a la izquierda.
  * @returns {string} Formato: "14:35:42"
  */
-function obtenerTimestampCorto() {
+function formatearHoraVirtual() {
     const horas = Math.floor(configuracionTiempo.horaActual).toString().padStart(2, '0');
     const minutos = Math.floor(configuracionTiempo.minutoActual).toString().padStart(2, '0');
     const segundos = Math.floor(configuracionTiempo.segundoActual).toString().padStart(2, '0');
@@ -268,11 +263,55 @@ function obtenerTimestampCorto() {
 }
 
 /**
+ * Formatea un timestamp completo usando el nombre de día recibido.
+ * El llamador decide la fuente del día (display u exportación).
+ * @param {string} nombreDia
+ * @returns {string} Formato: "Lunes 14:35:42"
+ */
+function formatearTimestampConDia(nombreDia) {
+    return `${nombreDia} ${formatearHoraVirtual()}`;
+}
+
+/**
+ * Obtiene timestamp virtual completo para display
+ * @returns {string} Formato: "Lunes 14:35:42"
+ */
+function obtenerTimestampVirtual() {
+    return formatearTimestampConDia(obtenerDiaString());
+}
+
+/**
+ * Obtiene timestamp virtual corto para gráficas
+ * @returns {string} Formato: "14:35:42"
+ */
+function obtenerTimestampCorto() {
+    return formatearHoraVirtual();
+}
+
+/**
  * Obtiene timestamp completo con día para exportación
+ * Formato legado estable, independiente del idioma de display.
  * @returns {string} Formato: "Lunes 14:35:42"
  */
 function obtenerTimestampExportacion() {
-    return obtenerTimestampVirtual();
+    return formatearTimestampConDia(obtenerDiaExportacion());
+}
+
+/**
+ * Obtiene el nombre del día para exportación (español legado estable)
+ * @returns {string} Nombre del día compatible con el formato exportado
+ */
+function obtenerDiaExportacion() {
+    return NOMBRES_DIAS_EXPORTACION[configuracionTiempo.diaActual];
+}
+
+/**
+ * Obtiene timestamp virtual corto para exportación (sin día)
+ * Formato numérico estable, independiente del idioma de display.
+ * @returns {string} Formato: "14:35:42"
+ */
+function obtenerTimestampCortoExportacion() {
+    return formatearHoraVirtual();
 }
 
 /**
@@ -611,6 +650,8 @@ window.obtenerDiaString = obtenerDiaString;
 window.obtenerTimestampVirtual = obtenerTimestampVirtual;
 window.obtenerTimestampCorto = obtenerTimestampCorto;
 window.obtenerTimestampExportacion = obtenerTimestampExportacion;
+window.obtenerDiaExportacion = obtenerDiaExportacion;
+window.obtenerTimestampCortoExportacion = obtenerTimestampCortoExportacion;
 window.obtenerMillisVirtuales = obtenerMillisVirtuales;
 window.obtenerProximoCambio = obtenerProximoCambio;
 window.obtenerDescripcionTrafico = obtenerDescripcionTrafico;

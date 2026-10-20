@@ -7,6 +7,7 @@
 // Historial de métricas con límite de 50 puntos de datos (solo para gráficas)
 const metricsHistory = {
     timestamps: [],
+    exportTimestamps: [], // Marcas de tiempo estables para CSV/JSON (independientes del display)
     density: [],
     netGeneration: [], // Tasa de cambio de población (antes "flow")
     throughput: [], // Flujo vehicular real (Q = k × v)
@@ -18,6 +19,7 @@ const metricsHistory = {
 // Historial COMPLETO de métricas sin límite (para exportación CSV)
 const completeMetricsHistory = {
     timestamps: [],
+    exportTimestamps: [], // Marcas de tiempo estables para CSV (independientes del display)
     density: [],
     netGeneration: [],
     throughput: [],
@@ -501,7 +503,9 @@ function calculateMetrics() {
  * @param {Object} metrics - Métricas calculadas
  */
 function updateMetricsHistory(metrics) {
-    // Usar tiempo virtual si está disponible, de lo contrario usar tiempo real
+    // Usar tiempo virtual si está disponible, de lo contrario usar tiempo real.
+    // El display y la exportación se calculan por separado para que una futura
+    // traducción del reloj visible no altere los archivos exportados.
     let timeStr;
     if (window.obtenerTimestampCorto) {
         timeStr = window.obtenerTimestampCorto();
@@ -511,9 +515,15 @@ function updateMetricsHistory(metrics) {
                   now.getMinutes().toString().padStart(2, '0') + ':' +
                   now.getSeconds().toString().padStart(2, '0');
     }
+    // Contextos antiguos sin formateador de exportación conservan la marca de
+    // tiempo que antes se exportaba (la del display).
+    const exportTimeStr = window.obtenerTimestampCortoExportacion
+        ? window.obtenerTimestampCortoExportacion()
+        : timeStr;
 
     // Agregar al historial limitado (para gráficas)
     metricsHistory.timestamps.push(timeStr);
+    metricsHistory.exportTimestamps.push(exportTimeStr);
     metricsHistory.density.push(parseFloat(metrics.density));
     metricsHistory.netGeneration.push(parseFloat(metrics.netGeneration));
     metricsHistory.throughput.push(parseFloat(metrics.throughput));
@@ -522,6 +532,7 @@ function updateMetricsHistory(metrics) {
 
     // Agregar al historial COMPLETO (sin límite, para exportación)
     completeMetricsHistory.timestamps.push(timeStr);
+    completeMetricsHistory.exportTimestamps.push(exportTimeStr);
     completeMetricsHistory.density.push(parseFloat(metrics.density));
     completeMetricsHistory.netGeneration.push(parseFloat(metrics.netGeneration));
     completeMetricsHistory.throughput.push(parseFloat(metrics.throughput));
@@ -531,6 +542,7 @@ function updateMetricsHistory(metrics) {
     // Limitar el historial de gráficas al número máximo de puntos de datos
     if (metricsHistory.timestamps.length > metricsHistory.maxDataPoints) {
         metricsHistory.timestamps.shift();
+        metricsHistory.exportTimestamps.shift();
         metricsHistory.density.shift();
         metricsHistory.netGeneration.shift();
         metricsHistory.throughput.shift();
@@ -562,7 +574,7 @@ function updateMetrics() {
 
 function clearMetricHistories() {
     for (const history of [metricsHistory, completeMetricsHistory]) {
-        for (const key of ['timestamps', 'density', 'netGeneration', 'throughput', 'speed', 'entropy']) {
+        for (const key of ['timestamps', 'exportTimestamps', 'density', 'netGeneration', 'throughput', 'speed', 'entropy']) {
             history[key].length = 0;
         }
     }
@@ -1070,11 +1082,14 @@ function descargarMetricasCSV() {
     const speedStats = calcularEstadisticas(completeMetricsHistory.speed);
     const entropyStats = calcularEstadisticas(completeMetricsHistory.entropy);
 
-    // Metadata del tiempo virtual (en español)
+    // Metadata del tiempo virtual (formato de exportación estable en español).
+    // Si un contexto antiguo no expone el formateador de exportación, se usa el
+    // de display para conservar la estructura del archivo.
+    const timestampExportacion = window.obtenerTimestampExportacion || window.obtenerTimestampVirtual;
     let csvContent = '';
-    if (window.configuracionTiempo && window.obtenerTimestampVirtual) {
+    if (window.configuracionTiempo && timestampExportacion) {
         csvContent += 'FLUVI - Simulador de Trafico - Exportacion de Metricas\n';
-        csvContent += `Tiempo Virtual: ${window.obtenerTimestampVirtual()}\n`;
+        csvContent += `Tiempo Virtual: ${timestampExportacion()}\n`;
         csvContent += `Perfiles Dinamicos Activos: ${window.configuracionTiempo.usarPerfiles ? 'Si' : 'No'}\n`;
         csvContent += `Tiempo por Paso: ${window.SEGUNDOS_POR_PASO || 1.0} segundo(s) simulados\n`;
         csvContent += `Total de Mediciones: ${completeMetricsHistory.timestamps.length}\n`;
@@ -1086,7 +1101,7 @@ function descargarMetricasCSV() {
 
     // Datos de series temporales (TODAS las medidas desde el inicio)
     for (let i = 0; i < completeMetricsHistory.timestamps.length; i++) {
-        csvContent += `${completeMetricsHistory.timestamps[i]},${completeMetricsHistory.density[i]},${completeMetricsHistory.throughput[i]},${completeMetricsHistory.netGeneration[i]},${completeMetricsHistory.speed[i]},${completeMetricsHistory.entropy[i]}\n`;
+        csvContent += `${completeMetricsHistory.exportTimestamps[i]},${completeMetricsHistory.density[i]},${completeMetricsHistory.throughput[i]},${completeMetricsHistory.netGeneration[i]},${completeMetricsHistory.speed[i]},${completeMetricsHistory.entropy[i]}\n`;
     }
 
     // Agregar línea en blanco y sección de estadísticas (en español)
@@ -1105,8 +1120,9 @@ function descargarMetricasCSV() {
 
     // Generar nombre de archivo con tiempo virtual si está disponible
     let fileName;
-    if (window.configuracionTiempo && window.obtenerDiaString) {
-        const dia = window.obtenerDiaString();
+    const obtenerDia = window.obtenerDiaExportacion || window.obtenerDiaString;
+    if (window.configuracionTiempo && obtenerDia) {
+        const dia = obtenerDia();
         const hora = Math.floor(window.configuracionTiempo.horaActual).toString().padStart(2, '0');
         const minuto = Math.floor(window.configuracionTiempo.minutoActual).toString().padStart(2, '0');
         fileName = `metricas_trafico_${dia}_${hora}h${minuto}m.csv`;
@@ -1158,10 +1174,12 @@ function descargarMetricasJSON() {
     };
 
     // Agregar información de tiempo virtual si está disponible
-    if (window.configuracionTiempo && window.obtenerTimestampVirtual) {
+    const timestampExportacionJSON = window.obtenerTimestampExportacion || window.obtenerTimestampVirtual;
+    const diaExportacionJSON = window.obtenerDiaExportacion || window.obtenerDiaString;
+    if (window.configuracionTiempo && timestampExportacionJSON && diaExportacionJSON) {
         metadata.virtualTime = {
-            currentTime: window.obtenerTimestampVirtual(),
-            day: window.obtenerDiaString(),
+            currentTime: timestampExportacionJSON(),
+            day: diaExportacionJSON(),
             hour: Math.floor(window.configuracionTiempo.horaActual),
             minute: Math.floor(window.configuracionTiempo.minutoActual),
             second: Math.floor(window.configuracionTiempo.segundoActual),
@@ -1175,7 +1193,7 @@ function descargarMetricasJSON() {
     const data = {
         metadata: metadata,
         metrics: {
-            timestamps: metricsHistory.timestamps,
+            timestamps: metricsHistory.exportTimestamps,
             density: metricsHistory.density,
             throughput: metricsHistory.throughput,
             netGeneration: metricsHistory.netGeneration,
@@ -1198,8 +1216,9 @@ function descargarMetricasJSON() {
 
     // Generar nombre de archivo con tiempo virtual si está disponible
     let fileName;
-    if (window.configuracionTiempo && window.obtenerDiaString) {
-        const dia = window.obtenerDiaString();
+    const obtenerDia = window.obtenerDiaExportacion || window.obtenerDiaString;
+    if (window.configuracionTiempo && obtenerDia) {
+        const dia = obtenerDia();
         const hora = Math.floor(window.configuracionTiempo.horaActual).toString().padStart(2, '0');
         const minuto = Math.floor(window.configuracionTiempo.minutoActual).toString().padStart(2, '0');
         fileName = `metricas_trafico_${dia}_${hora}h${minuto}m.json`;
