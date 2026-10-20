@@ -5,16 +5,17 @@
   const loadingStatus = document.getElementById('loadingStatus');
 
   let progress = 0;
-  const statusMessages = [
-    'Inicializando recursos...',
-    'Cargando librerías...',
-    'Preparando canvas...',
-    'Generando calles...',
-    'Calculando intersecciones...',
-    'Creando conexiones...',
-    'Iniciando simulación...',
-    'Listo!'
+  const statusMessageKeys = [
+    'loading.status.initializing',
+    'loading.status.libraries',
+    'loading.status.canvas',
+    'loading.status.streets',
+    'loading.status.intersections',
+    'loading.status.connections',
+    'loading.status.simulation',
+    'loading.status.ready'
   ];
+  const statusMessages = statusMessageKeys.map((key) => tr(key));
 
   let messageIndex = 0;
 
@@ -46,7 +47,7 @@
   window.hideLoadingScreen = () => {
     clearInterval(progressInterval);
     progressFill.style.width = '100%';
-    loadingStatus.textContent = 'Listo!';
+    loadingStatus.textContent = tr('loading.status.ready');
 
     setTimeout(() => {
       loadingScreen.classList.add('fade-out');
@@ -70,12 +71,12 @@
         // Inicializar motor gráfico PixiJS solo si está habilitado
         if (window.USE_PIXI && typeof inicializarMotorGrafico !== 'undefined') {
           try {
-            updateLoadingStatus('Inicializando motor gráfico...');
+            updateLoadingStatus(tr('loading.status.engine'));
             await inicializarMotorGrafico();
-            updateLoadingStatus('¡Listo!');
+            updateLoadingStatus(tr('loading.status.ready'));
           } catch (error) {
             console.error('❌ Error inicializando motor gráfico:', error);
-            alert('Error inicializando PixiJS. Revisa la consola para más detalles.');
+            fluviNotify.error('loading.error.engine');
           }
         } else if (!window.USE_PIXI) {
           console.log('ℹ️ PixiJS deshabilitado, usando Canvas 2D nativo');
@@ -83,19 +84,19 @@
 
         // Inicializar módulo de escenarios
         if (typeof inicializarEscenarios !== 'undefined') {
-          updateLoadingStatus('Inicializando escenarios...');
+          updateLoadingStatus(tr('loading.status.scenarios'));
           inicializarEscenarios();
         }
 
         // Inicializar gestión de escenarios
         if (typeof inicializarGestionEscenarios !== 'undefined') {
-          updateLoadingStatus('Inicializando gestión de escenarios...');
+          updateLoadingStatus(tr('loading.status.scenarioManagement'));
           inicializarGestionEscenarios();
         }
 
         // Inicializar calles excluidas por defecto en métricas
         if (typeof window.inicializarCallesExcluidasPorDefecto !== 'undefined') {
-          updateLoadingStatus('Configurando métricas...');
+          updateLoadingStatus(tr('loading.status.metrics'));
           window.inicializarCallesExcluidasPorDefecto();
         }
 

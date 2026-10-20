@@ -1,11 +1,13 @@
 import { cp, mkdir, rm } from "node:fs/promises"
 import { resolve } from "node:path"
 import { fileURLToPath } from "node:url"
+import { buildLocaleCatalogs } from "./build-locales.mjs"
 
 const rootDir = fileURLToPath(new URL("../", import.meta.url))
 
 // Preserve classic-script scope, HTML load order, and runtime asset URLs.
 export async function buildStaticSite(outDir = resolve(rootDir, "dist")) {
+	await buildLocaleCatalogs({ check: true })
 	const output = resolve(outDir)
 	if (output === rootDir || rootDir.startsWith(`${output}/`) ||
 		(output.startsWith(`${rootDir}/`) && output !== resolve(rootDir, "dist"))) {

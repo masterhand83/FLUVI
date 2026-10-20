@@ -1,0 +1,195 @@
+{
+  "common": {
+    "cancel": "Cancelar",
+    "close": "Cerrar",
+    "confirm": "Confirmar"
+  },
+  "loading": {
+    "error": {
+      "engine": "Error inicializando PixiJS. Revisa la consola para más detalles."
+    },
+    "instructions": {
+      "build": {
+        "body": "Diseña tus propios mapas y guárdalos para usarlos después",
+        "title": "🏗️ Construye"
+      },
+      "controls": {
+        "body": "Pausa, ajusta la velocidad y observa las métricas en tiempo real",
+        "title": "⏸️ Controla"
+      },
+      "customize": {
+        "body": "Crea curvas en calles, activa intersecciones y visualiza conexiones",
+        "title": "🌊 Personaliza"
+      },
+      "edit": {
+        "body": "Activa el modo edición para mover y rotar calles o edificios",
+        "title": "✏️ Edita"
+      },
+      "navigate": {
+        "body": "Zoom con la rueda, arrastra para moverte por el mapa",
+        "title": "🖱️ Navega"
+      },
+      "selection": {
+        "body": "Ctrl+Clic sobre calles o edificios para configurarlos rápidamente",
+        "title": "⚙️ Selección"
+      }
+    },
+    "status": {
+      "canvas": "Preparando canvas...",
+      "connections": "Creando conexiones...",
+      "engine": "Inicializando motor gráfico...",
+      "initializing": "Inicializando recursos...",
+      "intersections": "Calculando intersecciones...",
+      "libraries": "Cargando librerías...",
+      "metrics": "Configurando métricas...",
+      "ready": "¡Listo!",
+      "scenarioManagement": "Inicializando gestión de escenarios...",
+      "scenarios": "Inicializando escenarios...",
+      "simulation": "Iniciando simulación...",
+      "streets": "Generando calles..."
+    },
+    "title": "Cargando simulación..."
+  },
+  "notifications": {
+    "simulation": {
+      "changesAppliedGenerator": "Se actualizaron las probabilidades de «{{name}}»:\n• Generación: {{generation}}%\n• Cambio de carril: {{laneChange}}%",
+      "changesAppliedLaneChange": "Se actualizaron las probabilidades de «{{name}}»:\n• Cambio de carril: {{laneChange}}%",
+      "generationRange": "La probabilidad de generación debe estar entre 0 y 100.",
+      "laneChangeRange": "La probabilidad de cambio de carril debe estar entre 0 y 100."
+    },
+    "streetSelection": {
+      "required": "Por favor selecciona una calle primero."
+    },
+    "title": {
+      "error": "Error",
+      "info": "Información",
+      "success": "Éxito",
+      "warning": "Advertencia"
+    }
+  },
+  "settings": {
+    "language": {
+      "description": "Se aplica la próxima vez que inicies la aplicación.",
+      "invalid": "Selecciona Español o English.",
+      "label": "Idioma",
+      "savedNotice": "El idioma seleccionado se aplicará la próxima vez que inicies FLUVI.",
+      "storageError": "No se pudo guardar la preferencia de idioma. La sesión actual sigue funcionando y el idioma no cambia."
+    }
+  },
+  "sidebar": {
+    "editMode": "🔧 MODO EDICIÓN ACTIVO",
+    "heading": {
+      "about": "ℹ️ Sobre FLUVI",
+      "constructor": "🏗️ Constructor de Mapas",
+      "metrics": "📈 Métricas de la Simulación",
+      "scenarios": "🎬 Configuración de Escenarios",
+      "settings": "⚙️ Configuración",
+      "streetSettings": "⚙️ Configuración de Calles",
+      "tools": "✏️ Herramientas"
+    },
+    "sidebarToggle": {
+      "hide": "Ocultar panel de control",
+      "show": "Mostrar panel de control"
+    },
+    "title": "Panel de Control"
+  },
+  "simulation": {
+    "clear": "Borrar vehículos",
+    "clearTooltip": "Borrar todos los vehículos de todas las calles",
+    "connections": "Mostrar u ocultar conexiones entre calles",
+    "connectionsTooltip": "Mostrar/ocultar las conexiones entre calles en el canvas",
+    "generation": "Generación:",
+    "generationTooltip": "Controla la probabilidad de generación de vehículos del botón '🎲'",
+    "info": {
+      "clock": "Hora:",
+      "fps": "FPS:",
+      "generation": "Generación:",
+      "multiplier": "Mult. de Gen. de Vehíc. por hora:",
+      "population": "Vehículos:",
+      "timePerFrame": "Tiempo/Frame:"
+    },
+    "parkingCounters": "Mostrar u ocultar contadores de estacionamiento",
+    "parkingCountersTooltip": "Mostrar/ocultar contadores de ocupación de estacionamientos",
+    "pause": "Pausar simulación",
+    "pauseTooltip": "Pausar o reanudar la simulación de tráfico",
+    "profiles": "Perfiles",
+    "profilesTooltip": "Activar/desactivar perfiles dinámicos de tráfico según día y hora",
+    "random": "Llenar con vehículos aleatorios",
+    "randomTooltip": "Llenar las calles con vehículos aleatorios",
+    "resume": "Reanudar simulación",
+    "speed": "Velocidad:",
+    "speedTooltip": "Controla la velocidad de la simulación (cuántos ciclos por segundo)",
+    "step": "Avanzar un paso",
+    "stepTooltip": "Avanzar un paso de la simulación (solo disponible cuando está en pausa)"
+  },
+  "streetInspector": {
+    "addAnchor": "Ancla fija",
+    "addAnchorHelp": "El ancla guía un giro redondeado: la calle pasa cerca, no exactamente por ella.",
+    "addBezier": "Control Bézier",
+    "addChoiceLabel": "Añadir a la sección seleccionada",
+    "addControl": "+ Añadir control",
+    "anchor": "Ancla fija {{number}}",
+    "angle": "Ángulo (°)",
+    "cells": "Celdas",
+    "centerX": "Centro X",
+    "centerY": "Centro Y",
+    "close": "Cerrar el inspector de calle",
+    "control": "Control {{number}}",
+    "deleteAnchor": "Eliminar ancla",
+    "deleteControl": "Eliminar control",
+    "deleteStreet": "Eliminar calle",
+    "direction": {
+      "clockwise": "sentido horario",
+      "counterclockwise": "sentido antihorario",
+      "forward": "adelante",
+      "reverse": "reversa"
+    },
+    "endX": "Fin X",
+    "endY": "Fin Y",
+    "errors": {
+      "cellCountUnsupported": "La geometría no admite ese número de celdas.",
+      "deletePoint": "No se puede eliminar el punto: la curva resultante no es válida.",
+      "duplicateName": "Ya existe una calle con ese nombre.",
+      "emptyName": "El nombre no puede estar vacío.",
+      "invalidCells": "Introduce un número entero entre 1 y 2500.",
+      "invalidCurve": "La geometría de la curva no es válida.",
+      "invalidNumber": "Introduce un número válido.",
+      "invalidProbability": "La probabilidad debe estar entre 0 y 100 %.",
+      "invalidRadius": "Introduce un radio válido.",
+      "invalidRadiusGeometry": "El radio interior no es válido.",
+      "invalidRoundabout": "La geometría de la glorieta no es válida.",
+      "invalidType": "Selecciona un tipo de calle válido.",
+      "maxLanes": "El número máximo de carriles es 10.",
+      "splitSection": "No se pudo dividir esta sección."
+    },
+    "generateVehicles": "Generar vehículos",
+    "generateVehiclesLane": "Generar vehículos en carril {{lane}}",
+    "generation": "Generación (%)",
+    "innerRadius": "Radio interior",
+    "laneChange": "Cambio de carril (%)",
+    "laneDirection": "Carril {{lane}}: {{direction}}. Cambiar sentido",
+    "laneDirections": "Sentido por carril",
+    "laneDirectionsCount_many": "{{count}} carriles",
+    "laneDirectionsCount_one": "{{count}} carril",
+    "laneDirectionsCount_other": "{{count}} carriles",
+    "lanes": "Carriles",
+    "name": "Nombre",
+    "removeNamed": "Eliminar {{name}}",
+    "section": "Sección {{number}}",
+    "sectionsCount_many": "Secciones ({{count}})",
+    "sectionsCount_one": "Sección ({{count}})",
+    "sectionsCount_other": "Secciones ({{count}})",
+    "select": "Seleccionar",
+    "selectedAnchor": "Ancla fija seleccionada",
+    "selectedControl": "Control seleccionado",
+    "title": "Inspector de calle",
+    "type": "Tipo",
+    "typeOption": {
+      "connection": "Conexión (tipo de calle)",
+      "generator": "Generador",
+      "sink": "Devorador"
+    },
+    "x": "X",
+    "y": "Y"
+  }
+}

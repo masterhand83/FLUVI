@@ -9,6 +9,9 @@
     "test:smoke": "node tests/smoke/smoke.mjs && node tests/smoke/reference-image-lock.mjs && node tests/smoke/linked-reference-image.mjs && node tests/smoke/draw-street.mjs && node tests/smoke/diagonal-street.mjs && node tests/smoke/street-edit.mjs && node tests/smoke/street-handles.mjs && node tests/smoke/curve-street.mjs && node tests/smoke/rectangular-building.mjs && node tests/smoke/functional-parking-outline.mjs && node tests/smoke/car-click.mjs && node tests/smoke/bezier-car-click.mjs && node tests/smoke/car-click-performance.mjs && node tests/smoke/create-link.mjs && node tests/smoke/connection-types.mjs && node tests/smoke/lane-direction-ui.mjs && node tests/smoke/mixed-direction-link-draft.mjs && node tests/smoke/roundabout-link-draft.mjs && node tests/smoke/roundabout.mjs",
     "test:baseline:record": "node tests/baseline/record.mjs",
     "dev": "vite --host 127.0.0.1",
+    "locales:build": "node scripts/build-locales.mjs",
+    "locales:extract": "i18next-cli extract",
+    "locales:status": "i18next-cli status && node scripts/validate-locales.mjs",
     "lint": "biome lint . --reporter=summary --diagnostic-level=error",
     "lint:fix": "biome lint . --write"
   },
@@ -17,6 +20,8 @@
   "license": "ISC",
   "type": "module",
   "devDependencies": {
+    "i18next": "26.5.3",
+    "i18next-cli": "1.78.0",
     "puppeteer-core": "^25.10.0",
     "vite": "^8.2.2",
     "vitest": "4.1.11"

@@ -4393,7 +4393,7 @@ function iniciarSimulacion() {
 
         // Validar que haya una calle seleccionada
         if (calleIndex === "") {
-            mostrarNotificacion('error', 'Error', 'Por favor selecciona una calle primero.');
+            fluviNotify.error('notifications.streetSelection.required');
             return;
         }
 
@@ -4402,7 +4402,6 @@ function iniciarSimulacion() {
         const esTipoGenerador = calleActual.tipo === TIPOS.GENERADOR;
 
         let valorGeneracion = 0;
-        let mensajeGeneracion = '';
 
         // Solo validar y actualizar probabilidad de generación si es tipo GENERADOR
         if (esTipoGenerador) {
@@ -4411,19 +4410,17 @@ function iniciarSimulacion() {
             // Validar valores de probabilidad de generación
             if (isNaN(valorGeneracion) || valorGeneracion < 0 || valorGeneracion > 100) {
                 inputProbabilidadGeneracion.classList.add('is-invalid');
-                mostrarNotificacion('error', 'Error de Validación', 'La probabilidad de generación debe estar entre 0 y 100.');
+                fluviNotify.error('notifications.simulation.generationRange');
                 return;
             } else {
                 inputProbabilidadGeneracion.classList.remove('is-invalid');
             }
-
-            mensajeGeneracion = `• Generación: ${valorGeneracion}%\n`;
         }
 
         // Validar valores de probabilidad de salto (siempre se valida)
         if (isNaN(valorSalto) || valorSalto < 0 || valorSalto > 100) {
             inputProbabilidadSalto.classList.add('is-invalid');
-            mostrarNotificacion('error', 'Error de Validación', 'La probabilidad de cambio de carril debe estar entre 0 y 100.');
+            fluviNotify.error('notifications.simulation.laneChangeRange');
             return;
         } else {
             inputProbabilidadSalto.classList.remove('is-invalid');
@@ -4443,10 +4440,18 @@ function iniciarSimulacion() {
         calleActual.probabilidadSaltoDeCarril = nuevaProbabilidadSalto;
 
         // Mostrar notificación de éxito
-        mostrarNotificacion('success', 'Cambios Aplicados',
-            `Se actualizaron las probabilidades de "${nombreCalle}":\n` +
-            mensajeGeneracion +
-            `• Cambio de carril: ${valorSalto}%`);
+        if (esTipoGenerador) {
+            fluviNotify.success('notifications.simulation.changesAppliedGenerator', {
+                name: nombreCalle,
+                generation: valorGeneracion,
+                laneChange: valorSalto
+            });
+        } else {
+            fluviNotify.success('notifications.simulation.changesAppliedLaneChange', {
+                name: nombreCalle,
+                laneChange: valorSalto
+            });
+        }
     });
 
     // Validación en tiempo real para inputs de probabilidades
@@ -4575,12 +4580,14 @@ function iniciarSimulacion() {
             if (isPaused) {
                 // No cancelar animationFrame - dejar que siga corriendo pero sin ejecutar paso()
                 btnPauseResume.textContent = '▶️';
+                window.fluviI18n?.setAttribute(btnPauseResume, 'aria-label', 'simulation.resume');
                 btnPaso.disabled = false;
                 console.log('⏸️ Simulación pausada');
             } else {
                 // Resetear tiempoAnterior para evitar saltos temporales al reanudar
                 tiempoAnterior = performance.now();
                 btnPauseResume.textContent = '⏸';
+                window.fluviI18n?.setAttribute(btnPauseResume, 'aria-label', 'simulation.pause');
                 btnPaso.disabled = true;
                 console.log('▶️ Simulación reanudada');
             }

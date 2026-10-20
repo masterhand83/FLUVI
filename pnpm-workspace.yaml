@@ -2,5 +2,8 @@ packages:
   - "apps/*"
   - "packages/*"
 allowBuilds:
+  '@swc/core': true
   msgpackr-extract: true
   workerd: true
+minimumReleaseAgeExclude:
+  - i18next-cli@1.78.0

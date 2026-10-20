@@ -1,10 +1,29 @@
 /**
  * notifications.js - Sistema de notificaciones con Bootstrap Toasts
- * Proporciona feedback visual al usuario mediante toasts
+ * Proporciona feedback visual al usuario mediante toasts.
+ *
+ * Las rutas migradas usan `fluviNotify` con claves de catálogo y una severidad
+ * explícita. Las funciones heredadas siguen funcionando para llamadas que aún
+ * no se han migrado.
  */
 
+function notificationTitle(tipo) {
+    switch (tipo) {
+        case 'success':
+            return tr('notifications.title.success');
+        case 'error':
+            return tr('notifications.title.error');
+        case 'warning':
+            return tr('notifications.title.warning');
+        default:
+            return tr('notifications.title.info');
+    }
+}
+
 /**
- * Muestra una notificación toast
+ * Muestra una notificación toast.
+ * El título y el mensaje se asignan como texto, nunca como HTML: los nombres y
+ * números interpolados se conservan literalmente y no pueden inyectar marcado.
  * @param {string} tipo - Tipo de notificación: 'success', 'error', 'warning', 'info'
  * @param {string} titulo - Título de la notificación
  * @param {string} mensaje - Mensaje descriptivo
@@ -49,29 +68,38 @@ function mostrarNotificacion(tipo, titulo, mensaje, duracion = 5000) {
     // Crear ID único para el toast
     const toastId = `toast-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-    // Convertir saltos de línea a <br> para el mensaje
-    const mensajeHTML = mensaje.replace(/\n/g, '<br>');
+    const toastElement = document.createElement('div');
+    toastElement.id = toastId;
+    toastElement.className = 'toast';
+    toastElement.setAttribute('role', 'alert');
+    toastElement.setAttribute('aria-live', 'assertive');
+    toastElement.setAttribute('aria-atomic', 'true');
+    toastElement.dataset.bsDelay = String(duracion);
 
-    // Crear el HTML del toast
-    const toastHTML = `
-        <div id="${toastId}" class="toast" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="${duracion}">
-            <div class="toast-header ${cfg.bgClass} ${cfg.textClass}">
-                <strong class="me-auto">
-                    <span class="me-2">${cfg.icon}</span>${titulo}
-                </strong>
-                <button type="button" class="btn-close ${cfg.textClass === 'text-white' ? 'btn-close-white' : ''}" data-bs-dismiss="toast" aria-label="Close"></button>
-            </div>
-            <div class="toast-body">
-                ${mensajeHTML}
-            </div>
-        </div>
-    `;
+    const header = document.createElement('div');
+    header.className = `toast-header ${cfg.bgClass} ${cfg.textClass}`;
 
-    // Insertar el toast en el contenedor
-    toastContainer.insertAdjacentHTML('beforeend', toastHTML);
+    const title = document.createElement('strong');
+    title.className = 'me-auto';
+    const icon = document.createElement('span');
+    icon.className = 'me-2';
+    icon.textContent = cfg.icon;
+    title.append(icon, document.createTextNode(String(titulo)));
 
-    // Obtener el elemento del toast
-    const toastElement = document.getElementById(toastId);
+    const closeButton = document.createElement('button');
+    closeButton.type = 'button';
+    closeButton.className = `btn-close ${cfg.textClass === 'text-white' ? 'btn-close-white' : ''}`;
+    closeButton.dataset.bsDismiss = 'toast';
+    closeButton.setAttribute('aria-label', tr('common.close'));
+
+    const body = document.createElement('div');
+    body.className = 'toast-body';
+    body.style.whiteSpace = 'pre-line';
+    body.textContent = String(mensaje);
+
+    header.append(title, closeButton);
+    toastElement.append(header, body);
+    toastContainer.append(toastElement);
 
     // Inicializar y mostrar el toast con Bootstrap
     const toast = new bootstrap.Toast(toastElement, {
@@ -90,6 +118,7 @@ function mostrarNotificacion(tipo, titulo, mensaje, duracion = 5000) {
     if (window.CONSOLE_LOGS_ENABLED) {
         console.log(`📢 Notificación [${tipo}]: ${titulo} - ${mensaje}`);
     }
+    return toastElement;
 }
 
 /**
@@ -112,6 +141,27 @@ function mostrarInfo(titulo, mensaje, duracion) {
 }
 
 /**
+ * Notificaciones migradas: severidad explícita y mensaje desde catálogo.
+ */
+function keyedNotification(tipo, key, params, duracion) {
+    return mostrarNotificacion(tipo, notificationTitle(tipo), tr(key, params), duracion);
+}
+
+function keyedConfirmation(titleKey, messageKey, params, onConfirm, onCancel, options = {}) {
+    const titulo = trEscaped(titleKey, params);
+    const mensaje = trEscaped(messageKey, params).replace(/\n/g, '<br>');
+    mostrarConfirmacion(titulo, mensaje, onConfirm, onCancel, options);
+}
+
+window.fluviNotify = Object.freeze({
+    success: (key, params, duracion) => keyedNotification('success', key, params, duracion),
+    error: (key, params, duracion) => keyedNotification('error', key, params, duracion),
+    warning: (key, params, duracion) => keyedNotification('warning', key, params, duracion),
+    info: (key, params, duracion) => keyedNotification('info', key, params, duracion),
+    confirm: keyedConfirmation
+});
+
+/**
  * Sobrescribir alert() nativo para usar toasts Bootstrap
  * Mantiene una referencia al alert() original por si se necesita
  */
@@ -120,24 +170,20 @@ window.alertOriginal = window.alert;
 window.alert = (mensaje) => {
     // Determinar el tipo de notificación basado en el mensaje
     let tipo = 'info';
-    let titulo = 'Notificación';
 
     if (mensaje.includes('✅') || mensaje.includes('exitosa') || mensaje.includes('exitosamente') || mensaje.includes('guardad')) {
         tipo = 'success';
-        titulo = 'Éxito';
     } else if (mensaje.includes('❌') || mensaje.includes('Error') || mensaje.includes('error')) {
         tipo = 'error';
-        titulo = 'Error';
     } else if (mensaje.includes('⚠️') || mensaje.includes('Advertencia') || mensaje.includes('advertencia')) {
         tipo = 'warning';
-        titulo = 'Advertencia';
     }
 
     // Limpiar emojis del título si ya están en el mensaje
     const mensajeLimpio = mensaje.replace(/^(✅|❌|⚠️|ℹ️)\s*/, '');
 
     // Mostrar como toast
-    mostrarNotificacion(tipo, titulo, mensajeLimpio, 5000);
+    mostrarNotificacion(tipo, notificationTitle(tipo), mensajeLimpio, 5000);
 };
 
 /**
@@ -149,11 +195,11 @@ window.alert = (mensaje) => {
  * @param {Object} opciones - Opciones adicionales { btnConfirmText, btnConfirmClass, btnCancelText }
  */
 function mostrarConfirmacion(titulo, mensaje, onConfirm, onCancel = null, opciones = {}) {
-    // Opciones por defecto
+    // Opciones por defecto, traducidas al idioma de la sesión activa
     const config = {
-        btnConfirmText: opciones.btnConfirmText || 'Confirmar',
+        btnConfirmText: opciones.btnConfirmText || tr('common.confirm'),
         btnConfirmClass: opciones.btnConfirmClass || 'btn-danger',
-        btnCancelText: opciones.btnCancelText || 'Cancelar',
+        btnCancelText: opciones.btnCancelText || tr('common.cancel'),
         btnCancelClass: opciones.btnCancelClass || 'btn-secondary'
     };
 
@@ -167,7 +213,7 @@ function mostrarConfirmacion(titulo, mensaje, onConfirm, onCancel = null, opcion
                 <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title" id="${modalId}Label">${titulo}</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="${tr('common.close')}"></button>
                     </div>
                     <div class="modal-body">
                         ${mensaje}
@@ -201,8 +247,10 @@ function mostrarConfirmacion(titulo, mensaje, onConfirm, onCancel = null, opcion
 
     // Event listener para el botón de cancelar (quitar foco antes de cerrar)
     if (btnCancel) {
-        btnCancel.addEventListener('click', () => {
+        btnCancel.addEventListener('click', (event) => {
+            event.preventDefault();
             btnCancel.blur();
+            modal.hide();
         });
     }
 

@@ -24,6 +24,7 @@ function canvasFor(street) {
         obtenerCoordenadasGlobalesCelda: (_road, lane, index) => ({ x: index * 5, y: lane * 5 }),
         obtenerCoordenadasGlobalesCeldaConCurva: window.obtenerCoordenadasGlobalesCeldaConCurva,
         obtenerImagenVehiculo: () => ({ complete: true, naturalHeight: 5 }),
+        obtenerImagenCelda: () => ({ complete: true, naturalHeight: 5 }),
         obtenerColorVehiculo: () => 'red' };
     runInNewContext(`const getLaneDirection = window.getLaneDirection;\n${arrows}\n${vehicles}\nwindow.drawArrows = dibujarDireccionesCarriles; window.drawCars = dibujarCarros;`, context);
     return { window, rotations };

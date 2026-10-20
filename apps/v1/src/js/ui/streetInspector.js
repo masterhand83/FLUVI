@@ -91,8 +91,8 @@
 		fields.endX.value = calle.endX ?? "";
 		fields.endY.value = calle.endY ?? "";
 		const roundabout = isRoundabout(calle);
-		document.getElementById('streetInspectorXLabel').textContent = roundabout ? 'Centro X' : 'X';
-		document.getElementById('streetInspectorYLabel').textContent = roundabout ? 'Centro Y' : 'Y';
+		document.getElementById('streetInspectorXLabel').textContent = roundabout ? tr('streetInspector.centerX') : tr('streetInspector.x');
+		document.getElementById('streetInspectorYLabel').textContent = roundabout ? tr('streetInspector.centerY') : tr('streetInspector.y');
 		radiusRow.hidden = !roundabout;
 		document.getElementById('streetInspectorAngleRow').hidden = roundabout;
 		document.getElementById('streetInspectorTypeRow').hidden = roundabout;
@@ -106,6 +106,7 @@
 		fields.lanes.value = calle.carriles ?? calle.arreglo?.length ?? "";
 		if (directionsHost) {
 			directionsHost.replaceChildren();
+			directionsHost.setAttribute('aria-label', tr('streetInspector.laneDirectionsCount', { count: calle.carriles }));
 			for (let lane = 0; lane < calle.carriles; lane++) {
 				const row = document.createElement("div");
 				row.className = "d-flex align-items-center gap-2 mb-1";
@@ -118,7 +119,10 @@
 					const reversed = calle.laneDirections?.[lane] === -1;
 					button.textContent = roundabout ? (reversed ? "↺" : "↻") : reversed ? "←" : "→";
 					button.setAttribute("aria-pressed", String(reversed));
-					button.setAttribute("aria-label", `Carril ${lane + 1}: ${roundabout ? (reversed ? "sentido antihorario" : "sentido horario") : (reversed ? "reversa" : "adelante")}. Cambiar sentido`);
+					const direction = roundabout
+						? tr(reversed ? 'streetInspector.direction.counterclockwise' : 'streetInspector.direction.clockwise')
+						: tr(reversed ? 'streetInspector.direction.reverse' : 'streetInspector.direction.forward');
+					button.setAttribute("aria-label", tr('streetInspector.laneDirection', { lane: lane + 1, direction }));
 				};
 				updateButton();
 				button.addEventListener("click", () => {
@@ -139,14 +143,14 @@
 					checkbox.type = "checkbox";
 					checkbox.className = "form-check-input";
 					checkbox.checked = calle.laneGenerationEnabled?.[lane] !== false;
-					checkbox.setAttribute("aria-label", `Generar vehículos en carril ${lane + 1}`);
+					checkbox.setAttribute("aria-label", tr('streetInspector.generateVehiclesLane', { lane: lane + 1 }));
 					checkbox.addEventListener("change", () => {
 						if (selected !== calle) return;
 						window.streetEditPause?.();
 						calle.laneGenerationEnabled = Array.from({ length: calle.carriles }, (_, i) =>
 							i === lane ? checkbox.checked : calle.laneGenerationEnabled?.[i] !== false);
 					});
-					label.append(checkbox, "Generar vehículos");
+					label.append(checkbox, tr('streetInspector.generateVehicles'));
 					row.append(label);
 				}
 				directionsHost.append(row);
@@ -163,7 +167,7 @@
 			controlsHost.hidden = !isBezier(calle);
 			const parts = isBezier(calle) ? sections(calle) : [];
 			const count = document.createElement("strong");
-			count.textContent = `Secciones (${parts.length})`;
+			count.textContent = tr('streetInspector.sectionsCount', { count: parts.length });
 			controlsHost.append(count);
 			const addRow = (labelText, kind, segmentIndex, controlIndex) => {
 				const row = document.createElement("div");
@@ -173,14 +177,14 @@
 				const select = document.createElement("button");
 				select.type = "button";
 				select.className = "btn btn-sm btn-outline-secondary";
-				select.textContent = "Seleccionar";
+				select.textContent = tr('streetInspector.select');
 				select.setAttribute("aria-pressed", String(kind === "anchor" ? selectedAnchorIndex === segmentIndex : selectedAnchorIndex == null && selectedSegmentIndex === segmentIndex && selectedControlIndex === controlIndex));
 				select.addEventListener("click", () => kind === "anchor" ? selectAnchor(segmentIndex) : selectControl(segmentIndex, controlIndex));
 				const remove = document.createElement("button");
 				remove.type = "button";
 				remove.className = "btn btn-sm btn-outline-danger";
 				remove.textContent = "−";
-				remove.setAttribute("aria-label", `Eliminar ${labelText.toLowerCase()}`);
+				remove.setAttribute("aria-label", tr('streetInspector.removeNamed', { name: labelText.toLocaleLowerCase() }));
 				remove.addEventListener("click", () => {
 					if (kind === "anchor") selectAnchor(segmentIndex);
 					else selectControl(segmentIndex, controlIndex);
@@ -193,7 +197,7 @@
 				const heading = document.createElement("button");
 				heading.type = "button";
 				heading.className = "btn btn-sm btn-outline-secondary street-inspector-section";
-				heading.textContent = `Sección ${segmentIndex + 1}`;
+				heading.textContent = tr('streetInspector.section', { number: segmentIndex + 1 });
 				heading.setAttribute("aria-pressed", String(selectedSegmentIndex === segmentIndex && selectedAnchorIndex == null && selectedControlIndex == null));
 				heading.addEventListener("click", () => {
 					selectedSegmentIndex = segmentIndex;
@@ -203,9 +207,9 @@
 				});
 				controlsHost.append(heading);
 				part.controls.forEach((_, index) => {
-					addRow(`Control ${index + 1}`, "control", segmentIndex, index);
+					addRow(tr('streetInspector.control', { number: index + 1 }), "control", segmentIndex, index);
 				});
-				if (segmentIndex < parts.length - 1) addRow(`Ancla fija ${segmentIndex + 1}`, "anchor", segmentIndex);
+				if (segmentIndex < parts.length - 1) addRow(tr('streetInspector.anchor', { number: segmentIndex + 1 }), "anchor", segmentIndex);
 			});
 		}
 		const parts = isBezier(calle) ? sections(calle) : [];
@@ -213,8 +217,8 @@
 		selectedControlPanel.hidden =
 			!point;
 		if (!selectedControlPanel.hidden) {
-			pointLabel.textContent = selectedAnchorIndex != null ? "Ancla fija seleccionada" : "Control seleccionado";
-			deleteControlButton.textContent = selectedAnchorIndex != null ? "Eliminar ancla" : "Eliminar control";
+			pointLabel.textContent = tr(selectedAnchorIndex != null ? 'streetInspector.selectedAnchor' : 'streetInspector.selectedControl');
+			deleteControlButton.textContent = tr(selectedAnchorIndex != null ? 'streetInspector.deleteAnchor' : 'streetInspector.deleteControl');
 		}
 	};
 	function show(calle) {
@@ -276,9 +280,9 @@
 				return true;
 			}
 			if (field === fields.name) {
-				if (!value) return fail(field, "El nombre no puede estar vacío.");
+				if (!value) return fail(field, tr('streetInspector.errors.emptyName'));
 				if (!uniqueName(value))
-					return fail(field, "Ya existe una calle con ese nombre.");
+					return fail(field, tr('streetInspector.errors.duplicateName'));
 				selected.nombre = value;
 				selected.id = value;
 				for (const id of ["selectCalle", "selectCalleEditor"]) {
@@ -295,7 +299,7 @@
 				field === fields.endY
 			) {
 				if (value === "" || !Number.isFinite(numeric))
-					return fail(field, "Introduce un número válido.");
+					return fail(field, tr('streetInspector.errors.invalidNumber'));
 				const prop =
 					field === fields.angle
 						? "angulo"
@@ -350,14 +354,14 @@
 					}
 					candidate = candidateWithSections(candidate, sections(candidate).map((part) => ({ controls: part.controls.map(transform), end: transform(part.end) })));
 					if (!applyCurve(candidate))
-						return fail(field, "La geometría de la curva no es válida.");
+						return fail(field, tr('streetInspector.errors.invalidCurve'));
 					return true;
 				}
 				const old = selected[prop];
 				selected[prop] = numeric;
 				if (isRoundabout(selected) && !window.roundaboutStreet?.validate?.(selected)?.valid) {
 					selected[prop] = old;
-					return fail(field, "La geometría de la glorieta no es válida.");
+					return fail(field, tr('streetInspector.errors.invalidRoundabout'));
 				}
 				if (
 					selected.esCurva &&
@@ -365,7 +369,7 @@
 					!window.streetBezier.validate(selected).valid
 				) {
 					selected[prop] = old;
-					return fail(field, "La geometría de la curva no es válida.");
+					return fail(field, tr('streetInspector.errors.invalidCurve'));
 				}
 			} else if (field === fields.cells || field === fields.lanes) {
 				if (
@@ -374,16 +378,16 @@
 					numeric < 1 ||
 					(field === fields.cells && numeric > 2500)
 				)
-					return fail(field, "Introduce un número entero entre 1 y 2500.");
+					return fail(field, tr('streetInspector.errors.invalidCells'));
 				const cells =
 					field === fields.cells ? numeric : Number(selected.tamano);
 				const lanes =
 					field === fields.lanes ? numeric : Number(selected.carriles);
 				if (field === fields.lanes && numeric > 10)
-					return fail(field, "El número máximo de carriles es 10.");
+					return fail(field, tr('streetInspector.errors.maxLanes'));
 				if (isRoundabout(selected)) {
 					const result = window.roundaboutStreet?.validate?.({ ...selected, carriles: lanes });
-					if (!result?.valid) return fail(field, result?.reason || "La geometría de la glorieta no es válida.");
+					if (!result?.valid) return fail(field, result?.reason || tr('streetInspector.errors.invalidRoundabout'));
 					window.streetEditPause?.();
 					window.editorCalles?.aplicarNuevasDimensiones?.(selected, result.cells, lanes);
 					readModel(selected);
@@ -393,21 +397,21 @@
 				if (field === fields.cells && isBezier(selected)) {
 					const currentGeometry = window.streetBezier.validate(selected);
 					if (!currentGeometry.valid || !currentGeometry.cells)
-						return fail(field, "La geometría de la curva no es válida.");
+						return fail(field, tr('streetInspector.errors.invalidCurve'));
 					const candidate = scaleCurve(
 						selected,
 						numeric / currentGeometry.cells,
 					);
 					candidate.tamano = numeric;
 					if (!applyCurve(candidate))
-						return fail(field, "La geometría no admite ese número de celdas.");
+						return fail(field, tr('streetInspector.errors.cellCountUnsupported'));
 					return true;
 				}
 				if (field === fields.lanes && isBezier(selected)) {
 					const proposed = { ...selected, carriles: lanes };
 					const result = window.streetBezier.validate(proposed);
 					if (!result.valid)
-						return fail(field, "La geometría de la curva no es válida.");
+						return fail(field, tr('streetInspector.errors.invalidCurve'));
 					window.streetEditPause?.();
 					if (result.cells !== selected.tamano || lanes !== selected.carriles) {
 						if (window.editorCalles?.aplicarNuevasDimensiones) {
@@ -465,9 +469,9 @@
 					selected.laneGenerationEnabled = Array.from({ length: lanes }, (_, lane) => selected.laneGenerationEnabled?.[lane] !== false);
 				}
 			} else if (field === fields.radius) {
-				if (value === "" || !Number.isFinite(numeric)) return fail(field, "Introduce un radio válido.");
+				if (value === "" || !Number.isFinite(numeric)) return fail(field, tr('streetInspector.errors.invalidRadius'));
 				const result = window.roundaboutStreet?.validate?.({ ...selected, innerRadius: numeric });
-				if (!result?.valid) return fail(field, result?.reason || "El radio interior no es válido.");
+				if (!result?.valid) return fail(field, result?.reason || tr('streetInspector.errors.invalidRadiusGeometry'));
 				if (numeric !== selected.innerRadius) {
 					window.streetEditPause?.();
 					window.editorCalles?.aplicarNuevasDimensiones?.(selected, result.cells, selected.carriles);
@@ -475,7 +479,7 @@
 				}
 			} else if (field === fields.type) {
 				if (!["generador", "conexion", "devorador"].includes(value))
-					return fail(field, "Selecciona un tipo de calle válido.");
+					return fail(field, tr('streetInspector.errors.invalidType'));
 				if (value !== selected.tipo) window.streetEditPause?.();
 				if (value === "generador" && selected.tipo !== "generador")
 					selected.probabilidadGeneracion = 0.5;
@@ -489,7 +493,7 @@
 					numeric < 0 ||
 					numeric > 100
 				)
-					return fail(field, "La probabilidad debe estar entre 0 y 100 %.");
+					return fail(field, tr('streetInspector.errors.invalidProbability'));
 				if (field === fields.generation)
 					selected.probabilidadGeneracion = numeric / 100;
 				else selected.probabilidadSaltoDeCarril = numeric / 100;
@@ -628,7 +632,7 @@
 			readModel(selected);
 		} else
 			error.textContent =
-				"No se puede eliminar el punto: la curva resultante no es válida.";
+				tr('streetInspector.errors.deletePoint');
 	}
 	deleteControlButton?.addEventListener("click", deleteSelectedControl);
 	document.getElementById("streetInspectorDeleteStreet")?.addEventListener("click", () => {
@@ -708,11 +712,11 @@
 		const index = sectionIndex(parts);
 		const split = window.streetBezier?.splitSegment?.(candidate, index, 0.5);
 		if (!Array.isArray(split) || split.length !== parts.length + 1) {
-			error.textContent = "No se pudo dividir esta sección.";
+			error.textContent = tr('streetInspector.errors.splitSection');
 			return;
 		}
 		if (applyCurve(candidateWithSections(candidate, split, true))) selectAnchor(index);
-		else error.textContent = "La geometría de la curva no es válida.";
+		else error.textContent = tr('streetInspector.errors.invalidCurve');
 	});
 	document.addEventListener(
 		"keydown",

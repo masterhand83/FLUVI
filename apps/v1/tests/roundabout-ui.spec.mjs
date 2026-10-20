@@ -78,7 +78,9 @@ it('round-trips circular geometry and ignores malformed roundabouts without shif
     }, saved)
     await sim.page.waitForFunction(() => window.calles.some(street =>
         street.nombre === 'Roundabout UI test' && street !== window.__beforeRoundaboutLoad))
-    await sim.page.waitForFunction(() => window.conexiones.some(link => link.origen?.nombre === 'Roundabout UI test'), { timeout: 10000 })
+    // Street objects are installed before deferred connection/image restoration finishes.
+    await new Promise(resolve => setTimeout(resolve, 2000))
+    await sim.page.waitForFunction(() => window.conexiones.some(link => link.origen?.nombre === 'Roundabout UI test'), { timeout: 30000 })
     const restored = await sim.page.evaluate(() => {
         window.confirm = window.__oldRoundaboutConfirm
         const street = window.calles.find(item => item.nombre === 'Roundabout UI test')

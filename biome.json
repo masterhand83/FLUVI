@@ -15,7 +15,9 @@
 			"!!**/dist",
 			"!!**/build",
 			"!!apps/v1/src/bootstrap-5.0.2-dist",
-			"!!apps/v1/src/libs/chart.js"
+			"!!apps/v1/src/libs/chart.js",
+			"!!apps/v1/src/libs/i18next",
+			"!!apps/v1/src/locales/catalogs.js"
 		]
 	},
 	"formatter": {

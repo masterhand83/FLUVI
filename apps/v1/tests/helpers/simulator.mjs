@@ -25,8 +25,29 @@ export function findChrome() {
 // para que los pasos ocurran solo cuando el arnés pulsa ⏭. La semilla de carga
 // y la de pasos van por streams separados (__fluviBaseline.reseed) para que los
 // timers de la página no puedan desincronizar la secuencia de pasos.
-function baselineInitScript({ seed, usePixi, freezeFrames }) {
+function baselineInitScript({ seed, usePixi, freezeFrames, languagePreference, storageFailureKey, navigatorLanguage }) {
 	localStorage.setItem("usePixi", usePixi ? "true" : "false")
+	if (languagePreference !== undefined) {
+		localStorage.setItem("fluvi.interfaceLanguage", languagePreference)
+	}
+	if (navigatorLanguage) {
+		Object.defineProperty(navigator, "language", { get: () => navigatorLanguage })
+		Object.defineProperty(navigator, "languages", { get: () => [navigatorLanguage] })
+	}
+	if (storageFailureKey) {
+		const storagePrototype = Storage.prototype
+		const originalGetItem = storagePrototype.getItem
+		const originalSetItem = storagePrototype.setItem
+		const blocked = () => { throw new DOMException("Storage blocked for test", "SecurityError") }
+		storagePrototype.getItem = function (key) {
+			if (key === storageFailureKey) blocked()
+			return originalGetItem.call(this, key)
+		}
+		storagePrototype.setItem = function (key, value) {
+			if (key === storageFailureKey) blocked()
+			return originalSetItem.call(this, key, value)
+		}
+	}
 	const mulberry32 = (a) => () => {
 		a = (a + 0x6d2b79f5) | 0
 		let t = Math.imul(a ^ (a >>> 15), 1 | a)
@@ -67,7 +88,15 @@ async function launchBrowser() {
 	}
 }
 
-export async function openSimulator({ seed = 1, usePixi = false, freezeFrames = true, hasTouch = false } = {}) {
+export async function openSimulator({
+	seed = 1,
+	usePixi = false,
+	freezeFrames = true,
+	hasTouch = false,
+	languagePreference,
+	storageFailureKey,
+	navigatorLanguage,
+} = {}) {
 	const server = await startStaticServer(V1_ROOT)
 	const { browser, close: closeBrowser } = await launchBrowser()
 	const page = await browser.newPage()
@@ -80,16 +109,16 @@ export async function openSimulator({ seed = 1, usePixi = false, freezeFrames = 
 	page.on("console", (message) => {
 		if (message.type() === "error") consoleErrors.push(message.text())
 	})
-	await page.evaluateOnNewDocument(baselineInitScript, { seed, usePixi, freezeFrames })
+	await page.evaluateOnNewDocument(baselineInitScript, {
+		seed,
+		usePixi,
+		freezeFrames,
+		languagePreference,
+		storageFailureKey,
+		navigatorLanguage,
+	})
 	await page.goto(server.url, { waitUntil: "domcontentloaded" })
-	await page.waitForFunction(
-		() =>
-			Array.isArray(window.calles) &&
-			window.calles.length > 0 &&
-			Array.isArray(window.conexiones) &&
-			typeof window.calcularLimitesMapa === "function",
-		{ polling: 100, timeout: 30000 },
-	)
+	await waitForSimulator(page)
 	return {
 		page,
 		browser,
@@ -100,6 +129,22 @@ export async function openSimulator({ seed = 1, usePixi = false, freezeFrames = 
 			await server.close()
 		},
 	}
+}
+
+export async function waitForSimulator(page) {
+	await page.waitForFunction(
+		() =>
+			Array.isArray(window.calles) &&
+			window.calles.length > 0 &&
+			Array.isArray(window.conexiones) &&
+			typeof window.calcularLimitesMapa === "function",
+		{ polling: 100, timeout: 30000 },
+	)
+}
+
+export async function reloadSimulator(page) {
+	await page.reload({ waitUntil: "domcontentloaded" })
+	await waitForSimulator(page)
 }
 
 export function hashOcupacion(ocupacion) {

@@ -17,7 +17,16 @@ test("static deployment preserves classic scripts and ships local runtime resour
 		for (const url of urls) {
 			expect((await stat(join(output, url))).isFile(), url).toBe(true)
 		}
-		for (const entry of ["src/python/analizador.py", "assets/images/vehicles"]) {
+		for (const entry of [
+			"src/python/analizador.py",
+			"assets/images/vehicles",
+			"src/libs/i18next/i18next.min.js",
+			"src/libs/i18next/VERSION",
+			"src/locales/catalogs.js",
+			"src/locales/es/translation.json",
+			"src/locales/en/translation.json",
+			"src/locales/non-js-keys.json",
+		]) {
 			await stat(join(output, entry))
 		}
 	} finally {

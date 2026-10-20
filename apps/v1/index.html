@@ -31,6 +31,11 @@
 
   <!-- Script para aplicar modo oscuro ANTES de renderizar -->
   <script src="src/js/ui/darkMode.js"></script>
+
+  <!-- Localización: diccionarios locales + i18next distribuido con la aplicación -->
+  <script src="src/libs/i18next/i18next.min.js"></script>
+  <script src="src/locales/catalogs.js"></script>
+  <script src="src/js/ui/i18n.js"></script>
 </head>
 
 <body>
@@ -41,7 +46,7 @@
     <div class="loading-content">
       <div class="loading-header">
         <img src="src/assets/logos/logo_horizontal.png" alt="FLUVI" class="loading-logo">
-        <p>Cargando simulación...</p>
+        <p data-i18n="loading.title">Cargando simulación...</p>
       </div>
 
       <div class="loading-spinner">
@@ -50,33 +55,33 @@
 
       <div class="instructions">
         <div class="instruction-card">
-          <h3>🖱️ Navega</h3>
-          <p>Zoom con la rueda, arrastra para moverte por el mapa</p>
+          <h3 data-i18n="loading.instructions.navigate.title">🖱️ Navega</h3>
+          <p data-i18n="loading.instructions.navigate.body">Zoom con la rueda, arrastra para moverte por el mapa</p>
         </div>
 
         <div class="instruction-card">
-          <h3>⚙️ Selección</h3>
-          <p>Ctrl+Clic sobre calles o edificios para configurarlos rápidamente</p>
+          <h3 data-i18n="loading.instructions.selection.title">⚙️ Selección</h3>
+          <p data-i18n="loading.instructions.selection.body">Ctrl+Clic sobre calles o edificios para configurarlos rápidamente</p>
         </div>
 
         <div class="instruction-card">
-          <h3>⏸️ Controla</h3>
-          <p>Pausa, ajusta la velocidad y observa las métricas en tiempo real</p>
+          <h3 data-i18n="loading.instructions.controls.title">⏸️ Controla</h3>
+          <p data-i18n="loading.instructions.controls.body">Pausa, ajusta la velocidad y observa las métricas en tiempo real</p>
         </div>
 
         <div class="instruction-card">
-          <h3>✏️ Edita</h3>
-          <p>Activa el modo edición para mover y rotar calles o edificios</p>
+          <h3 data-i18n="loading.instructions.edit.title">✏️ Edita</h3>
+          <p data-i18n="loading.instructions.edit.body">Activa el modo edición para mover y rotar calles o edificios</p>
         </div>
 
         <div class="instruction-card">
-          <h3>🌊 Personaliza</h3>
-          <p>Crea curvas en calles, activa intersecciones y visualiza conexiones</p>
+          <h3 data-i18n="loading.instructions.customize.title">🌊 Personaliza</h3>
+          <p data-i18n="loading.instructions.customize.body">Crea curvas en calles, activa intersecciones y visualiza conexiones</p>
         </div>
 
         <div class="instruction-card">
-          <h3>🏗️ Construye</h3>
-          <p>Diseña tus propios mapas y guárdalos para usarlos después</p>
+          <h3 data-i18n="loading.instructions.build.title">🏗️ Construye</h3>
+          <p data-i18n="loading.instructions.build.body">Diseña tus propios mapas y guárdalos para usarlos después</p>
         </div>
       </div>
 
@@ -84,13 +89,13 @@
         <div class="progress-bar-custom">
           <div class="progress-fill" id="progressFill"></div>
         </div>
-        <div class="loading-status" id="loadingStatus">Inicializando recursos...</div>
+        <div class="loading-status" id="loadingStatus" data-i18n="loading.status.initializing">Inicializando recursos...</div>
       </div>
     </div>
   </div>
 
   <!-- Botón flotante para mostrar sidebar (visible solo cuando sidebar está oculto) -->
-  <button type="button" class="sidebar-toggle-float" id="sidebarToggleFloat" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="Mostrar panel de control" style="display: none;">
+  <button type="button" class="sidebar-toggle-float" id="sidebarToggleFloat" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="Mostrar panel de control" aria-label="Mostrar panel de control" data-i18n-attr="aria-label:sidebar.sidebarToggle.show;data-bs-title:sidebar.sidebarToggle.show" style="display: none;">
     <span>☰</span>
   </button>
 
@@ -101,7 +106,7 @@
   <!-- Sidebar Panel -->
   <div class="sidebar" id="sidebar">
     <!-- Toggle button dentro del panel (esquina superior derecha) -->
-    <button type="button" class="sidebar-toggle-inner" id="sidebarToggle" data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="Ocultar panel de control">
+    <button type="button" class="sidebar-toggle-inner" id="sidebarToggle" data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="Ocultar panel de control" aria-label="Ocultar panel de control" data-i18n-attr="aria-label:sidebar.sidebarToggle.hide;data-bs-title:sidebar.sidebarToggle.hide">
       <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
         <line x1="3" y1="12" x2="15" y2="12"></line>
         <polyline points="10 5 3 12 10 19"></polyline>
@@ -109,10 +114,10 @@
       </svg>
     </button>
 
-    <h4>Panel de Control</h4>
+    <h4 data-i18n="sidebar.title">Panel de Control</h4>
 
     <!-- Indicador de modo edición -->
-    <div id="editModeBadge" class="edit-mode-badge">
+    <div id="editModeBadge" class="edit-mode-badge" data-i18n="sidebar.editMode">
       🔧 MODO EDICIÓN ACTIVO
     </div>
 
@@ -124,7 +129,7 @@
       <!-- Accordion 1: Sobre FLUVI -->
       <div class="accordion-item">
         <h2 class="accordion-header" id="headingAbout">
-          <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAbout" aria-expanded="true" aria-controls="collapseAbout">
+          <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAbout" aria-expanded="true" aria-controls="collapseAbout" data-i18n="sidebar.heading.about">
             ℹ️ Sobre FLUVI
           </button>
         </h2>
@@ -158,7 +163,7 @@
       <!-- Herramientas del mapa -->
       <div class="accordion-item">
         <h2 class="accordion-header" id="headingMapDrawingTools">
-          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseMapDrawingTools" aria-expanded="false" aria-controls="collapseMapDrawingTools">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseMapDrawingTools" aria-expanded="false" aria-controls="collapseMapDrawingTools" data-i18n="sidebar.heading.tools">
             ✏️ Herramientas
           </button>
         </h2>
@@ -193,7 +198,7 @@
       <!-- Constructor de Mapas -->
       <div class="accordion-item">
         <h2 class="accordion-header" id="headingConstructor">
-          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseConstructor" aria-expanded="false" aria-controls="collapseConstructor">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseConstructor" aria-expanded="false" aria-controls="collapseConstructor" data-i18n="sidebar.heading.constructor">
             🏗️ Constructor de Mapas
           </button>
         </h2>
@@ -423,7 +428,7 @@
       <!-- Configuración de Calles -->
       <div class="accordion-item">
         <h2 class="accordion-header" id="headingConfig">
-          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseConfig" aria-expanded="false" aria-controls="collapseConfig">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseConfig" aria-expanded="false" aria-controls="collapseConfig" data-i18n="sidebar.heading.streetSettings">
             ⚙️ Configuración de Calles
           </button>
         </h2>
@@ -502,7 +507,7 @@
       <!-- Accordion 3: Configuración de Escenarios -->
       <div class="accordion-item">
         <h2 class="accordion-header" id="headingEscenarios">
-          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseEscenarios" aria-expanded="false" aria-controls="collapseEscenarios">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseEscenarios" aria-expanded="false" aria-controls="collapseEscenarios" data-i18n="sidebar.heading.scenarios">
             🎬 Configuración de Escenarios
           </button>
         </h2>
@@ -729,7 +734,7 @@
       <!-- Accordion 5: Métricas en Tiempo Real -->
       <div class="accordion-item">
         <h2 class="accordion-header" id="headingMetrics">
-          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseMetrics" aria-expanded="false" aria-controls="collapseMetrics">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseMetrics" aria-expanded="false" aria-controls="collapseMetrics" data-i18n="sidebar.heading.metrics">
             📈 Métricas de la Simulación
           </button>
         </h2>
@@ -855,12 +860,23 @@
     <div class="sidebar-footer-config">
       <!-- Header clickeable para colapsar/expandir -->
       <div class="config-header" id="configHeader">
-        <h6 class="config-title">⚙️ Configuración</h6>
+        <h6 class="config-title" data-i18n="sidebar.heading.settings">⚙️ Configuración</h6>
         <span class="config-chevron">▼</span>
       </div>
 
       <!-- Contenido colapsable -->
       <div class="config-content" id="configContent">
+        <!-- Preferencia de idioma para el próximo inicio -->
+        <div class="mb-3">
+          <label for="languagePreference" class="form-label" data-i18n="settings.language.label">Idioma</label>
+          <select id="languagePreference" class="form-select form-select-sm" aria-describedby="languagePreferenceDescription languagePreferenceNotice">
+            <option value="es" lang="es">Español</option>
+            <option value="en" lang="en">English</option>
+          </select>
+          <small id="languagePreferenceDescription" class="form-text text-muted d-block" data-i18n="settings.language.description">Se aplica la próxima vez que inicies la aplicación.</small>
+          <small id="languagePreferenceNotice" class="form-text d-block" role="status" aria-live="polite"></small>
+        </div>
+
         <!-- Switch Modo Oscuro -->
         <div class="form-check form-switch mb-3">
           <input class="form-check-input" type="checkbox" id="switchModoOscuro">
@@ -2292,32 +2308,32 @@
     <div class="info-bar">
       <div class="info-bar-content">
         <span class="info-item">
-          <span class="info-label">Generación:</span>
+          <span class="info-label" data-i18n="simulation.info.generation">Generación:</span>
           <span id="infoGeneration" class="info-value">0</span>
         </span>
         <span class="info-separator">|</span>
         <span class="info-item">
-          <span class="info-label">Vehículos:</span>
+          <span class="info-label" data-i18n="simulation.info.population">Vehículos:</span>
           <span id="infoPopulation" class="info-value">0</span>
         </span>
         <span class="info-separator">|</span>
         <span class="info-item">
-          <span class="info-label">Hora:</span>
+          <span class="info-label" data-i18n="simulation.info.clock">Hora:</span>
           <span id="infoSimulatedDateTime" class="info-value">--/--/---- --:--:--</span>
         </span>
         <span class="info-separator">|</span>
         <span class="info-item">
-          <span class="info-label">Tiempo/Frame:</span>
+          <span class="info-label" data-i18n="simulation.info.timePerFrame">Tiempo/Frame:</span>
           <span id="infoTimePerFrame" class="info-value">0.00s</span>
         </span>
         <span class="info-separator">|</span>
         <span class="info-item">
-          <span class="info-label">FPS:</span>
+          <span class="info-label" data-i18n="simulation.info.fps">FPS:</span>
           <span id="infoFPS" class="info-value">0.0</span>
         </span>
         <span class="info-separator">|</span>
         <span class="info-item">
-          <span class="info-label">Mult. de Gen. de Vehíc. por hora:</span>
+          <span class="info-label" data-i18n="simulation.info.multiplier">Mult. de Gen. de Vehíc. por hora:</span>
           <span id="infoTrafficMultiplier" class="info-value">1.0×</span>
         </span>
       </div>
@@ -2341,38 +2357,38 @@
         <div class="d-flex gap-2 mt-2"><button type="button" id="linkSaveButton" class="btn btn-primary btn-sm">Guardar enlace</button><button type="button" id="linkCancelButton" class="btn btn-outline-secondary btn-sm">Cancelar</button></div>
       </section>
 
-      <aside id="streetInspector" class="street-inspector" aria-live="polite" hidden>
+      <aside id="streetInspector" class="street-inspector" aria-live="polite" aria-label="Inspector de calle" data-i18n-attr="aria-label:streetInspector.title" hidden>
         <div class="street-inspector-heading">
-          <label class="street-inspector-field">Nombre <input id="streetInspectorName" type="text" autocomplete="off"></label>
-          <button type="button" id="streetInspectorClose" class="btn-close" aria-label="Cerrar"></button>
+          <label class="street-inspector-field"><span data-i18n="streetInspector.name">Nombre</span> <input id="streetInspectorName" type="text" autocomplete="off"></label>
+          <button type="button" id="streetInspectorClose" class="btn-close" aria-label="Cerrar el inspector de calle" data-i18n-attr="aria-label:streetInspector.close"></button>
         </div>
         <dl class="street-inspector-details">
-          <div><dt id="streetInspectorXLabel">X</dt><dd><input id="streetInspectorX" type="number" step="any"></dd></div>
-          <div><dt id="streetInspectorYLabel">Y</dt><dd><input id="streetInspectorY" type="number" step="any"></dd></div>
-          <div id="streetInspectorRadiusRow" hidden><dt>Radio interior</dt><dd><input id="streetInspectorRadius" type="number" min="0" step="any"></dd></div>
-          <div id="streetInspectorEndXRow" hidden><dt>Fin X</dt><dd><input id="streetInspectorEndX" type="number" step="any"></dd></div>
-          <div id="streetInspectorEndYRow" hidden><dt>Fin Y</dt><dd><input id="streetInspectorEndY" type="number" step="any"></dd></div>
-          <div id="streetInspectorAngleRow"><dt>Ángulo (°)</dt><dd><input id="streetInspectorAngle" type="number" step="any"></dd></div>
-          <div><dt>Celdas</dt><dd><input id="streetInspectorCells" type="number" min="1" max="2500" step="1"></dd></div>
-          <div><dt>Carriles</dt><dd><input id="streetInspectorLanes" type="number" min="1" max="10" step="1"></dd></div>
-          <div><dt>Sentido por carril</dt><dd id="streetInspectorLaneDirections" role="group" aria-label="Sentido por carril"></dd></div>
-          <div id="streetInspectorTypeRow"><dt>Tipo</dt><dd><select id="streetInspectorType"><option value="generador">Generador</option><option value="conexion">Conexión</option><option value="devorador">Devorador</option></select></dd></div>
-          <div id="streetInspectorGenerationRow"><dt>Generación (%)</dt><dd><input id="streetInspectorGeneration" type="number" min="0" max="100" step="any"></dd></div>
-          <div><dt>Cambio de carril (%)</dt><dd><input id="streetInspectorLaneChange" type="number" min="0" max="100" step="any"></dd></div>
+          <div><dt id="streetInspectorXLabel" data-i18n="streetInspector.x">X</dt><dd><input id="streetInspectorX" type="number" step="any"></dd></div>
+          <div><dt id="streetInspectorYLabel" data-i18n="streetInspector.y">Y</dt><dd><input id="streetInspectorY" type="number" step="any"></dd></div>
+          <div id="streetInspectorRadiusRow" hidden><dt data-i18n="streetInspector.innerRadius">Radio interior</dt><dd><input id="streetInspectorRadius" type="number" min="0" step="any"></dd></div>
+          <div id="streetInspectorEndXRow" hidden><dt data-i18n="streetInspector.endX">Fin X</dt><dd><input id="streetInspectorEndX" type="number" step="any"></dd></div>
+          <div id="streetInspectorEndYRow" hidden><dt data-i18n="streetInspector.endY">Fin Y</dt><dd><input id="streetInspectorEndY" type="number" step="any"></dd></div>
+          <div id="streetInspectorAngleRow"><dt data-i18n="streetInspector.angle">Ángulo (°)</dt><dd><input id="streetInspectorAngle" type="number" step="any"></dd></div>
+          <div><dt data-i18n="streetInspector.cells">Celdas</dt><dd><input id="streetInspectorCells" type="number" min="1" max="2500" step="1"></dd></div>
+          <div><dt data-i18n="streetInspector.lanes">Carriles</dt><dd><input id="streetInspectorLanes" type="number" min="1" max="10" step="1"></dd></div>
+          <div><dt data-i18n="streetInspector.laneDirections">Sentido por carril</dt><dd id="streetInspectorLaneDirections" role="group" aria-label="Sentido por carril" data-i18n-attr="aria-label:streetInspector.laneDirections"></dd></div>
+          <div id="streetInspectorTypeRow"><dt data-i18n="streetInspector.type">Tipo</dt><dd><select id="streetInspectorType"><option value="generador" data-i18n="streetInspector.typeOption.generator">Generador</option><option value="conexion" data-i18n="streetInspector.typeOption.connection">Conexión</option><option value="devorador" data-i18n="streetInspector.typeOption.sink">Devorador</option></select></dd></div>
+          <div id="streetInspectorGenerationRow"><dt data-i18n="streetInspector.generation">Generación (%)</dt><dd><input id="streetInspectorGeneration" type="number" min="0" max="100" step="any"></dd></div>
+          <div><dt data-i18n="streetInspector.laneChange">Cambio de carril (%)</dt><dd><input id="streetInspectorLaneChange" type="number" min="0" max="100" step="any"></dd></div>
           <div id="streetInspectorBezierControls" class="street-inspector-controls" hidden></div>
         </dl>
-        <button type="button" id="streetInspectorAddControl" class="btn btn-sm btn-outline-primary mt-2">+ Añadir control</button>
-        <div id="streetInspectorAddChoice" class="street-inspector-add-choice" role="group" aria-label="Añadir a la sección seleccionada" hidden>
-          <button type="button" id="streetInspectorChooseBezier" class="btn btn-sm btn-outline-primary">Control Bézier</button>
-          <button type="button" id="streetInspectorChooseAnchor" class="btn btn-sm btn-outline-primary">Ancla fija</button>
-          <button type="button" id="streetInspectorCancelAdd" class="btn btn-sm btn-outline-secondary">Cancelar</button>
-          <small>El ancla guía un giro redondeado: la calle pasa cerca, no exactamente por ella.</small>
+        <button type="button" id="streetInspectorAddControl" class="btn btn-sm btn-outline-primary mt-2" data-i18n="streetInspector.addControl">+ Añadir control</button>
+        <div id="streetInspectorAddChoice" class="street-inspector-add-choice" role="group" aria-label="Añadir a la sección seleccionada" data-i18n-attr="aria-label:streetInspector.addChoiceLabel" hidden>
+          <button type="button" id="streetInspectorChooseBezier" class="btn btn-sm btn-outline-primary" data-i18n="streetInspector.addBezier">Control Bézier</button>
+          <button type="button" id="streetInspectorChooseAnchor" class="btn btn-sm btn-outline-primary" data-i18n="streetInspector.addAnchor">Ancla fija</button>
+          <button type="button" id="streetInspectorCancelAdd" class="btn btn-sm btn-outline-secondary" data-i18n="common.cancel">Cancelar</button>
+          <small data-i18n="streetInspector.addAnchorHelp">El ancla guía un giro redondeado: la calle pasa cerca, no exactamente por ella.</small>
         </div>
         <div id="streetInspectorSelectedControl" class="street-inspector-selected-control" hidden>
-          <span id="streetInspectorSelectedPointLabel">Control seleccionado</span>
-          <button type="button" id="streetInspectorDeleteControl" class="btn btn-sm btn-outline-danger">Eliminar control</button>
+          <span id="streetInspectorSelectedPointLabel" data-i18n="streetInspector.selectedControl">Control seleccionado</span>
+          <button type="button" id="streetInspectorDeleteControl" class="btn btn-sm btn-outline-danger" data-i18n="streetInspector.deleteControl">Eliminar control</button>
         </div>
-        <button type="button" id="streetInspectorDeleteStreet" class="btn btn-sm btn-outline-danger mt-2">Eliminar calle</button>
+        <button type="button" id="streetInspectorDeleteStreet" class="btn btn-sm btn-outline-danger mt-2" data-i18n="streetInspector.deleteStreet">Eliminar calle</button>
         <div id="streetInspectorError" class="street-inspector-error" role="alert" aria-live="assertive"></div>
       </aside>
 
@@ -2423,40 +2439,40 @@
         <div id="controlBar" class="align-items-center">
           <!-- Grupo de controles de simulación -->
           <div class="btn-group">
-            <button type="button" id="btnPauseResume" class="btn btn-secondary btn-sm" data-bs-toggle="tooltip" data-bs-title="Pausar o reanudar la simulación de tráfico">⏸</button>
-            <button type="button" id="btnPaso" class="btn btn-success btn-sm" disabled data-bs-toggle="tooltip" data-bs-title="Avanzar un paso de la simulación (solo disponible cuando está en pausa)">⏭</button>
+            <button type="button" id="btnPauseResume" class="btn btn-secondary btn-sm" data-bs-toggle="tooltip" data-bs-title="Pausar o reanudar la simulación de tráfico" aria-label="Pausar simulación" data-i18n-attr="aria-label:simulation.pause;data-bs-title:simulation.pauseTooltip">⏸</button>
+            <button type="button" id="btnPaso" class="btn btn-success btn-sm" disabled data-bs-toggle="tooltip" data-bs-title="Avanzar un paso de la simulación (solo disponible cuando está en pausa)" aria-label="Avanzar un paso" data-i18n-attr="aria-label:simulation.step;data-bs-title:simulation.stepTooltip">⏭</button>
           </div>
 
           <!-- Grupo de controles de visualización -->
           <div class="btn-group">
-            <button type="button" id="btnConexiones" class="btn btn-info btn-sm" data-bs-toggle="tooltip" data-bs-title="Mostrar/ocultar las conexiones entre calles en el canvas">🔗</button>
-             <button type="button" id="btnContadores" class="btn btn-info btn-sm" data-bs-toggle="tooltip" data-bs-title="Mostrar/ocultar contadores de ocupación de estacionamientos">🔢</button>
+            <button type="button" id="btnConexiones" class="btn btn-info btn-sm" data-bs-toggle="tooltip" data-bs-title="Mostrar/ocultar las conexiones entre calles en el canvas" aria-label="Mostrar u ocultar conexiones entre calles" data-i18n-attr="aria-label:simulation.connections;data-bs-title:simulation.connectionsTooltip">🔗</button>
+             <button type="button" id="btnContadores" class="btn btn-info btn-sm" data-bs-toggle="tooltip" data-bs-title="Mostrar/ocultar contadores de ocupación de estacionamientos" aria-label="Mostrar u ocultar contadores de estacionamiento" data-i18n-attr="aria-label:simulation.parkingCounters;data-bs-title:simulation.parkingCountersTooltip">🔢</button>
           </div>
 
           <!-- Grupo de acciones -->
           <div class="btn-group">
-            <button type="button" id="btnRandom" class="btn btn-warning btn-sm" data-bs-toggle="tooltip" data-bs-title="Llenar las calles con vehículos aleatorios">🎲</button>
-            <button type="button" id="btnBorrar" class="btn btn-danger btn-sm" data-bs-toggle="tooltip" data-bs-title="Borrar todos los vehículos de todas las calles">🗑️</button>
+            <button type="button" id="btnRandom" class="btn btn-warning btn-sm" data-bs-toggle="tooltip" data-bs-title="Llenar las calles con vehículos aleatorios" aria-label="Llenar con vehículos aleatorios" data-i18n-attr="aria-label:simulation.random;data-bs-title:simulation.randomTooltip">🎲</button>
+            <button type="button" id="btnBorrar" class="btn btn-danger btn-sm" data-bs-toggle="tooltip" data-bs-title="Borrar todos los vehículos de todas las calles" aria-label="Borrar vehículos" data-i18n-attr="aria-label:simulation.clear;data-bs-title:simulation.clearTooltip">🗑️</button>
           </div>
 
           <!-- Controles de velocidad -->
           <div class="d-flex align-items-center gap-1">
-            <label for="velocidadSlider" class="form-label mb-0 small">Velocidad:</label>
-            <input type="range" class="form-range" id="velocidadSlider" min="1" max="100" step="1" style="width: 80px;" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Controla la velocidad de la simulación (cuántos ciclos por segundo)">
+            <label for="velocidadSlider" class="form-label mb-0 small" data-i18n="simulation.speed">Velocidad:</label>
+            <input type="range" class="form-range" id="velocidadSlider" min="1" max="100" step="1" style="width: 80px;" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Controla la velocidad de la simulación (cuántos ciclos por segundo)" aria-label="Velocidad" data-i18n-attr="aria-label:simulation.speed;data-bs-title:simulation.speedTooltip">
             <span id="velocidadValor" class="badge bg-primary">10</span>
           </div>
 
           <!-- Controles de generación -->
           <div class="d-flex align-items-center gap-1">
-            <label for="probabilidadSlider" class="form-label mb-0 small">Generación:</label>
-            <input type="range" class="form-range" id="probabilidadSlider" min="0" max="100" step="1" style="width: 80px;" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Controla la probabilidad de generación de vehículos del botón '🎲'">
+            <label for="probabilidadSlider" class="form-label mb-0 small" data-i18n="simulation.generation">Generación:</label>
+            <input type="range" class="form-range" id="probabilidadSlider" min="0" max="100" step="1" style="width: 80px;" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Controla la probabilidad de generación de vehículos del botón '🎲'" aria-label="Generación" data-i18n-attr="aria-label:simulation.generation;data-bs-title:simulation.generationTooltip">
             <span id="probabilidadValor" class="badge bg-secondary">10</span>
           </div>
 
           <!-- Toggle de perfiles dinámicos -->
           <div class="form-check form-switch flex-shrink-0">
-            <input class="form-check-input" type="checkbox" id="togglePerfilesDinamicos" checked onchange="togglePerfiles(this.checked)" data-bs-toggle="tooltip" data-bs-title="Activar/desactivar perfiles dinámicos de tráfico según día y hora">
-            <label class="form-check-label small" for="togglePerfilesDinamicos">Perfiles</label>
+            <input class="form-check-input" type="checkbox" id="togglePerfilesDinamicos" checked onchange="togglePerfiles(this.checked)" data-bs-toggle="tooltip" data-bs-title="Activar/desactivar perfiles dinámicos de tráfico según día y hora" aria-label="Perfiles" data-i18n-attr="aria-label:simulation.profiles;data-bs-title:simulation.profilesTooltip">
+            <label class="form-check-label small" for="togglePerfilesDinamicos" data-i18n="simulation.profiles">Perfiles</label>
           </div>
         </div>
       </div>

@@ -1,0 +1,193 @@
+{
+  "common": {
+    "cancel": "Cancel",
+    "close": "Close",
+    "confirm": "Confirm"
+  },
+  "loading": {
+    "error": {
+      "engine": "Error initializing PixiJS. Check the console for details."
+    },
+    "instructions": {
+      "build": {
+        "body": "Design your own maps and save them for later",
+        "title": "🏗️ Build"
+      },
+      "controls": {
+        "body": "Pause, adjust speed, and watch metrics in real time",
+        "title": "⏸️ Control"
+      },
+      "customize": {
+        "body": "Create street curves, enable intersections, and view street connections",
+        "title": "🌊 Customize"
+      },
+      "edit": {
+        "body": "Enable edit mode to move and rotate streets or buildings",
+        "title": "✏️ Edit"
+      },
+      "navigate": {
+        "body": "Zoom with the wheel, drag to move around the map",
+        "title": "🖱️ Navigate"
+      },
+      "selection": {
+        "body": "Ctrl+Click streets or buildings to configure them quickly",
+        "title": "⚙️ Selection"
+      }
+    },
+    "status": {
+      "canvas": "Preparing canvas...",
+      "connections": "Creating street connections...",
+      "engine": "Initializing graphics engine...",
+      "initializing": "Initializing resources...",
+      "intersections": "Calculating intersections...",
+      "libraries": "Loading libraries...",
+      "metrics": "Configuring metrics...",
+      "ready": "Ready!",
+      "scenarioManagement": "Initializing scenario management...",
+      "scenarios": "Initializing scenarios...",
+      "simulation": "Starting simulation...",
+      "streets": "Generating streets..."
+    },
+    "title": "Loading simulation..."
+  },
+  "notifications": {
+    "simulation": {
+      "changesAppliedGenerator": "Probabilities for «{{name}}» were updated:\n• Generation: {{generation}}%\n• Lane change: {{laneChange}}%",
+      "changesAppliedLaneChange": "Probabilities for «{{name}}» were updated:\n• Lane change: {{laneChange}}%",
+      "generationRange": "The generation probability must be between 0 and 100.",
+      "laneChangeRange": "The lane change probability must be between 0 and 100."
+    },
+    "streetSelection": {
+      "required": "Please select a street first."
+    },
+    "title": {
+      "error": "Error",
+      "info": "Information",
+      "success": "Success",
+      "warning": "Warning"
+    }
+  },
+  "settings": {
+    "language": {
+      "description": "Applies the next time you start the application.",
+      "invalid": "Select Español or English.",
+      "label": "Language",
+      "savedNotice": "The selected language will apply the next time you start FLUVI.",
+      "storageError": "The language preference could not be saved. The current session keeps working and the language has not changed."
+    }
+  },
+  "sidebar": {
+    "editMode": "🔧 EDIT MODE ACTIVE",
+    "heading": {
+      "about": "ℹ️ About FLUVI",
+      "constructor": "🏗️ Map Constructor",
+      "metrics": "📈 Simulation Metrics",
+      "scenarios": "🎬 Scenario Settings",
+      "settings": "⚙️ Settings",
+      "streetSettings": "⚙️ Street Settings",
+      "tools": "✏️ Tools"
+    },
+    "sidebarToggle": {
+      "hide": "Hide control panel",
+      "show": "Show control panel"
+    },
+    "title": "Control Panel"
+  },
+  "simulation": {
+    "clear": "Clear vehicles",
+    "clearTooltip": "Clear all vehicles from every street",
+    "connections": "Show or hide street connections",
+    "connectionsTooltip": "Show/hide street connections on the canvas",
+    "generation": "Generation:",
+    "generationTooltip": "Controls the vehicle generation probability for the '🎲' button",
+    "info": {
+      "clock": "Time:",
+      "fps": "FPS:",
+      "generation": "Generation:",
+      "multiplier": "Veh. gen. multiplier per hour:",
+      "population": "Vehicles:",
+      "timePerFrame": "Time/Frame:"
+    },
+    "parkingCounters": "Show or hide parking counters",
+    "parkingCountersTooltip": "Show/hide parking occupancy counters",
+    "pause": "Pause simulation",
+    "pauseTooltip": "Pause or resume the traffic simulation",
+    "profiles": "Profiles",
+    "profilesTooltip": "Enable/disable dynamic traffic profiles by day and hour",
+    "random": "Fill with random vehicles",
+    "randomTooltip": "Fill streets with random vehicles",
+    "resume": "Resume simulation",
+    "speed": "Speed:",
+    "speedTooltip": "Controls simulation speed (cycles per second)",
+    "step": "Advance one step",
+    "stepTooltip": "Advance the simulation one step (only available while paused)"
+  },
+  "streetInspector": {
+    "addAnchor": "Fixed anchor",
+    "addAnchorHelp": "The anchor guides a rounded turn: the street passes near it, not exactly through it.",
+    "addBezier": "Bezier control",
+    "addChoiceLabel": "Add to the selected section",
+    "addControl": "+ Add control",
+    "anchor": "Fixed anchor {{number}}",
+    "angle": "Angle (°)",
+    "cells": "Cells",
+    "centerX": "Center X",
+    "centerY": "Center Y",
+    "close": "Close street inspector",
+    "control": "Control {{number}}",
+    "deleteAnchor": "Delete anchor",
+    "deleteControl": "Delete control",
+    "deleteStreet": "Delete street",
+    "direction": {
+      "clockwise": "clockwise",
+      "counterclockwise": "counterclockwise",
+      "forward": "forward",
+      "reverse": "reverse"
+    },
+    "endX": "End X",
+    "endY": "End Y",
+    "errors": {
+      "cellCountUnsupported": "The geometry does not support that number of cells.",
+      "deletePoint": "The point cannot be removed: the resulting curve is not valid.",
+      "duplicateName": "A street with that name already exists.",
+      "emptyName": "The name cannot be empty.",
+      "invalidCells": "Enter a whole number between 1 and 2500.",
+      "invalidCurve": "The curve geometry is not valid.",
+      "invalidNumber": "Enter a valid number.",
+      "invalidProbability": "The probability must be between 0 and 100%.",
+      "invalidRadius": "Enter a valid radius.",
+      "invalidRadiusGeometry": "The inner radius is not valid.",
+      "invalidRoundabout": "The roundabout geometry is not valid.",
+      "invalidType": "Select a valid street type.",
+      "maxLanes": "The maximum number of lanes is 10.",
+      "splitSection": "This section could not be split."
+    },
+    "generateVehicles": "Generate vehicles",
+    "generateVehiclesLane": "Generate vehicles in lane {{lane}}",
+    "generation": "Generation (%)",
+    "innerRadius": "Inner radius",
+    "laneChange": "Lane change (%)",
+    "laneDirection": "Lane {{lane}}: {{direction}}. Change direction",
+    "laneDirections": "Direction per lane",
+    "laneDirectionsCount_one": "{{count}} lane",
+    "laneDirectionsCount_other": "{{count}} lanes",
+    "lanes": "Lanes",
+    "name": "Name",
+    "removeNamed": "Remove {{name}}",
+    "section": "Section {{number}}",
+    "sectionsCount_one": "Section ({{count}})",
+    "sectionsCount_other": "Sections ({{count}})",
+    "select": "Select",
+    "selectedAnchor": "Selected fixed anchor",
+    "selectedControl": "Selected control",
+    "title": "Street inspector",
+    "type": "Type",
+    "typeOption": {
+      "connection": "CONEXION (street type)",
+      "generator": "Generator",
+      "sink": "Sink"
+    },
+    "x": "X",
+    "y": "Y"
+  }
+}
