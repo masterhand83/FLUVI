@@ -6,6 +6,8 @@ For work involving `apps/v1/`, read `docs/v1/application-map.md` **before search
 
 Run focused tests with `pnpm test`, filtering to the affected modules, files, or use cases rather than running the entire test suite by default.
 
+For quick iteration, `pnpm --filter v1 test:fast` keeps unit checks and the localization browser spec while skipping every other spec that imports the Puppeteer harness. Use the full `pnpm --filter v1 test` before shipping browser-sensitive changes.
+
 ## Agent skills
 
 ### Issue tracker

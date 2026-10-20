@@ -19,7 +19,7 @@
 	const FALLBACK_LANGUAGE =
 		window.FLUVI_FALLBACK_LANGUAGE === "en" ? "en" : "es";
 	const STORAGE_KEY = "fluvi.interfaceLanguage";
-	const DEFAULT_LANGUAGE = "es";
+	const DEFAULT_LANGUAGE = FALLBACK_LANGUAGE;
 	const resources = window.FLUVI_LOCALE_RESOURCES || {
 		es: { translation: {} },
 		en: { translation: {} },
@@ -72,10 +72,6 @@
 	}
 
 	document.documentElement.lang = activeLanguage;
-	document.documentElement.setAttribute(
-		"data-active-language",
-		activeLanguage,
-	);
 
 	function translate(key, options = {}) {
 		if (engine && typeof engine.t === "function") {
@@ -196,7 +192,7 @@
 			showLanguageNotice(
 				notice,
 				"invalid",
-				translate("settings.language.invalid"),
+				tr("settings.language.invalid"),
 			);
 			return;
 		}
@@ -212,7 +208,7 @@
 				: state === "invalid"
 					? "settings.language.invalid"
 					: "settings.language.storageError";
-		showLanguageNotice(notice, state, translate(key));
+		showLanguageNotice(notice, state, tr(key));
 	}
 
 	function initializeLanguageSelector() {

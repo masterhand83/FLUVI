@@ -18,6 +18,15 @@
 	};
 	const radiusRow = document.getElementById("streetInspectorRadiusRow");
 	const isRoundabout = (street) => window.roundaboutStreet?.isRoundabout?.(street) ?? street?.geometryType === "roundabout";
+	const GEOMETRY_ERROR_KEYS = {
+		"too-long": "streetInspector.errors.geometryTooLong",
+		"too-short": "streetInspector.errors.geometryTooShort",
+		"invalid-controls": "streetInspector.errors.geometryInvalidControls",
+		"invalid-size": "streetInspector.errors.geometryInvalidSize",
+		"folded-lane-overlap": "streetInspector.errors.geometryFoldedLaneOverlap",
+	};
+	const geometryErrorMessage = (reason, fallbackKey) =>
+		tr(GEOMETRY_ERROR_KEYS[reason] || fallbackKey);
 	const generationRow = document.getElementById("streetInspectorGenerationRow");
 	const directionsHost = document.getElementById("streetInspectorLaneDirections");
 	const endXRow = document.getElementById("streetInspectorEndXRow");
@@ -184,7 +193,7 @@
 				remove.type = "button";
 				remove.className = "btn btn-sm btn-outline-danger";
 				remove.textContent = "−";
-				remove.setAttribute("aria-label", tr('streetInspector.removeNamed', { name: labelText.toLocaleLowerCase() }));
+				remove.setAttribute("aria-label", tr('streetInspector.removeNamed', { name: labelText.toLocaleLowerCase(document.documentElement.lang) }));
 				remove.addEventListener("click", () => {
 					if (kind === "anchor") selectAnchor(segmentIndex);
 					else selectControl(segmentIndex, controlIndex);
@@ -387,7 +396,7 @@
 					return fail(field, tr('streetInspector.errors.maxLanes'));
 				if (isRoundabout(selected)) {
 					const result = window.roundaboutStreet?.validate?.({ ...selected, carriles: lanes });
-					if (!result?.valid) return fail(field, result?.reason || tr('streetInspector.errors.invalidRoundabout'));
+					if (!result?.valid) return fail(field, geometryErrorMessage(result?.reason, 'streetInspector.errors.invalidRoundabout'));
 					window.streetEditPause?.();
 					window.editorCalles?.aplicarNuevasDimensiones?.(selected, result.cells, lanes);
 					readModel(selected);
@@ -397,7 +406,7 @@
 				if (field === fields.cells && isBezier(selected)) {
 					const currentGeometry = window.streetBezier.validate(selected);
 					if (!currentGeometry.valid || !currentGeometry.cells)
-						return fail(field, tr('streetInspector.errors.invalidCurve'));
+						return fail(field, geometryErrorMessage(currentGeometry.reason, 'streetInspector.errors.invalidCurve'));
 					const candidate = scaleCurve(
 						selected,
 						numeric / currentGeometry.cells,
@@ -411,7 +420,7 @@
 					const proposed = { ...selected, carriles: lanes };
 					const result = window.streetBezier.validate(proposed);
 					if (!result.valid)
-						return fail(field, tr('streetInspector.errors.invalidCurve'));
+						return fail(field, geometryErrorMessage(result.reason, 'streetInspector.errors.invalidCurve'));
 					window.streetEditPause?.();
 					if (result.cells !== selected.tamano || lanes !== selected.carriles) {
 						if (window.editorCalles?.aplicarNuevasDimensiones) {
@@ -471,7 +480,7 @@
 			} else if (field === fields.radius) {
 				if (value === "" || !Number.isFinite(numeric)) return fail(field, tr('streetInspector.errors.invalidRadius'));
 				const result = window.roundaboutStreet?.validate?.({ ...selected, innerRadius: numeric });
-				if (!result?.valid) return fail(field, result?.reason || tr('streetInspector.errors.invalidRadiusGeometry'));
+				if (!result?.valid) return fail(field, geometryErrorMessage(result?.reason, 'streetInspector.errors.invalidRadiusGeometry'));
 				if (numeric !== selected.innerRadius) {
 					window.streetEditPause?.();
 					window.editorCalles?.aplicarNuevasDimensiones?.(selected, result.cells, selected.carriles);

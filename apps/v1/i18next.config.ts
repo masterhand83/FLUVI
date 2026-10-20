@@ -5,9 +5,6 @@ export default defineConfig({
 	extract: {
 		input: ["src/js/**/*.js"],
 		ignore: [
-			// The shared interface forwards dynamic keys to i18next; its literals are
-			// catalog lookups, not user-facing calls to extract.
-			"src/js/ui/i18n.js",
 			"src/libs/**",
 			"src/bootstrap-5.0.2-dist/**",
 		],
@@ -19,7 +16,6 @@ export default defineConfig({
 			"fluviNotify.error",
 			"fluviNotify.warning",
 			"fluviNotify.info",
-			"fluviNotify.confirm",
 		],
 		defaultNS: "translation",
 		primaryLanguage: "es",

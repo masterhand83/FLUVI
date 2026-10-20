@@ -147,18 +147,11 @@ function keyedNotification(tipo, key, params, duracion) {
     return mostrarNotificacion(tipo, notificationTitle(tipo), tr(key, params), duracion);
 }
 
-function keyedConfirmation(titleKey, messageKey, params, onConfirm, onCancel, options = {}) {
-    const titulo = trEscaped(titleKey, params);
-    const mensaje = trEscaped(messageKey, params).replace(/\n/g, '<br>');
-    mostrarConfirmacion(titulo, mensaje, onConfirm, onCancel, options);
-}
-
 window.fluviNotify = Object.freeze({
     success: (key, params, duracion) => keyedNotification('success', key, params, duracion),
     error: (key, params, duracion) => keyedNotification('error', key, params, duracion),
     warning: (key, params, duracion) => keyedNotification('warning', key, params, duracion),
-    info: (key, params, duracion) => keyedNotification('info', key, params, duracion),
-    confirm: keyedConfirmation
+    info: (key, params, duracion) => keyedNotification('info', key, params, duracion)
 });
 
 /**

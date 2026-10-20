@@ -77,6 +77,47 @@ describe("startup language and simulator controls", () => {
 		}
 	})
 
+	it("shows translated Spanish notification severities and confirmation defaults", async () => {
+		const simulator = await openSimulator()
+		try {
+			const { page } = simulator
+			await hideLoadingScreen(page)
+			await page.evaluate(() => {
+				window.fluviNotify.warning(
+					"notifications.simulation.generationRange",
+					undefined,
+					60000,
+				)
+			})
+			await page.waitForSelector(".toast", { visible: true })
+			const toast = await page.$eval(".toast", (element) => ({
+				header: element.querySelector(".toast-header").className,
+				title: element.querySelector(".toast-header strong").textContent,
+				body: element.querySelector(".toast-body").textContent,
+			}))
+			expect(toast).toEqual({
+				header: "toast-header bg-warning text-dark",
+				title: "⚠️Advertencia",
+				body: "La probabilidad de generación debe estar entre 0 y 100.",
+			})
+
+			await page.evaluate(() => {
+				window.mostrarConfirmacion("Confirmar prueba", "Cuerpo")
+			})
+			await page.waitForSelector(".modal.show", { visible: true })
+			await new Promise((resolve) => setTimeout(resolve, 500))
+			expect(
+				await page.$$eval(".modal.show .modal-footer .btn", (elements) =>
+					elements.map((element) => element.textContent.trim()),
+				),
+			).toEqual(["Cancelar", "Confirmar"])
+			await page.click(".modal.show .modal-footer .btn-secondary")
+			await page.waitForSelector(".modal.show", { hidden: true })
+		} finally {
+			await simulator.close()
+		}
+	})
+
 	it("falls back to Spanish for an invalid saved preference", async () => {
 		const simulator = await openSimulator({
 			languagePreference: "fr",

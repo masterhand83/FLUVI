@@ -95,16 +95,16 @@ describe("repository locale catalogs", () => {
 		const english = await createInstance(catalogs, "en")
 		expect(
 			spanish.t("streetInspector.laneDirectionsCount", { count: 1 }),
-		).toBe("1 carril")
+		).toBe("Sentido por carril: 1 carril")
 		expect(
 			spanish.t("streetInspector.laneDirectionsCount", { count: 2 }),
-		).toBe("2 carriles")
+		).toBe("Sentido por carril: 2 carriles")
 		expect(
 			english.t("streetInspector.laneDirectionsCount", { count: 1 }),
-		).toBe("1 lane")
+		).toBe("Direction per lane: 1 lane")
 		expect(
 			english.t("streetInspector.laneDirectionsCount", { count: 2 }),
-		).toBe("2 lanes")
+		).toBe("Direction per lane: 2 lanes")
 	})
 
 	it("distributes the pinned browser build and catalogs with the static app", async () => {

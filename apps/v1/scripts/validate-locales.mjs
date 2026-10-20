@@ -162,12 +162,7 @@ export function collectHtmlMessageKeys(html) {
 
 export function validateNonJsInventory({ inventory, htmlKeys, catalogs }) {
 	const errors = []
-	const flattened = new Map(
-		Object.entries(catalogs).map(([language, namespaces]) => [
-			language,
-			flattenCatalog(namespaces.translation),
-		]),
-	)
+	const flattened = flattenCatalogs(catalogs)
 	const inventoryKeys = new Set([
 		...(inventory.html ?? []),
 		...(inventory.python ?? []),

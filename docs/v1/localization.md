@@ -85,7 +85,9 @@ suffixes (`_one`, `_other`, and locale-specific forms such as Spanish `_many`).
 - `pnpm --filter v1 locales:status` runs `i18next-cli status` plus repository
   validation: key/placeholder/plural parity, non-empty production values, and
   the HTML/Python inventory. The configured call patterns are `tr(...)`,
-  `fluviI18n.t(...)`, and the `fluviNotify` severity methods.
+  `fluviI18n.t(...)`, and the `fluviNotify` severity methods. `pnpm --filter v1
+  test` runs the same checks before Vitest, so a key missing from both catalogs
+  fails the test task rather than only a manual command.
 - `pnpm --filter v1 locales:extract` is an extraction helper. It may propose new
   keys; review the diff and translate them by hand. Do not run automatic
   instrumentation over classic scripts, and do not translate state identifiers,
@@ -133,7 +135,6 @@ window.fluviNotify.success(
   "notifications.simulation.changesAppliedLaneChange",
   { name: calle.nombre, laneChange: 12 },
 );
-window.fluviNotify.confirm(titleKey, messageKey, params, onConfirm, onCancel);
 ```
 
 The legacy `mostrarNotificacion`, `mostrarExito`, `mostrarError`,
