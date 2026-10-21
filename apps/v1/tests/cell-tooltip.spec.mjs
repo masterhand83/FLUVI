@@ -10,16 +10,21 @@ function setup() {
 	document.getElementById = () => tooltip;
 	document.addEventListener = document.on.bind(document);
 	document.removeEventListener = document.off.bind(document);
+	let translate = (key, options) =>
+		key === "streetTooltip.cell" ? `${options.street} : ${options.cell}` : key;
+	const tr = (key, options) => translate(key, options);
 	const window = {
 		cellDetectionEnabled: true, celda_tamano: 5, offsetX: 0, offsetY: 0, escala: 1,
+		tr,
 		obtenerCoordenadasGlobalesCelda: (street, lane, index) => ({ x: street.x + index * 5 + 2.5, y: 2.5 }),
 		obtenerCoordenadasGlobalesCeldaConCurva: (street, lane, index) => ({ x: street.x + index * 5 + 2.5, y: 102.5 }),
 	};
-	runInNewContext(readFileSync(new URL("../src/js/renderer/renderers/CalleRenderer.js", import.meta.url), "utf8"), { window, document, performance: { now: () => 100 }, console });
+	runInNewContext(readFileSync(new URL("../src/js/renderer/renderers/CalleRenderer.js", import.meta.url), "utf8"), { window, document, tr, performance: { now: () => 100 }, console });
 	const roads = new window.CalleRenderer({ app: { stage } }, {});
 	const street = { nombre: "Main", x: 0, carriles: 1, tamano: 3 };
 	const move = (x, y = 2.5) => stage.emit("pointermove", { data: { global: { x, y } } });
-	return { roads, street, stage, tooltip, move, window, document };
+	const setTranslator = (next) => { translate = next; };
+	return { roads, street, stage, tooltip, move, window, document, setTranslator };
 }
 
 describe("street cell tooltip", () => {
@@ -30,6 +35,16 @@ describe("street cell tooltip", () => {
 		expect(tooltip.textContent).toBe("Main : 0");
 		move(7.5);
 		expect(tooltip.textContent).toBe("Main : 1");
+	});
+
+	it("uses the localized format while retaining the physical cell index", () => {
+		const { roads, street, move, tooltip, setTranslator } = setup();
+		setTranslator((key, options) =>
+			key === "streetTooltip.cell" ? `${options.street} [${options.cell}]` : key,
+		);
+		roads.onCalleHover(street, {});
+		move(7.5);
+		expect(tooltip.textContent).toBe("Main [1]");
 	});
 
 	it("does not retain a previous cell when two moves happen at the same time", () => {

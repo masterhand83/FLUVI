@@ -115,9 +115,17 @@
         const radius = Math.hypot(end.x - start.x, end.y - start.y);
         const geometry = window.roundaboutStreet?.validate?.({ geometryType: 'roundabout', tipo: 'conexion', x: start.x, y: start.y, innerRadius: radius, startAngle: 0, carriles: 1 });
         if (!geometry?.valid) {
-            button.setAttribute('data-bs-title', geometry?.reason || 'El radio interior no es válido');
+            const message = window.streetInspector?.geometryErrorMessage?.(
+                geometry?.reason,
+                'streetDrawing.invalidRadius',
+            ) ?? tr('streetDrawing.invalidRadius');
+            button.setAttribute('data-bs-title', message);
+            window.fluviI18n?.refreshTooltip(button);
             button.classList.add('draw-street-retry');
-            window.setTimeout(() => button.classList.remove('draw-street-retry'), 1200);
+            window.setTimeout(() => {
+                button.classList.remove('draw-street-retry');
+                window.fluviI18n?.setAttribute(button, 'data-bs-title', 'streetDrawing.roundaboutTooltip');
+            }, 1200);
             return;
         }
         createAndSelect(start, radius, geometry.cells);
@@ -134,7 +142,7 @@
             const select = document.getElementById(id);
             if (!select) continue;
             if (!Array.from(select.options).some(option => option.value === String(index))) {
-                select.innerHTML = '<option value="">Selecciona una calle</option>';
+                select.replaceChildren(new Option(tr('streetSettings.selectStreetPlaceholder'), ''));
                 window.streetListUI.sortedEntries(window.calles).forEach(({ street: entry, index: i }) => {
                     select.add(new Option(entry.nombre, i));
                 });

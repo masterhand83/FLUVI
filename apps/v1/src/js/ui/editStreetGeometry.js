@@ -139,12 +139,18 @@
 				else delete h.dataset.end;
 				h.classList.toggle("selected", item.kind === window.streetInspector?.getSelectedHandleKind?.());
 				h.classList.toggle("street-anchor-handle", item.kind.startsWith("anchor:"));
-				h.setAttribute(
-					"aria-label",
-					item.kind.startsWith("anchor:") ? `Mover ancla ${Number(item.kind.split(":")[1]) + 1}` : item.kind.startsWith("control:")
-						? `Mover control ${Number(item.kind.split(":")[2]) + 1}`
-						: item.kind === 'radius' ? 'Cambiar radio interior de glorieta' : `Mover ${item.kind === "start" ? "inicio" : "fin"} de calle`,
-				);
+				const handleLabel = item.kind.startsWith("anchor:")
+					? tr("streetGeometry.moveAnchor", {
+							number: Number(item.kind.split(":")[1]) + 1,
+						})
+					: item.kind.startsWith("control:")
+						? tr("streetGeometry.moveControl", {
+								number: Number(item.kind.split(":")[2]) + 1,
+							})
+						: item.kind === "radius"
+							? tr("streetGeometry.changeRoundaboutRadius")
+							: tr(item.kind === "start" ? "streetGeometry.moveStart" : "streetGeometry.moveEnd");
+				h.setAttribute("aria-label", handleLabel);
 				if (h.parentElement !== canvas.parentElement)
 					canvas.parentElement.append(h);
 				place(h, item.p);
@@ -213,11 +219,21 @@
 	}
 	function setInvalidPreview(invalid, reason) {
 		canvas.classList.toggle("street-geometry-invalid", invalid);
-		window.streetInspector?.setGeometryError?.(
-			invalid
-				? `Geometría inválida${reason ? `: ${reason}` : ""}. Se revertirá al soltar.`
-				: "",
-		);
+		const fallbackKey = isRoundabout(window.calleSeleccionada)
+			? "streetInspector.errors.invalidRoundabout"
+			: "streetInspector.errors.invalidCurve";
+		const message = invalid
+			? reason
+				? tr("streetEditor.invalidGeometryWithReason", {
+						reason:
+							window.streetInspector?.geometryErrorMessage?.(
+								reason,
+								fallbackKey,
+							) ?? reason,
+					})
+				: tr("streetEditor.invalidGeometry")
+			: "";
+		window.streetInspector?.setGeometryError?.(message);
 	}
 	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Gesture finalization restores before applying a single validated commit.
 	function finish(commit) {

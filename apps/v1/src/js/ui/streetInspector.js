@@ -568,6 +568,9 @@
 		setGeometryError(message) {
 			error.textContent = message || "";
 		},
+		geometryErrorMessage(reason, fallbackKey) {
+			return geometryErrorMessage(reason, fallbackKey);
+		},
 	};
 	function selectControl(segmentIndex, index = undefined) {
 		if (index === undefined) [segmentIndex, index] = [0, segmentIndex];

@@ -954,7 +954,10 @@ class CalleRenderer {
                 const celdaObjetivo = encontrarCeldaEnCalle(calle, worldX, worldY);
 
                 if (celdaObjetivo) {
-                    tooltip.textContent = `${calle.nombre} : ${celdaObjetivo.indice}`;
+                    tooltip.textContent = tr('streetTooltip.cell', {
+                        street: calle.nombre,
+                        cell: celdaObjetivo.indice
+                    });
                 } else {
                     // Si no se encuentra celda, solo mostrar el nombre de la calle
                     tooltip.textContent = calle.nombre;

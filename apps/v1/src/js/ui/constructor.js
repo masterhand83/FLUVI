@@ -298,11 +298,11 @@ function mostrarDialogoNuevaCalle() {
         const nombreRegex = /^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s\-.]+$/;
         if (!nombre || nombre === '') {
             inputNombre.classList.add('is-invalid');
-            mostrarNotificacion('error', 'Error de Validación', 'El nombre de la calle es obligatorio.');
+            fluviNotify.error('notifications.streetEditor.nameRequired');
             isValid = false;
         } else if (!nombreRegex.test(nombre)) {
             inputNombre.classList.add('is-invalid');
-            mostrarNotificacion('error', 'Error de Validación', 'El nombre contiene caracteres inválidos. Solo letras, números, espacios, guiones y puntos.');
+            fluviNotify.error('notifications.streetEditor.nameInvalid');
             isValid = false;
         } else {
             inputNombre.classList.remove('is-invalid');
@@ -311,7 +311,7 @@ function mostrarDialogoNuevaCalle() {
         // Validar tamaño (1-2500)
         if (isNaN(tamano) || tamano < 1 || tamano > 2500) {
             inputTamano.classList.add('is-invalid');
-            mostrarNotificacion('error', 'Error de Validación', 'El tamaño debe estar entre 1 y 2500 celdas.');
+            fluviNotify.error('notifications.streetEditor.sizeRange');
             isValid = false;
         } else {
             inputTamano.classList.remove('is-invalid');
@@ -320,7 +320,7 @@ function mostrarDialogoNuevaCalle() {
         // Validar carriles (1-10)
         if (isNaN(carriles) || carriles < 1 || carriles > 10) {
             inputCarriles.classList.add('is-invalid');
-            mostrarNotificacion('error', 'Error de Validación', 'El número de carriles debe estar entre 1 y 10.');
+            fluviNotify.error('notifications.streetEditor.lanesRange');
             isValid = false;
         } else {
             inputCarriles.classList.remove('is-invalid');
@@ -329,7 +329,7 @@ function mostrarDialogoNuevaCalle() {
         // Validar posiciones X, Y
         if (isNaN(x)) {
             inputX.classList.add('is-invalid');
-            mostrarNotificacion('error', 'Error de Validación', 'La posición X es inválida.');
+            fluviNotify.error('notifications.streetEditor.positionXInvalid');
             isValid = false;
         } else {
             inputX.classList.remove('is-invalid');
@@ -337,7 +337,7 @@ function mostrarDialogoNuevaCalle() {
 
         if (isNaN(y)) {
             inputY.classList.add('is-invalid');
-            mostrarNotificacion('error', 'Error de Validación', 'La posición Y es inválida.');
+            fluviNotify.error('notifications.streetEditor.positionYInvalid');
             isValid = false;
         } else {
             inputY.classList.remove('is-invalid');
@@ -346,7 +346,7 @@ function mostrarDialogoNuevaCalle() {
         // Validar ángulo (0-360)
         if (isNaN(angulo) || angulo < 0 || angulo > 360) {
             inputAngulo.classList.add('is-invalid');
-            mostrarNotificacion('error', 'Error de Validación', 'El ángulo debe estar entre 0 y 360 grados.');
+            fluviNotify.error('notifications.streetEditor.angleRange');
             isValid = false;
         } else {
             inputAngulo.classList.remove('is-invalid');
@@ -356,7 +356,7 @@ function mostrarDialogoNuevaCalle() {
         if (tipo === 'GENERADOR') {
             if (isNaN(probGen) || probGen < 0 || probGen > 100) {
                 inputProbGen.classList.add('is-invalid');
-                mostrarNotificacion('error', 'Error de Validación', 'La probabilidad de generación debe estar entre 0 y 100.');
+                fluviNotify.error('notifications.simulation.generationRange');
                 isValid = false;
             } else {
                 inputProbGen.classList.remove('is-invalid');
@@ -370,7 +370,7 @@ function mostrarDialogoNuevaCalle() {
         // Validar probabilidad de salto (0-100)
         if (isNaN(probSalto) || probSalto < 0 || probSalto > 100) {
             inputProbSalto.classList.add('is-invalid');
-            mostrarNotificacion('error', 'Error de Validación', 'La probabilidad de cambio de carril debe estar entre 0 y 100.');
+            fluviNotify.error('notifications.simulation.laneChangeRange');
             isValid = false;
         } else {
             inputProbSalto.classList.remove('is-invalid');
@@ -601,7 +601,7 @@ function agregarCalle(nombre, tamano, tipo, x, y, angulo, probabilidadGeneracion
     } else {
         console.error("❌ Función crearCalle no disponible");
         if (!silencioso) {
-            alert("Error: No se puede crear la calle");
+            fluviNotify.error('notifications.streetEditor.createFailed');
         }
         return false;
     }
@@ -1980,12 +1980,12 @@ function eliminarObjetoSeleccionado() {
     const edificio = window.edificioSeleccionado;
 
     if (!calle && !edificio) {
-        alert("No hay ningún objeto seleccionado. Selecciona una calle o edificio primero.");
+        fluviNotify.warning('notifications.streetEditor.noSelection');
         return;
     }
 
     if (calle) {
-        const confirmacion = confirm(`¿Eliminar la calle "${calle.nombre}"?`);
+        const confirmacion = confirm(tr('streetEditor.confirmDelete', { name: calle.nombre }));
         if (!confirmacion) return;
 
         const index = window.calles.indexOf(calle);

@@ -50,9 +50,12 @@
         const button = document.getElementById('drawStreetButton');
         if (!button) return;
         button.classList.add('draw-street-retry');
-        button.setAttribute('data-bs-title', 'Arrastra al menos una celda para crear una calle');
+        window.fluviI18n?.setAttribute(button, 'data-bs-title', 'streetDrawing.retryCue');
         clearTimeout(cueTimer);
-        cueTimer = setTimeout(() => button.classList.remove('draw-street-retry'), 1200);
+        cueTimer = setTimeout(() => {
+            button.classList.remove('draw-street-retry');
+            window.fluviI18n?.setAttribute(button, 'data-bs-title', 'streetDrawing.buttonTooltip');
+        }, 1200);
     }
 
     function nextName() {
@@ -68,7 +71,7 @@
             const selector = document.getElementById(id);
             if (!selector) continue;
             if (!Array.from(selector.options).some(option => option.value === String(index))) {
-                selector.innerHTML = '<option value="">Selecciona una calle</option>';
+                selector.replaceChildren(new Option(tr('streetSettings.selectStreetPlaceholder'), ''));
                 window.streetListUI.sortedEntries(window.calles).forEach(({ street, index: streetIndex }) => {
                     selector.add(new Option(street.nombre, streetIndex));
                 });

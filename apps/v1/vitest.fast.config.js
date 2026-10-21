@@ -3,7 +3,10 @@ import { defineConfig, mergeConfig } from "vitest/config"
 import baseConfig from "./vitest.config.js"
 
 const testsDirectory = new URL("./tests/", import.meta.url)
-const browserSpecsToKeep = new Set(["localization.spec.mjs"])
+const browserSpecsToKeep = new Set([
+	"localization.spec.mjs",
+	"street-localization.spec.mjs",
+])
 
 // The full suite intentionally exercises the real browser and takes several
 // minutes. Fast mode keeps unit checks and the focused localization browser

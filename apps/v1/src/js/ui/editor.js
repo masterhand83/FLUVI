@@ -80,7 +80,7 @@ class EditorCalles {
 
         // Poblar selector de calles en configuración
         if (this.selectCalle && window.calles) {
-            this.selectCalle.innerHTML = '<option value="">Selecciona una calle</option>';
+            this.selectCalle.replaceChildren(new Option(tr('streetSettings.selectStreetPlaceholder'), ''));
             window.streetListUI.sortedEntries(window.calles).forEach(({ street: calle, index }) => {
                 const option = document.createElement('option');
                 option.value = index;
@@ -92,7 +92,7 @@ class EditorCalles {
 
         // Poblar selector de calles en editor (constructor)
         if (this.selectCalleEditor && window.calles) {
-            this.selectCalleEditor.innerHTML = '<option value="">Selecciona una calle</option>';
+            this.selectCalleEditor.replaceChildren(new Option(tr('streetSettings.selectStreetPlaceholder'), ''));
             window.streetListUI.sortedEntries(window.calles).forEach(({ street: calle, index }) => {
                 const option = document.createElement('option');
                 option.value = index;
@@ -104,7 +104,7 @@ class EditorCalles {
 
         // Poblar selector de edificios
         if (this.selectEdificio && window.edificios) {
-            this.selectEdificio.innerHTML = '<option value="">Selecciona un edificio</option>';
+            this.selectEdificio.replaceChildren(new Option(tr('streetEditor.buildingPlaceholder'), ''));
             window.edificios.forEach((edificio, index) => {
                 const option = document.createElement('option');
                 option.value = index;
@@ -381,7 +381,7 @@ class EditorCalles {
             if (!window.calleSeleccionada) return;
 
             if (window.calleSeleccionada.geometryType === 'roundabout') {
-                alert('⚠️ Ajusta el radio interior y los carriles de la glorieta desde el inspector. El número de celdas es automático.');
+                fluviNotify.warning('streetEditor.roundaboutRadiusHint');
                 return;
             }
 
@@ -389,21 +389,26 @@ class EditorCalles {
             const nuevosCarriles = parseInt(this.inputCarrilesEditar.value);
 
             if (isNaN(nuevoTamano) || isNaN(nuevosCarriles)) {
-                alert('⚠️ Por favor ingresa valores válidos para tamaño y carriles');
+                fluviNotify.warning('streetEditor.invalidDimensions');
                 return;
             }
 
             if (nuevoTamano < 10 || nuevoTamano > 500) {
-                alert('⚠️ El tamaño debe estar entre 10 y 500 celdas');
+                fluviNotify.warning('streetEditor.sizeOutOfRange');
                 return;
             }
 
             if (nuevosCarriles < 1 || nuevosCarriles > 10) {
-                alert('⚠️ Los carriles deben estar entre 1 y 10');
+                fluviNotify.warning('streetEditor.lanesOutOfRange');
                 return;
             }
 
-            const confirmar = confirm(`⚠️ Cambiar las dimensiones eliminará los vehículos fuera de los nuevos límites.\n\n¿Continuar?\n\nTamaño: ${window.calleSeleccionada.tamano} → ${nuevoTamano} celdas\nCarriles: ${window.calleSeleccionada.carriles} → ${nuevosCarriles} carriles`);
+            const confirmar = confirm(tr('streetEditor.resizeConfirm', {
+                sizeFrom: window.calleSeleccionada.tamano,
+                sizeTo: nuevoTamano,
+                lanesFrom: window.calleSeleccionada.carriles,
+                lanesTo: nuevosCarriles
+            }));
 
             if (confirmar) {
                 this.aplicarNuevasDimensiones(window.calleSeleccionada, nuevoTamano, nuevosCarriles);
@@ -927,7 +932,7 @@ class EditorCalles {
         const edificio = window.edificioSeleccionado;
 
         if (!calle && !edificio) {
-            alert('⚠️ Selecciona una calle o edificio primero');
+            fluviNotify.warning('streetEditor.selectObjectFirst');
             return;
         }
 
@@ -1008,7 +1013,7 @@ class EditorCalles {
         
         // Cambiar estilo del botón
         if (this.btnModoEdicion) {
-            this.btnModoEdicion.textContent = '🔒 Salir de Edición';
+            this.btnModoEdicion.textContent = tr('streetEditor.exitEditMode');
             this.btnModoEdicion.classList.remove('btn-warning');
             this.btnModoEdicion.classList.add('btn-secondary');
         }
@@ -1239,7 +1244,7 @@ class EditorCalles {
 
         // Restaurar estilo del botón
         if (this.btnModoEdicion) {
-            this.btnModoEdicion.textContent = '✏️ Modo Edición';
+            this.btnModoEdicion.textContent = tr('streetEditor.editMode');
             this.btnModoEdicion.classList.remove('btn-secondary');
             this.btnModoEdicion.classList.add('btn-warning');
         }

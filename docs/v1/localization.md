@@ -197,6 +197,37 @@ The catalog owner is `virtualTime.*`. Numeric day values, profile arrays,
 `tiempoToJSON`/`tiempoFromJSON` keys and clock calculations must not be
 translated.
 
+## Street drawing and inspection
+
+The street workflow uses these catalog owners:
+
+- `streetDrawing.*`: Draw/roundabout tool labels, tooltips, and the short
+  retry/invalid-radius cues.
+- `streetEditor.*`: the new-street modal, legacy visual editor controls,
+  dimension/position field labels, deletion and resize confirmations, and
+  geometry validation wording.
+- `streetSettings.*`: global generation, street selection, generation and
+  lane-change probabilities, the apply button, and related help text.
+- `streetGeometry.*`: accessible names for endpoint, control, anchor, and
+  roundabout-radius handles.
+- `streetTooltip.cell`: the Pixi cell tooltip format. Physical zero-based cell
+  indexes and the `Name : index` shape are retained.
+
+Street names and Etiqueta content are data. Creating or selecting a street must
+not translate its name, and names containing HTML-significant characters are
+preserved literally in the inspector, selectors, confirmations, and toasts.
+`tipo` values (`generador`, `conexion`, `devorador`), `geometryType`,
+`laneDirections`, `laneGenerationEnabled`, cell/index values, JSON keys, and
+public globals keep their current spelling. The UI distinguishes a street of
+type CONEXION from a Conexión entre calles (street connection) in both
+languages.
+
+Browser coverage lives in `tests/street-localization.spec.mjs` (Spanish and
+English, Canvas and Pixi, desktop and mobile, both themes, geometry edits,
+lane/generation controls, validation, safe names, and notifications).
+`tests/cell-tooltip.spec.mjs` covers the localized tooltip format and physical
+cell indexes.
+
 ## Terminology
 
 Keep the distinction from `CONTEXT.md`:

@@ -170,8 +170,8 @@
         <div id="collapseMapDrawingTools" class="accordion-collapse collapse" data-bs-parent="#controlPanelAccordion" aria-labelledby="headingMapDrawingTools">
           <div class="accordion-body">
             <div class="d-grid gap-2">
-              <button type="button" id="drawStreetButton" class="btn btn-outline-primary btn-sm" data-bs-toggle="tooltip" data-bs-title="Dibujar una calle">✏️ Calle</button>
-              <button type="button" id="drawRoundaboutButton" class="btn btn-outline-primary btn-sm" aria-pressed="false" data-bs-toggle="tooltip" data-bs-title="Arrastra del centro al radio interior">↻ Glorieta</button>
+              <button type="button" id="drawStreetButton" class="btn btn-outline-primary btn-sm" data-bs-toggle="tooltip" data-bs-title="Dibujar una calle" data-i18n="streetDrawing.button" data-i18n-attr="data-bs-title:streetDrawing.buttonTooltip">✏️ Calle</button>
+              <button type="button" id="drawRoundaboutButton" class="btn btn-outline-primary btn-sm" aria-pressed="false" data-bs-toggle="tooltip" data-bs-title="Arrastra del centro al radio interior" data-i18n="streetDrawing.roundaboutButton" data-i18n-attr="data-bs-title:streetDrawing.roundaboutTooltip">↻ Glorieta</button>
               <button type="button" id="createLinkButton" class="btn btn-outline-primary btn-sm">🔗 Crear enlace</button>
               <button type="button" id="drawBuildingButton" class="btn btn-outline-success btn-sm" aria-pressed="false" data-bs-toggle="tooltip" data-bs-title="Arrastra dos esquinas para crear un edificio rectangular">▭ Edificio</button>
               <label class="building-proportion-lock small"><input id="buildingProportionLock" type="checkbox"> Cuadrado</label>
@@ -243,44 +243,44 @@
 
             <hr class="my-3">
 
-            <h6 class="mb-3">🛠️ Modo Edición Visual</h6>
+            <h6 class="mb-3" data-i18n="streetEditor.visualEditTitle">🛠️ Modo Edición Visual</h6>
 
             <!-- Selector de tipo de objeto -->
-            <label for="selectTipoObjeto" class="form-label">Tipo de Objeto:</label>
+            <label for="selectTipoObjeto" class="form-label" data-i18n="streetEditor.objectType">Tipo de Objeto:</label>
             <select id="selectTipoObjeto" class="form-select mb-3">
-              <option value="">Selecciona tipo...</option>
-              <option value="calle">🛣️ Calle</option>
-              <option value="edificio">🏢 Edificio</option>
+              <option value="" data-i18n="streetEditor.objectTypePlaceholder">Selecciona tipo...</option>
+              <option value="calle" data-i18n="streetEditor.objectOption.street">🛣️ Calle</option>
+              <option value="edificio" data-i18n="streetEditor.objectOption.building">🏢 Edificio</option>
             </select>
 
             <!-- Selector de Calle -->
             <div id="calleEditorSelector" style="display: none;">
-              <label for="selectCalleEditor" class="form-label">Calle:</label>
+              <label for="selectCalleEditor" class="form-label" data-i18n="streetEditor.street">Calle:</label>
               <select id="selectCalleEditor" class="form-select mb-3">
-                <option value="">Seleccione una calle...</option>
+                <option value="" data-i18n="streetSettings.selectStreetPlaceholder">Seleccione una calle...</option>
               </select>
             </div>
 
             <!-- Selector de Edificio -->
             <div id="edificioSelector" style="display: none;">
-              <label for="selectEdificio" class="form-label">Edificio:</label>
+              <label for="selectEdificio" class="form-label" data-i18n="streetEditor.building">Edificio:</label>
               <select id="selectEdificio" class="form-select mb-3">
-                <option value="">Seleccione un edificio...</option>
+                <option value="" data-i18n="streetEditor.buildingPlaceholder">Seleccione un edificio...</option>
               </select>
             </div>
 
             <!-- Botón de modo edición -->
-            <button type="button" id="btnModoEdicion" class="btn btn-warning w-100 mb-2" disabled data-bs-toggle="tooltip" data-bs-title="Activar modo edición para mover y rotar el objeto seleccionado visualmente">
+            <button type="button" id="btnModoEdicion" class="btn btn-warning w-100 mb-2" disabled data-bs-toggle="tooltip" data-bs-title="Activar modo edición para mover y rotar el objeto seleccionado visualmente" data-i18n="streetEditor.editMode" data-i18n-attr="data-bs-title:streetEditor.editModeTooltip">
               ✏️ Modo Edición
             </button>
 
             <!-- Botones de guardar/cancelar (solo visibles en modo edición) -->
             <div id="editActionButtons" style="display: none;">
               <div class="d-flex gap-2 mb-2">
-                <button type="button" id="btnGuardarEdicion" class="btn btn-success flex-fill" data-bs-toggle="tooltip" data-bs-title="Guardar los cambios realizados en el modo edición">
+                <button type="button" id="btnGuardarEdicion" class="btn btn-success flex-fill" data-bs-toggle="tooltip" data-bs-title="Guardar los cambios realizados en el modo edición" data-i18n="streetEditor.save" data-i18n-attr="data-bs-title:streetEditor.saveTooltip">
                   💾 Guardar
                 </button>
-                <button type="button" id="btnCancelarEdicion" class="btn btn-secondary flex-fill" data-bs-toggle="tooltip" data-bs-title="Cancelar los cambios y restaurar la posición original">
+                <button type="button" id="btnCancelarEdicion" class="btn btn-secondary flex-fill" data-bs-toggle="tooltip" data-bs-title="Cancelar los cambios y restaurar la posición original" data-i18n="streetEditor.cancelEdit" data-i18n-attr="data-bs-title:streetEditor.cancelEditTooltip">
                   ❌ Cancelar
                 </button>
               </div>
@@ -288,63 +288,63 @@
 
             <!-- Dropdown de Ajustes Avanzados -->
             <div class="mt-3">
-              <button class="btn btn-outline-primary w-100" type="button" id="btnAjustesAvanzados" data-bs-toggle="tooltip" data-bs-title="Mostrar/ocultar ajustes avanzados de posición, rotación y dimensiones">
-                🔧 Ajustes Avanzados <span id="advancedArrow">▼</span>
+              <button class="btn btn-outline-primary w-100" type="button" id="btnAjustesAvanzados" data-bs-toggle="tooltip" data-bs-title="Mostrar/ocultar ajustes avanzados de posición, rotación y dimensiones" data-i18n-attr="data-bs-title:streetEditor.advancedSettingsTooltip">
+                <span data-i18n="streetEditor.advancedSettings">🔧 Ajustes Avanzados</span> <span id="advancedArrow">▼</span>
               </button>
 
               <div class="advanced-settings" id="advancedSettings">
                 <div class="mt-3">
-                  <h6>📍 Posición y Rotación Manual</h6>
+                  <h6 data-i18n="streetEditor.positionTitle">📍 Posición y Rotación Manual</h6>
 
                   <div class="coordinate-input">
                     <label for="inputPosX">X:</label>
-                    <input type="number" id="inputPosX" class="form-control" step="1" placeholder="Posición X">
+                    <input type="number" id="inputPosX" class="form-control" step="1" placeholder="Posición X" data-i18n-attr="placeholder:streetEditor.positionXPlaceholder">
                   </div>
 
                   <div class="coordinate-input">
                     <label for="inputPosY">Y:</label>
-                    <input type="number" id="inputPosY" class="form-control" step="1" placeholder="Posición Y">
+                    <input type="number" id="inputPosY" class="form-control" step="1" placeholder="Posición Y" data-i18n-attr="placeholder:streetEditor.positionYPlaceholder">
                   </div>
 
                   <div class="coordinate-input">
-                    <label for="inputAngulo">Ángulo:</label>
-                    <input type="number" id="inputAngulo" class="form-control" min="0" max="360" step="1" placeholder="0-360°">
+                    <label for="inputAngulo" data-i18n="streetEditor.angle">Ángulo:</label>
+                    <input type="number" id="inputAngulo" class="form-control" min="0" max="360" step="1" placeholder="0-360°" data-i18n-attr="placeholder:streetEditor.anglePlaceholder">
                     <span>°</span>
                   </div>
 
                   <!-- Nuevos campos para dimensiones de calles -->
                   <div id="dimensionesCalleSection" style="display: none;">
                     <hr class="my-3">
-                    <h6>📏 Dimensiones de Calle</h6>
+                    <h6 data-i18n="streetEditor.dimensionsTitle">📏 Dimensiones de Calle</h6>
 
                     <div class="coordinate-input">
-                      <label for="inputTamanoEditar">Tamaño:</label>
-                      <input type="number" id="inputTamanoEditar" class="form-control" min="10" max="500" step="1" placeholder="Tamaño en celdas">
-                      <span>celdas</span>
+                      <label for="inputTamanoEditar" data-i18n="streetEditor.sizeLabel">Tamaño:</label>
+                      <input type="number" id="inputTamanoEditar" class="form-control" min="10" max="500" step="1" placeholder="Tamaño en celdas" data-i18n-attr="placeholder:streetEditor.sizePlaceholder">
+                      <span data-i18n="streetEditor.cellsSuffix">celdas</span>
                     </div>
 
                     <div class="coordinate-input">
-                      <label for="inputCarrilesEditar">Carriles:</label>
-                      <input type="number" id="inputCarrilesEditar" class="form-control" min="1" max="10" step="1" placeholder="Número de carriles">
-                      <span>carriles</span>
+                      <label for="inputCarrilesEditar" data-i18n="streetEditor.lanesLabel">Carriles:</label>
+                      <input type="number" id="inputCarrilesEditar" class="form-control" min="1" max="10" step="1" placeholder="Número de carriles" data-i18n-attr="placeholder:streetEditor.lanesPlaceholder">
+                      <span data-i18n="streetEditor.lanesSuffix">carriles</span>
                     </div>
 
-                    <button type="button" id="btnAplicarDimensiones" class="btn btn-sm btn-warning mt-2 w-100" data-bs-toggle="tooltip" data-bs-title="Aplicar cambios de tamaño y número de carriles (elimina vehículos)">
+                    <button type="button" id="btnAplicarDimensiones" class="btn btn-sm btn-warning mt-2 w-100" data-bs-toggle="tooltip" data-bs-title="Aplicar cambios de tamaño y número de carriles (elimina vehículos)" data-i18n="streetEditor.applyDimensions" data-i18n-attr="data-bs-title:streetEditor.applyDimensionsTooltip">
                       📏 Aplicar Dimensiones
                     </button>
 
                     <div class="alert alert-warning p-2 small mt-2">
-                      <strong>⚠️ Advertencia:</strong> Cambiar las dimensiones reiniciará el contenido de la calle (elimina vehículos existentes).
+                      <strong data-i18n="streetEditor.dimensionsWarningLabel">⚠️ Advertencia:</strong> <span data-i18n="streetEditor.dimensionsWarningBody">Cambiar las dimensiones reiniciará el contenido de la calle (elimina vehículos existentes).</span>
                     </div>
                   </div>
 
-                  <button type="button" id="btnAplicarPosicion" class="btn btn-sm btn-success mt-2 w-100" data-bs-toggle="tooltip" data-bs-title="Aplicar la posición (X, Y) y ángulo de rotación ingresados manualmente">
+                  <button type="button" id="btnAplicarPosicion" class="btn btn-sm btn-success mt-2 w-100" data-bs-toggle="tooltip" data-bs-title="Aplicar la posición (X, Y) y ángulo de rotación ingresados manualmente" data-i18n="streetEditor.applyPosition" data-i18n-attr="data-bs-title:streetEditor.applyPositionTooltip">
                     ✓ Aplicar Posición
                   </button>
 
                   <div class="mt-3 p-2 bg-light rounded">
                     <small class="text-muted">
-                      <strong>💡 Consejo:</strong> Usa el modo edición para arrastrar y rotar visualmente el objeto.
+                      <strong data-i18n="streetEditor.tipLabel">💡 Consejo:</strong> <span data-i18n="streetEditor.tipBody">Usa el modo edición para arrastrar y rotar visualmente el objeto.</span>
                     </small>
                   </div>
                 </div>
@@ -354,14 +354,14 @@
             <!-- NUEVO: Sección de Modo Curva (solo para calles) -->
             <div id="curvaModeSection" style="display: none;">
               <div class="mt-3 border-top pt-3">
-                <h6>🌊 Modo Curva</h6>
+                <h6 data-i18n="streetEditor.curveTitle">🌊 Modo Curva</h6>
                 <small class="text-muted d-block mt-2">
-                  ⌨️ <strong>Presiona la tecla Z</strong> para activar/desactivar el modo de edición de vértices
+                  ⌨️ <span data-i18n="streetEditor.curveToggleBefore">Presiona la tecla</span> <strong>Z</strong> <span data-i18n="streetEditor.curveToggleAfter">para activar/desactivar el modo de edición de vértices</span>
                 </small>
                 <small class="text-muted d-block mt-1">
-                  💡 <strong>Haz clic en un vértice</strong> y arrástralo perpendicular a la calle para curvarlo (máx ±40°)
+                  💡 <strong data-i18n="streetEditor.curveDragLabel">Haz clic en un vértice</strong> <span data-i18n="streetEditor.curveDragBody">y arrástralo perpendicular a la calle para curvarlo (máx ±40°)</span>
                 </small>
-                <small class="text-muted d-block mt-1">
+                <small class="text-muted d-block mt-1" data-i18n="streetEditor.curveGuide">
                   🎯 Aparecerá una guía visual azul mostrando la dirección de arrastre
                 </small>
               </div>
@@ -369,14 +369,14 @@
 
             <hr class="my-3">
 
-            <h6 class="mb-3">🛣️ Agregar Elementos</h6>
+            <h6 class="mb-3" data-i18n="streetEditor.addElementsTitle">🛣️ Agregar Elementos</h6>
 
             <!-- Botones de agregar -->
             <div class="d-grid gap-2 mb-3">
-              <button type="button" id="btnAgregarCalle" class="btn btn-outline-primary btn-sm" data-bs-toggle="tooltip" data-bs-title="Abrir formulario para crear una nueva calle en el mapa">
+              <button type="button" id="btnAgregarCalle" class="btn btn-outline-primary btn-sm" data-bs-toggle="tooltip" data-bs-title="Abrir formulario para crear una nueva calle en el mapa" data-i18n="streetEditor.addStreet" data-i18n-attr="data-bs-title:streetEditor.addStreetTooltip">
                 ➕ Agregar Calle
               </button>
-              <button type="button" id="btnAgregarEdificio" class="btn btn-outline-success btn-sm" data-bs-toggle="tooltip" data-bs-title="Arrastrar un edificio rectangular en el mapa">
+              <button type="button" id="btnAgregarEdificio" class="btn btn-outline-success btn-sm" data-bs-toggle="tooltip" data-bs-title="Arrastrar un edificio rectangular en el mapa" data-i18n="streetEditor.addBuilding" data-i18n-attr="data-bs-title:streetEditor.addBuildingTooltip">
                 🏢 Agregar Edificio
               </button>
               <button type="button" id="btnEditarEdificio" class="btn btn-outline-warning btn-sm" style="display: none;" data-bs-toggle="tooltip" data-bs-title="Editar configuración del edificio seleccionado (Ctrl+Click para seleccionar)">
@@ -385,7 +385,7 @@
               <button type="button" id="btnAgregarConexion" class="btn btn-outline-secondary btn-sm" data-bs-toggle="tooltip" data-bs-title="Crear una conexión entre dos calles para flujo de tráfico">
                 🔗 Agregar Conexión
               </button>
-              <button type="button" id="btnEliminarObjeto" class="btn btn-outline-danger btn-sm" data-bs-toggle="tooltip" data-bs-title="Eliminar permanentemente la calle o edificio seleccionado">
+              <button type="button" id="btnEliminarObjeto" class="btn btn-outline-danger btn-sm" data-bs-toggle="tooltip" data-bs-title="Eliminar permanentemente la calle o edificio seleccionado" data-i18n="streetEditor.deleteObject" data-i18n-attr="data-bs-title:streetEditor.deleteObjectTooltip">
                 🗑️ Eliminar Objeto Seleccionado
               </button>
             </div>
@@ -439,17 +439,17 @@
             <div class="mb-3">
               <div class="form-check form-switch mb-2">
                 <input class="form-check-input" type="checkbox" role="switch" id="toggleGeneracionGlobal" aria-describedby="ayudaGeneracionGlobal">
-                <label class="form-check-label" for="toggleGeneracionGlobal">Usar generación global</label>
+                <label class="form-check-label" for="toggleGeneracionGlobal" data-i18n="streetSettings.toggle">Usar generación global</label>
               </div>
-              <label for="inputGeneracionGlobal" class="form-label">Generación global (%)</label>
+              <label for="inputGeneracionGlobal" class="form-label" data-i18n="streetSettings.generation">Generación global (%)</label>
               <input type="number" id="inputGeneracionGlobal" class="form-control" min="0" max="100" step="1" value="50" aria-describedby="ayudaGeneracionGlobal">
-              <div class="invalid-feedback">Por favor ingresa un valor entre 0 y 100.</div>
-              <small id="ayudaGeneracionGlobal" class="form-text text-muted">Al activar, reemplaza el porcentaje de todos los generadores sin modificar sus valores individuales. Los perfiles horarios siguen aplicándose.</small>
+              <div class="invalid-feedback" data-i18n="streetSettings.invalid">Por favor ingresa un valor entre 0 y 100.</div>
+              <small id="ayudaGeneracionGlobal" class="form-text text-muted" data-i18n="streetSettings.generationHelp">Al activar, reemplaza el porcentaje de todos los generadores sin modificar sus valores individuales. Los perfiles horarios siguen aplicándose.</small>
             </div>
 
-            <label for="selectCalle" class="form-label">Seleccionar Calle:</label>
+            <label for="selectCalle" class="form-label" data-i18n="streetSettings.selectStreet">Seleccionar Calle:</label>
             <select id="selectCalle" class="form-select mb-3">
-              <option value="">Seleccione una calle...</option>
+              <option value="" data-i18n="streetSettings.selectStreetPlaceholder">Seleccione una calle...</option>
             </select>
 
             <!-- Campos de probabilidad -->
@@ -457,8 +457,8 @@
               <!-- Probabilidad de Generación (solo para calles de tipo GENERADOR) -->
               <div class="mb-3" id="campoGeneracionConfig">
                 <label for="inputProbabilidadGeneracion" class="form-label">
-                  Probabilidad de Generación (%)
-                  <span class="info-icon" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="Controla la frecuencia con la que se generan nuevos vehículos en esta calle. 0% = sin vehículos, 100% = generación máxima continua. Solo disponible para calles de tipo GENERADOR.">
+                  <span data-i18n="streetSettings.generationProbability">Probabilidad de Generación (%)</span>
+                  <span class="info-icon" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="Controla la frecuencia con la que se generan nuevos vehículos en esta calle. 0% = sin vehículos, 100% = generación máxima continua. Solo disponible para calles de tipo GENERADOR." data-i18n-attr="data-bs-title:streetSettings.generationTooltip">
                     <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle" viewBox="0 0 16 16">
                       <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/>
                       <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533z"/>
@@ -467,16 +467,16 @@
                   </span>
                 </label>
                 <input type="number" id="inputProbabilidadGeneracion" class="form-control" min="0" max="100" step="1" placeholder="0-100">
-                <div class="invalid-feedback">
+                <div class="invalid-feedback" data-i18n="streetSettings.invalid">
                   Por favor ingresa un valor entre 0 y 100.
                 </div>
-                <small class="form-text text-muted">Ejemplo: "47" que sera equivalente a 47%.</small>
+                <small class="form-text text-muted" data-i18n="streetSettings.generationExample">Ejemplo: "47" que sera equivalente a 47%.</small>
               </div>
 
               <div class="mb-3">
                 <label for="inputProbabilidadSalto" class="form-label">
-                  Probabilidad de Cambio de Carril (%)
-                  <span class="info-icon" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="Define la probabilidad de que un vehículo cambie de carril cuando es posible. Valores bajos (0-5%) simulan tráfico ordenado, valores altos (>20%) generan más cambios de carril.">
+                  <span data-i18n="streetSettings.laneChangeProbability">Probabilidad de Cambio de Carril (%)</span>
+                  <span class="info-icon" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="Define la probabilidad de que un vehículo cambie de carril cuando es posible. Valores bajos (0-5%) simulan tráfico ordenado, valores altos (>20%) generan más cambios de carril." data-i18n-attr="data-bs-title:streetSettings.laneChangeTooltip">
                     <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle" viewBox="0 0 16 16">
                       <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/>
                       <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533z"/>
@@ -485,7 +485,7 @@
                   </span>
                 </label>
                 <input type="number" id="inputProbabilidadSalto" class="form-control" min="0" max="100" step="1" placeholder="0-100">
-                <div class="invalid-feedback">
+                <div class="invalid-feedback" data-i18n="streetSettings.invalid">
                   Por favor ingresa un valor entre 0 y 100.
                 </div>
               </div>
@@ -493,11 +493,11 @@
 
             <!-- Botón aplicar cambios -->
             <div id="calleApplyButton">
-              <button type="button" id="btnActualizarCalle" class="btn btn-primary w-100" data-bs-toggle="tooltip" data-bs-title="Aplicar las probabilidades configuradas a la calle seleccionada">✓ Aplicar Cambios</button>
+              <button type="button" id="btnActualizarCalle" class="btn btn-primary w-100" data-bs-toggle="tooltip" data-bs-title="Aplicar las probabilidades configuradas a la calle seleccionada" data-i18n="streetSettings.applyChanges" data-i18n-attr="data-bs-title:streetSettings.applyTooltip">✓ Aplicar Cambios</button>
             </div>
 
             <div class="alert alert-info p-2 small mt-3 mb-0">
-              <strong>💡 Atajo rápido:</strong> Presiona <kbd>Ctrl</kbd> (o <kbd>⌘ Cmd</kbd> en Mac) + clic sobre cualquier calle en el canvas para seleccionarla rápidamente.
+              <strong data-i18n="streetSettings.shortcutLabel">💡 Atajo rápido:</strong> <span data-i18n="streetSettings.shortcutPress">Presiona</span> <kbd>Ctrl</kbd> <span data-i18n="streetSettings.shortcutMacBefore">(o</span> <kbd>⌘ Cmd</kbd> <span data-i18n="streetSettings.shortcutMacAfter">en Mac)</span> <span data-i18n="streetSettings.shortcutSuffix">+ clic sobre cualquier calle en el canvas para seleccionarla rápidamente.</span>
             </div>
 
           </div>
@@ -1296,63 +1296,63 @@
 
   <!-- Modal Nueva Calle -->
   <div class="modal fade" id="modalNuevaCalle" role="dialog" tabindex="-1" aria-labelledby="modalNuevaCalleLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
       <div class="modal-content">
         <div class="modal-header bg-primary text-white">
-          <h5 class="modal-title" id="modalNuevaCalleLabel">➕ Agregar Nueva Calle</h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+          <h5 class="modal-title" id="modalNuevaCalleLabel" data-i18n="streetEditor.modalTitle">➕ Agregar Nueva Calle</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" data-i18n-attr="aria-label:common.close"></button>
         </div>
         <div class="modal-body">
           <div class="mb-3">
-            <label for="inputNombreCalle" class="form-label">Nombre:</label>
-            <input type="text" class="form-control" id="inputNombreCalle" placeholder="Ej: Calle Principal" required maxlength="100">
-            <div class="invalid-feedback">
+            <label for="inputNombreCalle" class="form-label" data-i18n="streetEditor.name">Nombre:</label>
+            <input type="text" class="form-control" id="inputNombreCalle" placeholder="Ej: Calle Principal" required maxlength="100" data-i18n-attr="placeholder:streetEditor.namePlaceholder">
+            <div class="invalid-feedback" data-i18n="streetEditor.nameInvalid">
               El nombre debe contener solo caracteres válidos (letras, números, espacios, guiones y puntos).
             </div>
           </div>
           <div class="mb-3">
-            <label for="inputTamanoCalle" class="form-label">Tamaño (celdas):</label>
+            <label for="inputTamanoCalle" class="form-label" data-i18n="streetEditor.size">Tamaño (celdas):</label>
             <input type="number" class="form-control" id="inputTamanoCalle" placeholder="100" min="1" max="2500" value="100" required>
-            <div class="invalid-feedback">
+            <div class="invalid-feedback" data-i18n="streetEditor.sizeInvalid">
               El tamaño debe estar entre 1 y 2500 celdas.
             </div>
-            <small class="form-text text-muted">Máximo: 2500 celdas</small>
+            <small class="form-text text-muted" data-i18n="streetEditor.sizeHelp">Máximo: 2500 celdas</small>
           </div>
           <div class="mb-3">
-            <label for="selectTipoCalle" class="form-label">Tipo:</label>
+            <label for="selectTipoCalle" class="form-label" data-i18n="streetEditor.type">Tipo:</label>
             <select class="form-select" id="selectTipoCalle">
-              <option value="GENERADOR">🚗 Generador</option>
-              <option value="CONEXION" selected>🛣️ Conexión</option>
-              <option value="DEVORADOR">🏁 Devorador</option>
+              <option value="GENERADOR" data-i18n="streetEditor.typeOption.generator">🚗 Generador</option>
+              <option value="CONEXION" selected data-i18n="streetEditor.typeOption.connection">🛣️ Conexión</option>
+              <option value="DEVORADOR" data-i18n="streetEditor.typeOption.sink">🏁 Devorador</option>
             </select>
           </div>
           <div class="mb-3">
-            <label for="inputCarrilesCalle" class="form-label">Número de Carriles:</label>
+            <label for="inputCarrilesCalle" class="form-label" data-i18n="streetEditor.lanes">Número de Carriles:</label>
             <input type="number" class="form-control" id="inputCarrilesCalle" placeholder="3" min="1" max="10" value="3" required>
-            <div class="invalid-feedback">
+            <div class="invalid-feedback" data-i18n="streetEditor.lanesInvalid">
               El número de carriles debe estar entre 1 y 10.
             </div>
-            <small class="form-text text-muted">Máximo: 10 carriles</small>
+            <small class="form-text text-muted" data-i18n="streetEditor.lanesHelp">Máximo: 10 carriles</small>
           </div>
           <div class="row">
             <div class="col-md-4 mb-3">
-              <label for="inputXCalle" class="form-label">Posición X:</label>
+              <label for="inputXCalle" class="form-label" data-i18n="streetEditor.positionX">Posición X:</label>
               <input type="number" class="form-control" id="inputXCalle" placeholder="500" value="500" required>
-              <div class="invalid-feedback">
+              <div class="invalid-feedback" data-i18n="streetEditor.required">
                 Requerido.
               </div>
             </div>
             <div class="col-md-4 mb-3">
-              <label for="inputYCalle" class="form-label">Posición Y:</label>
+              <label for="inputYCalle" class="form-label" data-i18n="streetEditor.positionY">Posición Y:</label>
               <input type="number" class="form-control" id="inputYCalle" placeholder="500" value="500" required>
-              <div class="invalid-feedback">
+              <div class="invalid-feedback" data-i18n="streetEditor.required">
                 Requerido.
               </div>
             </div>
             <div class="col-md-4 mb-3">
-              <label for="inputAnguloCalle" class="form-label">Ángulo (°):</label>
+              <label for="inputAnguloCalle" class="form-label" data-i18n="streetEditor.angle">Ángulo (°):</label>
               <input type="number" class="form-control" id="inputAnguloCalle" placeholder="0" min="0" max="360" value="0" required>
-              <div class="invalid-feedback">
+              <div class="invalid-feedback" data-i18n="streetEditor.angleInvalid">
                 Debe estar entre 0 y 360°.
               </div>
             </div>
@@ -1360,8 +1360,8 @@
           <!-- Probabilidad de Generación (solo para tipo GENERADOR) -->
           <div class="mb-3" id="campoGeneracionModal">
             <label for="inputProbGenCalle" class="form-label">
-              Probabilidad de Generación (%)
-              <span class="info-icon" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="Controla la frecuencia con la que se generan nuevos vehículos. 0% = sin vehículos, 100% = generación máxima continua. Solo disponible para calles de tipo GENERADOR.">
+              <span data-i18n="streetEditor.generationProbability">Probabilidad de Generación (%)</span>
+              <span class="info-icon" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="Controla la frecuencia con la que se generan nuevos vehículos. 0% = sin vehículos, 100% = generación máxima continua. Solo disponible para calles de tipo GENERADOR." data-i18n-attr="data-bs-title:streetEditor.generationTooltip">
                 <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle" viewBox="0 0 16 16">
                   <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/>
                   <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533z"/>
@@ -1370,15 +1370,15 @@
               </span>
             </label>
             <input type="number" class="form-control" id="inputProbGenCalle" placeholder="50" min="0" max="100" step="1" value="50">
-            <div class="invalid-feedback">
+            <div class="invalid-feedback" data-i18n="streetEditor.generationInvalid">
               La probabilidad debe estar entre 0 y 100.
             </div>
-            <small class="form-text text-muted">Ejemplo: 50 = 50%, 100 = 100%. Solo disponible para calles de tipo GENERADOR.</small>
+            <small class="form-text text-muted" data-i18n="streetEditor.generationHelp">Ejemplo: 50 = 50%, 100 = 100%. Solo disponible para calles de tipo GENERADOR.</small>
           </div>
           <div class="mb-3">
             <label for="inputProbSaltoCalle" class="form-label">
-              Probabilidad de Cambio de Carril (%)
-              <span class="info-icon" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="Define la probabilidad de que un vehículo cambie de carril cuando es posible. Valores bajos (0-5%) simulan tráfico ordenado, valores altos (>20%) generan más cambios de carril.">
+              <span data-i18n="streetEditor.laneChangeProbability">Probabilidad de Cambio de Carril (%)</span>
+              <span class="info-icon" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="Define la probabilidad de que un vehículo cambie de carril cuando es posible. Valores bajos (0-5%) simulan tráfico ordenado, valores altos (>20%) generan más cambios de carril." data-i18n-attr="data-bs-title:streetEditor.laneChangeTooltip">
                 <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle" viewBox="0 0 16 16">
                   <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/>
                   <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533z"/>
@@ -1387,15 +1387,15 @@
               </span>
             </label>
             <input type="number" class="form-control" id="inputProbSaltoCalle" placeholder="2" min="0" max="100" step="1" value="2" required>
-            <div class="invalid-feedback">
+            <div class="invalid-feedback" data-i18n="streetEditor.laneChangeInvalid">
               La probabilidad debe estar entre 0 y 100.
             </div>
-            <small class="form-text text-muted">Ejemplo: 2 = 2%, 10 = 10%</small>
+            <small class="form-text text-muted" data-i18n="streetEditor.laneChangeHelp">Ejemplo: 2 = 2%, 10 = 10%</small>
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-bs-toggle="tooltip" data-bs-title="Cerrar sin crear la calle">Cancelar</button>
-          <button type="button" class="btn btn-primary" id="btnConfirmarNuevaCalle" data-bs-toggle="tooltip" data-bs-title="Crear la calle con los parámetros ingresados">✓ Crear Calle</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-bs-toggle="tooltip" data-bs-title="Cerrar sin crear la calle" data-i18n="streetEditor.cancel" data-i18n-attr="data-bs-title:streetEditor.cancelTooltip">Cancelar</button>
+          <button type="button" class="btn btn-primary" id="btnConfirmarNuevaCalle" data-bs-toggle="tooltip" data-bs-title="Crear la calle con los parámetros ingresados" data-i18n="streetEditor.create" data-i18n-attr="data-bs-title:streetEditor.createTooltip">✓ Crear Calle</button>
         </div>
       </div>
     </div>
