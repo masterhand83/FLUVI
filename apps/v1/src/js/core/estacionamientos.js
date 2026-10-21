@@ -13,6 +13,10 @@ function obtenerCalleConexionEstacionamiento(conexion) {
     return window.calles?.find(calle => calle.id === conexion?.calleId || calle.nombre === conexion?.calleId) || null;
 }
 
+function traducirEstacionamiento(key, options) {
+    return typeof window.tr === 'function' ? window.tr(key, options) : key;
+}
+
 function conexionEstacionamientoEsValida(conexion, calle = obtenerCalleConexionEstacionamiento(conexion)) {
     return Number.isInteger(conexion?.carril) && conexion.carril >= 0 &&
         Number.isInteger(conexion?.indice) && conexion.indice >= 0 &&
@@ -21,35 +25,45 @@ function conexionEstacionamientoEsValida(conexion, calle = obtenerCalleConexionE
 
 // Pure validation: drafts must never change the live building or street maps.
 function validarConfiguracionEstacionamiento(edificio, conexiones, capacidad) {
-    if (!edificio) return 'Selecciona un edificio para configurar el estacionamiento.';
-    if (!Number.isInteger(capacidad) || capacidad <= 0) return 'La capacidad debe ser un entero positivo.';
+    if (!edificio) return traducirEstacionamiento('parking.validation.buildingRequired');
+    if (!Number.isInteger(capacidad) || capacidad <= 0) return traducirEstacionamiento('parking.validation.capacityPositive');
     const ocupacion = edificio.vehiculosActuales ?? 0;
-    if (!Number.isInteger(ocupacion) || ocupacion < 0) return 'La ocupación debe ser un entero no negativo.';
-    if (capacidad < ocupacion) return `La capacidad no puede ser menor que la ocupación actual (${ocupacion}).`;
+    if (!Number.isInteger(ocupacion) || ocupacion < 0) return traducirEstacionamiento('parking.validation.occupancyInvalid');
+    if (capacidad < ocupacion) return traducirEstacionamiento('parking.validation.capacityBelowOccupancy', { occupancy: ocupacion });
     if (!Array.isArray(conexiones) || conexiones.length < 2 || conexiones.length > 20) {
-        return 'Configura entre 1 y 10 pares completos de entrada y salida.';
+        return traducirEstacionamiento('parking.validation.pairCount');
     }
     const entradas = conexiones.filter(c => c?.tipo === 'entrada').length;
     const salidas = conexiones.filter(c => c?.tipo === 'salida').length;
     if (entradas !== salidas || entradas + salidas !== conexiones.length) {
-        return 'Cada par necesita una entrada y una salida; completa ambos extremos.';
+        return traducirEstacionamiento('parking.validation.incompletePair');
     }
     const usados = new Map();
     for (const conexion of conexiones) {
         const calle = obtenerCalleConexionEstacionamiento(conexion);
-        if (!calle) return `Selecciona una calle existente para la ${conexion.tipo}.`;
+        if (!calle) {
+            return traducirEstacionamiento(conexion.tipo === 'entrada'
+                ? 'parking.validation.entranceStreetRequired'
+                : 'parking.validation.exitStreetRequired');
+        }
         if (!conexionEstacionamientoEsValida(conexion, calle)) {
-            return `Revisa el carril y la celda de la ${conexion.tipo} en «${calle.nombre}»: deben ser enteros dentro de la calle.`;
+            return traducirEstacionamiento(conexion.tipo === 'entrada'
+                ? 'parking.validation.entranceEndpointInvalid'
+                : 'parking.validation.exitEndpointInvalid', { street: calle.nombre });
         }
         const clave = `${conexion.carril}-${conexion.indice}`;
         if (!usados.has(calle)) usados.set(calle, new Set());
-        if (usados.get(calle).has(clave)) return 'Cada entrada y salida debe usar una celda diferente.';
+        if (usados.get(calle).has(clave)) return traducirEstacionamiento('parking.validation.duplicateEndpoint');
         usados.get(calle).add(clave);
         const mapping = calle.conexionesEstacionamiento?.get(clave);
         const otroEdificio = (window.edificios || []).some(otro => otro !== edificio && otro.esEstacionamiento === true &&
             otro.conexiones?.some(c => obtenerCalleConexionEstacionamiento(c) === calle && c.carril === conexion.carril && c.indice === conexion.indice));
         if ((mapping && !conexionPerteneceAEdificio(mapping, edificio)) || otroEdificio) {
-            return `La celda ${conexion.indice} del carril ${conexion.carril} en «${calle.nombre}» ya pertenece a otro estacionamiento. Elige otra celda.`;
+            return traducirEstacionamiento('parking.validation.endpointOwned', {
+                lane: conexion.carril,
+                cell: conexion.indice,
+                street: calle.nombre
+            });
         }
     }
     return null;

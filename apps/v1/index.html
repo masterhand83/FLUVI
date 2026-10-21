@@ -1443,11 +1443,11 @@
 
           <!-- Configuración de Estacionamiento -->
           <hr>
-          <h6 class="border-bottom pb-2 mb-3 fw-semibold">🅿️ Configuración de Estacionamiento</h6>
+          <h6 class="border-bottom pb-2 mb-3 fw-semibold" data-i18n="parking.legacy.title">🅿️ Configuración de Estacionamiento</h6>
 
           <div class="form-check form-switch mb-3">
             <input class="form-check-input" type="checkbox" id="checkEstacionamiento" onchange="toggleEstacionamientoConfig(this.checked)" style="cursor: pointer;">
-            <label class="form-check-label fw-semibold" for="checkEstacionamiento" style="cursor: pointer;">
+            <label class="form-check-label fw-semibold" for="checkEstacionamiento" style="cursor: pointer;" data-i18n="parking.legacy.toggle">
               Funciona como estacionamiento
             </label>
           </div>
@@ -1455,45 +1455,47 @@
           <div id="configEstacionamiento" style="display: none;">
             <!-- Capacidad -->
             <div class="mb-3">
-              <label for="inputCapacidad" class="form-label">Capacidad máxima de vehículos:</label>
+              <label for="inputCapacidad" class="form-label" data-i18n="parking.legacy.capacity">Capacidad máxima de vehículos:</label>
               <input type="number" class="form-control" id="inputCapacidad" min="1" max="500" value="50">
             </div>
 
             <!-- Conexiones -->
             <div class="mb-3">
-              <span class="form-label fw-semibold">Conexiones (Entradas/Salidas):</span>
+              <span class="form-label fw-semibold" data-i18n="parking.legacy.connections">Conexiones (Entradas/Salidas):</span>
               <div class="alert alert-info small mb-2" role="alert">
-                <strong>⚠️ Importante:</strong> Las conexiones deben venir en pares (1 entrada → 1 salida). Máximo 10 pares.
-                <br><small class="text-muted">La entrada y salida NO pueden estar en la misma celda del mismo carril.</small>
+                <strong data-i18n="parking.legacy.pairsImportantLabel">⚠️ Importante:</strong>
+                <span data-i18n="parking.legacy.pairsImportantBody">Las conexiones deben venir en pares (1 entrada → 1 salida). Máximo 10 pares.</span>
+                <br><small class="text-muted" data-i18n="parking.legacy.overlapHelp">La entrada y salida NO pueden estar en la misma celda del mismo carril.</small>
               </div>
 
               <div id="listaConexionesEdificio" class="mb-2 border rounded p-2" style="max-height: 400px; overflow-y: auto; min-height: 50px; background-color: var(--bs-light-bg-subtle);"></div>
 
-              <button type="button" class="btn btn-sm btn-primary" onclick="agregarParConexion()">
+              <button type="button" class="btn btn-sm btn-primary" onclick="agregarParConexion()" data-i18n="parking.legacy.addPair">
                 ➕ Agregar Par (Entrada + Salida)
               </button>
             </div>
 
             <!-- Probabilidades por hora -->
             <div class="mb-3">
-              <span class="form-label fw-semibold">Probabilidades de Entrada/Salida por Hora:</span>
+              <span class="form-label fw-semibold" data-i18n="parking.legacy.probabilities">Probabilidades de Entrada/Salida por Hora:</span>
               <div class="alert alert-warning small mb-2" role="alert">
-                <strong>⏰ Configuración:</strong> Ajusta las probabilidades para cada hora del día (0-23). Los valores van de 0% a 100%.
+                <strong data-i18n="parking.legacy.scheduleLabel">⏰ Configuración:</strong>
+                <span data-i18n="parking.legacy.scheduleBody">Ajusta las probabilidades para cada hora del día (0-23). Los valores van de 0% a 100%.</span>
               </div>
 
               <div class="btn-group btn-group-sm mb-3 d-flex">
-                <button type="button" class="btn btn-outline-primary flex-fill" onclick="aplicarPerfilHorario('normal')">Normal</button>
-                <button type="button" class="btn btn-outline-primary flex-fill" onclick="aplicarPerfilHorario('oficina')">Oficina</button>
-                <button type="button" class="btn btn-outline-primary flex-fill" onclick="aplicarPerfilHorario('centro')">Centro Comercial</button>
+                <button type="button" class="btn btn-outline-primary flex-fill" onclick="aplicarPerfilHorario('normal')" data-i18n="parking.legacy.presets.normal">Normal</button>
+                <button type="button" class="btn btn-outline-primary flex-fill" onclick="aplicarPerfilHorario('oficina')" data-i18n="parking.legacy.presets.office">Oficina</button>
+                <button type="button" class="btn btn-outline-primary flex-fill" onclick="aplicarPerfilHorario('centro')" data-i18n="parking.legacy.presets.mall">Centro Comercial</button>
               </div>
 
               <div class="row g-3">
                 <div class="col-md-6">
-                  <span class="form-label small fw-semibold text-success">🟢 Entrada (%)</span>
+                  <span class="form-label small fw-semibold text-success" data-i18n="parking.legacy.entrancePercent">🟢 Entrada (%)</span>
                   <div id="slidersProbEntrada" class="border rounded p-2" style="max-height: 200px; overflow-y: auto; background-color: var(--bs-light-bg-subtle);"></div>
                 </div>
                 <div class="col-md-6">
-                  <span class="form-label small fw-semibold text-primary">🔵 Salida (%)</span>
+                  <span class="form-label small fw-semibold text-primary" data-i18n="parking.legacy.exitPercent">🔵 Salida (%)</span>
                   <div id="slidersProbSalida" class="border rounded p-2" style="max-height: 200px; overflow-y: auto; background-color: var(--bs-light-bg-subtle);"></div>
                 </div>
               </div>
@@ -2462,16 +2464,16 @@
         <button type="button" id="buildingInspectorReplaceImage" class="btn btn-sm btn-outline-success mt-2" hidden data-i18n="buildingInspector.replaceImage">Reemplazar imagen</button>
         <input id="buildingInspectorImageInput" type="file" accept="image/png,image/jpeg,image/webp" hidden>
         <small id="buildingInspectorImageStatus" role="status" aria-live="polite" hidden></small>
-        <section id="buildingInspectorParking" class="building-inspector-parking mt-2" aria-label="Estacionamiento funcional">
-          <label><input id="buildingInspectorParkingToggle" type="checkbox"> Estacionamiento funcional</label>
+        <section id="buildingInspectorParking" class="building-inspector-parking mt-2" aria-label="Estacionamiento funcional" data-i18n-attr="aria-label:parking.inspector.title">
+          <label data-i18n="parking.inspector.toggle"><input id="buildingInspectorParkingToggle" type="checkbox"> Estacionamiento funcional</label>
           <small id="buildingInspectorParkingStatus" role="status" aria-live="polite"></small>
           <div id="buildingInspectorParkingConfig" hidden>
-            <label class="street-inspector-field">Capacidad <input id="buildingInspectorParkingCapacity" type="number" min="1" step="1" value="50"></label>
-            <small>Carril y celda: numeración desde 1. Completa todos los pares para aplicar las conexiones.</small>
+            <label class="street-inspector-field" data-i18n="parking.inspector.capacity">Capacidad <input id="buildingInspectorParkingCapacity" type="number" min="1" step="1" value="50"></label>
+            <small data-i18n="parking.inspector.help">Carril y celda: numeración desde 1. Completa todos los pares para aplicar las conexiones.</small>
             <div id="buildingInspectorParkingPairs"></div>
-            <button id="buildingInspectorParkingAddPair" type="button" class="btn btn-sm btn-outline-primary mt-1">Añadir par (máximo 10)</button>
+            <button id="buildingInspectorParkingAddPair" type="button" class="btn btn-sm btn-outline-primary mt-1" data-i18n="parking.inspector.addPair">Añadir par (máximo 10)</button>
             <details class="mt-2">
-              <summary>Probabilidades por hora (%)</summary>
+              <summary data-i18n="parking.inspector.probabilities">Probabilidades por hora (%)</summary>
               <div id="buildingInspectorParkingProbabilities"></div>
             </details>
           </div>

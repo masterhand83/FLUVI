@@ -55,9 +55,20 @@
 	function parkingStatus() {
 		if (!parking.status || !selected) return
 		const functional = window.edificioTieneConexionesEstacionamientoFuncionales?.(selected)
-		parking.status.textContent = functional
-			? `Activo: ${selected.vehiculosActuales || 0} / ${selected.capacidadMaxima} vehículos.`
-			: parkingDraft?.enabled ? "Sin activar: completa una entrada y una salida válidas por par." : "Edificio decorativo."
+		if (functional) {
+			const capacity = selected.capacidadMaxima ?? 0
+			parking.status.textContent = tr("parking.inspector.status.active", {
+				count: capacity,
+				occupied: selected.vehiculosActuales || 0,
+			})
+			return
+		}
+		parking.status.textContent = parkingDraft?.enabled
+			? tr("parking.inspector.status.incomplete")
+			: tr("parking.inspector.status.decorative")
+	}
+	function parkingTypeLabel(type) {
+		return tr(type === "entrada" ? "parking.connection.entrance" : "parking.connection.exit")
 	}
 	function parkingInput(id, value, min, max) {
 		const input = document.createElement("input")
@@ -79,16 +90,16 @@
 			row.id = `buildingInspectorParkingPair${index}`
 			row.className = "building-parking-pair"
 			const legend = document.createElement("legend")
-			legend.textContent = `Par ${index + 1}`
+			legend.textContent = tr("parking.inspector.pairLegend", { number: index + 1 })
 			row.append(legend)
-			for (const [type, title] of [["entrada", "Entrada"], ["salida", "Salida"]]) {
+			for (const [type, idSuffix, title] of [["entrada", "Entrada", parkingTypeLabel("entrada")], ["salida", "Salida", parkingTypeLabel("salida")]]) {
 				const connection = pair[type]
-				const prefix = `buildingInspectorParkingPair${index}${title}`
+				const prefix = `buildingInspectorParkingPair${index}${idSuffix}`
 				const road = document.createElement("select")
 				road.id = `${prefix}Road`
 				const placeholder = document.createElement("option")
 				placeholder.value = ""
-				placeholder.textContent = "Selecciona una calle"
+				placeholder.textContent = tr("parking.inspector.streetPlaceholder")
 				road.append(placeholder)
 				for (const street of [...(window.calles || [])].sort((a, b) => a.nombre.localeCompare(b.nombre, "es"))) {
 					const option = document.createElement("option")
@@ -99,10 +110,10 @@
 				road.value = connection.road
 				const lane = parkingInput(`${prefix}Lane`, connection.lane, 1)
 				const cell = parkingInput(`${prefix}Cell`, connection.cell, 1)
-				row.append(parkingLabel(`${title}: calle`, road))
+				row.append(parkingLabel(tr("parking.inspector.streetLabel", { type: title }), road))
 				const coordinates = document.createElement("div")
 				coordinates.className = "street-inspector-details"
-				coordinates.append(parkingLabel("Carril", lane), parkingLabel("Celda", cell))
+				coordinates.append(parkingLabel(tr("parking.inspector.lane"), lane), parkingLabel(tr("parking.inspector.cell"), cell))
 				row.append(coordinates)
 				for (const [key, input] of [["road", road], ["lane", lane], ["cell", cell]]) {
 					input.addEventListener(key === "road" ? "change" : "input", () => {
@@ -112,7 +123,7 @@
 				}
 			}
 			const remove = document.createElement("button")
-			Object.assign(remove, { id: `buildingInspectorParkingPair${index}Remove`, type: "button", textContent: "Eliminar par", disabled: parkingDraft.pairs.length === 1 })
+			Object.assign(remove, { id: `buildingInspectorParkingPair${index}Remove`, type: "button", textContent: tr("parking.inspector.removePair"), disabled: parkingDraft.pairs.length === 1 })
 			remove.className = "btn btn-sm btn-outline-danger mt-1"
 			remove.addEventListener("click", () => {
 				parkingDraft.pairs.splice(index, 1)
@@ -155,14 +166,19 @@
 			const time = document.createElement("span")
 			time.textContent = `${String(hour).padStart(2, "0")}:00`
 			row.append(time)
-			for (const [type, title, property] of [["entrada", "Entrada", "probabilidadesEntrada"], ["salida", "Salida", "probabilidadesSalida"]]) {
-				const input = parkingInput(`buildingInspectorParking${title}${hour}`, Math.round(parkingDraft[type][hour] * 100), 0, 100)
+			for (const [type, idSuffix, title, property] of [
+				["entrada", "Entrada", parkingTypeLabel("entrada"), "probabilidadesEntrada"],
+				["salida", "Salida", parkingTypeLabel("salida"), "probabilidadesSalida"],
+			]) {
+				const input = parkingInput(`buildingInspectorParking${idSuffix}${hour}`, Math.round(parkingDraft[type][hour] * 100), 0, 100)
+				const hourLabel = String(hour).padStart(2, "0")
+				input.setAttribute("aria-label", tr("parking.inspector.probabilityInput", { type: title, hour: hourLabel }))
 				input.addEventListener("input", () => {
 					const value = Number(input.value)
 					const valid = input.value !== "" && Number.isFinite(value) && value >= 0 && value <= 100
 					input.setAttribute("aria-invalid", String(!valid))
 					if (!valid) {
-						parking.error.textContent = `${title}, ${hour}:00: introduce una probabilidad entre 0 y 100 %.`
+						parking.error.textContent = tr("parking.inspector.probabilityError", { type: title, hour: hourLabel })
 						return
 					}
 					parkingDraft[type][hour] = value / 100
@@ -180,7 +196,9 @@
 		const capacity = Number(parking.capacity.value)
 		if (!parking.capacity.value || !Number.isInteger(capacity) || capacity < 1 || capacity < (selected.vehiculosActuales || 0)) {
 			parking.capacity.setAttribute("aria-invalid", "true")
-			parking.error.textContent = `La capacidad debe ser un entero positivo y al menos ${Math.max(1, selected.vehiculosActuales || 0)} (ocupación actual).`
+			parking.error.textContent = tr("parking.inspector.capacityError", {
+				minimum: Math.max(1, selected.vehiculosActuales || 0),
+			})
 			return
 		}
 		parking.capacity.removeAttribute("aria-invalid")
@@ -198,12 +216,12 @@
 		// The core validator owns overlap, ownership and atomic replacement rules.
 		const reason = window.validarConfiguracionEstacionamiento?.(selected, connections, capacity)
 		if (typeof window.validarConfiguracionEstacionamiento !== "function" || reason) {
-			parking.error.textContent = reason || "No se puede validar el estacionamiento. Intenta de nuevo cuando el mapa termine de cargar."
+			parking.error.textContent = reason || tr("parking.validation.unavailable")
 			parkingStatus()
 			return
 		}
 		if (!window.configurarEstacionamiento?.(selected, connections, capacity)) {
-			parking.error.textContent = "No se pudieron aplicar las conexiones. Revisa las calles, carriles y celdas de todos los pares."
+			parking.error.textContent = tr("parking.validation.applyFailed")
 			return
 		}
 		selected.probabilidadesEntrada = [...parkingDraft.entrada]

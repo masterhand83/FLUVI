@@ -508,11 +508,101 @@
     "streetSelection": {
       "required": "Please select a street first."
     },
+    "parking": {
+      "invalidConfiguration": "Parking cannot be configured: {{reason}}",
+      "noConnections": "Without connections, the building will be decorative."
+    },
     "title": {
       "error": "Error",
       "info": "Information",
       "success": "Success",
       "warning": "Warning"
+    }
+  },
+  "parking": {
+    "connection": {
+      "entrance": "Entrance",
+      "exit": "Exit"
+    },
+    "count": {
+      "cells_one": "{{count}} cell",
+      "cells_other": "{{count}} cells",
+      "lanes_one": "{{count}} lane",
+      "lanes_other": "{{count}} lanes"
+    },
+    "inspector": {
+      "addPair": "Add pair (maximum 10)",
+      "capacity": "Capacity",
+      "capacityError": "Capacity must be a positive integer and at least {{minimum}} (current occupancy).",
+      "cell": "Cell",
+      "help": "Lane and cell: numbered from 1. Complete every pair to apply the connections.",
+      "lane": "Lane",
+      "pairLegend": "Pair {{number}}",
+      "probabilityError": "{{type}} at {{hour}}:00: enter a probability between 0 and 100%.",
+      "probabilityInput": "{{type}}, {{hour}}:00",
+      "probabilities": "Hourly probabilities (%)",
+      "removePair": "Remove pair",
+      "status": {
+        "active_one": "Active: {{occupied}} / {{count}} vehicle.",
+        "active_other": "Active: {{occupied}} / {{count}} vehicles.",
+        "decorative": "Decorative building.",
+        "incomplete": "Not active: complete one valid entrance and exit per pair."
+      },
+      "streetLabel": "{{type}}: street",
+      "streetPlaceholder": "Select a street",
+      "title": "Functional parking",
+      "toggle": "Functional parking"
+    },
+    "legacy": {
+      "addPair": "➕ Add Pair (Entrance + Exit)",
+      "capacity": "Maximum vehicle capacity:",
+      "cellHint": "Cell 1 to {{max}}",
+      "cellPlaceholder": "Cell (1-N)",
+      "connections": "Connections (Entrances/Exits):",
+      "entrance": "🟢 ENTRANCE",
+      "entrancePercent": "🟢 Entrance (%)",
+      "errorLabel": "⚠️ Error:",
+      "exit": "🔵 EXIT",
+      "exitPercent": "🔵 Exit (%)",
+      "hour": "Hour {{hour}}:00",
+      "laneHint": "Lane 1 to {{max}}",
+      "lanePlaceholder": "Lane (1-N)",
+      "listMissing": "The building connection list was not found.",
+      "maxPairs": "A maximum of 10 connection pairs is allowed.",
+      "overlapError": "The entrance and exit cannot use the same cell in the same lane.",
+      "overlapHelp": "The entrance and exit CANNOT use the same cell in the same lane.",
+      "pair": "Pair {{number}}",
+      "pairsImportantBody": "Connections must come in pairs (1 entrance → 1 exit). Maximum 10 pairs.",
+      "pairsImportantLabel": "⚠️ Important:",
+      "presets": {
+        "mall": "Shopping center",
+        "normal": "Normal",
+        "office": "Office"
+      },
+      "probabilities": "Hourly Entrance/Exit Probabilities:",
+      "removePair": "✖️ Remove",
+      "scheduleBody": "Adjust the probabilities for every hour of the day (0-23). Values range from 0% to 100%.",
+      "scheduleLabel": "⏰ Settings:",
+      "streetOption": "{{name}} ({{lanes}}, {{cells}})",
+      "streetPlaceholder": "Street...",
+      "title": "🅿️ Parking Settings",
+      "toggle": "Works as parking"
+    },
+    "validation": {
+      "applyFailed": "The connections could not be applied. Check the streets, lanes, and cells of every pair.",
+      "buildingRequired": "Select a building to configure parking.",
+      "capacityBelowOccupancy": "Capacity cannot be less than the current occupancy ({{occupancy}}).",
+      "capacityPositive": "Capacity must be a positive integer.",
+      "duplicateEndpoint": "Each entrance and exit must use a different cell.",
+      "endpointOwned": "Cell {{cell}} in lane {{lane}} on «{{street}}» already belongs to another parking lot. Choose another cell.",
+      "entranceEndpointInvalid": "Check the entrance lane and cell on «{{street}}»: they must be integers inside the street.",
+      "entranceStreetRequired": "Select an existing street for the entrance.",
+      "exitEndpointInvalid": "Check the exit lane and cell on «{{street}}»: they must be integers inside the street.",
+      "exitStreetRequired": "Select an existing street for the exit.",
+      "incompletePair": "Each pair needs one entrance and one exit; complete both ends.",
+      "occupancyInvalid": "Occupancy must be a non-negative integer.",
+      "pairCount": "Configure between 1 and 10 complete entrance and exit pairs.",
+      "unavailable": "Parking cannot be validated. Try again when the map finishes loading."
     }
   },
   "settings": {
@@ -524,8 +614,8 @@
     },
     "consoleLogs": {
       "hide": "🚫 Hide console logs",
-      "show": "📝 Show console logs",
-      "label": "📝 Console logs"
+      "label": "📝 Console logs",
+      "show": "📝 Show console logs"
     },
     "darkMode": {
       "dark": "🌙 Dark mode",
@@ -624,9 +714,9 @@
       "twoStreets": "Select two different streets."
     },
     "legacy": {
-      "cannotChange": "Cannot be changed while editing",
       "cancelEditTooltip": "Close without saving the changes",
       "cancelTooltip": "Close without creating the street connection",
+      "cannotChange": "Cannot be changed while editing",
       "connectionLabel": "Street connection:",
       "create": "✓ Create Connection",
       "createTooltip": "Create the street connection between the streets with the entered parameters",
@@ -657,10 +747,10 @@
       "noSource": "Select a source street first",
       "oneBasedHelp": "Positions are counted from 1 (not from 0)",
       "outputsTitle": "Exit Configuration",
-      "probability": "Probability (%)",
-      "probabilityHelp": "% of vehicles that take this exit",
       "probabilisticInfoBody": "Define a source lane and configure the probability and positions for each available destination lane.",
       "probabilisticInfoTitle": "💡 Probabilistic connection:",
+      "probability": "Probability (%)",
+      "probabilityHelp": "% of vehicles that take this exit",
       "selectLane": "Select a lane...",
       "selectStreetDestination": "Select a destination street...",
       "selectStreetSource": "Select a source street...",

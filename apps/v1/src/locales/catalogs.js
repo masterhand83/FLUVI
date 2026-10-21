@@ -515,11 +515,104 @@ window.FLUVI_LOCALE_RESOURCES = {
 				"streetSelection": {
 					"required": "Por favor selecciona una calle primero."
 				},
+				"parking": {
+					"invalidConfiguration": "No se puede configurar el estacionamiento: {{reason}}",
+					"noConnections": "Sin conexiones, el edificio será decorativo."
+				},
 				"title": {
 					"error": "Error",
 					"info": "Información",
 					"success": "Éxito",
 					"warning": "Advertencia"
+				}
+			},
+			"parking": {
+				"connection": {
+					"entrance": "Entrada",
+					"exit": "Salida"
+				},
+				"count": {
+					"cells_many": "{{count}} celdas",
+					"cells_one": "{{count}} celda",
+					"cells_other": "{{count}} celdas",
+					"lanes_many": "{{count}} carriles",
+					"lanes_one": "{{count}} carril",
+					"lanes_other": "{{count}} carriles"
+				},
+				"inspector": {
+					"addPair": "Añadir par (máximo 10)",
+					"capacity": "Capacidad",
+					"capacityError": "La capacidad debe ser un entero positivo y al menos {{minimum}} (ocupación actual).",
+					"cell": "Celda",
+					"help": "Carril y celda: numeración desde 1. Completa todos los pares para aplicar las conexiones.",
+					"lane": "Carril",
+					"pairLegend": "Par {{number}}",
+					"probabilityError": "{{type}} a las {{hour}}:00: introduce una probabilidad entre 0 y 100 %.",
+					"probabilityInput": "{{type}}, {{hour}}:00",
+					"probabilities": "Probabilidades por hora (%)",
+					"removePair": "Eliminar par",
+					"status": {
+						"active_many": "Activo: {{occupied}} / {{count}} vehículos.",
+						"active_one": "Activo: {{occupied}} / {{count}} vehículo.",
+						"active_other": "Activo: {{occupied}} / {{count}} vehículos.",
+						"decorative": "Edificio decorativo.",
+						"incomplete": "Sin activar: completa una entrada y una salida válidas por par."
+					},
+					"streetLabel": "{{type}}: calle",
+					"streetPlaceholder": "Selecciona una calle",
+					"title": "Estacionamiento funcional",
+					"toggle": "Estacionamiento funcional"
+				},
+				"legacy": {
+					"addPair": "➕ Agregar Par (Entrada + Salida)",
+					"capacity": "Capacidad máxima de vehículos:",
+					"cellHint": "Posición 1 a {{max}}",
+					"cellPlaceholder": "Posición (1-N)",
+					"connections": "Conexiones (Entradas/Salidas):",
+					"entrance": "🟢 ENTRADA",
+					"entrancePercent": "🟢 Entrada (%)",
+					"errorLabel": "⚠️ Error:",
+					"exit": "🔵 SALIDA",
+					"exitPercent": "🔵 Salida (%)",
+					"hour": "Hora {{hour}}:00",
+					"laneHint": "Carril 1 a {{max}}",
+					"lanePlaceholder": "Carril (1-N)",
+					"listMissing": "No se encontró la lista de conexiones del edificio.",
+					"maxPairs": "Máximo 10 pares de conexiones permitidos.",
+					"overlapError": "La entrada y salida no pueden estar en la misma celda del mismo carril.",
+					"overlapHelp": "La entrada y salida NO pueden estar en la misma celda del mismo carril.",
+					"pair": "Par {{number}}",
+					"pairsImportantBody": "Las conexiones deben venir en pares (1 entrada → 1 salida). Máximo 10 pares.",
+					"pairsImportantLabel": "⚠️ Importante:",
+					"presets": {
+						"mall": "Centro Comercial",
+						"normal": "Normal",
+						"office": "Oficina"
+					},
+					"probabilities": "Probabilidades de Entrada/Salida por Hora:",
+					"removePair": "✖️ Eliminar",
+					"scheduleBody": "Ajusta las probabilidades para cada hora del día (0-23). Los valores van de 0% a 100%.",
+					"scheduleLabel": "⏰ Configuración:",
+					"streetOption": "{{name}} ({{lanes}}, {{cells}})",
+					"streetPlaceholder": "Calle...",
+					"title": "🅿️ Configuración de Estacionamiento",
+					"toggle": "Funciona como estacionamiento"
+				},
+				"validation": {
+					"applyFailed": "No se pudieron aplicar las conexiones. Revisa las calles, carriles y celdas de todos los pares.",
+					"buildingRequired": "Selecciona un edificio para configurar el estacionamiento.",
+					"capacityBelowOccupancy": "La capacidad no puede ser menor que la ocupación actual ({{occupancy}}).",
+					"capacityPositive": "La capacidad debe ser un entero positivo.",
+					"duplicateEndpoint": "Cada entrada y salida debe usar una celda diferente.",
+					"endpointOwned": "La celda {{cell}} del carril {{lane}} en «{{street}}» ya pertenece a otro estacionamiento. Elige otra celda.",
+					"entranceEndpointInvalid": "Revisa el carril y la celda de la entrada en «{{street}}»: deben ser enteros dentro de la calle.",
+					"entranceStreetRequired": "Selecciona una calle existente para la entrada.",
+					"exitEndpointInvalid": "Revisa el carril y la celda de la salida en «{{street}}»: deben ser enteros dentro de la calle.",
+					"exitStreetRequired": "Selecciona una calle existente para la salida.",
+					"incompletePair": "Cada par necesita una entrada y una salida; completa ambos extremos.",
+					"occupancyInvalid": "La ocupación debe ser un entero no negativo.",
+					"pairCount": "Configura entre 1 y 10 pares completos de entrada y salida.",
+					"unavailable": "No se puede validar el estacionamiento. Intenta de nuevo cuando el mapa termine de cargar."
 				}
 			},
 			"settings": {
@@ -531,8 +624,8 @@ window.FLUVI_LOCALE_RESOURCES = {
 				},
 				"consoleLogs": {
 					"hide": "🚫 Ocultar Logs en Consola",
-					"show": "📝 Mostrar Logs en Consola",
-					"label": "📝 Logs en Consola"
+					"label": "📝 Logs en Consola",
+					"show": "📝 Mostrar Logs en Consola"
 				},
 				"darkMode": {
 					"dark": "🌙 Modo Oscuro",
@@ -631,9 +724,9 @@ window.FLUVI_LOCALE_RESOURCES = {
 					"twoStreets": "Selecciona dos calles distintas."
 				},
 				"legacy": {
-					"cannotChange": "No se puede cambiar al editar",
 					"cancelEditTooltip": "Cerrar sin guardar los cambios",
 					"cancelTooltip": "Cerrar sin crear la conexión",
+					"cannotChange": "No se puede cambiar al editar",
 					"connectionLabel": "Conexión:",
 					"create": "✓ Crear conexión",
 					"createTooltip": "Crear la conexión entre las calles con los parámetros ingresados",
@@ -665,10 +758,10 @@ window.FLUVI_LOCALE_RESOURCES = {
 					"noSource": "Selecciona una calle origen primero",
 					"oneBasedHelp": "Las posiciones se cuentan desde 1 (no desde 0)",
 					"outputsTitle": "Configuración de salidas",
-					"probability": "Probabilidad (%)",
-					"probabilityHelp": "% de vehículos que toman esta salida",
 					"probabilisticInfoBody": "Define un carril origen y configura la probabilidad y las posiciones para cada carril destino disponible.",
 					"probabilisticInfoTitle": "💡 Conexión probabilística:",
+					"probability": "Probabilidad (%)",
+					"probabilityHelp": "% de vehículos que toman esta salida",
 					"selectLane": "Selecciona un carril...",
 					"selectStreetDestination": "Selecciona calle destino...",
 					"selectStreetSource": "Selecciona calle origen...",
@@ -1584,11 +1677,101 @@ window.FLUVI_LOCALE_RESOURCES = {
 				"streetSelection": {
 					"required": "Please select a street first."
 				},
+				"parking": {
+					"invalidConfiguration": "Parking cannot be configured: {{reason}}",
+					"noConnections": "Without connections, the building will be decorative."
+				},
 				"title": {
 					"error": "Error",
 					"info": "Information",
 					"success": "Success",
 					"warning": "Warning"
+				}
+			},
+			"parking": {
+				"connection": {
+					"entrance": "Entrance",
+					"exit": "Exit"
+				},
+				"count": {
+					"cells_one": "{{count}} cell",
+					"cells_other": "{{count}} cells",
+					"lanes_one": "{{count}} lane",
+					"lanes_other": "{{count}} lanes"
+				},
+				"inspector": {
+					"addPair": "Add pair (maximum 10)",
+					"capacity": "Capacity",
+					"capacityError": "Capacity must be a positive integer and at least {{minimum}} (current occupancy).",
+					"cell": "Cell",
+					"help": "Lane and cell: numbered from 1. Complete every pair to apply the connections.",
+					"lane": "Lane",
+					"pairLegend": "Pair {{number}}",
+					"probabilityError": "{{type}} at {{hour}}:00: enter a probability between 0 and 100%.",
+					"probabilityInput": "{{type}}, {{hour}}:00",
+					"probabilities": "Hourly probabilities (%)",
+					"removePair": "Remove pair",
+					"status": {
+						"active_one": "Active: {{occupied}} / {{count}} vehicle.",
+						"active_other": "Active: {{occupied}} / {{count}} vehicles.",
+						"decorative": "Decorative building.",
+						"incomplete": "Not active: complete one valid entrance and exit per pair."
+					},
+					"streetLabel": "{{type}}: street",
+					"streetPlaceholder": "Select a street",
+					"title": "Functional parking",
+					"toggle": "Functional parking"
+				},
+				"legacy": {
+					"addPair": "➕ Add Pair (Entrance + Exit)",
+					"capacity": "Maximum vehicle capacity:",
+					"cellHint": "Cell 1 to {{max}}",
+					"cellPlaceholder": "Cell (1-N)",
+					"connections": "Connections (Entrances/Exits):",
+					"entrance": "🟢 ENTRANCE",
+					"entrancePercent": "🟢 Entrance (%)",
+					"errorLabel": "⚠️ Error:",
+					"exit": "🔵 EXIT",
+					"exitPercent": "🔵 Exit (%)",
+					"hour": "Hour {{hour}}:00",
+					"laneHint": "Lane 1 to {{max}}",
+					"lanePlaceholder": "Lane (1-N)",
+					"listMissing": "The building connection list was not found.",
+					"maxPairs": "A maximum of 10 connection pairs is allowed.",
+					"overlapError": "The entrance and exit cannot use the same cell in the same lane.",
+					"overlapHelp": "The entrance and exit CANNOT use the same cell in the same lane.",
+					"pair": "Pair {{number}}",
+					"pairsImportantBody": "Connections must come in pairs (1 entrance → 1 exit). Maximum 10 pairs.",
+					"pairsImportantLabel": "⚠️ Important:",
+					"presets": {
+						"mall": "Shopping center",
+						"normal": "Normal",
+						"office": "Office"
+					},
+					"probabilities": "Hourly Entrance/Exit Probabilities:",
+					"removePair": "✖️ Remove",
+					"scheduleBody": "Adjust the probabilities for every hour of the day (0-23). Values range from 0% to 100%.",
+					"scheduleLabel": "⏰ Settings:",
+					"streetOption": "{{name}} ({{lanes}}, {{cells}})",
+					"streetPlaceholder": "Street...",
+					"title": "🅿️ Parking Settings",
+					"toggle": "Works as parking"
+				},
+				"validation": {
+					"applyFailed": "The connections could not be applied. Check the streets, lanes, and cells of every pair.",
+					"buildingRequired": "Select a building to configure parking.",
+					"capacityBelowOccupancy": "Capacity cannot be less than the current occupancy ({{occupancy}}).",
+					"capacityPositive": "Capacity must be a positive integer.",
+					"duplicateEndpoint": "Each entrance and exit must use a different cell.",
+					"endpointOwned": "Cell {{cell}} in lane {{lane}} on «{{street}}» already belongs to another parking lot. Choose another cell.",
+					"entranceEndpointInvalid": "Check the entrance lane and cell on «{{street}}»: they must be integers inside the street.",
+					"entranceStreetRequired": "Select an existing street for the entrance.",
+					"exitEndpointInvalid": "Check the exit lane and cell on «{{street}}»: they must be integers inside the street.",
+					"exitStreetRequired": "Select an existing street for the exit.",
+					"incompletePair": "Each pair needs one entrance and one exit; complete both ends.",
+					"occupancyInvalid": "Occupancy must be a non-negative integer.",
+					"pairCount": "Configure between 1 and 10 complete entrance and exit pairs.",
+					"unavailable": "Parking cannot be validated. Try again when the map finishes loading."
 				}
 			},
 			"settings": {
@@ -1600,8 +1783,8 @@ window.FLUVI_LOCALE_RESOURCES = {
 				},
 				"consoleLogs": {
 					"hide": "🚫 Hide console logs",
-					"show": "📝 Show console logs",
-					"label": "📝 Console logs"
+					"label": "📝 Console logs",
+					"show": "📝 Show console logs"
 				},
 				"darkMode": {
 					"dark": "🌙 Dark mode",
@@ -1700,9 +1883,9 @@ window.FLUVI_LOCALE_RESOURCES = {
 					"twoStreets": "Select two different streets."
 				},
 				"legacy": {
-					"cannotChange": "Cannot be changed while editing",
 					"cancelEditTooltip": "Close without saving the changes",
 					"cancelTooltip": "Close without creating the street connection",
+					"cannotChange": "Cannot be changed while editing",
 					"connectionLabel": "Street connection:",
 					"create": "✓ Create Connection",
 					"createTooltip": "Create the street connection between the streets with the entered parameters",
@@ -1733,10 +1916,10 @@ window.FLUVI_LOCALE_RESOURCES = {
 					"noSource": "Select a source street first",
 					"oneBasedHelp": "Positions are counted from 1 (not from 0)",
 					"outputsTitle": "Exit Configuration",
-					"probability": "Probability (%)",
-					"probabilityHelp": "% of vehicles that take this exit",
 					"probabilisticInfoBody": "Define a source lane and configure the probability and positions for each available destination lane.",
 					"probabilisticInfoTitle": "💡 Probabilistic connection:",
+					"probability": "Probability (%)",
+					"probabilityHelp": "% of vehicles that take this exit",
 					"selectLane": "Select a lane...",
 					"selectStreetDestination": "Select a destination street...",
 					"selectStreetSource": "Select a source street...",

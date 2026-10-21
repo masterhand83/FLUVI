@@ -299,6 +299,47 @@ English, Canvas and Pixi, rectangular/polygonal/image creation, image replacemen
 invalid uploads and polygon geometry, safe names, renderer tooltips, deletion
 confirmation, notification severities, desktop/mobile, and both themes).
 
+## Functional parking
+
+Functional parking is independent of building appearance. The unified immediate
+inspector in `ui/buildingInspector.js`, the legacy building modal in
+`index.html`/`ui/edificioUI.js`, and the shared validation in
+`core/estacionamientos.js` use one catalog owner, `parking.*`:
+
+- `parking.inspector.*`: immediate-inspector toggle, capacity, pair rows,
+  entrance/exit labels, hourly probabilities, status text, and inline errors.
+- `parking.legacy.*`: legacy modal headings, enablement, capacity, connection
+  guidance, presets, generated pair rows, hourly sliders, overlap feedback, and
+  add/remove actions.
+- `parking.validation.*`: incomplete pairs, pair counts, capacity/occupancy,
+  endpoint ranges, duplicate endpoints, and endpoint ownership. The validator
+  still returns `null` for a valid configuration and a readable message
+  otherwise; `configurarEstacionamiento` remains atomic.
+- `notifications.parking.*`: explicit warning/error toasts for decorative
+  buildings without connections and rejected configuration.
+- `parking.connection.entrance`/`parking.connection.exit` and
+  `parking.count.lanes`/`parking.count.cells` are shared labels used by the
+  controls and street-option summaries.
+
+Street and building names, connection `tipo` values (`entrada`/`salida`), lane
+and cell indexes (including zero-based physical storage and one-based UI
+numbering), probabilities, capacities, occupancy, JSON keys, and public globals
+remain data. Dynamic element IDs keep their historical Spanish suffixes
+(`...Entrada0`, `...Salida0`) so tests and integrations are stable.
+
+Renderer-owned interface text stays numeric: Canvas draws the functional-parking
+outline without prose, and the Pixi occupancy counter keeps the
+`(occupied/capacity)` format. Map labels and building names are never translated.
+The translated text does not influence spawning, connection ownership,
+occupancy, cleanup, or conservation.
+
+Browser coverage lives in `tests/parking-localization.spec.mjs` (Spanish and
+English, Canvas and Pixi, valid configuration, rejected edits that preserve live
+mappings, legacy controls, notification severities, safe names, desktop/mobile,
+and both themes). Existing behavior regressions remain in
+`tests/parking-configuration.spec.mjs`, `tests/parking-building-inspector.spec.mjs`,
+and `tests/parking-conservation.spec.mjs`.
+
 ## Terminology
 
 Keep the distinction from `CONTEXT.md`:

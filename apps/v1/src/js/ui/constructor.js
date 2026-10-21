@@ -1647,7 +1647,7 @@ function mostrarDialogoNuevoEdificio() {
                 const { probEntrada, probSalida } = window.recolectarProbabilidades();
 
                 if (conexiones.length === 0) {
-                    mostrarToast('Sin conexiones, el edificio será decorativo', 'warning');
+                    fluviNotify.warning('notifications.parking.noConnections');
                 } else {
                     // Configurar estacionamiento
                     const exito = window.configurarEstacionamiento(edificio, conexiones, capacidad);
@@ -1656,7 +1656,8 @@ function mostrarDialogoNuevoEdificio() {
                         edificio.probabilidadesSalida = probSalida;
                         console.log('✅ Edificio configurado como estacionamiento');
                     } else {
-                        mostrarToast(window.validarConfiguracionEstacionamiento(edificio, conexiones, capacidad), 'danger');
+                        const reason = window.validarConfiguracionEstacionamiento(edificio, conexiones, capacidad) || tr('parking.validation.applyFailed');
+                        fluviNotify.error('notifications.parking.invalidConfiguration', { reason });
                     }
                 }
             }
@@ -1944,7 +1945,7 @@ function editarEdificioSeleccionado() {
 
                 const error = window.validarConfiguracionEstacionamiento(edificio, conexiones, capacidad);
                 if (error) {
-                    mostrarToast(error, 'danger');
+                    fluviNotify.error('notifications.parking.invalidConfiguration', { reason: error });
                     return;
                 }
                 window.configurarEstacionamiento(edificio, conexiones, capacidad);

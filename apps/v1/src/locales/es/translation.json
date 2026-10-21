@@ -508,11 +508,104 @@
     "streetSelection": {
       "required": "Por favor selecciona una calle primero."
     },
+    "parking": {
+      "invalidConfiguration": "No se puede configurar el estacionamiento: {{reason}}",
+      "noConnections": "Sin conexiones, el edificio será decorativo."
+    },
     "title": {
       "error": "Error",
       "info": "Información",
       "success": "Éxito",
       "warning": "Advertencia"
+    }
+  },
+  "parking": {
+    "connection": {
+      "entrance": "Entrada",
+      "exit": "Salida"
+    },
+    "count": {
+      "cells_many": "{{count}} celdas",
+      "cells_one": "{{count}} celda",
+      "cells_other": "{{count}} celdas",
+      "lanes_many": "{{count}} carriles",
+      "lanes_one": "{{count}} carril",
+      "lanes_other": "{{count}} carriles"
+    },
+    "inspector": {
+      "addPair": "Añadir par (máximo 10)",
+      "capacity": "Capacidad",
+      "capacityError": "La capacidad debe ser un entero positivo y al menos {{minimum}} (ocupación actual).",
+      "cell": "Celda",
+      "help": "Carril y celda: numeración desde 1. Completa todos los pares para aplicar las conexiones.",
+      "lane": "Carril",
+      "pairLegend": "Par {{number}}",
+      "probabilityError": "{{type}} a las {{hour}}:00: introduce una probabilidad entre 0 y 100 %.",
+      "probabilityInput": "{{type}}, {{hour}}:00",
+      "probabilities": "Probabilidades por hora (%)",
+      "removePair": "Eliminar par",
+      "status": {
+        "active_many": "Activo: {{occupied}} / {{count}} vehículos.",
+        "active_one": "Activo: {{occupied}} / {{count}} vehículo.",
+        "active_other": "Activo: {{occupied}} / {{count}} vehículos.",
+        "decorative": "Edificio decorativo.",
+        "incomplete": "Sin activar: completa una entrada y una salida válidas por par."
+      },
+      "streetLabel": "{{type}}: calle",
+      "streetPlaceholder": "Selecciona una calle",
+      "title": "Estacionamiento funcional",
+      "toggle": "Estacionamiento funcional"
+    },
+    "legacy": {
+      "addPair": "➕ Agregar Par (Entrada + Salida)",
+      "capacity": "Capacidad máxima de vehículos:",
+      "cellHint": "Posición 1 a {{max}}",
+      "cellPlaceholder": "Posición (1-N)",
+      "connections": "Conexiones (Entradas/Salidas):",
+      "entrance": "🟢 ENTRADA",
+      "entrancePercent": "🟢 Entrada (%)",
+      "errorLabel": "⚠️ Error:",
+      "exit": "🔵 SALIDA",
+      "exitPercent": "🔵 Salida (%)",
+      "hour": "Hora {{hour}}:00",
+      "laneHint": "Carril 1 a {{max}}",
+      "lanePlaceholder": "Carril (1-N)",
+      "listMissing": "No se encontró la lista de conexiones del edificio.",
+      "maxPairs": "Máximo 10 pares de conexiones permitidos.",
+      "overlapError": "La entrada y salida no pueden estar en la misma celda del mismo carril.",
+      "overlapHelp": "La entrada y salida NO pueden estar en la misma celda del mismo carril.",
+      "pair": "Par {{number}}",
+      "pairsImportantBody": "Las conexiones deben venir en pares (1 entrada → 1 salida). Máximo 10 pares.",
+      "pairsImportantLabel": "⚠️ Importante:",
+      "presets": {
+        "mall": "Centro Comercial",
+        "normal": "Normal",
+        "office": "Oficina"
+      },
+      "probabilities": "Probabilidades de Entrada/Salida por Hora:",
+      "removePair": "✖️ Eliminar",
+      "scheduleBody": "Ajusta las probabilidades para cada hora del día (0-23). Los valores van de 0% a 100%.",
+      "scheduleLabel": "⏰ Configuración:",
+      "streetOption": "{{name}} ({{lanes}}, {{cells}})",
+      "streetPlaceholder": "Calle...",
+      "title": "🅿️ Configuración de Estacionamiento",
+      "toggle": "Funciona como estacionamiento"
+    },
+    "validation": {
+      "applyFailed": "No se pudieron aplicar las conexiones. Revisa las calles, carriles y celdas de todos los pares.",
+      "buildingRequired": "Selecciona un edificio para configurar el estacionamiento.",
+      "capacityBelowOccupancy": "La capacidad no puede ser menor que la ocupación actual ({{occupancy}}).",
+      "capacityPositive": "La capacidad debe ser un entero positivo.",
+      "duplicateEndpoint": "Cada entrada y salida debe usar una celda diferente.",
+      "endpointOwned": "La celda {{cell}} del carril {{lane}} en «{{street}}» ya pertenece a otro estacionamiento. Elige otra celda.",
+      "entranceEndpointInvalid": "Revisa el carril y la celda de la entrada en «{{street}}»: deben ser enteros dentro de la calle.",
+      "entranceStreetRequired": "Selecciona una calle existente para la entrada.",
+      "exitEndpointInvalid": "Revisa el carril y la celda de la salida en «{{street}}»: deben ser enteros dentro de la calle.",
+      "exitStreetRequired": "Selecciona una calle existente para la salida.",
+      "incompletePair": "Cada par necesita una entrada y una salida; completa ambos extremos.",
+      "occupancyInvalid": "La ocupación debe ser un entero no negativo.",
+      "pairCount": "Configura entre 1 y 10 pares completos de entrada y salida.",
+      "unavailable": "No se puede validar el estacionamiento. Intenta de nuevo cuando el mapa termine de cargar."
     }
   },
   "settings": {
@@ -524,8 +617,8 @@
     },
     "consoleLogs": {
       "hide": "🚫 Ocultar Logs en Consola",
-      "show": "📝 Mostrar Logs en Consola",
-      "label": "📝 Logs en Consola"
+      "label": "📝 Logs en Consola",
+      "show": "📝 Mostrar Logs en Consola"
     },
     "darkMode": {
       "dark": "🌙 Modo Oscuro",
@@ -624,9 +717,9 @@
       "twoStreets": "Selecciona dos calles distintas."
     },
     "legacy": {
-      "cannotChange": "No se puede cambiar al editar",
       "cancelEditTooltip": "Cerrar sin guardar los cambios",
       "cancelTooltip": "Cerrar sin crear la conexión",
+      "cannotChange": "No se puede cambiar al editar",
       "connectionLabel": "Conexión:",
       "create": "✓ Crear conexión",
       "createTooltip": "Crear la conexión entre las calles con los parámetros ingresados",
@@ -658,10 +751,10 @@
       "noSource": "Selecciona una calle origen primero",
       "oneBasedHelp": "Las posiciones se cuentan desde 1 (no desde 0)",
       "outputsTitle": "Configuración de salidas",
-      "probability": "Probabilidad (%)",
-      "probabilityHelp": "% de vehículos que toman esta salida",
       "probabilisticInfoBody": "Define un carril origen y configura la probabilidad y las posiciones para cada carril destino disponible.",
       "probabilisticInfoTitle": "💡 Conexión probabilística:",
+      "probability": "Probabilidad (%)",
+      "probabilityHelp": "% de vehículos que toman esta salida",
       "selectLane": "Selecciona un carril...",
       "selectStreetDestination": "Selecciona calle destino...",
       "selectStreetSource": "Selecciona calle origen...",

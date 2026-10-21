@@ -7,6 +7,7 @@ const browserSpecsToKeep = new Set([
 	"building-localization.spec.mjs",
 	"connection-localization.spec.mjs",
 	"localization.spec.mjs",
+	"parking-localization.spec.mjs",
 	"street-localization.spec.mjs",
 ])
 
