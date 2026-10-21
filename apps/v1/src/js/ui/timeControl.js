@@ -8,7 +8,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const previewTiempoSeleccionado = document.getElementById('previewTiempoSeleccionado');
   const tiempoActualDisplay = document.getElementById('tiempoActualDisplay');
 
-  const nombresDias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+  const nombreDia = (dia) => window.NOMBRES_DIAS?.[dia] || '';
+
+  function notificarSistemaTiempoNoDisponible() {
+    console.error('❌ No se encontró configuracionTiempo en window');
+    if (window.fluviNotify) {
+      window.fluviNotify.error('virtualTime.modal.unavailable');
+      return;
+    }
+    alert(tr('virtualTime.modal.unavailable'));
+  }
 
   // Función para actualizar el display del tiempo actual
   function actualizarDisplayTiempoActual() {
@@ -19,7 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
       tiempoActualDisplay.textContent = window.obtenerTimestampVirtual();
     } else if (window.configuracionTiempo) {
       // Fallback manual si la función no está disponible
-      const dia = nombresDias[window.configuracionTiempo.diaActual];
+      const dia = nombreDia(window.configuracionTiempo.diaActual);
       const hora = Math.floor(window.configuracionTiempo.horaActual).toString().padStart(2, '0');
       const minutos = Math.floor(window.configuracionTiempo.minutoActual).toString().padStart(2, '0');
       const segundos = Math.floor(window.configuracionTiempo.segundoActual).toString().padStart(2, '0');
@@ -39,7 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Función para actualizar la vista previa en el modal
   function actualizarPreview() {
-    const dia = nombresDias[parseInt(selectDiaSemanaModal.value)];
+    const dia = nombreDia(parseInt(selectDiaSemanaModal.value));
     const hora = parseInt(inputHoraModal.value) || 0;
     const minutos = parseInt(inputMinutosModal.value) || 0;
     previewTiempoSeleccionado.textContent = `${dia} ${hora.toString().padStart(2, '0')}:${minutos.toString().padStart(2, '0')}`;
@@ -107,16 +116,16 @@ document.addEventListener('DOMContentLoaded', () => {
       // Actualizar el display del tiempo actual
       actualizarDisplayTiempoActual();
 
-      const nombreDia = nombresDias[dia];
-      console.log(`⏰ Tiempo del simulador actualizado: ${nombreDia} ${hora.toString().padStart(2, '0')}:${minutos.toString().padStart(2, '0')}:00`);
+      const nombreDiaSeleccionado = nombreDia(dia);
+      console.log(`⏰ Tiempo del simulador actualizado: ${nombreDiaSeleccionado} ${hora.toString().padStart(2, '0')}:${minutos.toString().padStart(2, '0')}:00`);
 
       // Feedback visual
-      const originalText = btnConfirmarTiempo.innerHTML;
-      btnConfirmarTiempo.innerHTML = '✅ Aplicado!';
+      const textoOriginal = btnConfirmarTiempo.textContent.trim();
+      btnConfirmarTiempo.textContent = tr('virtualTime.modal.applied');
       btnConfirmarTiempo.disabled = true;
 
       setTimeout(() => {
-        btnConfirmarTiempo.innerHTML = originalText;
+        btnConfirmarTiempo.textContent = textoOriginal;
         btnConfirmarTiempo.disabled = false;
 
         // Cerrar el modal usando Bootstrap 5
@@ -126,8 +135,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }, 1000);
     } else {
-      console.error('❌ No se encontró configuracionTiempo en window');
-      alert('Error: El sistema de tiempo no está disponible');
+      notificarSistemaTiempoNoDisponible();
     }
   });
 

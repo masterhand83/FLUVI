@@ -856,3 +856,785 @@ describe("settings, help, and project information", () => {
 		})
 	}
 })
+
+const virtualTimeCopy = {
+	en: {
+		sidebarTitle: "📅 Simulation Date and Time",
+		description:
+			"Set the simulation's starting weekday and time to test different traffic profiles.",
+		current: "Simulation time:",
+		changeButton: "⏰ Change Date and Time",
+		changeTooltip: "Set the simulation's starting weekday and time",
+		profilesButton: "📊 Configure Gen. Multiplier",
+		profilesTooltip:
+			"Configure vehicle generation multipliers for each hour of the day and day of the week",
+		timeTitle: "📅 Set Date and Time",
+		weekdayLabel: "📆 Weekday",
+		weekdayOptions: [
+			"🔵 Sunday",
+			"🔴 Monday",
+			"🟠 Tuesday",
+			"🟡 Wednesday",
+			"🟢 Thursday",
+			"🟣 Friday",
+			"🟤 Saturday",
+		],
+		hourLabel: "🕐 Hour",
+		hourRange: "0-23 hours",
+		minutesLabel: "⏱️ Minutes",
+		minutesRange: "0-59 minutes",
+		previewLabel: "🔍 Preview:",
+		preview: "Friday 00:00",
+		noteLabel: "💡 Note:",
+		noteBody:
+			"Different days and hours have different traffic multipliers. For example, peak hours (7-9 AM, 6-8 PM) on weekdays have more traffic.",
+		confirm: "✅ Confirm and Apply",
+		cancel: "Cancel",
+		profilesTitle: "📊 Configure Hourly Generation Multipliers",
+		profilesWeekdayLabel: "📅 Weekday:",
+		profilesWeekdayHelp: "Changes apply only to the selected day",
+		rangeTitle: "💡 Value range:",
+		rangeItems: [
+			"Very low traffic (early morning)",
+			"Low to normal traffic",
+			"Normal to high traffic",
+			"Peak hour (morning/afternoon)",
+			"Very heavy traffic",
+		],
+		morningTitle: "🌙 Early Morning and Morning (00:00 - 11:00)",
+		afternoonTitle: "☀️ Afternoon and Night (12:00 - 23:00)",
+		presetsTitle: "⚡ Quick Presets:",
+		presets: [
+			"🏢 Workday",
+			"🎉 Weekend",
+			"📊 Constant (1.0)",
+			"🌙 Night",
+		],
+		copyAll: "📋 Copy to All Days",
+		restoreDefaults: "🔄 Restore Defaults",
+		update: "✅ Update Multipliers",
+		sliderTitle: "Controls the 00:00-00:59 range",
+		close: "Close",
+		copyTitle: "Copy multipliers",
+		copyConfirm: "Copy the values from Sunday to ALL days of the week?",
+		copySuccess: "Values copied to all days of the week successfully.",
+		restoreTitle: "Restore multipliers",
+		restoreQuestion: "What do you want to restore to default values?",
+		restoreOnlyDay: "Only this day (Sunday)",
+		restoreOnlyDayDefault: "Only this day (Monday)",
+		restoreAllOption: "All days of the week",
+		restoreConfirm: "Restore",
+		restoreDaySuccess: "Multipliers for Sunday restored.",
+		updateSuccess:
+			"Multipliers for Sunday updated successfully.\n\nThe new values will apply on the next simulation step.",
+		displayDay: "Sunday",
+		peakDescription: "Peak hour",
+	},
+	es: {
+		sidebarTitle: "📅 Fecha y Hora del Simulador",
+		description:
+			"Configura el día y hora inicial de la simulación para probar diferentes perfiles de tráfico.",
+		current: "Tiempo de la simulación:",
+		changeButton: "⏰ Cambiar Fecha y Hora",
+		changeTooltip:
+			"Establece el día de la semana y hora inicial de la simulación",
+		profilesButton: "📊 Configurar Multiplicador de Gen.",
+		profilesTooltip:
+			"Configura los multiplicadores de generación de vehículos para cada hora del día y día de la semana",
+		timeTitle: "📅 Configurar Fecha y Hora",
+		weekdayLabel: "📆 Día de la Semana",
+		weekdayOptions: [
+			"🔵 Domingo",
+			"🔴 Lunes",
+			"🟠 Martes",
+			"🟡 Miércoles",
+			"🟢 Jueves",
+			"🟣 Viernes",
+			"🟤 Sábado",
+		],
+		hourLabel: "🕐 Hora",
+		hourRange: "0-23 horas",
+		minutesLabel: "⏱️ Minutos",
+		minutesRange: "0-59 minutos",
+		previewLabel: "🔍 Vista previa:",
+		preview: "Viernes 00:00",
+		noteLabel: "💡 Nota:",
+		noteBody:
+			"Diferentes días y horas tienen distintos multiplicadores de tráfico. Por ejemplo, las horas pico (7-9 AM, 6-8 PM) en días laborales tienen más tráfico.",
+		confirm: "✅ Confirmar y Aplicar",
+		cancel: "Cancelar",
+		profilesTitle: "📊 Configurar Multiplicadores de Generación por Hora",
+		profilesWeekdayLabel: "📅 Día de la Semana:",
+		profilesWeekdayHelp: "Los cambios se aplicarán solo al día seleccionado",
+		rangeTitle: "💡 Rango de valores:",
+		rangeItems: [
+			"Tráfico muy bajo (madrugada)",
+			"Tráfico bajo a normal",
+			"Tráfico normal a alto",
+			"Hora pico (mañana/tarde)",
+			"Tráfico muy intenso",
+		],
+		morningTitle: "🌙 Madrugada y Mañana (00:00 - 11:00)",
+		afternoonTitle: "☀️ Tarde y Noche (12:00 - 23:00)",
+		presetsTitle: "⚡ Presets Rápidos:",
+		presets: [
+			"🏢 Día Laboral",
+			"🎉 Fin de Semana",
+			"📊 Constante (1.0)",
+			"🌙 Nocturno",
+		],
+		copyAll: "📋 Copiar a Todos los Días",
+		restoreDefaults: "🔄 Restaurar Default",
+		update: "✅ Actualizar Multiplicadores",
+		sliderTitle: "Controla el rango 00:00-00:59",
+		close: "Cerrar",
+		copyTitle: "Copiar multiplicadores",
+		copyConfirm:
+			"¿Deseas copiar los valores de Domingo a TODOS los días de la semana?",
+		copySuccess: "Valores copiados a todos los días de la semana exitosamente.",
+		restoreTitle: "Restaurar multiplicadores",
+		restoreQuestion: "¿Qué deseas restaurar a valores por defecto?",
+		restoreOnlyDay: "Solo este día (Domingo)",
+		restoreOnlyDayDefault: "Solo este día (Lunes)",
+		restoreAllOption: "Todos los días de la semana",
+		restoreConfirm: "Restaurar",
+		restoreDaySuccess: "Multiplicadores de Domingo restaurados.",
+		updateSuccess:
+			"Multiplicadores de Domingo actualizados exitosamente.\n\nLos nuevos valores se aplicarán en el siguiente paso de simulación.",
+		displayDay: "Domingo",
+		peakDescription: "Hora pico",
+	},
+}
+
+const openSidebarModal = async (page, modalId) => {
+	await page.$eval(`[data-bs-target="#${modalId}"]`, (button) =>
+		button.click(),
+	)
+	await page.waitForSelector(`#${modalId}.show`, { visible: true })
+	await page.waitForFunction(
+		(id) => document.getElementById(id).getAttribute("aria-modal") === "true",
+		{ polling: 100 },
+		modalId,
+	)
+	await page.waitForFunction(
+		(id) => !document.querySelector(`#${id} .modal-dialog`)?.getAnimations().length,
+		{ polling: 100 },
+		modalId,
+	)
+}
+
+const waitForToastBody = (page, body) =>
+	page.waitForFunction(
+		(expected) =>
+			[...document.querySelectorAll(".toast-body")].some(
+				(element) => element.textContent === expected,
+			),
+		{ polling: 100, timeout: 5000 },
+		body,
+	)
+
+describe("virtual time and traffic profiles", () => {
+	for (const [language, copy] of Object.entries(virtualTimeCopy)) {
+		it(`translates the clock and hourly profile controls in ${language}`, async () => {
+			const simulator = await openSimulator({ languagePreference: language })
+			try {
+				const { page } = simulator
+				await hideLoadingScreen(page)
+
+				const checkRestoreDialog = async () => {
+					await page.evaluate(() => window.confirmarRestaurarDefault())
+					await page.waitForSelector("#modalRestaurarMultiplicadores.show", {
+						visible: true,
+					})
+					await page.waitForFunction(
+						() =>
+							document
+								.getElementById("modalRestaurarMultiplicadores")
+								.getAttribute("aria-modal") === "true",
+						{ polling: 100 },
+					)
+					await page.waitForFunction(
+						() =>
+							!document
+								.querySelector(
+									"#modalRestaurarMultiplicadores .modal-dialog",
+								)
+								.getAnimations().length,
+						{ polling: 100 },
+					)
+					const restoreLayout = await readModalLayout(
+						page,
+						"modalRestaurarMultiplicadores",
+					)
+					expectUsableModal(restoreLayout, copy.restoreTitle)
+					expect(restoreLayout.text).toContain(copy.restoreQuestion)
+					expect(restoreLayout.text).toContain(copy.restoreOnlyDayDefault)
+					expect(restoreLayout.text).toContain(copy.restoreAllOption)
+					await closeLocalizedModal(page, "modalRestaurarMultiplicadores")
+				}
+
+				const sidebar = await page.evaluate(() => {
+					const section = document
+						.getElementById("tiempoActualDisplay")
+						.closest(".mt-3")
+					const tooltip = (target) =>
+						document
+							.querySelector(`[data-bs-target="#${target}"]`)
+							.closest("[data-bs-toggle='tooltip']")
+							.getAttribute("data-bs-title")
+					return {
+						title: section.querySelector("h6").textContent.trim(),
+						description: section.querySelector("p").textContent.trim(),
+						current: section.querySelector("strong").textContent.trim(),
+						clock: document.getElementById("tiempoActualDisplay").textContent.trim(),
+						changeButton: document
+							.querySelector('[data-bs-target="#modalTiempoSimulador"]')
+							.textContent.trim(),
+						changeTooltip: tooltip("modalTiempoSimulador"),
+						profilesButton: document
+							.querySelector('[data-bs-target="#modalMultiplicadores"]')
+							.textContent.trim(),
+						profilesTooltip: tooltip("modalMultiplicadores"),
+					}
+				})
+				expect(sidebar).toEqual({
+					title: copy.sidebarTitle,
+					description: copy.description,
+					current: copy.current,
+					clock: `${language === "en" ? "Monday" : "Lunes"} 07:00:00`,
+					changeButton: copy.changeButton,
+					changeTooltip: copy.changeTooltip,
+					profilesButton: copy.profilesButton,
+					profilesTooltip: copy.profilesTooltip,
+				})
+
+				await openSidebarModal(page, "modalTiempoSimulador")
+				const timeModal = await page.evaluate(() => ({
+					title: document
+						.getElementById("modalTiempoSimuladorLabel")
+						.textContent.trim(),
+					intro: document
+						.querySelector("#modalTiempoSimulador .modal-body > p")
+						.textContent.trim(),
+					weekdayLabel: document
+						.querySelector('label[for="selectDiaSemanaModal"]')
+						.textContent.trim(),
+					weekdays: [...document.getElementById("selectDiaSemanaModal").options].map(
+						(option) => option.textContent.trim(),
+					),
+					hourLabel: document
+						.querySelector('label[for="inputHoraModal"]')
+						.textContent.trim(),
+					hourRange: document
+						.querySelector("#inputHoraModal + small")
+						.textContent.trim(),
+					minutesLabel: document
+						.querySelector('label[for="inputMinutosModal"]')
+						.textContent.trim(),
+					minutesRange: document
+						.querySelector("#inputMinutosModal + small")
+						.textContent.trim(),
+					previewLabel: document
+						.querySelector("#previewTiempoSeleccionado")
+						.closest(".alert").querySelector("strong").textContent.trim(),
+					noteLabel: document
+						.querySelector("#modalTiempoSimulador .alert-warning strong")
+						.textContent.trim(),
+					noteBody: document
+						.querySelector("#modalTiempoSimulador .alert-warning span")
+						.textContent.trim(),
+					buttons: [
+						...document.querySelectorAll(
+							"#modalTiempoSimulador .modal-footer .btn",
+						),
+					].map((button) => button.textContent.trim()),
+				}))
+				expect(timeModal.title).toBe(copy.timeTitle)
+				expect(timeModal.weekdayLabel).toBe(copy.weekdayLabel)
+				expect(timeModal.weekdays).toEqual(copy.weekdayOptions)
+				expect(timeModal.hourLabel).toBe(copy.hourLabel)
+				expect(timeModal.hourRange).toBe(copy.hourRange)
+				expect(timeModal.minutesLabel).toBe(copy.minutesLabel)
+				expect(timeModal.minutesRange).toBe(copy.minutesRange)
+				expect(timeModal.previewLabel).toBe(copy.previewLabel)
+				expect(timeModal.noteLabel).toBe(copy.noteLabel)
+				expect(timeModal.noteBody).toBe(copy.noteBody)
+				expect(timeModal.buttons).toEqual([copy.cancel, copy.confirm])
+				expect(timeModal.intro).not.toMatch(/\bvirtualTime\./)
+
+				await page.select("#selectDiaSemanaModal", "5")
+				await page.$eval("#inputHoraModal", (input) => {
+					input.value = "0"
+					input.dispatchEvent(new Event("input", { bubbles: true }))
+				})
+				expect(
+					await page.$eval("#previewTiempoSeleccionado", (element) =>
+						element.textContent.trim(),
+					),
+				).toBe(copy.preview)
+				let layout = await readModalLayout(page, "modalTiempoSimulador")
+				expect(layout.close).toBe(copy.close)
+				expectUsableModal(layout, copy.timeTitle)
+				await closeLocalizedModal(page, "modalTiempoSimulador")
+
+				await openSidebarModal(page, "modalMultiplicadores")
+				await page.waitForSelector("#slider-mult-23", { visible: true })
+				const profileModal = await page.evaluate(() => ({
+					title: document
+						.getElementById("modalMultiplicadoresLabel")
+						.textContent.trim(),
+					weekdayLabel: document
+						.querySelector('label[for="selectDiaSemanaMultiplicador"]')
+						.textContent.trim(),
+					weekdayHelp: document
+						.querySelector("#selectDiaSemanaMultiplicador + small")
+						.textContent.trim(),
+					rangeTitle: document
+						.querySelector("#contenedorSliders")
+						.previousElementSibling.querySelector("strong")
+						.textContent.trim(),
+					rangeItems: [
+						...document
+							.querySelector("#contenedorSliders")
+							.previousElementSibling.querySelectorAll("li span"),
+					].map((element) => element.textContent.trim()),
+					columnTitles: [
+						...document.querySelectorAll("#contenedorSliders h6"),
+					].map((element) => element.textContent.trim()),
+					presetsTitle: document
+						.querySelector('[onclick*="aplicarPresetMultiplicadores"]')
+						.closest(".mt-4").querySelector("h6").textContent.trim(),
+					presets: [
+						...document.querySelectorAll(
+							'[onclick*="aplicarPresetMultiplicadores"]',
+						),
+					].map((button) => button.textContent.trim()),
+					copyAll: document
+						.querySelector('[onclick="copiarATodosDias()"]')
+						.textContent.trim(),
+					restoreDefaults: document
+						.querySelector('[onclick="confirmarRestaurarDefault()"]')
+						.textContent.trim(),
+					buttons: [
+						...document.querySelectorAll(
+							"#modalMultiplicadores .modal-footer .btn",
+						),
+					].map((button) => button.textContent.trim()),
+					sliderCount: document.querySelectorAll(
+						"#modalMultiplicadores input[type='range']",
+					).length,
+					sliderTitle: document
+						.getElementById("slider-mult-0")
+						.getAttribute("title"),
+					sliderLabel: document
+						.getElementById("slider-mult-0")
+						.getAttribute("aria-label"),
+				}))
+				expect(profileModal.title).toBe(copy.profilesTitle)
+				expect(profileModal.weekdayLabel).toBe(copy.profilesWeekdayLabel)
+				expect(profileModal.weekdayHelp).toBe(copy.profilesWeekdayHelp)
+				expect(profileModal.rangeTitle).toBe(copy.rangeTitle)
+				expect(profileModal.rangeItems).toEqual(copy.rangeItems)
+				expect(profileModal.columnTitles).toEqual([
+					copy.morningTitle,
+					copy.afternoonTitle,
+				])
+				expect(profileModal.presetsTitle).toBe(copy.presetsTitle)
+				expect(profileModal.presets).toEqual(copy.presets)
+				expect(profileModal.copyAll).toBe(copy.copyAll)
+				expect(profileModal.restoreDefaults).toBe(copy.restoreDefaults)
+				expect(profileModal.buttons).toEqual([copy.cancel, copy.update])
+				expect(profileModal.sliderCount).toBe(24)
+				expect(profileModal.sliderTitle).toBe(copy.sliderTitle)
+				expect(profileModal.sliderLabel).toBe(copy.sliderTitle)
+
+				layout = await readModalLayout(page, "modalMultiplicadores")
+				expectUsableModal(layout, copy.profilesTitle)
+				await closeLocalizedModal(page, "modalMultiplicadores")
+				await checkRestoreDialog()
+
+				await page.click("#switchModoOscuro")
+				await page.waitForFunction(
+					() => document.body.classList.contains("dark-mode"),
+					{ polling: 100 },
+				)
+				await openSidebarModal(page, "modalTiempoSimulador")
+				layout = await readModalLayout(page, "modalTiempoSimulador")
+				expectUsableModal(layout, copy.timeTitle)
+				await closeLocalizedModal(page, "modalTiempoSimulador")
+				await openSidebarModal(page, "modalMultiplicadores")
+				layout = await readModalLayout(page, "modalMultiplicadores")
+				expectUsableModal(layout, copy.profilesTitle)
+				await closeLocalizedModal(page, "modalMultiplicadores")
+				await checkRestoreDialog()
+
+				await page.setViewport({ width: 390, height: 844 })
+				await new Promise((resolve) => setTimeout(resolve, 400))
+				await openSidebarModal(page, "modalTiempoSimulador")
+				layout = await readModalLayout(page, "modalTiempoSimulador")
+				expectUsableModal(layout, copy.timeTitle)
+				await closeLocalizedModal(page, "modalTiempoSimulador")
+				await openSidebarModal(page, "modalMultiplicadores")
+				layout = await readModalLayout(page, "modalMultiplicadores")
+				expectUsableModal(layout, copy.profilesTitle)
+				await closeLocalizedModal(page, "modalMultiplicadores")
+				await checkRestoreDialog()
+
+				await page.click("#switchModoOscuro")
+				await page.waitForFunction(
+					() => !document.body.classList.contains("dark-mode"),
+					{ polling: 100 },
+				)
+			} finally {
+				await simulator.close()
+			}
+		})
+	}
+
+	for (const [language, copy] of Object.entries(virtualTimeCopy)) {
+		it(`keeps midnight, zero multipliers, and profile switching independent in ${language}`, async () => {
+			const simulator = await openSimulator({ languagePreference: language })
+			try {
+				const { page } = simulator
+				await hideLoadingScreen(page)
+				await page.evaluate(() => {
+					document.getElementById("btnPauseResume").click()
+					document.getElementById("btnBorrar").click()
+				})
+
+				await openSidebarModal(page, "modalTiempoSimulador")
+				await page.select("#selectDiaSemanaModal", "0")
+				await page.$eval("#inputHoraModal", (input) => {
+					input.value = "0"
+					input.dispatchEvent(new Event("input", { bubbles: true }))
+				})
+				await page.$eval("#inputMinutosModal", (input) => {
+					input.value = "0"
+					input.dispatchEvent(new Event("input", { bubbles: true }))
+				})
+				await page.click("#btnConfirmarTiempo")
+				await page.waitForFunction(
+					() =>
+						configuracionTiempo.diaActual === 0 &&
+						configuracionTiempo.horaActual === 0 &&
+						configuracionTiempo.minutoActual === 0 &&
+						configuracionTiempo.segundoActual === 0,
+					{ polling: 100 },
+				)
+				await page.waitForSelector("#modalTiempoSimulador", { hidden: true })
+				expect(
+					await page.$eval("#tiempoActualDisplay", (element) =>
+						element.textContent.trim(),
+					),
+				).toBe(`${copy.displayDay} 00:00:00`)
+
+				await openSidebarModal(page, "modalMultiplicadores")
+				await page.waitForSelector("#slider-mult-23", { visible: true })
+				await page.select("#selectDiaSemanaMultiplicador", "0")
+				await page.$eval("#slider-mult-0", (slider) => {
+					slider.value = "0"
+					slider.dispatchEvent(new Event("input", { bubbles: true }))
+				})
+				await page.click("#btnActualizarMultiplicadores")
+				await page.waitForSelector("#modalMultiplicadores", { hidden: true })
+				await page.waitForFunction(
+					() => window.obtenerPerfilDia(0)[0] === 0,
+					{ polling: 100 },
+				)
+
+				const upcoming = await page.evaluate(() => {
+					const saved = {
+						day: window.configuracionTiempo.diaActual,
+						hour: window.configuracionTiempo.horaActual,
+						minute: window.configuracionTiempo.minutoActual,
+					}
+					Object.assign(window.configuracionTiempo, {
+						diaActual: 5,
+						horaActual: 5,
+						minutoActual: 0,
+					})
+					const change = window.obtenerProximoCambio()
+					Object.assign(window.configuracionTiempo, {
+						diaActual: saved.day,
+						horaActual: saved.hour,
+						minutoActual: saved.minute,
+					})
+					return change
+				})
+				expect(upcoming.descripcion).toBe(copy.peakDescription)
+				expect(upcoming.horaProxima).toBe(7)
+
+				const result = await page.evaluate(() => {
+					const street = window.calles.find(
+						(road) => road.tipo === window.TIPOS.GENERADOR,
+					)
+					generacionGlobal.activa = true
+					generacionGlobal.probabilidad = 1
+					street.arreglo.forEach((lane) => {
+						lane.fill(0)
+					})
+					const profilesOn = {
+						enabled: window.configuracionTiempo.usarPerfiles,
+						multiplier: window.obtenerMultiplicadorTrafico(),
+					}
+					document.getElementById("btnPaso").click()
+					const displayWithProfiles = document.getElementById(
+						"infoTrafficMultiplier",
+					).textContent
+					const noSpawnWithProfiles = !street.arreglo
+						.flat()
+						.some((value) => value >= 1 && value <= 6)
+
+					street.arreglo.forEach((lane) => {
+						lane.fill(0)
+					})
+					document.getElementById("togglePerfilesDinamicos").click()
+					document.getElementById("btnPaso").click()
+					const spawnedWithoutProfiles = street.arreglo
+						.flat()
+						.some((value) => value >= 1 && value <= 6)
+					const profilesOff = {
+						enabled: window.configuracionTiempo.usarPerfiles,
+						multiplier: window.obtenerMultiplicadorTrafico(),
+						display: document.getElementById("infoTrafficMultiplier").textContent,
+					}
+
+					const clock = {
+						day: window.configuracionTiempo.diaActual,
+						hour: window.configuracionTiempo.horaActual,
+						minute: window.configuracionTiempo.minutoActual,
+						second: window.configuracionTiempo.segundoActual,
+					}
+					const json = window.tiempoToJSON()
+					return {
+						profilesOn,
+						displayWithProfiles,
+						noSpawnWithProfiles,
+						spawnedWithoutProfiles,
+						profilesOff,
+						clock,
+						display: window.obtenerTimestampVirtual(),
+						exportTimestamp: window.obtenerTimestampExportacion(),
+						exportDay: window.obtenerDiaExportacion(),
+						displayDay: window.obtenerDiaString(),
+						profile: window.obtenerPerfilDia(0),
+						jsonDay: json.diaActual,
+						jsonHour: json.horaActual,
+						jsonMultiplier: json.multiplicadoresPorDiaHora[0][0],
+					}
+				})
+
+				expect(result.profilesOn).toEqual({ enabled: true, multiplier: 0 })
+				expect(result.displayWithProfiles).toBe("0.0×")
+				expect(result.noSpawnWithProfiles).toBe(true)
+				expect(result.spawnedWithoutProfiles).toBe(true)
+				expect(result.profilesOff).toEqual({
+					enabled: false,
+					multiplier: 1,
+					display: "1.0×",
+				})
+				expect(result.clock).toEqual({
+					day: 0,
+					hour: 0,
+					minute: 0,
+					second: 4,
+				})
+				expect(result.display).toBe(`${copy.displayDay} 00:00:04`)
+				expect(result.displayDay).toBe(copy.displayDay)
+				expect(result.exportTimestamp).toBe("Domingo 00:00:04")
+				expect(result.exportDay).toBe("Domingo")
+				expect(result.profile[0]).toBe(0)
+				expect(result.jsonDay).toBe(0)
+				expect(result.jsonHour).toBe(0)
+				expect(result.jsonMultiplier).toBe(0)
+				expect(simulator.pageErrors).toEqual([])
+			} finally {
+				await simulator.close()
+			}
+		})
+
+		it(`confirms copy, restore, and update actions in ${language}`, async () => {
+			const simulator = await openSimulator({ languagePreference: language })
+			try {
+				const { page } = simulator
+				await hideLoadingScreen(page)
+				await openSidebarModal(page, "modalMultiplicadores")
+				await page.waitForSelector("#slider-mult-23", { visible: true })
+				await page.select("#selectDiaSemanaMultiplicador", "0")
+				await page.$eval("#slider-mult-1", (slider) => {
+					slider.value = "0.7"
+					slider.dispatchEvent(new Event("input", { bubbles: true }))
+				})
+
+				await page.$eval('[onclick="copiarATodosDias()"]', (button) =>
+					button.click(),
+				)
+				await page.waitForFunction(
+					() => document.querySelectorAll(".modal.show").length === 2,
+					{ polling: 100 },
+				)
+				const confirmation = await page.evaluate(() => {
+					const modal = [...document.querySelectorAll(".modal.show")].at(-1)
+					return {
+						title: modal.querySelector(".modal-title").textContent.trim(),
+						body: modal.querySelector(".modal-body").textContent.trim(),
+					}
+				})
+				expect(confirmation).toEqual({
+					title: copy.copyTitle,
+					body: copy.copyConfirm,
+				})
+				await page.waitForFunction(
+					() => {
+						const modal = [...document.querySelectorAll(".modal.show")].at(-1)
+						const instance = modal && bootstrap.Modal.getInstance(modal)
+						return (
+							instance?._isShown === true &&
+							instance?._isTransitioning === false
+						)
+					},
+					{ polling: 100 },
+				)
+				await page.evaluate(() => {
+					[...document.querySelectorAll(".modal.show")]
+						.at(-1)
+						.querySelector('[id$="-confirm"]')
+						.click()
+				})
+				await page.waitForFunction(
+					() =>
+						![...document.querySelectorAll(".modal")].some(
+							(modal) =>
+								modal.id.startsWith("modal-confirm-") &&
+								modal.classList.contains("show"),
+						),
+					{ polling: 100 },
+				)
+				await waitForToastBody(page, copy.copySuccess)
+				expect(
+					await page.evaluate(() =>
+						[0, 1, 2, 3, 4, 5, 6].map(
+							(day) => window.obtenerPerfilDia(day)[1],
+						),
+					),
+				).toEqual([0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7])
+
+				await page.$eval('[onclick="confirmarRestaurarDefault()"]', (button) =>
+					button.click(),
+				)
+				await page.waitForSelector("#modalRestaurarMultiplicadores.show", {
+					visible: true,
+				})
+				await page.waitForFunction(
+					() => {
+						const modal = document.getElementById(
+							"modalRestaurarMultiplicadores",
+						)
+						const instance = bootstrap.Modal.getInstance(modal)
+						return (
+							instance?._isShown === true &&
+							instance?._isTransitioning === false
+						)
+					},
+					{ polling: 100 },
+				)
+				const restoreDialog = await page.evaluate(() => {
+					const modal = document.getElementById("modalRestaurarMultiplicadores")
+					return {
+						title: modal
+							.querySelector(".modal-title")
+							.textContent.trim(),
+						question: modal.querySelector(".modal-body p").textContent.trim(),
+						options: [
+							...modal.querySelectorAll(".form-check-label"),
+						].map((label) => label.textContent.trim()),
+						buttons: [
+							...modal.querySelectorAll(".modal-footer .btn"),
+						].map((button) => button.textContent.trim()),
+					}
+				})
+				expect(restoreDialog).toEqual({
+					title: copy.restoreTitle,
+					question: copy.restoreQuestion,
+					options: [copy.restoreOnlyDay, copy.restoreAllOption],
+					buttons: [copy.cancel, copy.restoreConfirm],
+				})
+				await page.click("#btnConfirmarRestaurarMultiplicadores")
+				await page.waitForSelector("#modalRestaurarMultiplicadores", {
+					hidden: true,
+				})
+				await waitForToastBody(page, copy.restoreDaySuccess)
+				expect(
+					await page.evaluate(() => ({
+						sunday: window.obtenerPerfilDia(0)[1],
+						monday: window.obtenerPerfilDia(1)[1],
+					})),
+				).toEqual({ sunday: 0, monday: 0.7 })
+
+				await page.$eval("#slider-mult-2", (slider) => {
+					slider.value = "1.2"
+					slider.dispatchEvent(new Event("input", { bubbles: true }))
+				})
+				await page.click("#btnActualizarMultiplicadores")
+				await page.waitForSelector("#modalMultiplicadores", { hidden: true })
+				await waitForToastBody(page, copy.updateSuccess)
+				expect(
+					await page.evaluate(() => ({
+						value: window.obtenerPerfilDia(0)[2],
+						clockDay: window.configuracionTiempo.diaActual,
+					})),
+				).toEqual({ value: 1.2, clockDay: 1 })
+				expect(simulator.pageErrors).toEqual([])
+			} finally {
+				await simulator.close()
+			}
+		})
+	}
+
+	it("computes identical deterministic simulation results in Spanish and English", async () => {
+		const run = async (language) => {
+			const simulator = await openSimulator({ languagePreference: language, seed: 17 })
+			try {
+				const { page } = simulator
+				const result = await page.evaluate(() => {
+					document.getElementById("btnPauseResume").click()
+					document.getElementById("btnBorrar").click()
+					Object.assign(window.configuracionTiempo, {
+						diaActual: 1,
+						horaActual: 8,
+						minutoActual: 0,
+						segundoActual: 0,
+						usarPerfiles: true,
+					})
+					window.__fluviBaseline.reseed(23)
+					for (let step = 0; step < 25; step++) {
+						document.getElementById("btnPaso").click()
+					}
+					return {
+						occupancy: window.calles
+							.map(
+								(road) =>
+									`${road.id}:${road.arreglo.map((lane) => lane.join("")).join(",")}`,
+							)
+							.join(";"),
+						clock: {
+							day: window.configuracionTiempo.diaActual,
+							hour: window.configuracionTiempo.horaActual,
+							minute: window.configuracionTiempo.minutoActual,
+							second: window.configuracionTiempo.segundoActual,
+						},
+						generation: document.getElementById("infoGeneration").textContent,
+					}
+				})
+				expect(simulator.pageErrors).toEqual([])
+				return result
+			} finally {
+				await simulator.close()
+			}
+		}
+
+		const spanish = await run("es")
+		const english = await run("en")
+		expect(english).toEqual(spanish)
+	})
+})

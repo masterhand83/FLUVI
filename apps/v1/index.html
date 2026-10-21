@@ -705,24 +705,24 @@
 
             <!-- Control de Fecha y Hora del Simulador -->
             <div class="mt-3">
-              <h6 class="mb-2">📅 Fecha y Hora del Simulador</h6>
-              <p class="text-muted small mb-2">Configura el día y hora inicial de la simulación para probar diferentes perfiles de tráfico.</p>
+              <h6 class="mb-2" data-i18n="virtualTime.sidebar.title">📅 Fecha y Hora del Simulador</h6>
+              <p class="text-muted small mb-2" data-i18n="virtualTime.sidebar.description">Configura el día y hora inicial de la simulación para probar diferentes perfiles de tráfico.</p>
 
               <!-- Mostrar tiempo actual del simulador -->
               <div class="alert alert-secondary p-2 small mb-2">
-                <strong>Tiempo de la simulación:</strong> <span id="tiempoActualDisplay">Lunes 07:00</span>
+                <strong data-i18n="virtualTime.sidebar.current">Tiempo de la simulación:</strong> <span id="tiempoActualDisplay">Lunes 07:00</span>
               </div>
 
               <!-- Botón para abrir modal de configuración -->
-              <div data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="Establece el día de la semana y hora inicial de la simulación">
-                <button type="button" class="btn btn-primary btn-sm w-100" data-bs-toggle="modal" data-bs-target="#modalTiempoSimulador">
+              <div data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="Establece el día de la semana y hora inicial de la simulación" data-i18n-attr="data-bs-title:virtualTime.sidebar.changeTooltip">
+                <button type="button" class="btn btn-primary btn-sm w-100" data-bs-toggle="modal" data-bs-target="#modalTiempoSimulador" data-i18n="virtualTime.sidebar.changeButton">
                   ⏰ Cambiar Fecha y Hora
                 </button>
               </div>
 
               <!-- Botón para configurar multiplicadores -->
-              <div class="mt-2" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="Configura los multiplicadores de generación de vehículos para cada hora del día y día de la semana">
-                <button type="button" class="btn btn-success btn-sm w-100" data-bs-toggle="modal" data-bs-target="#modalMultiplicadores">
+              <div class="mt-2" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="Configura los multiplicadores de generación de vehículos para cada hora del día y día de la semana" data-i18n-attr="data-bs-title:virtualTime.sidebar.profilesTooltip">
+                <button type="button" class="btn btn-success btn-sm w-100" data-bs-toggle="modal" data-bs-target="#modalMultiplicadores" data-i18n="virtualTime.sidebar.profilesButton">
                   📊 Configurar Multiplicador de Gen.
                 </button>
               </div>
@@ -2042,43 +2042,43 @@
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title" id="modalTiempoSimuladorLabel">📅 Configurar Fecha y Hora</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          <h5 class="modal-title" id="modalTiempoSimuladorLabel" data-i18n="virtualTime.modal.title">📅 Configurar Fecha y Hora</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" data-i18n-attr="aria-label:common.close"></button>
         </div>
         <div class="modal-body">
-          <p class="text-muted small mb-3">Selecciona el día de la semana y la hora de inicio para la simulación. Esto afecta los patrones de tráfico según el perfil horario.</p>
+          <p class="text-muted small mb-3" data-i18n="virtualTime.modal.intro">Selecciona el día de la semana y la hora de inicio para la simulación. Esto afecta los patrones de tráfico según el perfil horario.</p>
 
           <!-- Selector de Día de la Semana -->
           <div class="mb-3">
-            <label for="selectDiaSemanaModal" class="form-label fw-bold">📆 Día de la Semana</label>
+            <label for="selectDiaSemanaModal" class="form-label fw-bold" data-i18n="virtualTime.modal.weekdayLabel">📆 Día de la Semana</label>
             <select class="form-select" id="selectDiaSemanaModal">
-              <option value="0">🔵 Domingo</option>
-              <option value="1" selected>🔴 Lunes</option>
-              <option value="2">🟠 Martes</option>
-              <option value="3">🟡 Miércoles</option>
-              <option value="4">🟢 Jueves</option>
-              <option value="5">🟣 Viernes</option>
-              <option value="6">🟤 Sábado</option>
+              <option value="0" data-i18n="virtualTime.weekdayOption.sunday">🔵 Domingo</option>
+              <option value="1" selected data-i18n="virtualTime.weekdayOption.monday">🔴 Lunes</option>
+              <option value="2" data-i18n="virtualTime.weekdayOption.tuesday">🟠 Martes</option>
+              <option value="3" data-i18n="virtualTime.weekdayOption.wednesday">🟡 Miércoles</option>
+              <option value="4" data-i18n="virtualTime.weekdayOption.thursday">🟢 Jueves</option>
+              <option value="5" data-i18n="virtualTime.weekdayOption.friday">🟣 Viernes</option>
+              <option value="6" data-i18n="virtualTime.weekdayOption.saturday">🟤 Sábado</option>
             </select>
           </div>
 
           <!-- Grid para Hora y Minutos -->
           <div class="row">
             <div class="col-6">
-              <label for="inputHoraModal" class="form-label fw-bold">🕐 Hora</label>
+              <label for="inputHoraModal" class="form-label fw-bold" data-i18n="virtualTime.modal.hourLabel">🕐 Hora</label>
               <input type="number" class="form-control" id="inputHoraModal" min="0" max="23" value="7" placeholder="0-23">
-              <small class="text-muted">0-23 horas</small>
+              <small class="text-muted" data-i18n="virtualTime.modal.hourRange">0-23 horas</small>
             </div>
             <div class="col-6">
-              <label for="inputMinutosModal" class="form-label fw-bold">⏱️ Minutos</label>
+              <label for="inputMinutosModal" class="form-label fw-bold" data-i18n="virtualTime.modal.minutesLabel">⏱️ Minutos</label>
               <input type="number" class="form-control" id="inputMinutosModal" min="0" max="59" value="0" placeholder="0-59">
-              <small class="text-muted">0-59 minutos</small>
+              <small class="text-muted" data-i18n="virtualTime.modal.minutesRange">0-59 minutos</small>
             </div>
           </div>
 
           <!-- Vista previa del tiempo seleccionado -->
           <div class="alert alert-info mt-3 mb-0">
-            <strong>🔍 Vista previa:</strong>
+            <strong data-i18n="virtualTime.modal.previewLabel">🔍 Vista previa:</strong>
             <div class="mt-2" style="font-size: 1.1rem; font-weight: 600;">
               <span id="previewTiempoSeleccionado">Lunes 07:00</span>
             </div>
@@ -2086,12 +2086,12 @@
 
           <!-- Información sobre perfiles de tráfico -->
           <div class="alert alert-warning mt-3 mb-0 small">
-            <strong>💡 Nota:</strong> Diferentes días y horas tienen distintos multiplicadores de tráfico. Por ejemplo, las horas pico (7-9 AM, 6-8 PM) en días laborales tienen más tráfico.
+            <strong data-i18n="virtualTime.modal.noteLabel">💡 Nota:</strong> <span data-i18n="virtualTime.modal.noteBody">Diferentes días y horas tienen distintos multiplicadores de tráfico. Por ejemplo, las horas pico (7-9 AM, 6-8 PM) en días laborales tienen más tráfico.</span>
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-          <button type="button" class="btn btn-success" id="btnConfirmarTiempo">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n="virtualTime.modal.cancel">Cancelar</button>
+          <button type="button" class="btn btn-success" id="btnConfirmarTiempo" data-i18n="virtualTime.modal.confirm">
             ✅ Confirmar y Aplicar
           </button>
         </div>
@@ -2104,39 +2104,41 @@
     <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
       <div class="modal-content">
         <div class="modal-header bg-success text-white">
-          <h5 class="modal-title" id="modalMultiplicadoresLabel">📊 Configurar Multiplicadores de Generación por Hora</h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+          <h5 class="modal-title" id="modalMultiplicadoresLabel" data-i18n="virtualTime.profiles.title">📊 Configurar Multiplicadores de Generación por Hora</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" data-i18n-attr="aria-label:common.close"></button>
         </div>
         <div class="modal-body">
           <p class="text-muted small mb-3">
-            Ajusta los multiplicadores de generación de vehículos para cada hora del día (0-23).
-            Cada slider controla <strong>exclusivamente su rango de hora</strong> (ej: 08:00 controla de 08:00 a 08:59).
-            Estos valores se aplican cuando <strong>"Perfiles"</strong> está activado.
+            <span data-i18n="virtualTime.profiles.introBefore">Ajusta los multiplicadores de generación de vehículos para cada hora del día (0-23). Cada slider controla</span>
+            <strong data-i18n="virtualTime.profiles.introStrong">exclusivamente su rango de hora</strong>
+            <span data-i18n="virtualTime.profiles.introAfter">(ej: 08:00 controla de 08:00 a 08:59). Estos valores se aplican cuando</span>
+            <strong data-i18n="virtualTime.profiles.introProfiles">"Perfiles"</strong>
+            <span data-i18n="virtualTime.profiles.introEnd">está activado.</span>
           </p>
 
           <!-- Selector de día de la semana -->
           <div class="mb-3">
-            <label for="selectDiaSemanaMultiplicador" class="form-label fw-bold">📅 Día de la Semana:</label>
+            <label for="selectDiaSemanaMultiplicador" class="form-label fw-bold" data-i18n="virtualTime.profiles.weekdayLabel">📅 Día de la Semana:</label>
             <select class="form-select" id="selectDiaSemanaMultiplicador" onchange="cambiarDiaMultiplicador(this.value)">
-              <option value="0">🔵 Domingo</option>
-              <option value="1" selected>🔴 Lunes</option>
-              <option value="2">🟠 Martes</option>
-              <option value="3">🟡 Miércoles</option>
-              <option value="4">🟢 Jueves</option>
-              <option value="5">🟣 Viernes</option>
-              <option value="6">🟤 Sábado</option>
+              <option value="0" data-i18n="virtualTime.weekdayOption.sunday">🔵 Domingo</option>
+              <option value="1" selected data-i18n="virtualTime.weekdayOption.monday">🔴 Lunes</option>
+              <option value="2" data-i18n="virtualTime.weekdayOption.tuesday">🟠 Martes</option>
+              <option value="3" data-i18n="virtualTime.weekdayOption.wednesday">🟡 Miércoles</option>
+              <option value="4" data-i18n="virtualTime.weekdayOption.thursday">🟢 Jueves</option>
+              <option value="5" data-i18n="virtualTime.weekdayOption.friday">🟣 Viernes</option>
+              <option value="6" data-i18n="virtualTime.weekdayOption.saturday">🟤 Sábado</option>
             </select>
-            <small class="text-muted">Los cambios se aplicarán solo al día seleccionado</small>
+            <small class="text-muted" data-i18n="virtualTime.profiles.weekdayHelp">Los cambios se aplicarán solo al día seleccionado</small>
           </div>
 
           <div class="alert alert-info small mb-3">
-            <strong>💡 Rango de valores:</strong>
+            <strong data-i18n="virtualTime.profiles.rangeTitle">💡 Rango de valores:</strong>
             <ul class="mb-0 mt-1">
-              <li><strong>0.0 - 0.5:</strong> Tráfico muy bajo (madrugada)</li>
-              <li><strong>0.5 - 1.0:</strong> Tráfico bajo a normal</li>
-              <li><strong>1.0 - 1.5:</strong> Tráfico normal a alto</li>
-              <li><strong>1.5 - 2.5:</strong> Hora pico (mañana/tarde)</li>
-              <li><strong>2.5 - 3.0:</strong> Tráfico muy intenso</li>
+              <li><strong>0.0 - 0.5:</strong> <span data-i18n="virtualTime.profiles.rangeVeryLow">Tráfico muy bajo (madrugada)</span></li>
+              <li><strong>0.5 - 1.0:</strong> <span data-i18n="virtualTime.profiles.rangeLow">Tráfico bajo a normal</span></li>
+              <li><strong>1.0 - 1.5:</strong> <span data-i18n="virtualTime.profiles.rangeHigh">Tráfico normal a alto</span></li>
+              <li><strong>1.5 - 2.5:</strong> <span data-i18n="virtualTime.profiles.rangeModerate">Hora pico (mañana/tarde)</span></li>
+              <li><strong>2.5 - 3.0:</strong> <span data-i18n="virtualTime.profiles.rangeVeryHigh">Tráfico muy intenso</span></li>
             </ul>
           </div>
 
@@ -2144,48 +2146,75 @@
           <div class="row" id="contenedorSliders">
             <!-- Columna 1: Horas 0-11 -->
             <div class="col-md-6">
-              <h6 class="text-muted mb-3">🌙 Madrugada y Mañana (00:00 - 11:00)</h6>
+              <h6 class="text-muted mb-3" data-i18n="virtualTime.profiles.morningTitle">🌙 Madrugada y Mañana (00:00 - 11:00)</h6>
               <div id="slidersColumna1"></div>
             </div>
             <!-- Columna 2: Horas 12-23 -->
             <div class="col-md-6">
-              <h6 class="text-muted mb-3">☀️ Tarde y Noche (12:00 - 23:00)</h6>
+              <h6 class="text-muted mb-3" data-i18n="virtualTime.profiles.afternoonTitle">☀️ Tarde y Noche (12:00 - 23:00)</h6>
               <div id="slidersColumna2"></div>
             </div>
           </div>
 
           <!-- Botones de presets -->
           <div class="mt-4 border-top pt-3">
-            <h6 class="text-muted mb-2">⚡ Presets Rápidos:</h6>
+            <h6 class="text-muted mb-2" data-i18n="virtualTime.profiles.presetsTitle">⚡ Presets Rápidos:</h6>
             <div class="d-flex gap-2 flex-wrap mb-2">
-              <button type="button" class="btn btn-outline-primary btn-sm" onclick="aplicarPresetMultiplicadores('laboral')">
+              <button type="button" class="btn btn-outline-primary btn-sm" onclick="aplicarPresetMultiplicadores('laboral')" data-i18n="virtualTime.profiles.presetWorkday">
                 🏢 Día Laboral
               </button>
-              <button type="button" class="btn btn-outline-secondary btn-sm" onclick="aplicarPresetMultiplicadores('finSemana')">
+              <button type="button" class="btn btn-outline-secondary btn-sm" onclick="aplicarPresetMultiplicadores('finSemana')" data-i18n="virtualTime.profiles.presetWeekend">
                 🎉 Fin de Semana
               </button>
-              <button type="button" class="btn btn-outline-info btn-sm" onclick="aplicarPresetMultiplicadores('constante')">
+              <button type="button" class="btn btn-outline-info btn-sm" onclick="aplicarPresetMultiplicadores('constante')" data-i18n="virtualTime.profiles.presetConstant">
                 📊 Constante (1.0)
               </button>
-              <button type="button" class="btn btn-outline-warning btn-sm" onclick="aplicarPresetMultiplicadores('nocturno')">
+              <button type="button" class="btn btn-outline-warning btn-sm" onclick="aplicarPresetMultiplicadores('nocturno')" data-i18n="virtualTime.profiles.presetNight">
                 🌙 Nocturno
               </button>
             </div>
             <div class="d-flex gap-2 flex-wrap">
-              <button type="button" class="btn btn-outline-success btn-sm" onclick="copiarATodosDias()">
+              <button type="button" class="btn btn-outline-success btn-sm" onclick="copiarATodosDias()" data-i18n="virtualTime.profiles.copyAll">
                 📋 Copiar a Todos los Días
               </button>
-              <button type="button" class="btn btn-outline-danger btn-sm" onclick="confirmarRestaurarDefault()">
+              <button type="button" class="btn btn-outline-danger btn-sm" onclick="confirmarRestaurarDefault()" data-i18n="virtualTime.profiles.restoreDefaults">
                 🔄 Restaurar Default
               </button>
             </div>
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-          <button type="button" class="btn btn-success" id="btnActualizarMultiplicadores">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n="virtualTime.profiles.cancel">Cancelar</button>
+          <button type="button" class="btn btn-success" id="btnActualizarMultiplicadores" data-i18n="virtualTime.profiles.update">
             ✅ Actualizar Multiplicadores
           </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirmación para restaurar multiplicadores -->
+  <div class="modal fade" id="modalRestaurarMultiplicadores" role="dialog" tabindex="-1" aria-labelledby="modalRestaurarMultiplicadoresLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="modalRestaurarMultiplicadoresLabel" data-i18n="virtualTime.profiles.restoreTitle">Restaurar multiplicadores</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" data-i18n-attr="aria-label:common.close"></button>
+        </div>
+        <div class="modal-body">
+          <p data-i18n="virtualTime.profiles.restoreQuestion">¿Qué deseas restaurar a valores por defecto?</p>
+          <div class="form-check mb-2">
+            <input class="form-check-input" type="radio" name="restaurarMultiplicadoresAlcance" id="restaurarMultiplicadoresSoloDia" value="dia" checked>
+            <label class="form-check-label" for="restaurarMultiplicadoresSoloDia" id="restaurarMultiplicadoresSoloDiaLabel">Solo este día (Lunes)</label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="radio" name="restaurarMultiplicadoresAlcance" id="restaurarMultiplicadoresTodosDias" value="todos">
+            <label class="form-check-label" for="restaurarMultiplicadoresTodosDias" data-i18n="virtualTime.profiles.restoreAllOption">Todos los días de la semana</label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n="common.cancel">Cancelar</button>
+          <button type="button" class="btn btn-danger" id="btnConfirmarRestaurarMultiplicadores" data-i18n="virtualTime.profiles.restoreConfirm">Restaurar</button>
         </div>
       </div>
     </div>

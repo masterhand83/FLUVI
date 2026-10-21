@@ -175,6 +175,28 @@ and mobile viewports, light and dark themes, settings control reachability,
 translated labels/tooltips, preserved shortcut/credit content, and modal bounds
 without horizontal overflow.
 
+## Virtual time and traffic profiles
+
+`core/tiempo.js` keeps the numeric clock convention (`0=Sunday` … `6=Saturday`),
+`SEGUNDOS_POR_PASO`, multipliers and profile persistence independent of the
+active language. Only display names and descriptions come from the catalogs:
+
+- `NOMBRES_DIAS` is built from `virtualTime.weekday.*` for the sidebar/modal
+  clock, previews and profile messages; weekday `<option>` labels come from the
+  static `virtualTime.weekdayOption.*` annotations.
+- `NOMBRES_DIAS_EXPORTACION`, `obtenerDiaExportacion`,
+  `obtenerTimestampExportacion` and `obtenerTimestampCortoExportacion` remain
+  the stable Spanish/numeric export format.
+- `ui/timeControl.js` renders the sidebar clock and modal preview through
+  `NOMBRES_DIAS`, and reports failures with `fluviNotify`.
+- `ui/multiplicadoresUI.js` translates generated slider labels/titles, copy and
+  restore dialogs, and apply feedback. Slider badges keep dot decimals so
+  localized number formatting never reaches profile values or saved maps.
+
+The catalog owner is `virtualTime.*`. Numeric day values, profile arrays,
+`tiempoToJSON`/`tiempoFromJSON` keys and clock calculations must not be
+translated.
+
 ## Terminology
 
 Keep the distinction from `CONTEXT.md`:

@@ -3,6 +3,14 @@
 // Variable global para trackear el día seleccionado
 let diaSeleccionado = 1; // Por defecto Lunes
 
+function escaparAtributoHtml(valor) {
+  return String(valor)
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
 /**
  * Genera dinámicamente los 24 sliders para configurar multiplicadores
  * Los divide en dos columnas: 0-11 y 12-23
@@ -34,10 +42,12 @@ function generarSlidersMultiplicadores(dia = null) {
 
     // Crear el HTML del slider
     const rangoHora = `${String(hora).padStart(2, '0')}:00-${String(hora).padStart(2, '0')}:59`;
+    const tituloRango = tr('virtualTime.profiles.sliderTitle', { range: rangoHora });
+    const tituloRangoAttr = escaparAtributoHtml(tituloRango);
     const sliderHTML = `
       <div class="mb-3 pb-2 border-bottom">
         <div class="d-flex justify-content-between align-items-center mb-1">
-          <label class="form-label mb-0 fw-bold" style="font-size: 0.9rem;" title="Controla el rango ${rangoHora}">
+          <label class="form-label mb-0 fw-bold" style="font-size: 0.9rem;" title="${tituloRangoAttr}">
             ${String(hora).padStart(2, '0')}:00
           </label>
           <span class="badge bg-primary" id="valor-mult-${hora}" style="min-width: 50px;">
@@ -54,7 +64,8 @@ function generarSlidersMultiplicadores(dia = null) {
           step="0.1"
           value="${valorActual}"
           oninput="actualizarValorSlider(${hora}, this.value)"
-          title="Controla el rango ${rangoHora}"
+          title="${tituloRangoAttr}"
+          aria-label="${tituloRangoAttr}"
         >
         <div class="d-flex justify-content-between small text-muted" style="font-size: 0.7rem;">
           <span>0.0</span>
@@ -198,47 +209,130 @@ function aplicarPresetMultiplicadores(preset) {
 /**
  * Copia los valores del día actual a todos los demás días
  */
+function notificarCopia(exito) {
+  if (exito) {
+    if (window.fluviNotify) {
+      window.fluviNotify.success('virtualTime.profiles.copySuccess');
+    } else {
+      alert(tr('virtualTime.profiles.copySuccess'));
+    }
+    console.log('✅ Valores copiados a todos los días');
+    return;
+  }
+  if (window.fluviNotify) {
+    window.fluviNotify.error('virtualTime.profiles.copyError');
+  } else {
+    alert(tr('virtualTime.profiles.copyError'));
+  }
+}
+
 function copiarATodosDias() {
   const valoresActuales = leerValoresSliders();
+  const dia = window.NOMBRES_DIAS[diaSeleccionado];
 
-  if (confirm(`¿Deseas copiar los valores de ${window.NOMBRES_DIAS[diaSeleccionado]} a TODOS los días de la semana?`)) {
-    const exito = window.actualizarMultiplicadoresTodosDias(valoresActuales);
-    if (exito) {
-      alert(`✅ Valores copiados a todos los días de la semana exitosamente.`);
-      console.log('✅ Valores copiados a todos los días');
-    } else {
-      alert('❌ Error al copiar valores. Revisa la consola.');
-    }
+  const aplicarCopia = () => {
+    notificarCopia(window.actualizarMultiplicadoresTodosDias(valoresActuales));
+  };
+
+  const mensaje = window.fluviI18n?.tEscaped
+    ? window.fluviI18n.tEscaped('virtualTime.profiles.copyConfirm', { day: dia })
+    : escaparAtributoHtml(tr('virtualTime.profiles.copyConfirm', { day: dia }));
+
+  if (typeof window.mostrarConfirmacion === 'function') {
+    window.mostrarConfirmacion(
+      escaparAtributoHtml(tr('virtualTime.profiles.copyTitle')),
+      mensaje,
+      aplicarCopia
+    );
+  } else if (confirm(mensaje)) {
+    aplicarCopia();
   }
 }
 
 /**
  * Confirma y restaura los multiplicadores por defecto
  */
-function confirmarRestaurarDefault() {
-  const opciones = [
-    'Solo este día (' + window.NOMBRES_DIAS[diaSeleccionado] + ')',
-    'Todos los días de la semana',
-    'Cancelar'
-  ];
+function actualizarEtiquetaRestaurarDia() {
+  const etiqueta = document.getElementById('restaurarMultiplicadoresSoloDiaLabel');
+  if (!etiqueta) return;
+  etiqueta.textContent = tr('virtualTime.profiles.restoreOnlyDay', {
+    day: window.NOMBRES_DIAS[diaSeleccionado]
+  });
+}
 
-  const respuesta = prompt(
-    `¿Qué deseas restaurar a valores por defecto?\n\n` +
-    `1 - ${opciones[0]}\n` +
-    `2 - ${opciones[1]}\n` +
-    `3 - ${opciones[2]}\n\n` +
-    `Escribe el número de tu opción:`,
-    '1'
-  );
+function notificarRestauracion(alcance, dia) {
+  if (alcance === 'todos') {
+    if (window.fluviNotify) {
+      window.fluviNotify.success('virtualTime.profiles.restoreAllSuccess');
+    } else {
+      alert(tr('virtualTime.profiles.restoreAllSuccess'));
+    }
+    return;
+  }
+  if (window.fluviNotify) {
+    window.fluviNotify.success('virtualTime.profiles.restoreDaySuccess', { day: dia });
+  } else {
+    alert(tr('virtualTime.profiles.restoreDaySuccess', { day: dia }));
+  }
+}
 
-  if (respuesta === '1') {
-    window.restaurarMultiplicadoresDefault(diaSeleccionado);
-    generarSlidersMultiplicadores(diaSeleccionado);
-    alert(`✅ Multiplicadores de ${window.NOMBRES_DIAS[diaSeleccionado]} restaurados.`);
-  } else if (respuesta === '2') {
+function restaurarMultiplicadoresSegunAlcance() {
+  const alcance = document.querySelector('input[name="restaurarMultiplicadoresAlcance"]:checked')?.value || 'dia';
+  const dia = window.NOMBRES_DIAS[diaSeleccionado];
+
+  if (alcance === 'todos') {
     window.restaurarMultiplicadoresDefault(null);
-    generarSlidersMultiplicadores(diaSeleccionado);
-    alert('✅ Multiplicadores de todos los días restaurados.');
+  } else {
+    window.restaurarMultiplicadoresDefault(diaSeleccionado);
+  }
+  generarSlidersMultiplicadores(diaSeleccionado);
+  notificarRestauracion(alcance, dia);
+
+  const modal = bootstrap.Modal.getInstance(document.getElementById('modalRestaurarMultiplicadores'));
+  if (modal) modal.hide();
+}
+
+function confirmarRestaurarDefault() {
+  actualizarEtiquetaRestaurarDia();
+  const modalElement = document.getElementById('modalRestaurarMultiplicadores');
+  if (!modalElement) return;
+  bootstrap.Modal.getOrCreateInstance(modalElement).show();
+}
+
+/**
+ * Maneja el clic en el botón "Actualizar Multiplicadores"
+ */
+function notificarValorInvalido(hora, valor) {
+  if (window.fluviNotify) {
+    window.fluviNotify.error('virtualTime.profiles.invalidValue', { hour: hora, value: valor });
+  } else {
+    alert(tr('virtualTime.profiles.invalidValue', { hour: hora, value: valor }));
+  }
+}
+
+function validarValoresMultiplicadores(valores) {
+  for (let i = 0; i < valores.length; i++) {
+    if (isNaN(valores[i]) || valores[i] < 0 || valores[i] > 3) {
+      notificarValorInvalido(i, valores[i]);
+      return false;
+    }
+  }
+  return true;
+}
+
+function notificarActualizacionMultiplicadores(exito, dia) {
+  if (exito) {
+    if (window.fluviNotify) {
+      window.fluviNotify.success('virtualTime.profiles.updateSuccess', { day: dia });
+    } else {
+      alert(tr('virtualTime.profiles.updateSuccess', { day: dia }));
+    }
+    return;
+  }
+  if (window.fluviNotify) {
+    window.fluviNotify.error('virtualTime.profiles.updateError');
+  } else {
+    alert(tr('virtualTime.profiles.updateError'));
   }
 }
 
@@ -248,20 +342,15 @@ function confirmarRestaurarDefault() {
 function confirmarActualizacionMultiplicadores() {
   const valores = leerValoresSliders();
 
-  // Validar valores
-  for (let i = 0; i < valores.length; i++) {
-    if (isNaN(valores[i]) || valores[i] < 0 || valores[i] > 3) {
-      alert(`❌ Error: Valor inválido en hora ${i}: ${valores[i]}`);
-      return;
-    }
-  }
+  if (!validarValoresMultiplicadores(valores)) return;
 
   // Actualizar los multiplicadores en el sistema para el día seleccionado
   const exito = window.actualizarMultiplicadoresDia(diaSeleccionado, valores);
+  const dia = window.NOMBRES_DIAS[diaSeleccionado];
 
   if (exito) {
     // Notificar al usuario
-    console.log(`✅ Multiplicadores de ${window.NOMBRES_DIAS[diaSeleccionado]} actualizados exitosamente`);
+    console.log(`✅ Multiplicadores de ${dia} actualizados exitosamente`);
     console.log('📊 Valores guardados:', valores);
 
     // Invalidar caché para aplicar cambios inmediatamente
@@ -278,12 +367,10 @@ function confirmarActualizacionMultiplicadores() {
     if (modal) {
       modal.hide();
     }
-
-    // Mostrar mensaje de éxito
-    alert(`✅ Multiplicadores de ${window.NOMBRES_DIAS[diaSeleccionado]} actualizados exitosamente.\n\nLos nuevos valores se aplicarán en el siguiente paso de simulación.`);
-  } else {
-    alert('❌ Error al actualizar los multiplicadores. Revisa la consola para más detalles.');
   }
+
+  // Mostrar mensaje de éxito o error
+  notificarActualizacionMultiplicadores(exito, dia);
 }
 
 // ========== EVENT LISTENERS ==========
@@ -309,6 +396,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnActualizar = document.getElementById('btnActualizarMultiplicadores');
   if (btnActualizar) {
     btnActualizar.addEventListener('click', confirmarActualizacionMultiplicadores);
+  }
+
+  // Confirmación de restauración de multiplicadores
+  const btnRestaurar = document.getElementById('btnConfirmarRestaurarMultiplicadores');
+  if (btnRestaurar) {
+    btnRestaurar.addEventListener('click', restaurarMultiplicadoresSegunAlcance);
   }
 
   console.log('✅ Sistema de configuración de multiplicadores por día inicializado');

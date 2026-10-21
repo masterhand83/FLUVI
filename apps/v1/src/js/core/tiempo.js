@@ -161,9 +161,18 @@ const NOMBRES_DIAS_EXPORTACION = Object.freeze([
     'Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'
 ]);
 
-// Nombres de los días para display (copia independiente del formato de exportación).
-// Aquí puede cambiarse el idioma de la interfaz sin afectar las exportaciones.
-const NOMBRES_DIAS = [...NOMBRES_DIAS_EXPORTACION];
+// Nombres de los días para display, traducidos al idioma activo.
+// El orden físico sigue la convención numérica 0=Domingo ... 6=Sábado y no
+// depende del idioma. La copia de exportación permanece independiente.
+const NOMBRES_DIAS = [
+    tr('virtualTime.weekday.sunday'),
+    tr('virtualTime.weekday.monday'),
+    tr('virtualTime.weekday.tuesday'),
+    tr('virtualTime.weekday.wednesday'),
+    tr('virtualTime.weekday.thursday'),
+    tr('virtualTime.weekday.friday'),
+    tr('virtualTime.weekday.saturday')
+];
 
 // ==================== FUNCIONES DE TIEMPO ====================
 
@@ -353,11 +362,11 @@ function obtenerProximoCambio() {
 
             let descripcion = '';
             if (multBusqueda > 1.3) {
-                descripcion = 'Hora pico';
+                descripcion = tr('virtualTime.traffic.peak');
             } else if (multBusqueda < 0.5) {
-                descripcion = 'Tráfico bajo';
+                descripcion = tr('virtualTime.traffic.low');
             } else {
-                descripcion = 'Tráfico moderado';
+                descripcion = tr('virtualTime.traffic.moderate');
             }
 
             return {
@@ -374,6 +383,7 @@ function obtenerProximoCambio() {
 
 /**
  * Obtiene descripción del estado de tráfico actual
+ * Formato legado estable para exportación JSON: no se traduce con la interfaz.
  * @returns {string} Descripción del multiplicador actual
  */
 function obtenerDescripcionTrafico() {
