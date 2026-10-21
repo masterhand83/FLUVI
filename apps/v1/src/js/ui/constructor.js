@@ -710,10 +710,10 @@ function validarSumaProbabilidades() {
         if (!alertaSuma) {
             alertaSuma = document.createElement('div');
             alertaSuma.className = 'alert alert-warning alert-sm mt-2 alerta-suma-probabilidades';
-            alertaSuma.innerHTML = `<strong>⚠️ Advertencia:</strong> La suma de probabilidades es <strong>${suma.toFixed(1)}%</strong>. Se recomienda que sume 100% para una distribución correcta.`;
+            alertaSuma.textContent = tr('streetConnection.legacy.sumWarning', { sum: suma.toFixed(1) });
             contenedor.insertBefore(alertaSuma, contenedor.firstChild);
         } else {
-            alertaSuma.innerHTML = `<strong>⚠️ Advertencia:</strong> La suma de probabilidades es <strong>${suma.toFixed(1)}%</strong>. Se recomienda que sume 100% para una distribución correcta.`;
+            alertaSuma.textContent = tr('streetConnection.legacy.sumWarning', { sum: suma.toFixed(1) });
         }
         return false;
     } else {
@@ -794,9 +794,43 @@ function entradaCarril(calle, carril) {
     return window.getLaneEntryCell?.(calle, carril) ?? 0;
 }
 
+const TIPOS_CONEXION_UI = {
+    lineal: { labelKey: 'streetConnection.types.lineal', icon: '🟢' },
+    incorporacion: { labelKey: 'streetConnection.types.incorporacion', icon: '🟠' },
+    probabilistica: { labelKey: 'streetConnection.types.probabilistica', icon: '🟣' },
+};
+
+function tipoConexionUI(tipo) {
+    return TIPOS_CONEXION_UI[String(tipo || '').toLocaleLowerCase()] || TIPOS_CONEXION_UI.lineal;
+}
+
+function etiquetaTipoConexion(tipo) {
+    return tr(tipoConexionUI(tipo).labelKey);
+}
+
+function opcionCarril(carril) {
+    const option = document.createElement('option');
+    option.value = String(carril);
+    option.textContent = tr('streetConnection.legacy.laneOption', { lane: carril + 1 });
+    return option;
+}
+
+function campoConexion(labelText, control, helpText) {
+    const column = document.createElement('div');
+    column.className = 'col-md-6';
+    const label = document.createElement('label');
+    label.className = 'form-label small';
+    label.textContent = labelText;
+    const help = document.createElement('small');
+    help.className = 'text-muted';
+    help.textContent = helpText;
+    column.append(label, control, help);
+    return column;
+}
+
 function conexionesConSentidoValido(conexiones) {
     if (conexiones.some(conexion => window.isConnectionDirectionCompatible?.(conexion) === false)) {
-        alert('⚠️ La conexión usa una entrada o salida contraria al sentido del carril. Corrige la posición o el sentido.');
+        fluviNotify.error('streetConnection.errors.invalidDirection');
         return false;
     }
     return true;
@@ -804,7 +838,7 @@ function conexionesConSentidoValido(conexiones) {
 
 function mostrarDialogoNuevaConexion() {
     if (!window.calles || window.calles.length < 2) {
-        alert("❌ Necesitas al menos 2 calles para crear una conexión");
+        fluviNotify.error('streetConnection.errors.notEnoughStreets');
         return;
     }
 
@@ -825,8 +859,8 @@ function mostrarDialogoNuevaConexion() {
     const selectOrigen = document.getElementById('selectCalleOrigen');
     const selectDestino = document.getElementById('selectCalleDestino');
 
-    selectOrigen.innerHTML = '<option value="">Selecciona calle origen...</option>';
-    selectDestino.innerHTML = '<option value="">Selecciona calle destino...</option>';
+    selectOrigen.replaceChildren(new Option(tr('streetConnection.legacy.selectStreetSource'), ''));
+    selectDestino.replaceChildren(new Option(tr('streetConnection.legacy.selectStreetDestination'), ''));
 
     // Mantener los índices originales al ordenar por nombre.
     const callesConIndices = window.streetListUI.sortedEntries(window.calles).map(({ street: calle, index }) => ({ calle, index }));
@@ -905,19 +939,16 @@ function mostrarDialogoNuevaConexion() {
         const origenIdx = parseInt(selectOrigen.value);
 
         if (isNaN(origenIdx) || origenIdx < 0 || origenIdx >= window.calles.length) {
-            selectCarrilOrigenProb.innerHTML = '<option value="">Selecciona una calle origen primero</option>';
+            selectCarrilOrigenProb.replaceChildren(new Option(tr('streetConnection.legacy.sourceLaneFirst'), ''));
             return;
         }
 
         const origen = window.calles[origenIdx];
         const numCarriles = origen.carriles;
 
-        let html = '';
-        for (let i = 0; i < numCarriles; i++) {
-            html += `<option value="${i}">Carril ${i + 1}</option>`;
-        }
-
-        selectCarrilOrigenProb.innerHTML = html;
+        selectCarrilOrigenProb.replaceChildren(
+            ...Array.from({ length: numCarriles }, (_, carril) => opcionCarril(carril)),
+        );
         // Seleccionar primer carril por defecto
         selectCarrilOrigenProb.value = '0';
         selectCarrilOrigenProb.onchange = () => { validarCarrilOrigen(); generarFormulariosDistribucion(); };
@@ -933,7 +964,7 @@ function mostrarDialogoNuevaConexion() {
         const destinoIdx = parseInt(selectDestino.value);
 
         if (isNaN(destinoIdx) || destinoIdx < 0 || destinoIdx >= window.calles.length) {
-            selectCarrilDestinoIncorp.innerHTML = '<option value="">Selecciona una calle destino primero</option>';
+            selectCarrilDestinoIncorp.replaceChildren(new Option(tr('streetConnection.legacy.destinationLaneFirst'), ''));
             if (inputPosInicial) {
                 inputPosInicial.removeAttribute('max');
             }
@@ -943,12 +974,9 @@ function mostrarDialogoNuevaConexion() {
         const destino = window.calles[destinoIdx];
         const numCarriles = destino.carriles;
 
-        let html = '';
-        for (let i = 0; i < numCarriles; i++) {
-            html += `<option value="${i}">Carril ${i + 1}</option>`;
-        }
-
-        selectCarrilDestinoIncorp.innerHTML = html;
+        selectCarrilDestinoIncorp.replaceChildren(
+            ...Array.from({ length: numCarriles }, (_, carril) => opcionCarril(carril)),
+        );
         // Seleccionar primer carril por defecto
         selectCarrilDestinoIncorp.value = '0';
         const updateDefaultEntry = () => {
@@ -965,7 +993,7 @@ function mostrarDialogoNuevaConexion() {
             // Actualizar texto de ayuda
             const helpText = inputPosInicial.nextElementSibling;
             if (helpText && helpText.classList.contains('text-muted')) {
-                helpText.textContent = `Posición en la calle destino (máx: ${destino.tamano})`;
+                helpText.textContent = tr('streetConnection.legacy.initialPositionHelpWithMax', { max: destino.tamano });
             }
         }
     }
@@ -980,14 +1008,20 @@ function mostrarDialogoNuevaConexion() {
         const contenedor = document.getElementById('contenedorDistribucionesProbabilisticas');
         const destinoIdx = parseInt(selectDestino.value);
         const origenIdx = parseInt(selectOrigen.value);
+        const aviso = (key) => {
+            const paragraph = document.createElement('p');
+            paragraph.className = 'text-muted text-center py-3';
+            paragraph.textContent = tr(key);
+            contenedor.replaceChildren(paragraph);
+        };
 
         if (isNaN(destinoIdx) || destinoIdx < 0 || destinoIdx >= window.calles.length) {
-            contenedor.innerHTML = '<p class="text-muted text-center py-3">Selecciona una calle destino para configurar las salidas</p>';
+            aviso('streetConnection.legacy.noDestination');
             return;
         }
 
         if (isNaN(origenIdx) || origenIdx < 0 || origenIdx >= window.calles.length) {
-            contenedor.innerHTML = '<p class="text-muted text-center py-3">Selecciona una calle origen primero</p>';
+            aviso('streetConnection.legacy.noSource');
             return;
         }
 
@@ -995,20 +1029,20 @@ function mostrarDialogoNuevaConexion() {
         const destino = window.calles[destinoIdx];
         const numCarriles = destino.carriles;
 
-        let html = `
-            <div class="mb-3">
-                <label class="form-label fw-bold">
-                    Configuración de Salidas
-                    <span class="badge bg-secondary">${numCarriles} carril${numCarriles > 1 ? 'es' : ''} disponibles</span>
-                </label>
-                <div class="accordion" id="accordionDistribuciones">
-        `;
+        const wrapper = document.createElement('div');
+        wrapper.className = 'mb-3';
+        const heading = document.createElement('label');
+        heading.className = 'form-label fw-bold';
+        heading.append(tr('streetConnection.legacy.outputsTitle'), ' ');
+        const badge = document.createElement('span');
+        badge.className = 'badge bg-secondary';
+        badge.textContent = tr('streetConnection.legacy.lanesAvailable', { count: numCarriles });
+        heading.append(badge);
+        const accordion = document.createElement('div');
+        accordion.className = 'accordion';
+        accordion.id = 'accordionDistribuciones';
 
-        // Generar opciones de carriles destino (en formato humano: 1, 2, 3...)
-        let opcionesCarriles = '';
-        for (let c = 0; c < numCarriles; c++) {
-            opcionesCarriles += `<option value="${c}">Carril ${c + 1}</option>`;
-        }
+        const opcionesCarriles = () => Array.from({ length: numCarriles }, (_, carril) => opcionCarril(carril));
 
         for (let i = 0; i < numCarriles; i++) {
             const collapseId = `collapseSalida${i}`;
@@ -1018,75 +1052,90 @@ function mostrarDialogoNuevaConexion() {
             const probPorDefecto = Math.floor(100 / numCarriles);
             const probExtra = 100 - (probPorDefecto * numCarriles); // Redondeo extra
 
-            html += `
-                <div class="accordion-item">
-                    <h2 class="accordion-header">
-                        <button class="accordion-button ${!isFirst ? 'collapsed' : ''}" type="button" data-bs-toggle="collapse" data-bs-target="#${collapseId}">
-                            🎯 Salida ${i + 1}
-                        </button>
-                    </h2>
-                    <div id="${collapseId}" class="accordion-collapse collapse ${isFirst ? 'show' : ''}" data-bs-parent="#accordionDistribuciones">
-                        <div class="accordion-body">
-                            <div class="row g-2">
-                                <div class="col-md-6">
-                                    <label class="form-label small">Carril Destino</label>
-                                    <select class="form-select form-select-sm" id="carrilDestinoSalida${i}">
-                                        ${opcionesCarriles}
-                                    </select>
-                                    <small class="text-muted">A qué carril van los vehículos</small>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label small">Probabilidad (%)</label>
-                                    <input type="number" class="form-control form-control-sm"
-                                           id="probSalida${i}"
-                                           placeholder="0-100"
-                                           min="0"
-                                           max="100"
-                                           step="1"
-                                           value="${probPorDefecto + (i === 0 ? probExtra : 0)}">
-                                    <small class="text-muted">% de vehículos que toman esta salida</small>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label small">Posición Origen (celda)</label>
-                                    <input type="number" class="form-control form-control-sm"
-                                           id="posOrigenSalida${i}"
-                                           placeholder="1-${origen.tamano}"
-                                           min="1"
-                                           max="${origen.tamano}"
-                                           value="${salidaCarril(origen, Number(selectCarrilOrigenProb.value)) + 1}">
-                                    <small class="text-muted">Celda donde se origina (máx: ${origen.tamano})</small>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label small">Posición Destino (celda)</label>
-                                    <input type="number" class="form-control form-control-sm"
-                                           id="posDestinoSalida${i}"
-                                           placeholder="1-${destino.tamano}"
-                                           min="1"
-                                           max="${destino.tamano}"
-                                           value="${entradaCarril(destino, i) + 1}">
-                                    <small class="text-muted">Celda donde llegan (máx: ${destino.tamano})</small>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
+            const item = document.createElement('div');
+            item.className = 'accordion-item';
+            const header = document.createElement('h2');
+            header.className = 'accordion-header';
+            const toggle = document.createElement('button');
+            toggle.className = `accordion-button${isFirst ? '' : ' collapsed'}`;
+            toggle.type = 'button';
+            toggle.dataset.bsToggle = 'collapse';
+            toggle.dataset.bsTarget = `#${collapseId}`;
+            toggle.textContent = tr('streetConnection.legacy.exitTitle', { number: i + 1 });
+            header.append(toggle);
+
+            const collapse = document.createElement('div');
+            collapse.id = collapseId;
+            collapse.className = `accordion-collapse collapse${isFirst ? ' show' : ''}`;
+            collapse.dataset.bsParent = '#accordionDistribuciones';
+            const body = document.createElement('div');
+            body.className = 'accordion-body';
+            const row = document.createElement('div');
+            row.className = 'row g-2';
+
+            const selectCarril = document.createElement('select');
+            selectCarril.className = 'form-select form-select-sm';
+            selectCarril.id = `carrilDestinoSalida${i}`;
+            selectCarril.append(...opcionesCarriles());
+
+            const probInput = document.createElement('input');
+            probInput.type = 'number';
+            probInput.className = 'form-control form-control-sm';
+            probInput.id = `probSalida${i}`;
+            probInput.placeholder = '0-100';
+            probInput.min = '0';
+            probInput.max = '100';
+            probInput.step = '1';
+            probInput.value = String(probPorDefecto + (i === 0 ? probExtra : 0));
+
+            const posOrigenInput = document.createElement('input');
+            posOrigenInput.type = 'number';
+            posOrigenInput.className = 'form-control form-control-sm';
+            posOrigenInput.id = `posOrigenSalida${i}`;
+            posOrigenInput.placeholder = `1-${origen.tamano}`;
+            posOrigenInput.min = '1';
+            posOrigenInput.max = String(origen.tamano);
+            posOrigenInput.value = String(salidaCarril(origen, Number(selectCarrilOrigenProb.value)) + 1);
+
+            const posDestinoInput = document.createElement('input');
+            posDestinoInput.type = 'number';
+            posDestinoInput.className = 'form-control form-control-sm';
+            posDestinoInput.id = `posDestinoSalida${i}`;
+            posDestinoInput.placeholder = `1-${destino.tamano}`;
+            posDestinoInput.min = '1';
+            posDestinoInput.max = String(destino.tamano);
+            posDestinoInput.value = String(entradaCarril(destino, i) + 1);
+
+            row.append(
+                campoConexion(tr('streetConnection.legacy.destinationLane'), selectCarril, tr('streetConnection.legacy.destinationLaneHelp')),
+                campoConexion(tr('streetConnection.legacy.probability'), probInput, tr('streetConnection.legacy.probabilityHelp')),
+                campoConexion(tr('streetConnection.legacy.sourcePosition'), posOrigenInput, tr('streetConnection.legacy.sourcePositionHelp', { max: origen.tamano })),
+                campoConexion(tr('streetConnection.legacy.destinationPosition'), posDestinoInput, tr('streetConnection.legacy.destinationPositionHelp', { max: destino.tamano })),
+            );
+            body.append(row);
+            collapse.append(body);
+            item.append(header, collapse);
+            accordion.append(item);
         }
 
-        html += `
-                </div>
-                <div class="alert alert-warning small mt-2 mb-0">
-                    <strong>⚠️ Importante:</strong>
-                    <ul class="mb-0 mt-1">
-                        <li>La suma de probabilidades debería ser ~100%</li>
-                        <li>Cada carril destino solo puede usarse una vez</li>
-                        <li>Las posiciones se cuentan desde 1 (no desde 0)</li>
-                    </ul>
-                </div>
-            </div>
-        `;
-
-        contenedor.innerHTML = html;
+        const alertBox = document.createElement('div');
+        alertBox.className = 'alert alert-warning small mt-2 mb-0';
+        const important = document.createElement('strong');
+        important.textContent = tr('streetConnection.legacy.importantTitle');
+        const list = document.createElement('ul');
+        list.className = 'mb-0 mt-1';
+        for (const key of [
+            'streetConnection.legacy.sumHelp',
+            'streetConnection.legacy.uniqueLaneHelp',
+            'streetConnection.legacy.oneBasedHelp',
+        ]) {
+            const item = document.createElement('li');
+            item.textContent = tr(key);
+            list.append(item);
+        }
+        alertBox.append(important, list);
+        wrapper.append(heading, accordion, alertBox);
+        contenedor.replaceChildren(wrapper);
 
         // Agregar listeners para validación en tiempo real
         for (let i = 0; i < numCarriles; i++) {
@@ -1140,17 +1189,17 @@ function mostrarDialogoNuevaConexion() {
 
         // Validaciones básicas
         if (isNaN(origenIdx) || origenIdx < 0 || origenIdx >= window.calles.length) {
-            alert("❌ Selecciona una calle de origen válida");
+            fluviNotify.error('streetConnection.errors.sourceStreet');
             return;
         }
 
         if (isNaN(destinoIdx) || destinoIdx < 0 || destinoIdx >= window.calles.length) {
-            alert("❌ Selecciona una calle de destino válida");
+            fluviNotify.error('streetConnection.errors.destinationStreet');
             return;
         }
 
         if (origenIdx === destinoIdx) {
-            alert("❌ La calle de origen y destino no pueden ser la misma");
+            fluviNotify.error('streetConnection.errors.sameStreet');
             return;
         }
 
@@ -1163,7 +1212,10 @@ function mostrarDialogoNuevaConexion() {
             // Las conexiones lineales conectan cada carril i de origen al carril i de destino
             // Verificamos si ya existe la conexión del primer carril
             if (validarConexionDuplicada(origenIdx, 0, destinoIdx, 0)) {
-                alert(`❌ Ya existe una conexión lineal de "${origen.nombre}" a "${destino.nombre}".\n\nLas conexiones lineales unen todos los carriles 1:1, por lo que no se pueden duplicar.`);
+                fluviNotify.error('streetConnection.errors.linealDuplicate', {
+                    source: origen.nombre,
+                    destination: destino.nombre,
+                });
                 return;
             }
 
@@ -1176,27 +1228,31 @@ function mostrarDialogoNuevaConexion() {
             const posInicialHumana = parseInt(inputPosInicial.value);
 
             if (isNaN(carrilDestino)) {
-                alert("❌ Selecciona un carril destino válido");
+                fluviNotify.error('streetConnection.errors.selectDestinationLane');
                 selectCarrilDestinoIncorp.classList.add('is-invalid');
                 return;
             }
 
             if (isNaN(posInicialHumana)) {
-                alert("❌ La posición inicial es inválida");
+                fluviNotify.error('streetConnection.errors.initialPosition');
                 inputPosInicial.classList.add('is-invalid');
                 return;
             }
 
             // Validar rango de carril destino (0-based)
             if (carrilDestino < 0 || carrilDestino >= destino.carriles) {
-                alert(`❌ El carril destino debe estar entre 0 y ${destino.carriles - 1}`);
+                fluviNotify.error('streetConnection.errors.destinationLaneRange', {
+                    max: destino.carriles - 1,
+                });
                 selectCarrilDestinoIncorp.classList.add('is-invalid');
                 return;
             }
 
             // Validar rango de posición inicial (1-based para el usuario)
             if (posInicialHumana < 1 || posInicialHumana > destino.tamano) {
-                alert(`❌ La posición inicial debe estar entre 1 y ${destino.tamano} (tamaño de calle destino)`);
+                fluviNotify.error('streetConnection.errors.initialPositionRange', {
+                    max: destino.tamano,
+                });
                 inputPosInicial.classList.add('is-invalid');
                 return;
             }
@@ -1209,7 +1265,11 @@ function mostrarDialogoNuevaConexion() {
             // Las conexiones de incorporación conectan TODOS los carriles de origen al carrilDestino
             // Así que verificamos si ya existe alguna conexión del primer carril de origen al carril destino
             if (validarConexionDuplicada(origenIdx, 0, destinoIdx, carrilDestino)) {
-                alert(`❌ Ya existe una conexión de incorporación de "${origen.nombre}" al carril ${carrilDestino + 1} de "${destino.nombre}".\n\nLas conexiones de incorporación unen TODOS los carriles de origen a un carril destino, por lo que no se pueden duplicar.`);
+                fluviNotify.error('streetConnection.errors.incorporationDuplicate', {
+                    source: origen.nombre,
+                    lane: carrilDestino + 1,
+                    destination: destino.nombre,
+                });
                 selectCarrilDestinoIncorp.classList.add('is-invalid');
                 return;
             }
@@ -1219,19 +1279,21 @@ function mostrarDialogoNuevaConexion() {
             const carrilOrigen = parseInt(document.getElementById('selectCarrilOrigenProb').value);
 
             if (isNaN(carrilOrigen)) {
-                alert("❌ Selecciona un carril origen válido");
+                fluviNotify.error('streetConnection.errors.selectSourceLane');
                 return;
             }
 
             // Validar que esté en el rango correcto (0-based)
             if (carrilOrigen < 0 || carrilOrigen >= origen.carriles) {
-                alert(`❌ El carril origen debe estar entre 0 y ${origen.carriles - 1}`);
+                fluviNotify.error('streetConnection.errors.sourceLaneRange', {
+                    max: origen.carriles - 1,
+                });
                 return;
             }
 
             // Validar que no haya carriles duplicados
             if (!validarCarrilesUnicos()) {
-                alert("❌ Hay carriles destino duplicados. Cada carril solo puede usarse una vez.");
+                fluviNotify.error('streetConnection.errors.duplicateDestinationLanes');
                 return;
             }
 
@@ -1254,28 +1316,38 @@ function mostrarDialogoNuevaConexion() {
 
                 // Validar valores
                 if (isNaN(carrilDestino) || isNaN(probabilidad) || isNaN(posOrigenHumano) || isNaN(posDestinoHumano)) {
-                    alert(`❌ Valores inválidos en salida ${i + 1}`);
+                    fluviNotify.error('streetConnection.errors.exitInvalidValues', {
+                        exit: i + 1,
+                    });
                     posOrigenInput.classList.add('is-invalid');
                     posDestinoInput.classList.add('is-invalid');
                     return;
                 }
 
                 if (probabilidad < 0 || probabilidad > 1) {
-                    alert(`❌ La probabilidad de la salida ${i + 1} debe estar entre 0 y 100%`);
+                    fluviNotify.error('streetConnection.errors.exitProbabilityRange', {
+                        exit: i + 1,
+                    });
                     probabilidadInput.classList.add('is-invalid');
                     return;
                 }
 
                 // VALIDACIÓN ESTRICTA: Posición origen debe estar entre 1 y tamaño de calle origen
                 if (posOrigenHumano < 1 || posOrigenHumano > origen.tamano) {
-                    alert(`❌ La posición origen de la salida ${i + 1} debe estar entre 1 y ${origen.tamano} (tamaño de calle origen)`);
+                    fluviNotify.error('streetConnection.errors.exitSourceRange', {
+                        exit: i + 1,
+                        max: origen.tamano,
+                    });
                     posOrigenInput.classList.add('is-invalid');
                     return;
                 }
 
                 // VALIDACIÓN ESTRICTA: Posición destino debe estar entre 1 y tamaño de calle destino
                 if (posDestinoHumano < 1 || posDestinoHumano > destino.tamano) {
-                    alert(`❌ La posición destino de la salida ${i + 1} debe estar entre 1 y ${destino.tamano} (tamaño de calle destino)`);
+                    fluviNotify.error('streetConnection.errors.exitDestinationRange', {
+                        exit: i + 1,
+                        max: destino.tamano,
+                    });
                     posDestinoInput.classList.add('is-invalid');
                     return;
                 }
@@ -1284,7 +1356,12 @@ function mostrarDialogoNuevaConexion() {
                 if (probabilidad > 0) {
                     // VALIDACIÓN DE DUPLICADOS: Verificar si ya existe esta conexión
                     if (validarConexionDuplicada(origenIdx, carrilOrigen, destinoIdx, carrilDestino)) {
-                        alert(`❌ Ya existe una conexión del carril ${carrilOrigen + 1} de "${origen.nombre}" al carril ${carrilDestino + 1} de "${destino.nombre}". No se permiten conexiones duplicadas.`);
+                        fluviNotify.error('streetConnection.errors.exitDuplicate', {
+                            sourceLane: carrilOrigen + 1,
+                            source: origen.nombre,
+                            destinationLane: carrilDestino + 1,
+                            destination: destino.nombre,
+                        });
                         carrilDestinoSelect.classList.add('is-invalid');
                         return;
                     }
@@ -1303,7 +1380,7 @@ function mostrarDialogoNuevaConexion() {
             }
 
             if (distribuciones.length === 0) {
-                alert("❌ Debes configurar al menos una salida con probabilidad mayor a 0%");
+                fluviNotify.error('streetConnection.errors.noExit');
                 return;
             }
 
@@ -1360,7 +1437,9 @@ function mostrarDialogoNuevaConexion() {
                 actualizarListaConexiones(window.calleSeleccionada);
             }
 
-            alert(`✅ Conexión ${tipo} creada exitosamente\n\nLa simulación está lista para usar la nueva conexión.`);
+            fluviNotify.success('notifications.streetConnection.created', {
+                type: etiquetaTipoConexion(tipo),
+            });
 
             // Cerrar modal correctamente
             // Remover el foco antes de cerrar para evitar errores de accesibilidad
@@ -1381,7 +1460,10 @@ function mostrarDialogoNuevaConexion() {
             // Limpiar contenedor de distribuciones
             const contenedor = document.getElementById('contenedorDistribucionesProbabilisticas');
             if (contenedor) {
-                contenedor.innerHTML = '<p class="text-muted text-center py-3">Selecciona una calle destino para configurar las salidas</p>';
+                const paragraph = document.createElement('p');
+                paragraph.className = 'text-muted text-center py-3';
+                paragraph.textContent = tr('streetConnection.legacy.noDestination');
+                contenedor.replaceChildren(paragraph);
             }
 
             // Nota: No removemos el listener aquí porque lo reutilizamos
@@ -2741,10 +2823,10 @@ function toggleListaConexiones() {
     if (container.style.display === 'none') {
         actualizarListaConexiones(window.calleSeleccionada);
         container.style.display = 'block';
-        btn.textContent = '🔼 Ocultar Conexiones';
+        btn.textContent = tr('streetConnection.list.hide');
     } else {
         container.style.display = 'none';
-        btn.textContent = '📋 Ver Conexiones Existentes';
+        btn.textContent = tr('streetConnection.list.show');
     }
 }
 
@@ -2762,8 +2844,15 @@ function actualizarListaConexiones(calleSeleccionada = null) {
         searchInput.oninput = () => actualizarListaConexiones(calleSeleccionada);
     }
 
+    const emptyItem = (key, params) => {
+        const item = document.createElement('div');
+        item.className = 'list-group-item text-muted text-center';
+        item.textContent = tr(key, params);
+        return item;
+    };
+
     if (!window.conexiones || window.conexiones.length === 0) {
-        listaDiv.innerHTML = '<div class="list-group-item text-muted text-center">No hay conexiones creadas</div>';
+        listaDiv.append(emptyItem('streetConnection.list.empty'));
         return;
     }
 
@@ -2777,9 +2866,9 @@ function actualizarListaConexiones(calleSeleccionada = null) {
 
         // Mostrar mensaje si la calle seleccionada no tiene conexiones
         if (conexionesFiltradas.length === 0) {
-            listaDiv.innerHTML = `<div class="list-group-item text-muted text-center">
-                <strong>${calleSeleccionada.nombre}</strong> no tiene conexiones asociadas
-            </div>`;
+            listaDiv.append(emptyItem('streetConnection.list.selectedEmpty', {
+                name: calleSeleccionada.nombre,
+            }));
             console.log(`📋 Calle "${calleSeleccionada.nombre}" no tiene conexiones`);
             return;
         }
@@ -2789,7 +2878,9 @@ function actualizarListaConexiones(calleSeleccionada = null) {
     if (calleSeleccionada && !query) {
         const header = document.createElement('div');
         header.className = 'list-group-item list-group-item-info';
-        header.innerHTML = `<small><strong>📌 Conexiones de:</strong> ${calleSeleccionada.nombre}</small>`;
+        header.textContent = tr('streetConnection.list.header', {
+            name: calleSeleccionada.nombre,
+        });
         listaDiv.appendChild(header);
     }
 
@@ -2801,6 +2892,7 @@ function actualizarListaConexiones(calleSeleccionada = null) {
             conexion.origen.nombre,
             conexion.destino.nombre,
             tipo,
+            etiquetaTipoConexion(tipo),
             conexion.carrilOrigen + 1,
             conexion.carrilDestino + 1,
             conexion.posOrigen == null ? '' : conexion.posOrigen + 1,
@@ -2810,7 +2902,7 @@ function actualizarListaConexiones(calleSeleccionada = null) {
     });
 
     if (query && conexionesFiltradas.length === 0) {
-        listaDiv.innerHTML = '<div class="list-group-item text-muted text-center">No se encontraron conexiones</div>';
+        listaDiv.append(emptyItem('streetConnection.list.noMatches'));
         return;
     }
 
@@ -2820,47 +2912,66 @@ function actualizarListaConexiones(calleSeleccionada = null) {
         // Obtener el índice real de la conexión en el array global
         const indexReal = window.conexiones.indexOf(conexion);
 
-        const origenNombre = conexion.origen.nombre || `Calle ${indexReal}`;
-        const destinoNombre = conexion.destino.nombre || `Calle ${indexReal}`;
+        const origenNombre = conexion.origen.nombre || tr('streetConnection.list.unnamedStreet', { index: indexReal });
+        const destinoNombre = conexion.destino.nombre || tr('streetConnection.list.unnamedStreet', { index: indexReal });
 
-        let tipoIcono = '🟢';
-        let tipoTexto = 'Lineal';
-        if (conexion.tipo === 'incorporacion') {
-            tipoIcono = '🟠';
-            tipoTexto = 'Incorporación';
-        } else if (conexion.tipo === 'probabilistica') {
-            tipoIcono = '🟣';
-            tipoTexto = 'Probabilística';
-        }
+        const tipoIcono = tipoConexionUI(conexion.tipo).icon;
 
         const item = document.createElement('div');
         item.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center';
         const incompatible = window.isConnectionDirectionCompatible?.(conexion) === false;
         if (incompatible) {
             item.classList.add('list-group-item-warning');
-            item.title = 'Sentido incompatible: editar esta conexión';
+            item.title = tr('streetConnection.list.incompatibleTitle');
         }
 
-        let detallesConexion = `${tipoIcono} <strong>${origenNombre}</strong> [C${conexion.carrilOrigen + 1}] → <strong>${destinoNombre}</strong> [C${conexion.carrilDestino + 1}]`;
+        const details = document.createElement('div');
+        details.className = 'small';
+        const sourceName = document.createElement('strong');
+        sourceName.textContent = origenNombre;
+        const destinationName = document.createElement('strong');
+        destinationName.textContent = destinoNombre;
+        const laneLabel = tr('streetConnection.list.laneShort');
+        details.append(
+            `${tipoIcono} `,
+            sourceName,
+            ` [${laneLabel}${conexion.carrilOrigen + 1}] → `,
+            destinationName,
+            ` [${laneLabel}${conexion.carrilDestino + 1}]`,
+        );
 
         if (conexion.tipo === 'probabilistica') {
             const prob = Math.round(conexion.probabilidadTransferencia * 100);
-            detallesConexion += ` <span class="badge bg-secondary">${prob}%</span>`;
+            const badge = document.createElement('span');
+            badge.className = 'badge bg-secondary';
+            badge.textContent = `${prob}%`;
+            details.append(' ', badge);
         }
-        if (incompatible) detallesConexion += ' <span class="badge bg-warning text-dark">⚠ Sentido incompatible · editar</span>';
+        if (incompatible) {
+            const badge = document.createElement('span');
+            badge.className = 'badge bg-warning text-dark';
+            badge.textContent = tr('streetConnection.list.incompatibleBadge');
+            details.append(' ', badge);
+        }
 
-        item.innerHTML = `
-            <div class="small">${detallesConexion}</div>
-            <div class="btn-group btn-group-sm" role="group">
-                <button class="btn btn-outline-warning btn-sm" onclick="editarConexionDesdeLista(${indexReal})" title="Editar">
-                    ✏️
-                </button>
-                <button class="btn btn-outline-danger btn-sm" onclick="eliminarConexion(${indexReal})" title="Eliminar">
-                    🗑️
-                </button>
-            </div>
-        `;
+        const actions = document.createElement('div');
+        actions.className = 'btn-group btn-group-sm';
+        actions.setAttribute('role', 'group');
+        const edit = document.createElement('button');
+        edit.className = 'btn btn-outline-warning btn-sm';
+        edit.setAttribute('onclick', `editarConexionDesdeLista(${indexReal})`);
+        edit.title = tr('streetConnection.list.edit');
+        edit.setAttribute('aria-label', tr('streetConnection.list.edit'));
+        edit.textContent = '✏️';
+        const remove = document.createElement('button');
+        remove.className = 'btn btn-outline-danger btn-sm';
+        remove.setAttribute('onclick', `eliminarConexion(${indexReal})`);
+        remove.title = tr('streetConnection.list.delete');
+        remove.setAttribute('aria-label', tr('streetConnection.list.delete'));
+        remove.textContent = '🗑️';
+        actions.append(edit, remove);
 
+        item.append(details, actions);
         listaDiv.appendChild(item);
     });
 
@@ -2880,7 +2991,7 @@ document.addEventListener('street-lane-directions-changed', () => {
 function editarConexionDesdeLista(index) {
     const conexion = window.conexiones && window.conexiones[index];
     if (!conexion) {
-        alert('❌ Conexión no encontrada');
+        fluviNotify.error('streetConnection.list.notFound');
         return;
     }
     if (window.createLinkTool && typeof window.createLinkTool.edit === 'function') {
@@ -2898,11 +3009,9 @@ function poblarEdicionProbabilistica(conexion) {
     // Poblar selector de carril origen (solo lectura, no se puede cambiar)
     const selectCarrilOrigen = document.getElementById('editSelectCarrilOrigenProb');
     if (selectCarrilOrigen) {
-        let html = '';
-        for (let i = 0; i < origen.carriles; i++) {
-            html += `<option value="${i}">Carril ${i + 1}</option>`;
-        }
-        selectCarrilOrigen.innerHTML = html;
+        selectCarrilOrigen.replaceChildren(
+            ...Array.from({ length: origen.carriles }, (_, carril) => opcionCarril(carril)),
+        );
         selectCarrilOrigen.value = conexion.carrilOrigen;
         selectCarrilOrigen.disabled = true; // No permitir cambiar el carril origen
     }
@@ -2910,69 +3019,75 @@ function poblarEdicionProbabilistica(conexion) {
     // Generar formulario SOLO para esta conexión individual
     const contenedor = document.getElementById('editContenedorDistribucionesProbabilisticas');
 
-    const html = `
-        <div class="alert alert-info small mb-3">
-            <strong>📝 Editando conexión individual:</strong> Carril ${conexion.carrilOrigen + 1} → Carril ${conexion.carrilDestino + 1}
-        </div>
+    const info = document.createElement('div');
+    info.className = 'alert alert-info small mb-3';
+    info.textContent = tr('streetConnection.legacy.editIndividual', {
+        sourceLane: conexion.carrilOrigen + 1,
+        destinationLane: conexion.carrilDestino + 1,
+    });
 
-        <div class="mb-3">
-            <label class="form-label fw-bold">Configuración de Esta Salida</label>
+    const wrapper = document.createElement('div');
+    wrapper.className = 'mb-3';
+    const heading = document.createElement('label');
+    heading.className = 'form-label fw-bold';
+    heading.textContent = tr('streetConnection.legacy.editConfigTitle');
+    const row = document.createElement('div');
+    row.className = 'row g-2';
 
-            <div class="row g-2">
-                <div class="col-md-6">
-                    <label class="form-label small">Carril Destino</label>
-                    <select class="form-select form-select-sm" id="editCarrilDestinoSalidaUnica" disabled>
-                        <option value="${conexion.carrilDestino}">Carril ${conexion.carrilDestino + 1}</option>
-                    </select>
-                    <small class="text-muted">No se puede cambiar al editar</small>
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label small">Probabilidad (%)</label>
-                    <input type="number" class="form-control form-control-sm"
-                           id="editProbSalidaUnica"
-                           placeholder="0-100"
-                           min="0"
-                           max="100"
-                           step="1"
-                           value="${conexion.probabilidadTransferencia * 100}">
-                    <small class="text-muted">% de vehículos que toman esta salida</small>
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label small">Posición Origen (celda)</label>
-                    <input type="number" class="form-control form-control-sm"
-                           id="editPosOrigenSalidaUnica"
-                           placeholder="1-${origen.tamano}"
-                           min="1"
-                           max="${origen.tamano}"
-                           value="${(conexion.posOrigen === -1 ? origen.tamano - 1 : conexion.posOrigen) + 1}">
-                    <small class="text-muted">Celda donde se origina (máx: ${origen.tamano})</small>
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label small">Posición Destino (celda)</label>
-                    <input type="number" class="form-control form-control-sm"
-                           id="editPosDestinoSalidaUnica"
-                           placeholder="1-${destino.tamano}"
-                           min="1"
-                           max="${destino.tamano}"
-                           value="${conexion.posDestino + 1}">
-                    <small class="text-muted">Celda donde llegan (máx: ${destino.tamano})</small>
-                </div>
-            </div>
-        </div>
+    const selectCarril = document.createElement('select');
+    selectCarril.className = 'form-select form-select-sm';
+    selectCarril.id = 'editCarrilDestinoSalidaUnica';
+    selectCarril.disabled = true;
+    const laneOption = opcionCarril(conexion.carrilDestino);
+    selectCarril.append(laneOption);
 
-        <div class="alert alert-warning small mt-2 mb-0">
-            <strong>⚠️ Nota:</strong> Solo puedes editar la probabilidad y las posiciones de esta salida específica.
-            Para cambiar el carril origen o destino, elimina esta conexión y crea una nueva.
-        </div>
-    `;
+    const probabilidadInput = document.createElement('input');
+    probabilidadInput.type = 'number';
+    probabilidadInput.className = 'form-control form-control-sm';
+    probabilidadInput.id = 'editProbSalidaUnica';
+    probabilidadInput.placeholder = '0-100';
+    probabilidadInput.min = '0';
+    probabilidadInput.max = '100';
+    probabilidadInput.step = '1';
+    probabilidadInput.value = String(conexion.probabilidadTransferencia * 100);
 
-    contenedor.innerHTML = html;
+    const posOrigenInput = document.createElement('input');
+    posOrigenInput.type = 'number';
+    posOrigenInput.className = 'form-control form-control-sm';
+    posOrigenInput.id = 'editPosOrigenSalidaUnica';
+    posOrigenInput.placeholder = `1-${origen.tamano}`;
+    posOrigenInput.min = '1';
+    posOrigenInput.max = String(origen.tamano);
+    posOrigenInput.value = String((conexion.posOrigen === -1 ? origen.tamano - 1 : conexion.posOrigen) + 1);
+
+    const posDestinoInput = document.createElement('input');
+    posDestinoInput.type = 'number';
+    posDestinoInput.className = 'form-control form-control-sm';
+    posDestinoInput.id = 'editPosDestinoSalidaUnica';
+    posDestinoInput.placeholder = `1-${destino.tamano}`;
+    posDestinoInput.min = '1';
+    posDestinoInput.max = String(destino.tamano);
+    posDestinoInput.value = String(conexion.posDestino + 1);
+
+    row.append(
+        campoConexion(tr('streetConnection.legacy.destinationLane'), selectCarril, tr('streetConnection.legacy.cannotChange')),
+        campoConexion(tr('streetConnection.legacy.probability'), probabilidadInput, tr('streetConnection.legacy.probabilityHelp')),
+        campoConexion(tr('streetConnection.legacy.sourcePosition'), posOrigenInput, tr('streetConnection.legacy.sourcePositionHelp', { max: origen.tamano })),
+        campoConexion(tr('streetConnection.legacy.destinationPosition'), posDestinoInput, tr('streetConnection.legacy.destinationPositionHelp', { max: destino.tamano })),
+    );
+    wrapper.append(heading, row);
+
+    const note = document.createElement('div');
+    note.className = 'alert alert-warning small mt-2 mb-0';
+    note.textContent = tr('streetConnection.legacy.editNote');
+
+    contenedor.replaceChildren(info, wrapper, note);
 }
 
 // Editar una conexión existente
 function editarConexion(index) {
     if (!window.conexiones || index < 0 || index >= window.conexiones.length) {
-        alert('❌ Conexión no encontrada');
+        fluviNotify.error('streetConnection.list.notFound');
         return;
     }
 
@@ -3016,11 +3131,9 @@ function editarConexion(index) {
         // Poblar selector de carril destino
         const selectCarrilDestino = document.getElementById('editSelectCarrilDestinoIncorp');
         if (selectCarrilDestino) {
-            let html = '';
-            for (let i = 0; i < conexion.destino.carriles; i++) {
-                html += `<option value="${i}">Carril ${i + 1}</option>`;
-            }
-            selectCarrilDestino.innerHTML = html;
+            selectCarrilDestino.replaceChildren(
+                ...Array.from({ length: conexion.destino.carriles }, (_, carril) => opcionCarril(carril)),
+            );
             selectCarrilDestino.value = conexion.carrilDestino;
         }
 
@@ -3082,7 +3195,7 @@ function editarConexion(index) {
 // Guardar cambios en una conexión (modifica directamente la conexión existente)
 function guardarCambiosConexion(index) {
     if (!window.conexiones || index < 0 || index >= window.conexiones.length) {
-        alert('❌ Error al guardar cambios');
+        fluviNotify.error('streetConnection.errors.saveFailed');
         return;
     }
 
@@ -3102,7 +3215,7 @@ function guardarCambiosConexion(index) {
         const posDestinoInput = document.getElementById('editPosDestinoSalidaUnica');
 
         if (!probabilidadInput || !posOrigenInput || !posDestinoInput) {
-            alert('❌ Error al leer valores del formulario');
+            fluviNotify.error('streetConnection.errors.saveFailed');
             return;
         }
 
@@ -3115,19 +3228,23 @@ function guardarCambiosConexion(index) {
 
         // Validaciones
         if (isNaN(probabilidad) || probabilidad < 0 || probabilidad > 1) {
-            alert('❌ La probabilidad debe estar entre 0 y 100%');
+            fluviNotify.error('streetConnection.errors.invalidProbability');
             probabilidadInput.classList.add('is-invalid');
             return;
         }
 
         if (isNaN(posOrigenHumano) || posOrigenHumano < 1 || posOrigenHumano > origen.tamano) {
-            alert(`❌ La posición origen debe estar entre 1 y ${origen.tamano}`);
+            fluviNotify.error('streetConnection.errors.sourcePositionRange', {
+                max: origen.tamano,
+            });
             posOrigenInput.classList.add('is-invalid');
             return;
         }
 
         if (isNaN(posDestinoHumano) || posDestinoHumano < 1 || posDestinoHumano > destino.tamano) {
-            alert(`❌ La posición destino debe estar entre 1 y ${destino.tamano}`);
+            fluviNotify.error('streetConnection.errors.destinationPositionRange', {
+                max: destino.tamano,
+            });
             posDestinoInput.classList.add('is-invalid');
             return;
         }
@@ -3152,23 +3269,27 @@ function guardarCambiosConexion(index) {
 
         // Validaciones mejoradas
         if (isNaN(carrilDestino)) {
-            alert('❌ Selecciona un carril destino válido');
+            fluviNotify.error('streetConnection.errors.selectDestinationLane');
             selectCarrilDestino.classList.add('is-invalid');
             return;
         }
         if (isNaN(posInicialHumano)) {
-            alert('❌ La posición inicial es inválida');
+            fluviNotify.error('streetConnection.errors.initialPosition');
             inputPosInicial.classList.add('is-invalid');
             return;
         }
         if (carrilDestino < 0 || carrilDestino >= conexion.destino.carriles) {
-            alert(`❌ El carril destino debe estar entre 0 y ${conexion.destino.carriles - 1}`);
+            fluviNotify.error('streetConnection.errors.destinationLaneRange', {
+                max: conexion.destino.carriles - 1,
+            });
             selectCarrilDestino.classList.add('is-invalid');
             return;
         }
         // Validar que la posición sea mayor que 0 (contar desde 1)
         if (posInicialHumano < 1 || posInicialHumano > conexion.destino.tamano) {
-            alert(`❌ La posición inicial debe estar entre 1 y ${conexion.destino.tamano}`);
+            fluviNotify.error('streetConnection.errors.initialPositionRange', {
+                max: conexion.destino.tamano,
+            });
             inputPosInicial.classList.add('is-invalid');
             return;
         }
@@ -3192,7 +3313,7 @@ function guardarCambiosConexion(index) {
 
     if (window.isConnectionDirectionCompatible?.(conexion) === false) {
         Object.assign(conexion, previous);
-        alert('⚠️ Esta conexión es incompatible con el sentido de sus carriles. Ajusta sus posiciones.');
+        fluviNotify.warning('streetConnection.errors.incompatibleEdit');
         return;
     }
 
@@ -3253,18 +3374,21 @@ function guardarCambiosConexion(index) {
     }
 
     console.log(`✏️ Conexión ${index} editada: ${conexion.origen.nombre}[${conexion.carrilOrigen}] → ${conexion.destino.nombre}[${conexion.carrilDestino}] (${tipoNuevo})`);
-    alert('✅ Cambios aplicados correctamente a la simulación.');
+    fluviNotify.success('notifications.streetConnection.updated');
 }
 
 // Eliminar una conexión (aplica cambios inmediatamente)
 function eliminarConexion(index) {
     if (!window.conexiones || index < 0 || index >= window.conexiones.length) {
-        alert('❌ Conexión no encontrada');
+        fluviNotify.error('streetConnection.list.notFound');
         return;
     }
 
     const conexion = window.conexiones[index];
-    const confirmacion = confirm(`¿Eliminar conexión de "${conexion.origen.nombre}" a "${conexion.destino.nombre}"?`);
+    const confirmacion = confirm(tr('streetConnection.list.deleteConfirm', {
+        source: conexion.origen.nombre,
+        destination: conexion.destino.nombre,
+    }));
 
     if (!confirmacion) return;
 
@@ -3303,7 +3427,7 @@ function eliminarConexion(index) {
     }
 
     console.log(`🗑️ Conexión ${index} eliminada de la simulación`);
-    alert('✅ Conexión eliminada correctamente.');
+    fluviNotify.success('notifications.streetConnection.deleted');
 }
 
 

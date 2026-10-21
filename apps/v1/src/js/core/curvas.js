@@ -8,8 +8,8 @@
 // - Arrastre y actualización de vértices
 
 // Variables globales para el control de vértices
-const verticeSeleccionado = null;
-const controlandoVertice = false;
+let verticeSeleccionado = null;
+let controlandoVertice = false;
 
 // Geometry is read far more often than it is edited. Keep the legacy integration
 // order (including its rounding) while sharing its prefixes between cells/lanes.

@@ -228,6 +228,43 @@ lane/generation controls, validation, safe names, and notifications).
 `tests/cell-tooltip.spec.mjs` covers the localized tooltip format and physical
 cell indexes.
 
+## Street connection drafting and editing
+
+`ui/createLink.js` and the legacy connection controls in `ui/constructor.js`
+share the `streetConnection.*` catalog owner:
+
+- `streetConnection.panel` and `streetConnection.row` cover the map-first
+  Lineal/Incorporation/Probabilistic draft: source/destination selectors,
+  type-specific fields, per-lane enablement, fixed-cell review, Save/Cancel,
+  and live status text.
+- `streetConnection.pick`, `streetConnection.lineal`, and
+  `streetConnection.position` cover map-pick guidance, fixed Lineal summaries,
+  unmatched lanes, and physical first/last-cell wording. Cell indexes remain
+  zero-based physical indexes; `posOrigen = -1` still displays as the last
+  physical cell.
+- `streetConnection.list` covers sidebar visibility, search, selected-street
+  headers, empty/no-match states, edit/delete actions, and incompatible-direction
+  warnings.
+- `streetConnection.legacy` covers the new/edit connection modals, generated
+  probabilistic exit forms, lane options, sum warnings, and assistance text.
+- `streetConnection.errors`, `streetConnection.overlap`, and
+  `notifications.streetConnection.*` cover validation, duplicate/direction/
+  endpoint/incomplete drafts, and explicit success, warning, and error toasts.
+
+Saved connection types (`lineal`, `incorporacion`, `probabilistica`), stored
+positions, probabilities, street names, and JSON keys are data and never
+translated. Street names are assigned as text or `Option` labels, so names with
+HTML-significant characters remain literal in the panel, list, confirmations,
+and toasts. The UI calls these mappings **Conexión entre calles** /
+**street connection**; the terminology section below keeps that distinct from a
+Calle whose `tipo` is `conexion`.
+
+Browser coverage lives in `tests/connection-localization.spec.mjs` (Spanish and
+English, Canvas and Pixi, correction, cancellation, saved-link reopening,
+incorporation lane selection, probabilistic transfer mapping, duplicate,
+direction, and incomplete-draft validation, legacy creation/edit/delete,
+notification severities, safe names, desktop/mobile, and both themes).
+
 ## Terminology
 
 Keep the distinction from `CONTEXT.md`:

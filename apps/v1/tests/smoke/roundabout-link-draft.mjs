@@ -39,7 +39,7 @@ for (const usePixi of [false, true]) {
         assert.equal(await page.$eval(`${rows} [data-testid="source-cell"]`, el => el.value), '');
         assert.equal(await page.$eval(`${rows} [data-testid="destination-cell"]`, el => el.value), '');
         await page.click('#linkSaveButton');
-        assert.match(await page.$eval('#linkDraftMessage', el => el.textContent), /fuera de rango/);
+        assert.match(await page.$eval('#linkDraftMessage', el => el.textContent), /Completa las calles/);
         for (const row of [1, 2]) {
             await set(row, 'source-cell', row + 4);
             await set(row, 'destination-cell', row + 2);

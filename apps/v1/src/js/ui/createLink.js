@@ -38,6 +38,23 @@
 	const effective = (v, s) => (Number(v) === -1 ? s - 1 : Number(v));
 	const roundabout = (street) => window.roundaboutStreet?.isRoundabout(street) ?? street?.geometryType === "roundabout";
 	const explicitCells = () => roundabout(draft?.source) || roundabout(draft?.destination);
+	const cellPosition = (cell, size) =>
+		cell === 0
+			? tr("streetConnection.position.firstCell")
+			: cell === size - 1
+				? tr("streetConnection.position.lastCell")
+				: tr("streetConnection.position.cell");
+	const edgePosition = (cell, size) =>
+		cell === size - 1
+			? tr("streetConnection.position.last")
+			: tr("streetConnection.position.first");
+	const endpointLabel = (phase) =>
+		phase === "source"
+			? tr("streetConnection.pick.source")
+			: tr("streetConnection.pick.destination");
+	const setStatus = (key, params) => {
+		status.textContent = tr(key, params);
+	};
 	function defaultMapping(source, destination, sourceLane, destinationLane) {
 		const needsCells = roundabout(source) || roundabout(destination);
 		return {
@@ -87,7 +104,7 @@
 			[sourceSelect, draft?.source],
 			[destinationSelect, draft?.destination],
 		]) {
-			select.replaceChildren(new Option("Selecciona una calle", ""));
+			select.replaceChildren(new Option(tr("streetConnection.panel.selectStreet"), ""));
 			for (const { street } of window.streetListUI.sortedEntries(streets()))
 				select.add(new Option(name(street), street.id));
 			select.value = picked?.id || "";
@@ -140,7 +157,12 @@
 		row.append(wrap);
 	}
 	function pickButton(container, row, index, phase) {
-		const label = `Elegir ${phase === "source" ? "origen" : "destino"} en mapa para correspondencia ${index + 1}`;
+		const label = tr(
+			phase === "source"
+				? "streetConnection.pick.sourceLabel"
+				: "streetConnection.pick.destinationLabel",
+			{ index: index + 1 },
+		);
 		const pick = document.createElement("button");
 		pick.type = "button";
 		pick.className = "btn btn-outline-secondary btn-sm mb-1 align-self-start";
@@ -162,7 +184,11 @@
 			pick.setAttribute("aria-pressed", "true");
 			markPickRow(pick, true);
 			setPickStatus(
-				`Correspondencia ${index + 1}: elige una celda de ${phase === "source" ? "origen" : "destino"} en ${name(phase === "source" ? draft.source : draft.destination)}. Escape cancela.`,
+				tr("streetConnection.pick.instruction", {
+					index: index + 1,
+					endpoint: endpointLabel(phase),
+					street: name(phase === "source" ? draft.source : draft.destination),
+				}),
 			);
 		});
 		container.append(pick);
@@ -171,13 +197,26 @@
 		const summary = document.createElement("div");
 		summary.className = "small";
 		summary.dataset.testid = "link-lineal-summary";
-		summary.textContent = `Correspondencia fija: ${linealMappings(draft.source, draft.destination).map((m) => {
-			const sourceCell = effective(m["source-cell"], draft.source.tamano),
-				destinationCell = m["destination-cell"];
-			const sourceEnd = sourceCell === draft.source.tamano - 1 ? "última celda" : sourceCell === 0 ? "primera celda" : "celda";
-			const destinationEnd = destinationCell === 0 ? "primera celda" : destinationCell === draft.destination.tamano - 1 ? "última celda" : "celda";
-			return `carril ${m["source-lane"] + 1}: ${sourceEnd} de origen (${sourceCell}) → carril ${m["destination-lane"] + 1}, ${destinationEnd} de destino (${destinationCell})`;
-		}).join("; ")}.`;
+		const mappingsText = linealMappings(draft.source, draft.destination)
+			.map((m) => {
+				const sourceCell = effective(m["source-cell"], draft.source.tamano),
+					destinationCell = m["destination-cell"];
+				return tr("streetConnection.lineal.mapping", {
+					sourceLane: m["source-lane"] + 1,
+					sourcePosition: cellPosition(sourceCell, draft.source.tamano),
+					sourceCell,
+					destinationLane: m["destination-lane"] + 1,
+					destinationPosition: cellPosition(
+						destinationCell,
+						draft.destination.tamano,
+					),
+					destinationCell,
+				});
+			})
+			.join("; ");
+		summary.textContent = tr("streetConnection.lineal.summary", {
+			mappings: mappingsText,
+		});
 		rowsElement.append(summary);
 		for (
 			let lane = draft.destination.carriles;
@@ -187,7 +226,9 @@
 			const el = document.createElement("div");
 			el.className = "link-unmatched small";
 			el.dataset.testid = "link-unmatched-lane";
-			el.textContent = `Carril origen ${lane + 1} sin correspondencia`;
+			el.textContent = tr("streetConnection.lineal.unmatched", {
+				lane: lane + 1,
+			});
 			rowsElement.append(el);
 		}
 	}
@@ -204,7 +245,7 @@
 		input(
 			origin,
 			"source-lane",
-			"Carril origen",
+			tr("streetConnection.row.sourceLane"),
 			m["source-lane"],
 			0,
 			draft.source.carriles - 1,
@@ -213,7 +254,7 @@
 			input(
 				origin,
 				"source-cell",
-				"Celda origen",
+				tr("streetConnection.row.sourceCell"),
 				m["source-cell"] ?? "",
 				roundabout(draft.source) ? 0 : -1,
 				draft.source.tamano - 1,
@@ -223,19 +264,27 @@
 			fixed.className = "small";
 			fixed.dataset.testid = "link-fixed-source-cell";
 			const physicalCell = effective(m["source-cell"], draft.source.tamano);
-			fixed.textContent = `Celda origen: ${physicalCell === draft.source.tamano - 1 ? "última" : "primera"} salida del carril ${m["source-lane"] + 1} (${physicalCell})`;
+			fixed.textContent = tr("streetConnection.row.fixedSourceCell", {
+				position: edgePosition(physicalCell, draft.source.tamano),
+				lane: m["source-lane"] + 1,
+				cell: physicalCell,
+			});
 			origin.append(fixed);
 			origin.querySelector("[data-testid='source-lane']").addEventListener("input", () => {
 				const lane = Number(origin.querySelector("[data-testid='source-lane']").value);
 				const cell = exit(draft.source, lane);
-				fixed.textContent = `Celda origen: ${cell === draft.source.tamano - 1 ? "última" : "primera"} salida del carril ${lane + 1} (${cell})`;
+				fixed.textContent = tr("streetConnection.row.fixedSourceCell", {
+					position: edgePosition(cell, draft.source.tamano),
+					lane: lane + 1,
+					cell,
+				});
 			});
 		}
 		pickButton(destination, row, index, "destination");
 		input(
 			destination,
 			"destination-lane",
-			"Carril destino",
+			tr("streetConnection.row.destinationLane"),
 			m["destination-lane"],
 			0,
 			draft.destination.carriles - 1,
@@ -243,7 +292,7 @@
 		input(
 			destination,
 			"destination-cell",
-			"Celda destino",
+			tr("streetConnection.row.destinationCell"),
 			m["destination-cell"] ?? "",
 			0,
 			draft.destination.tamano - 1,
@@ -257,7 +306,7 @@
 			enabled.className = "form-check-input";
 			enabled.dataset.testid = "link-lane-enabled";
 			enabled.checked = m.enabled !== false;
-			label.append(enabled, "Conectar este carril");
+			label.append(enabled, tr("streetConnection.row.connectLane"));
 			origin.prepend(label);
 			const toggle = () => {
 				if (pickRow === row) stopRowPick();
@@ -274,12 +323,20 @@
 			row.classList.toggle("text-muted", !enabled.checked);
 		}
 		if (draft.type === types.PROBABILISTICA)
-			input(row, "chance", "Probabilidad (%)", m.chance, 0, 100, "any");
+			input(
+				row,
+				"chance",
+				tr("streetConnection.row.chance"),
+				m.chance,
+				0,
+				100,
+				"any",
+			);
 		if (draft.type === types.PROBABILISTICA) {
 			const remove = document.createElement("button");
 			remove.type = "button";
 			remove.textContent = "×";
-			remove.setAttribute("aria-label", "Eliminar salida");
+			remove.setAttribute("aria-label", tr("streetConnection.row.removeExit"));
 			remove.addEventListener("click", () => {
 				const index = [...rowsElement.children].indexOf(row);
 				draft.rows = mappings();
@@ -463,13 +520,16 @@
 		panel.setAttribute("aria-hidden", "false");
 		panel.removeAttribute("aria-invalid");
 		button.classList.add("active");
-		status.textContent = link
-			? draft.type === types.LINEAL
-				? "Revisa la correspondencia fija y guarda los cambios."
-				: "Edita la correspondencia y guarda los cambios."
-			: "Elige la calle de origen en el mapa.";
-		message.textContent = notice.textContent = "";
-		typeSelect.value =
+		if (link) {
+			setStatus(
+				draft.type === types.LINEAL
+					? "streetConnection.panel.status.editLineal"
+					: "streetConnection.panel.status.edit",
+			);
+		} else {
+			setStatus("streetConnection.panel.status.chooseSource");
+		}
+		message.textContent = notice.textContent = "";		typeSelect.value =
 			Object.keys(types).find((k) => types[k] === draft.type) || "LINEAL";
 		addExit.hidden = draft.type !== types.PROBABILISTICA;
 		selectors();
@@ -480,17 +540,21 @@
 		if (!draft || !street) return;
 		if (!draft.source) {
 			draft.source = street;
-			status.textContent = `Origen: ${name(street)}. Elige otra calle como destino.`;
+			setStatus("streetConnection.panel.status.chooseDestination", {
+				name: name(street),
+			});
 		} else if (!draft.destination) {
 			if (street === draft.source) {
-				status.textContent = "El destino debe ser una calle distinta.";
+				setStatus("streetConnection.panel.status.sameStreet");
 				return;
 			}
 			draft.destination = street;
 			draft.rows = defaults();
-			status.textContent = explicitCells()
-				? "Elige celdas de origen y destino en el mapa o escribe sus índices antes de guardar."
-				: "Revisa las correspondencias antes de guardar.";
+			setStatus(
+				explicitCells()
+					? "streetConnection.panel.status.needsCells"
+					: "streetConnection.panel.status.review",
+			);
 		} else return;
 		selectors();
 		renderRows();
@@ -550,16 +614,27 @@
 				...rowsElement.querySelectorAll("[data-testid='link-mapping-row']"),
 			].indexOf(row) + 1;
 		if (hit?.calle !== expected) {
-			const reason = hit ? "calle incorrecta" : "fuera de la calle";
 			setPickStatus(
-				`Correspondencia ${index}: ${reason}. Elige una celda de ${phase === "source" ? "origen" : "destino"} en ${name(expected)}.`,
+				tr(
+					hit
+						? "streetConnection.pick.wrongStreet"
+						: "streetConnection.pick.outsideStreet",
+					{
+						index,
+						endpoint: endpointLabel(phase),
+						street: name(expected),
+					},
+				),
 			);
 			return;
 		}
 		const cell = window.cellGeometryIndex?.findNearest(p.x, p.y, [expected]);
 		if (!validPickedCell(cell, expected)) {
 			setPickStatus(
-				`Correspondencia ${index}: no se encontró una celda válida en ${name(expected)}. Vuelve a intentarlo.`,
+				tr("streetConnection.pick.invalidCell", {
+					index,
+					street: name(expected),
+				}),
 			);
 			return;
 		}
@@ -574,7 +649,12 @@
 		updateNotice();
 		stopRowPick();
 		setPickStatus(
-			`Correspondencia ${index}: ${phase === "source" ? "origen" : "destino"} elegido en el mapa (carril ${cell.carril}, celda ${cell.indice}). Revisa los campos antes de guardar.`,
+			tr("streetConnection.pick.applied", {
+				index,
+				endpoint: endpointLabel(phase),
+				lane: cell.carril,
+				cell: cell.indice,
+			}),
 		);
 	}
 	function validPickedCell(cell, expected) {
@@ -707,16 +787,24 @@
 			),
 		);
 		if (overlap)
-			notice.textContent =
-				"Existe un solapamiento no idéntico; puedes guardarlo.";
+			notice.textContent = tr("streetConnection.overlap");
 	}
 	function validate(ms, s, d) {
-		if (!s || !d || s === d) return "Selecciona dos calles distintas.";
+		if (!s || !d || s === d) return tr("streetConnection.errors.twoStreets");
 		const rows = [
 				...rowsElement.querySelectorAll("[data-testid='link-mapping-row']"),
 			].filter((row) => !row.querySelector('[data-testid="link-lane-enabled"]') ||
 				row.querySelector('[data-testid="link-lane-enabled"]').checked),
 			keys = new Set();
+		const incomplete = ms.some((mapping) =>
+			[
+				mapping["source-lane"],
+				mapping["source-cell"],
+				mapping["destination-lane"],
+				mapping["destination-cell"],
+			].some((value) => !Number.isInteger(value)),
+		);
+		if (incomplete) return tr("streetConnection.errors.incomplete");
 		let bad = false,
 			duplicateFound = false;
 		ms.forEach((m, i) => {
@@ -733,11 +821,9 @@
 			duplicateFound ||= dup;
 			keys.add(key);
 		});
-		if (!ms.length) return "Añade al menos una correspondencia.";
-		if (bad)
-			return "Hay una correspondencia fuera de rango, con dirección incompatible o probabilidad inválida.";
-		if (duplicateFound)
-			return "Ya existe una correspondencia dirigida idéntica.";
+		if (!ms.length) return tr("streetConnection.errors.noMappings");
+		if (bad) return tr("streetConnection.errors.invalidMapping");
+		if (duplicateFound) return tr("streetConnection.errors.duplicate");
 		return "";
 	}
 	function refresh() {
@@ -791,7 +877,7 @@
 			(!Array.isArray(window.conexiones) ||
 				!window.conexiones.includes(draft.editing))
 		) {
-			message.textContent = "La conexión que editabas ya no existe.";
+			message.textContent = tr("streetConnection.errors.missingConnection");
 			panel.setAttribute("aria-invalid", "true");
 			return;
 		}
@@ -805,7 +891,7 @@
 			return;
 		}
 		if (!commitMappings(ms, s, d)) {
-			message.textContent = "La conexión que editabas ya no existe.";
+			message.textContent = tr("streetConnection.errors.missingConnection");
 			panel.setAttribute("aria-invalid", "true");
 			return;
 		}
@@ -872,18 +958,28 @@
 		select.addEventListener("change", () => {
 			stopRowPick();
 			const picked = streets().find((s) => s.id === select.value);
-			if (
-				!picked ||
-				picked === draft?.[key === "source" ? "destination" : "source"]
-			)
+			if (!picked) return;
+			const opposite = draft?.[key === "source" ? "destination" : "source"];
+			if (picked === opposite) {
+				setStatus("streetConnection.panel.status.sameStreet");
 				return;
+			}
 			draft[key] = picked;
-			if (draft.source && draft.destination)
+			if (draft.source && draft.destination) {
 				draft.rows = defaults();
-			draft.linealExplicit = false;
-			status.textContent = explicitCells()
-				? "Elige celdas de origen y destino en el mapa o escribe sus índices antes de guardar."
-				: "Revisa las correspondencias antes de guardar.";
+				draft.linealExplicit = false;
+				setStatus(
+					explicitCells()
+						? "streetConnection.panel.status.needsCells"
+						: "streetConnection.panel.status.review",
+				);
+			} else if (draft.source) {
+				setStatus("streetConnection.panel.status.chooseDestination", {
+					name: name(draft.source),
+				});
+			} else {
+				setStatus("streetConnection.panel.status.chooseSource");
+			}
 			renderRows();
 		});
 	typeSelect.addEventListener("change", () => {
