@@ -110,10 +110,10 @@
 				road.value = connection.road
 				const lane = parkingInput(`${prefix}Lane`, connection.lane, 1)
 				const cell = parkingInput(`${prefix}Cell`, connection.cell, 1)
-				row.append(parkingLabel(tr("parking.inspector.streetLabel", { type: title }), road))
+				row.append(parkingLabel(tr("parking.field.streetLabel", { type: title }), road))
 				const coordinates = document.createElement("div")
 				coordinates.className = "street-inspector-details"
-				coordinates.append(parkingLabel(tr("parking.inspector.lane"), lane), parkingLabel(tr("parking.inspector.cell"), cell))
+				coordinates.append(parkingLabel(tr("parking.field.lane"), lane), parkingLabel(tr("parking.field.cell"), cell))
 				row.append(coordinates)
 				for (const [key, input] of [["road", road], ["lane", lane], ["cell", cell]]) {
 					input.addEventListener(key === "road" ? "change" : "input", () => {

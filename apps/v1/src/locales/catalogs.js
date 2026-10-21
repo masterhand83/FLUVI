@@ -517,6 +517,8 @@ window.FLUVI_LOCALE_RESOURCES = {
 				},
 				"parking": {
 					"invalidConfiguration": "No se puede configurar el estacionamiento: {{reason}}",
+					"listMissing": "No se encontró la lista de conexiones del edificio.",
+					"maxPairs": "Máximo 10 pares de conexiones permitidos.",
 					"noConnections": "Sin conexiones, el edificio será decorativo."
 				},
 				"title": {
@@ -539,13 +541,16 @@ window.FLUVI_LOCALE_RESOURCES = {
 					"lanes_one": "{{count}} carril",
 					"lanes_other": "{{count}} carriles"
 				},
+				"field": {
+					"cell": "Celda",
+					"lane": "Carril",
+					"streetLabel": "{{type}}: calle"
+				},
 				"inspector": {
 					"addPair": "Añadir par (máximo 10)",
 					"capacity": "Capacidad",
 					"capacityError": "La capacidad debe ser un entero positivo y al menos {{minimum}} (ocupación actual).",
-					"cell": "Celda",
 					"help": "Carril y celda: numeración desde 1. Completa todos los pares para aplicar las conexiones.",
-					"lane": "Carril",
 					"pairLegend": "Par {{number}}",
 					"probabilityError": "{{type}} a las {{hour}}:00: introduce una probabilidad entre 0 y 100 %.",
 					"probabilityInput": "{{type}}, {{hour}}:00",
@@ -558,7 +563,6 @@ window.FLUVI_LOCALE_RESOURCES = {
 						"decorative": "Edificio decorativo.",
 						"incomplete": "Sin activar: completa una entrada y una salida válidas por par."
 					},
-					"streetLabel": "{{type}}: calle",
 					"streetPlaceholder": "Selecciona una calle",
 					"title": "Estacionamiento funcional",
 					"toggle": "Estacionamiento funcional"
@@ -577,8 +581,6 @@ window.FLUVI_LOCALE_RESOURCES = {
 					"hour": "Hora {{hour}}:00",
 					"laneHint": "Carril 1 a {{max}}",
 					"lanePlaceholder": "Carril (1-N)",
-					"listMissing": "No se encontró la lista de conexiones del edificio.",
-					"maxPairs": "Máximo 10 pares de conexiones permitidos.",
 					"overlapError": "La entrada y salida no pueden estar en la misma celda del mismo carril.",
 					"overlapHelp": "La entrada y salida NO pueden estar en la misma celda del mismo carril.",
 					"pair": "Par {{number}}",
@@ -590,6 +592,7 @@ window.FLUVI_LOCALE_RESOURCES = {
 						"office": "Oficina"
 					},
 					"probabilities": "Probabilidades de Entrada/Salida por Hora:",
+					"probabilityInput": "{{type}}, {{hour}}:00",
 					"removePair": "✖️ Eliminar",
 					"scheduleBody": "Ajusta las probabilidades para cada hora del día (0-23). Los valores van de 0% a 100%.",
 					"scheduleLabel": "⏰ Configuración:",
@@ -624,8 +627,8 @@ window.FLUVI_LOCALE_RESOURCES = {
 				},
 				"consoleLogs": {
 					"hide": "🚫 Ocultar Logs en Consola",
-					"label": "📝 Logs en Consola",
-					"show": "📝 Mostrar Logs en Consola"
+					"show": "📝 Mostrar Logs en Consola",
+					"label": "📝 Logs en Consola"
 				},
 				"darkMode": {
 					"dark": "🌙 Modo Oscuro",
@@ -724,9 +727,9 @@ window.FLUVI_LOCALE_RESOURCES = {
 					"twoStreets": "Selecciona dos calles distintas."
 				},
 				"legacy": {
+					"cannotChange": "No se puede cambiar al editar",
 					"cancelEditTooltip": "Cerrar sin guardar los cambios",
 					"cancelTooltip": "Cerrar sin crear la conexión",
-					"cannotChange": "No se puede cambiar al editar",
 					"connectionLabel": "Conexión:",
 					"create": "✓ Crear conexión",
 					"createTooltip": "Crear la conexión entre las calles con los parámetros ingresados",
@@ -758,10 +761,10 @@ window.FLUVI_LOCALE_RESOURCES = {
 					"noSource": "Selecciona una calle origen primero",
 					"oneBasedHelp": "Las posiciones se cuentan desde 1 (no desde 0)",
 					"outputsTitle": "Configuración de salidas",
-					"probabilisticInfoBody": "Define un carril origen y configura la probabilidad y las posiciones para cada carril destino disponible.",
-					"probabilisticInfoTitle": "💡 Conexión probabilística:",
 					"probability": "Probabilidad (%)",
 					"probabilityHelp": "% de vehículos que toman esta salida",
+					"probabilisticInfoBody": "Define un carril origen y configura la probabilidad y las posiciones para cada carril destino disponible.",
+					"probabilisticInfoTitle": "💡 Conexión probabilística:",
 					"selectLane": "Selecciona un carril...",
 					"selectStreetDestination": "Selecciona calle destino...",
 					"selectStreetSource": "Selecciona calle origen...",
@@ -1679,6 +1682,8 @@ window.FLUVI_LOCALE_RESOURCES = {
 				},
 				"parking": {
 					"invalidConfiguration": "Parking cannot be configured: {{reason}}",
+					"listMissing": "The building connection list was not found.",
+					"maxPairs": "A maximum of 10 connection pairs is allowed.",
 					"noConnections": "Without connections, the building will be decorative."
 				},
 				"title": {
@@ -1699,13 +1704,16 @@ window.FLUVI_LOCALE_RESOURCES = {
 					"lanes_one": "{{count}} lane",
 					"lanes_other": "{{count}} lanes"
 				},
+				"field": {
+					"cell": "Cell",
+					"lane": "Lane",
+					"streetLabel": "{{type}}: street"
+				},
 				"inspector": {
 					"addPair": "Add pair (maximum 10)",
 					"capacity": "Capacity",
 					"capacityError": "Capacity must be a positive integer and at least {{minimum}} (current occupancy).",
-					"cell": "Cell",
 					"help": "Lane and cell: numbered from 1. Complete every pair to apply the connections.",
-					"lane": "Lane",
 					"pairLegend": "Pair {{number}}",
 					"probabilityError": "{{type}} at {{hour}}:00: enter a probability between 0 and 100%.",
 					"probabilityInput": "{{type}}, {{hour}}:00",
@@ -1717,7 +1725,6 @@ window.FLUVI_LOCALE_RESOURCES = {
 						"decorative": "Decorative building.",
 						"incomplete": "Not active: complete one valid entrance and exit per pair."
 					},
-					"streetLabel": "{{type}}: street",
 					"streetPlaceholder": "Select a street",
 					"title": "Functional parking",
 					"toggle": "Functional parking"
@@ -1736,8 +1743,6 @@ window.FLUVI_LOCALE_RESOURCES = {
 					"hour": "Hour {{hour}}:00",
 					"laneHint": "Lane 1 to {{max}}",
 					"lanePlaceholder": "Lane (1-N)",
-					"listMissing": "The building connection list was not found.",
-					"maxPairs": "A maximum of 10 connection pairs is allowed.",
 					"overlapError": "The entrance and exit cannot use the same cell in the same lane.",
 					"overlapHelp": "The entrance and exit CANNOT use the same cell in the same lane.",
 					"pair": "Pair {{number}}",
@@ -1749,6 +1754,7 @@ window.FLUVI_LOCALE_RESOURCES = {
 						"office": "Office"
 					},
 					"probabilities": "Hourly Entrance/Exit Probabilities:",
+					"probabilityInput": "{{type}}, {{hour}}:00",
 					"removePair": "✖️ Remove",
 					"scheduleBody": "Adjust the probabilities for every hour of the day (0-23). Values range from 0% to 100%.",
 					"scheduleLabel": "⏰ Settings:",
@@ -1783,8 +1789,8 @@ window.FLUVI_LOCALE_RESOURCES = {
 				},
 				"consoleLogs": {
 					"hide": "🚫 Hide console logs",
-					"label": "📝 Console logs",
-					"show": "📝 Show console logs"
+					"show": "📝 Show console logs",
+					"label": "📝 Console logs"
 				},
 				"darkMode": {
 					"dark": "🌙 Dark mode",
@@ -1883,9 +1889,9 @@ window.FLUVI_LOCALE_RESOURCES = {
 					"twoStreets": "Select two different streets."
 				},
 				"legacy": {
+					"cannotChange": "Cannot be changed while editing",
 					"cancelEditTooltip": "Close without saving the changes",
 					"cancelTooltip": "Close without creating the street connection",
-					"cannotChange": "Cannot be changed while editing",
 					"connectionLabel": "Street connection:",
 					"create": "✓ Create Connection",
 					"createTooltip": "Create the street connection between the streets with the entered parameters",
@@ -1916,10 +1922,10 @@ window.FLUVI_LOCALE_RESOURCES = {
 					"noSource": "Select a source street first",
 					"oneBasedHelp": "Positions are counted from 1 (not from 0)",
 					"outputsTitle": "Exit Configuration",
-					"probabilisticInfoBody": "Define a source lane and configure the probability and positions for each available destination lane.",
-					"probabilisticInfoTitle": "💡 Probabilistic connection:",
 					"probability": "Probability (%)",
 					"probabilityHelp": "% of vehicles that take this exit",
+					"probabilisticInfoBody": "Define a source lane and configure the probability and positions for each available destination lane.",
+					"probabilisticInfoTitle": "💡 Probabilistic connection:",
 					"selectLane": "Select a lane...",
 					"selectStreetDestination": "Select a destination street...",
 					"selectStreetSource": "Select a source street...",

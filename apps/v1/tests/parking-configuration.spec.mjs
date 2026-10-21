@@ -14,7 +14,7 @@ beforeEach(() => {
     road = { id: 'road', nombre: 'Calle', arreglo: [Array(30).fill(0)] };
     building = { id: 'building', label: 'Edificio', vehiculosActuales: 0 };
     window = { calles: [road], edificios: [building], renderizarCanvas: vi.fn() };
-    context = vm.createContext({ window, console: { log() {}, warn() {}, error() {} } });
+    context = vm.createContext({ window, tr: (key) => key, console: { log() {}, warn() {}, error() {} } });
     vm.runInContext(core, context);
 });
 

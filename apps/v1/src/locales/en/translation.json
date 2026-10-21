@@ -510,6 +510,8 @@
     },
     "parking": {
       "invalidConfiguration": "Parking cannot be configured: {{reason}}",
+      "listMissing": "The building connection list was not found.",
+      "maxPairs": "A maximum of 10 connection pairs is allowed.",
       "noConnections": "Without connections, the building will be decorative."
     },
     "title": {
@@ -530,13 +532,16 @@
       "lanes_one": "{{count}} lane",
       "lanes_other": "{{count}} lanes"
     },
+    "field": {
+      "cell": "Cell",
+      "lane": "Lane",
+      "streetLabel": "{{type}}: street"
+    },
     "inspector": {
       "addPair": "Add pair (maximum 10)",
       "capacity": "Capacity",
       "capacityError": "Capacity must be a positive integer and at least {{minimum}} (current occupancy).",
-      "cell": "Cell",
       "help": "Lane and cell: numbered from 1. Complete every pair to apply the connections.",
-      "lane": "Lane",
       "pairLegend": "Pair {{number}}",
       "probabilityError": "{{type}} at {{hour}}:00: enter a probability between 0 and 100%.",
       "probabilityInput": "{{type}}, {{hour}}:00",
@@ -548,7 +553,6 @@
         "decorative": "Decorative building.",
         "incomplete": "Not active: complete one valid entrance and exit per pair."
       },
-      "streetLabel": "{{type}}: street",
       "streetPlaceholder": "Select a street",
       "title": "Functional parking",
       "toggle": "Functional parking"
@@ -567,8 +571,6 @@
       "hour": "Hour {{hour}}:00",
       "laneHint": "Lane 1 to {{max}}",
       "lanePlaceholder": "Lane (1-N)",
-      "listMissing": "The building connection list was not found.",
-      "maxPairs": "A maximum of 10 connection pairs is allowed.",
       "overlapError": "The entrance and exit cannot use the same cell in the same lane.",
       "overlapHelp": "The entrance and exit CANNOT use the same cell in the same lane.",
       "pair": "Pair {{number}}",
@@ -580,6 +582,7 @@
         "office": "Office"
       },
       "probabilities": "Hourly Entrance/Exit Probabilities:",
+      "probabilityInput": "{{type}}, {{hour}}:00",
       "removePair": "✖️ Remove",
       "scheduleBody": "Adjust the probabilities for every hour of the day (0-23). Values range from 0% to 100%.",
       "scheduleLabel": "⏰ Settings:",
@@ -614,8 +617,8 @@
     },
     "consoleLogs": {
       "hide": "🚫 Hide console logs",
-      "label": "📝 Console logs",
-      "show": "📝 Show console logs"
+      "show": "📝 Show console logs",
+      "label": "📝 Console logs"
     },
     "darkMode": {
       "dark": "🌙 Dark mode",
@@ -714,9 +717,9 @@
       "twoStreets": "Select two different streets."
     },
     "legacy": {
+      "cannotChange": "Cannot be changed while editing",
       "cancelEditTooltip": "Close without saving the changes",
       "cancelTooltip": "Close without creating the street connection",
-      "cannotChange": "Cannot be changed while editing",
       "connectionLabel": "Street connection:",
       "create": "✓ Create Connection",
       "createTooltip": "Create the street connection between the streets with the entered parameters",
@@ -747,10 +750,10 @@
       "noSource": "Select a source street first",
       "oneBasedHelp": "Positions are counted from 1 (not from 0)",
       "outputsTitle": "Exit Configuration",
-      "probabilisticInfoBody": "Define a source lane and configure the probability and positions for each available destination lane.",
-      "probabilisticInfoTitle": "💡 Probabilistic connection:",
       "probability": "Probability (%)",
       "probabilityHelp": "% of vehicles that take this exit",
+      "probabilisticInfoBody": "Define a source lane and configure the probability and positions for each available destination lane.",
+      "probabilisticInfoTitle": "💡 Probabilistic connection:",
       "selectLane": "Select a lane...",
       "selectStreetDestination": "Select a destination street...",
       "selectStreetSource": "Select a source street...",

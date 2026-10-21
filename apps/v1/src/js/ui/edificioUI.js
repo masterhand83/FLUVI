@@ -12,10 +12,6 @@ if (!window.contadorPares) {
     window.contadorPares = 0;
 }
 
-function textoEstacionamiento(key, options) {
-    return typeof window.tr === 'function' ? window.tr(key, options) : key;
-}
-
 /**
  * Muestra/oculta la configuración de estacionamiento
  */
@@ -50,9 +46,9 @@ function inicializarSlidersProbabilidades() {
         const divEntrada = document.createElement('div');
         divEntrada.className = 'mb-2';
         divEntrada.innerHTML = `
-            <label class="form-label small mb-0" for="probEntrada_${hora}">${textoEstacionamiento('parking.legacy.hour', { hour: hora })}</label>
+            <label class="form-label small mb-0" for="probEntrada_${hora}">${tr('parking.legacy.hour', { hour: hora })}</label>
             <div class="d-flex align-items-center gap-2">
-                <input type="range" class="form-range" id="probEntrada_${hora}" min="0" max="100" value="30" aria-label="${textoEstacionamiento('parking.legacy.entrancePercent')}">
+                <input type="range" class="form-range" id="probEntrada_${hora}" min="0" max="100" value="30" aria-label="${tr('parking.legacy.probabilityInput', { type: tr('parking.connection.entrance'), hour: String(hora).padStart(2, '0') })}">
                 <span class="badge bg-primary" id="valEntrada_${hora}">30%</span>
             </div>
         `;
@@ -69,9 +65,9 @@ function inicializarSlidersProbabilidades() {
         const divSalida = document.createElement('div');
         divSalida.className = 'mb-2';
         divSalida.innerHTML = `
-            <label class="form-label small mb-0" for="probSalida_${hora}">${textoEstacionamiento('parking.legacy.hour', { hour: hora })}</label>
+            <label class="form-label small mb-0" for="probSalida_${hora}">${tr('parking.legacy.hour', { hour: hora })}</label>
             <div class="d-flex align-items-center gap-2">
-                <input type="range" class="form-range" id="probSalida_${hora}" min="0" max="100" value="20" aria-label="${textoEstacionamiento('parking.legacy.exitPercent')}">
+                <input type="range" class="form-range" id="probSalida_${hora}" min="0" max="100" value="20" aria-label="${tr('parking.legacy.probabilityInput', { type: tr('parking.connection.exit'), hour: String(hora).padStart(2, '0') })}">
                 <span class="badge bg-info" id="valSalida_${hora}">20%</span>
             </div>
         `;
@@ -150,7 +146,7 @@ function agregarParConexion() {
     const lista = document.getElementById('listaConexionesEdificio');
     if (!lista) {
         console.error('❌ Elemento listaConexionesEdificio no encontrado');
-        window.fluviNotify?.error('parking.legacy.listMissing');
+        window.fluviNotify?.error('notifications.parking.listMissing');
         return;
     }
 
@@ -159,7 +155,7 @@ function agregarParConexion() {
     // Verificar máximo de 10 pares
     const paresActuales = lista.querySelectorAll('.par-conexion').length;
     if (paresActuales >= 10) {
-        window.fluviNotify?.warning('parking.legacy.maxPairs');
+        window.fluviNotify?.warning('notifications.parking.maxPairs');
         return;
     }
 
@@ -171,48 +167,48 @@ function agregarParConexion() {
     div.id = parId;
     div.innerHTML = `
         <div class="d-flex justify-content-between align-items-center mb-2">
-            <strong>${textoEstacionamiento('parking.legacy.pair', { number: window.contadorPares })}</strong>
+            <strong>${tr('parking.legacy.pair', { number: window.contadorPares })}</strong>
             <button type="button" class="btn btn-sm btn-danger" onclick="eliminarParConexion('${parId}')">
-                ${textoEstacionamiento('parking.legacy.removePair')}
+                ${tr('parking.legacy.removePair')}
             </button>
         </div>
 
         <!-- ENTRADA -->
         <div class="mb-3 bg-success bg-opacity-25 p-2 rounded">
-            <label class="form-label small mb-1 text-white" for="${parId}_entrada_calle"><strong>${textoEstacionamiento('parking.legacy.entrance')}</strong></label>
+            <label class="form-label small mb-1 text-white" for="${parId}_entrada_calle"><strong>${tr('parking.legacy.entrance')}</strong></label>
             <div class="row g-2">
                 <div class="col-md-4">
-                    <select class="form-select form-select-sm" id="${parId}_entrada_calle" aria-label="${textoEstacionamiento('parking.inspector.streetLabel', { type: textoEstacionamiento('parking.connection.entrance') })}">
-                        <option value="">${textoEstacionamiento('parking.legacy.streetPlaceholder')}</option>
+                    <select class="form-select form-select-sm" id="${parId}_entrada_calle" aria-label="${tr('parking.field.streetLabel', { type: tr('parking.connection.entrance') })}">
+                        <option value="">${tr('parking.legacy.streetPlaceholder')}</option>
                     </select>
                 </div>
                 <div class="col-md-4">
-                    <input type="number" class="form-control form-control-sm" id="${parId}_entrada_carril" placeholder="${textoEstacionamiento('parking.legacy.lanePlaceholder')}" aria-label="${textoEstacionamiento('parking.inspector.lane')}" min="1">
-                    <small class="text-white-50" id="${parId}_entrada_carril_hint">${textoEstacionamiento('parking.legacy.laneHint', { max: 'N' })}</small>
+                    <input type="number" class="form-control form-control-sm" id="${parId}_entrada_carril" placeholder="${tr('parking.legacy.lanePlaceholder')}" aria-label="${tr('parking.field.lane')}" min="1">
+                    <small class="text-white-50" id="${parId}_entrada_carril_hint">${tr('parking.legacy.laneHint', { max: 'N' })}</small>
                 </div>
                 <div class="col-md-4">
-                    <input type="number" class="form-control form-control-sm" id="${parId}_entrada_indice" placeholder="${textoEstacionamiento('parking.legacy.cellPlaceholder')}" aria-label="${textoEstacionamiento('parking.inspector.cell')}" min="1">
-                    <small class="text-white-50" id="${parId}_entrada_indice_hint">${textoEstacionamiento('parking.legacy.cellHint', { max: 'N' })}</small>
+                    <input type="number" class="form-control form-control-sm" id="${parId}_entrada_indice" placeholder="${tr('parking.legacy.cellPlaceholder')}" aria-label="${tr('parking.field.cell')}" min="1">
+                    <small class="text-white-50" id="${parId}_entrada_indice_hint">${tr('parking.legacy.cellHint', { max: 'N' })}</small>
                 </div>
             </div>
         </div>
 
         <!-- SALIDA -->
         <div class="bg-primary bg-opacity-25 p-2 rounded">
-            <label class="form-label small mb-1 text-white" for="${parId}_salida_calle"><strong>${textoEstacionamiento('parking.legacy.exit')}</strong></label>
+            <label class="form-label small mb-1 text-white" for="${parId}_salida_calle"><strong>${tr('parking.legacy.exit')}</strong></label>
             <div class="row g-2">
                 <div class="col-md-4">
-                    <select class="form-select form-select-sm" id="${parId}_salida_calle" aria-label="${textoEstacionamiento('parking.inspector.streetLabel', { type: textoEstacionamiento('parking.connection.exit') })}">
-                        <option value="">${textoEstacionamiento('parking.legacy.streetPlaceholder')}</option>
+                    <select class="form-select form-select-sm" id="${parId}_salida_calle" aria-label="${tr('parking.field.streetLabel', { type: tr('parking.connection.exit') })}">
+                        <option value="">${tr('parking.legacy.streetPlaceholder')}</option>
                     </select>
                 </div>
                 <div class="col-md-4">
-                    <input type="number" class="form-control form-control-sm" id="${parId}_salida_carril" placeholder="${textoEstacionamiento('parking.legacy.lanePlaceholder')}" aria-label="${textoEstacionamiento('parking.inspector.lane')}" min="1">
-                    <small class="text-white-50" id="${parId}_salida_carril_hint">${textoEstacionamiento('parking.legacy.laneHint', { max: 'N' })}</small>
+                    <input type="number" class="form-control form-control-sm" id="${parId}_salida_carril" placeholder="${tr('parking.legacy.lanePlaceholder')}" aria-label="${tr('parking.field.lane')}" min="1">
+                    <small class="text-white-50" id="${parId}_salida_carril_hint">${tr('parking.legacy.laneHint', { max: 'N' })}</small>
                 </div>
                 <div class="col-md-4">
-                    <input type="number" class="form-control form-control-sm" id="${parId}_salida_indice" placeholder="${textoEstacionamiento('parking.legacy.cellPlaceholder')}" aria-label="${textoEstacionamiento('parking.inspector.cell')}" min="1">
-                    <small class="text-white-50" id="${parId}_salida_indice_hint">${textoEstacionamiento('parking.legacy.cellHint', { max: 'N' })}</small>
+                    <input type="number" class="form-control form-control-sm" id="${parId}_salida_indice" placeholder="${tr('parking.legacy.cellPlaceholder')}" aria-label="${tr('parking.field.cell')}" min="1">
+                    <small class="text-white-50" id="${parId}_salida_indice_hint">${tr('parking.legacy.cellHint', { max: 'N' })}</small>
                 </div>
             </div>
         </div>
@@ -308,8 +304,8 @@ function actualizarLimitesYValidar(calleId, inputCarril, inputIndice, parId, tip
     const hintCarril = document.getElementById(`${parId}_${tipo}_carril_hint`);
     const hintIndice = document.getElementById(`${parId}_${tipo}_indice_hint`);
 
-    if (hintCarril) hintCarril.textContent = textoEstacionamiento('parking.legacy.laneHint', { max: calle.carriles });
-    if (hintIndice) hintIndice.textContent = textoEstacionamiento('parking.legacy.cellHint', { max: calle.tamano });
+    if (hintCarril) hintCarril.textContent = tr('parking.legacy.laneHint', { max: calle.carriles });
+    if (hintIndice) hintIndice.textContent = tr('parking.legacy.cellHint', { max: calle.tamano });
 
     // Validar valores actuales
     validarInput(calleId, inputCarril, 'carril', parId, tipo);
@@ -360,8 +356,8 @@ function validarNoTraslape(parId) {
             errorMsg.id = `${parId}_traslape_error`;
             errorMsg.className = 'alert alert-danger alert-sm mt-2';
             const label = document.createElement('strong');
-            label.textContent = textoEstacionamiento('parking.legacy.errorLabel');
-            errorMsg.append(label, document.createTextNode(` ${textoEstacionamiento('parking.legacy.overlapError')}`));
+            label.textContent = tr('parking.legacy.errorLabel');
+            errorMsg.append(label, document.createTextNode(` ${tr('parking.legacy.overlapError')}`));
             document.getElementById(parId).appendChild(errorMsg);
         }
     } else {
@@ -413,10 +409,10 @@ function poblarSelectoresCalles(parId) {
     if (!selectEntrada || !selectSalida || !window.calles) return;
 
     window.streetListUI.sortedEntries(window.calles).forEach(({ street: calle }) => {
-        const optionLabel = textoEstacionamiento('parking.legacy.streetOption', {
+        const optionLabel = tr('parking.legacy.streetOption', {
             name: calle.nombre,
-            lanes: textoEstacionamiento('parking.count.lanes', { count: calle.carriles }),
-            cells: textoEstacionamiento('parking.count.cells', { count: calle.tamano })
+            lanes: tr('parking.count.lanes', { count: calle.carriles }),
+            cells: tr('parking.count.cells', { count: calle.tamano })
         });
         const optionEntrada = document.createElement('option');
         optionEntrada.value = calle.id || calle.nombre;

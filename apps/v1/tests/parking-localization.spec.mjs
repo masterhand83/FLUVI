@@ -129,6 +129,7 @@ const copy = {
 			laneHint: "Lane 1 to 2",
 			cellHint: "Cell 1 to 8",
 			hour: "Hour 0:00",
+			probabilityInput: "Entrance, 00:00",
 			streetOption: (name) => `${name} (2 lanes, 8 cells)`,
 			overlapError:
 				"⚠️ Error: The entrance and exit cannot use the same cell in the same lane.",
@@ -205,6 +206,7 @@ const copy = {
 			laneHint: "Carril 1 a 2",
 			cellHint: "Posición 1 a 8",
 			hour: "Hora 0:00",
+			probabilityInput: "Entrada, 00:00",
 			streetOption: (name) => `${name} (2 carriles, 8 celdas)`,
 			overlapError:
 				"⚠️ Error: La entrada y salida no pueden estar en la misma celda del mismo carril.",
@@ -713,6 +715,9 @@ const runParkingWorkflow = async ({ page, language, usePixi }) => {
 			hour: document.querySelector(
 				"#slidersProbEntrada label",
 			).textContent.trim(),
+			probabilityInput: document
+				.getElementById("probEntrada_0")
+				.getAttribute("aria-label"),
 			option: entranceOption?.textContent,
 			roadB,
 		}
@@ -728,6 +733,7 @@ const runParkingWorkflow = async ({ page, language, usePixi }) => {
 		laneHint: labels.legacy.laneHintPlaceholder,
 		cellHint: labels.legacy.cellHintPlaceholder,
 		hour: labels.legacy.hour,
+		probabilityInput: labels.legacy.probabilityInput,
 	})
 	expect(generated.option).toBe(labels.legacy.streetOption(ROAD_A))
 

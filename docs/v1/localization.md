@@ -309,14 +309,17 @@ inspector in `ui/buildingInspector.js`, the legacy building modal in
 - `parking.inspector.*`: immediate-inspector toggle, capacity, pair rows,
   entrance/exit labels, hourly probabilities, status text, and inline errors.
 - `parking.legacy.*`: legacy modal headings, enablement, capacity, connection
-  guidance, presets, generated pair rows, hourly sliders, overlap feedback, and
-  add/remove actions.
+  guidance, presets, generated pair rows, hourly sliders, probability accessible
+  names, overlap feedback, and add/remove actions.
+- `parking.field.*`: shared lane, cell, and entrance/exit street labels used by
+  both the immediate inspector and generated legacy rows.
 - `parking.validation.*`: incomplete pairs, pair counts, capacity/occupancy,
   endpoint ranges, duplicate endpoints, and endpoint ownership. The validator
   still returns `null` for a valid configuration and a readable message
   otherwise; `configurarEstacionamiento` remains atomic.
 - `notifications.parking.*`: explicit warning/error toasts for decorative
-  buildings without connections and rejected configuration.
+  buildings without connections, rejected configuration, repeated pair limits,
+  and missing legacy controls.
 - `parking.connection.entrance`/`parking.connection.exit` and
   `parking.count.lanes`/`parking.count.cells` are shared labels used by the
   controls and street-option summaries.

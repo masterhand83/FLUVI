@@ -13,10 +13,6 @@ function obtenerCalleConexionEstacionamiento(conexion) {
     return window.calles?.find(calle => calle.id === conexion?.calleId || calle.nombre === conexion?.calleId) || null;
 }
 
-function traducirEstacionamiento(key, options) {
-    return typeof window.tr === 'function' ? window.tr(key, options) : key;
-}
-
 function conexionEstacionamientoEsValida(conexion, calle = obtenerCalleConexionEstacionamiento(conexion)) {
     return Number.isInteger(conexion?.carril) && conexion.carril >= 0 &&
         Number.isInteger(conexion?.indice) && conexion.indice >= 0 &&
@@ -25,41 +21,41 @@ function conexionEstacionamientoEsValida(conexion, calle = obtenerCalleConexionE
 
 // Pure validation: drafts must never change the live building or street maps.
 function validarConfiguracionEstacionamiento(edificio, conexiones, capacidad) {
-    if (!edificio) return traducirEstacionamiento('parking.validation.buildingRequired');
-    if (!Number.isInteger(capacidad) || capacidad <= 0) return traducirEstacionamiento('parking.validation.capacityPositive');
+    if (!edificio) return tr('parking.validation.buildingRequired');
+    if (!Number.isInteger(capacidad) || capacidad <= 0) return tr('parking.validation.capacityPositive');
     const ocupacion = edificio.vehiculosActuales ?? 0;
-    if (!Number.isInteger(ocupacion) || ocupacion < 0) return traducirEstacionamiento('parking.validation.occupancyInvalid');
-    if (capacidad < ocupacion) return traducirEstacionamiento('parking.validation.capacityBelowOccupancy', { occupancy: ocupacion });
+    if (!Number.isInteger(ocupacion) || ocupacion < 0) return tr('parking.validation.occupancyInvalid');
+    if (capacidad < ocupacion) return tr('parking.validation.capacityBelowOccupancy', { occupancy: ocupacion });
     if (!Array.isArray(conexiones) || conexiones.length < 2 || conexiones.length > 20) {
-        return traducirEstacionamiento('parking.validation.pairCount');
+        return tr('parking.validation.pairCount');
     }
     const entradas = conexiones.filter(c => c?.tipo === 'entrada').length;
     const salidas = conexiones.filter(c => c?.tipo === 'salida').length;
     if (entradas !== salidas || entradas + salidas !== conexiones.length) {
-        return traducirEstacionamiento('parking.validation.incompletePair');
+        return tr('parking.validation.incompletePair');
     }
     const usados = new Map();
     for (const conexion of conexiones) {
         const calle = obtenerCalleConexionEstacionamiento(conexion);
         if (!calle) {
-            return traducirEstacionamiento(conexion.tipo === 'entrada'
-                ? 'parking.validation.entranceStreetRequired'
-                : 'parking.validation.exitStreetRequired');
+            return conexion.tipo === 'entrada'
+                ? tr('parking.validation.entranceStreetRequired')
+                : tr('parking.validation.exitStreetRequired');
         }
         if (!conexionEstacionamientoEsValida(conexion, calle)) {
-            return traducirEstacionamiento(conexion.tipo === 'entrada'
-                ? 'parking.validation.entranceEndpointInvalid'
-                : 'parking.validation.exitEndpointInvalid', { street: calle.nombre });
+            return conexion.tipo === 'entrada'
+                ? tr('parking.validation.entranceEndpointInvalid', { street: calle.nombre })
+                : tr('parking.validation.exitEndpointInvalid', { street: calle.nombre });
         }
         const clave = `${conexion.carril}-${conexion.indice}`;
         if (!usados.has(calle)) usados.set(calle, new Set());
-        if (usados.get(calle).has(clave)) return traducirEstacionamiento('parking.validation.duplicateEndpoint');
+        if (usados.get(calle).has(clave)) return tr('parking.validation.duplicateEndpoint');
         usados.get(calle).add(clave);
         const mapping = calle.conexionesEstacionamiento?.get(clave);
         const otroEdificio = (window.edificios || []).some(otro => otro !== edificio && otro.esEstacionamiento === true &&
             otro.conexiones?.some(c => obtenerCalleConexionEstacionamiento(c) === calle && c.carril === conexion.carril && c.indice === conexion.indice));
         if ((mapping && !conexionPerteneceAEdificio(mapping, edificio)) || otroEdificio) {
-            return traducirEstacionamiento('parking.validation.endpointOwned', {
+            return tr('parking.validation.endpointOwned', {
                 lane: conexion.carril,
                 cell: conexion.indice,
                 street: calle.nombre
