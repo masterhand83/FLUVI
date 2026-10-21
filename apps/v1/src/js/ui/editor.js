@@ -108,7 +108,7 @@ class EditorCalles {
             window.edificios.forEach((edificio, index) => {
                 const option = document.createElement('option');
                 option.value = index;
-                option.textContent = edificio.label || `Edificio ${index + 1}`;
+                option.textContent = edificio.label || tr('buildingInspector.defaultName', { number: index + 1 });
                 this.selectEdificio.appendChild(option);
             });
             console.log(`✅ ${window.edificios.length} edificios agregados al selector`);

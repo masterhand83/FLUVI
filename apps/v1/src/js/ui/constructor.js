@@ -142,7 +142,7 @@ function inicializarConstructor() {
             window.edificios.forEach((edificio, index) => {
                 const option = document.createElement('option');
                 option.value = index;
-                option.textContent = edificio.label || `Edificio ${index + 1}`;
+                option.textContent = edificio.label || tr('buildingInspector.defaultName', { number: index + 1 });
                 selectEdificio.appendChild(option);
             });
         }
@@ -1596,8 +1596,8 @@ function mostrarDialogoNuevoEdificio() {
             btnConfirmar.removeEventListener('click', handlerNuevoEdificio);
         }
 
-        if (modalTitle) modalTitle.textContent = '🏢 Agregar Nuevo Edificio';
-        if (btnConfirmar) btnConfirmar.textContent = '✓ Crear Edificio';
+        if (modalTitle) modalTitle.textContent = tr('buildingEditor.titleNew');
+        if (btnConfirmar) btnConfirmar.textContent = tr('buildingEditor.create');
 
         // Cambiar color del header a verde para modo agregar
         const modalHeader = modalElement.querySelector('.modal-header');
@@ -1622,17 +1622,17 @@ function mostrarDialogoNuevoEdificio() {
 
             // Validaciones básicas
             if (!label || label.trim() === '') {
-                alert("❌ El nombre es obligatorio");
+                fluviNotify.error('notifications.buildingEditor.nameRequired');
                 return;
             }
 
             if (isNaN(x) || isNaN(y) || isNaN(width) || isNaN(height) || isNaN(angle)) {
-                alert("❌ Valores inválidos. Verifica todos los campos numéricos.");
+                fluviNotify.error('notifications.buildingEditor.invalidNumbers');
                 return;
             }
 
             if (width <= 0 || height <= 0) {
-                alert("❌ El ancho y alto deben ser mayores a 0");
+                fluviNotify.error('notifications.buildingEditor.sizePositive');
                 return;
             }
 
@@ -1808,7 +1808,7 @@ function actualizarBotonEditarEdificio() {
  */
 function editarEdificioSeleccionado() {
     if (!window.edificioSeleccionado) {
-        alert('⚠️ No hay edificio seleccionado');
+        fluviNotify.warning('notifications.buildingEditor.noSelection');
         return;
     }
 
@@ -1826,8 +1826,8 @@ function editarEdificioSeleccionado() {
     const modalTitle = modal.querySelector('#modalNuevoEdificioLabel');
     const btnConfirmar = document.getElementById('btnConfirmarNuevoEdificio');
 
-    if (modalTitle) modalTitle.textContent = '✏️ Editar Edificio';
-    if (btnConfirmar) btnConfirmar.textContent = '✓ Actualizar Edificio';
+    if (modalTitle) modalTitle.textContent = tr('buildingEditor.titleEdit');
+    if (btnConfirmar) btnConfirmar.textContent = tr('buildingEditor.update');
 
     // Cambiar color del header a amarillo para modo edición
     const modalHeader = modal.querySelector('.modal-header');
@@ -1925,7 +1925,8 @@ function editarEdificioSeleccionado() {
         // Agregar nuevo listener para modo edición
         nuevoBtn.addEventListener('click', () => {
             // Recolectar valores del formulario
-            const label = document.getElementById('inputNombreEdificio').value || 'Edificio';
+            const enteredLabel = document.getElementById('inputNombreEdificio').value;
+            const label = enteredLabel.trim() ? enteredLabel : (edificio.label || tr('buildingInspector.defaultName', { number: window.edificios.indexOf(edificio) + 1 }));
             if (label !== edificio.label) window.buildingImageAppearance?.preserveBundledIdentity(edificio);
             edificio.label = label;
             edificio.x = parseFloat(document.getElementById('inputXEdificio').value) || 0;
@@ -1977,7 +1978,7 @@ function editarEdificioSeleccionado() {
 
             bsModal.hide();
             console.log(`✅ Edificio "${edificio.label}" actualizado`);
-            mostrarToast(`Edificio "${edificio.label}" actualizado exitosamente`, 'success');
+            fluviNotify.success('notifications.buildingEditor.updated', { name: edificio.label });
         });
     }
 }
@@ -2038,7 +2039,7 @@ function actualizarSelectorEdificios() {
     const edificiosConIndice = window.edificios.map((edificio, index) => ({
         edificio: edificio,
         index: index,
-        label: edificio.label || `Edificio ${index + 1}`
+        label: edificio.label || tr('buildingInspector.defaultName', { number: index + 1 })
     }));
 
     // Ordenar alfabéticamente por label
@@ -2191,7 +2192,7 @@ function eliminarObjetoSeleccionado() {
             console.log(`🗑️ Calle "${calle.nombre}" eliminada`);
         }
     } else if (edificio) {
-        const confirmacion = confirm(`¿Eliminar el edificio "${edificio.label}"?`);
+        const confirmacion = confirm(tr('buildingInspector.confirmDelete', { name: edificio.label }));
         if (!confirmacion) return;
 
         const index = window.edificios.findIndex(e => e === edificio);
@@ -2222,7 +2223,7 @@ function eliminarObjetoSeleccionado() {
             }
 
             console.log(`🗑️ Edificio "${edificio.label}" eliminado`);
-            alert("Edificio eliminado exitosamente");
+            fluviNotify.success('notifications.buildingInspector.deleted', { name: edificio.label });
         }
     }
 }

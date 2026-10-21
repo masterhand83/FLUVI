@@ -265,6 +265,40 @@ incorporation lane selection, probabilistic transfer mapping, duplicate,
 direction, and incomplete-draft validation, legacy creation/edit/delete,
 notification severities, safe names, desktop/mobile, and both themes).
 
+## Building appearance workflows
+
+Building appearance is owned by `ui/buildingInspector.js`, the building factory
+and legacy building modal in `ui/constructor.js`, and the building selectors in
+`ui/constructor.js` and `ui/editor.js`. These catalog owners cover it:
+
+- `buildingDrawing.*`: the rectangular, polygon, and image-building tool labels,
+  tooltips, square lock, upload guidance, and cancel action.
+- `buildingInspector.*`: the immediate inspector fields and color palette, custom
+  handle labels, polygon draw panel, image upload/replacement status, default
+  generated names, deletion confirmation, and validation. Polygon rejection
+  reasons map the technical `edificioPolygonGeometry` reason identifiers to
+  translated sentences; unknown reasons keep the identifier only as an
+  interpolated detail.
+- `buildingEditor.*`: the legacy create/edit modal title, appearance fields,
+  placeholders, and create/update/cancel actions.
+- `notifications.buildingEditor.*` and `notifications.buildingInspector.*`: explicit
+  warning, error, and success toasts for missing selections, invalid names/values,
+  updates, and confirmed deletion.
+
+Building labels, selector values, `appearanceMode`, `geometryType`, vertices,
+colors, dimensions, `imageData`, image rotation conventions, bundled artwork keys,
+and JSON keys are data and never translated. New buildings receive a generated
+name in the active language, after which it is stored like any other label and is
+not renamed when a later session starts in the other language. The Canvas
+`canvas.title` and Pixi `EdificioRenderer` hover tooltip show the building's
+stored label unchanged. Functional-parking controls and validation remain owned by
+ticket 08; appearance labels never decide whether a building is parking.
+
+Browser coverage lives in `tests/building-localization.spec.mjs` (Spanish and
+English, Canvas and Pixi, rectangular/polygonal/image creation, image replacement,
+invalid uploads and polygon geometry, safe names, renderer tooltips, deletion
+confirmation, notification severities, desktop/mobile, and both themes).
+
 ## Terminology
 
 Keep the distinction from `CONTEXT.md`:

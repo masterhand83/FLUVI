@@ -4,6 +4,7 @@ import baseConfig from "./vitest.config.js"
 
 const testsDirectory = new URL("./tests/", import.meta.url)
 const browserSpecsToKeep = new Set([
+	"building-localization.spec.mjs",
 	"connection-localization.spec.mjs",
 	"localization.spec.mjs",
 	"street-localization.spec.mjs",

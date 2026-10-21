@@ -6,7 +6,7 @@ const core = readFileSync(new URL('../src/js/core/estacionamientos.js', import.m
 const constructorSource = readFileSync(new URL('../src/js/ui/constructor.js', import.meta.url), 'utf8');
 const deletion = constructorSource.slice(constructorSource.indexOf('function eliminarObjetoSeleccionado('),
     constructorSource.indexOf('// ==================== GUARDAR SIMULACIÓN'));
-let window, building, roads, confirmation, scene;
+let window, building, roads, confirmation, scene, notify;
 
 beforeEach(() => {
     roads = ['first', 'second'].map(id => ({ id, nombre: id, arreglo: [Array(10).fill(0)] }));
@@ -21,7 +21,10 @@ beforeEach(() => {
         renderizarCanvas: vi.fn(), USE_PIXI: true, mostrarContadores: true,
         pixiApp: { sceneManager: scene } };
     confirmation = vi.fn(() => true);
+    notify = { success: vi.fn(), error: vi.fn(), warning: vi.fn(), info: vi.fn() };
     const context = vm.createContext({ window, confirm: confirmation, alert: vi.fn(),
+        tr: (key, options) => options?.name ? `${key}:${options.name}` : key,
+        fluviNotify: notify,
         console: { log() {}, warn() {}, error() {} },
         simulacionActual: { edificios: [building] }, actualizarSelectorEdificios: vi.fn() });
     vm.runInContext(core, context);

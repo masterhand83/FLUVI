@@ -108,6 +108,97 @@ window.FLUVI_LOCALE_RESOURCES = {
 					"title": "Advertencias"
 				}
 			},
+			"buildingDrawing": {
+				"cancelImage": "Cancelar imagen",
+				"imageButton": "🖼️ Edificio con imagen",
+				"imageHelp": "PNG, JPEG o WebP, hasta 5 MB. Después, haz clic en el centro del edificio.",
+				"polygonButton": "⬠ Polígono",
+				"polygonTooltip": "Coloca vértices en el mapa; cierra el polígono para terminar",
+				"rectangleButton": "▭ Edificio",
+				"rectangleTooltip": "Arrastra dos esquinas para crear un edificio rectangular",
+				"square": "Cuadrado"
+			},
+			"buildingEditor": {
+				"angle": "Ángulo (°):",
+				"basicInfo": "📋 Información Básica",
+				"cancel": "✖ Cancelar",
+				"create": "✓ Crear Edificio",
+				"editButton": "✏️ Editar Edificio",
+				"editTooltip": "Editar configuración del edificio seleccionado (Ctrl+Click para seleccionar)",
+				"height": "Alto:",
+				"name": "Nombre:",
+				"namePlaceholder": "Ej: Edificio Central",
+				"positionX": "Posición X:",
+				"positionY": "Posición Y:",
+				"titleEdit": "✏️ Editar Edificio",
+				"titleNew": "🏢 Agregar Nuevo Edificio",
+				"update": "✓ Actualizar Edificio",
+				"width": "Ancho:"
+			},
+			"buildingInspector": {
+				"angle": "Ángulo (°)",
+				"close": "Cerrar el inspector de edificio",
+				"color": "Color",
+				"colorPalette": "Color del edificio",
+				"colors": {
+					"blue": "Azul",
+					"brown": "Café",
+					"gray": "Gris",
+					"green": "Verde",
+					"legacyBrown": "Café heredado",
+					"sky": "Cielo"
+				},
+				"confirmDelete": "¿Eliminar el edificio «{{name}}»?",
+				"defaultName": "Edificio {{number}}",
+				"deleteBuilding": "Eliminar edificio",
+				"draw": {
+					"cancel": "Cancelar",
+					"finish": "Cerrar / terminar",
+					"minimumVertices": "Se necesitan al menos tres vértices.",
+					"placeImage": "Haz clic en el centro del edificio con imagen.",
+					"placeVertices": "Coloca vértices en el mapa.",
+					"vertices_many": "{{count}} vértices. Haz clic en el primero o en «Cerrar / terminar».",
+					"vertices_one": "{{count}} vértice. Haz clic en el primero o en «Cerrar / terminar».",
+					"vertices_other": "{{count}} vértices. Haz clic en el primero o en «Cerrar / terminar»."
+				},
+				"errors": {
+					"imageFormat": "Formato no admitido. Usa PNG, JPEG o WebP.",
+					"imageRead": "No se pudo leer la imagen. Elige un PNG, JPEG o WebP válido.",
+					"imageSize": "La imagen no puede superar 5 MB.",
+					"invalidDrag": "Arrastra un área válida para crear el edificio.",
+					"invalidNumber": "Introduce un número válido.",
+					"nameRequired": "El nombre no puede estar vacío.",
+					"polygon": {
+						"invalidVertices": "Las coordenadas deben ser números finitos y se necesitan al menos tres vértices.",
+						"selfIntersection": "El polígono no puede cruzarse a sí mismo.",
+						"tooFewDistinctVertices": "El polígono necesita al menos tres vértices distintos.",
+						"unknown": "Geometría inválida: {{reason}}.",
+						"zeroArea": "El polígono debe encerrar un área mayor que cero.",
+						"zeroLengthEdge": "Dos vértices consecutivos no pueden coincidir."
+					},
+					"proportionalSize": "Introduce un tamaño proporcional válido.",
+					"sizePositive": "El tamaño debe ser mayor que cero."
+				},
+				"handles": {
+					"move": "Mover edificio",
+					"resize": "Cambiar tamaño del edificio",
+					"rotate": "Girar edificio",
+					"vertex": "Mover vértice del edificio"
+				},
+				"height": "Alto",
+				"image": {
+					"created": "Edificio con imagen creado.",
+					"reading": "Comprobando imagen…",
+					"ready": "Imagen lista. Haz clic en su centro en el mapa; Escape cancela.",
+					"replaced": "Imagen reemplazada."
+				},
+				"name": "Nombre",
+				"replaceImage": "Reemplazar imagen",
+				"title": "Inspector de edificio",
+				"width": "Ancho",
+				"x": "X",
+				"y": "Y"
+			},
 			"common": {
 				"cancel": "Cancelar",
 				"close": "Cerrar",
@@ -389,6 +480,16 @@ window.FLUVI_LOCALE_RESOURCES = {
 				"title": "Cargando simulación..."
 			},
 			"notifications": {
+				"buildingEditor": {
+					"invalidNumbers": "Valores inválidos. Verifica todos los campos numéricos.",
+					"nameRequired": "El nombre es obligatorio.",
+					"noSelection": "No hay ningún edificio seleccionado.",
+					"sizePositive": "El ancho y alto deben ser mayores a 0.",
+					"updated": "Edificio «{{name}}» actualizado correctamente."
+				},
+				"buildingInspector": {
+					"deleted": "Edificio «{{name}}» eliminado correctamente."
+				},
 				"simulation": {
 					"changesAppliedGenerator": "Se actualizaron las probabilidades de «{{name}}»:\n• Generación: {{generation}}%\n• Cambio de carril: {{laneChange}}%",
 					"changesAppliedLaneChange": "Se actualizaron las probabilidades de «{{name}}»:\n• Cambio de carril: {{laneChange}}%",
@@ -1076,6 +1177,97 @@ window.FLUVI_LOCALE_RESOURCES = {
 					"title": "Warnings"
 				}
 			},
+			"buildingDrawing": {
+				"cancelImage": "Cancel image",
+				"imageButton": "🖼️ Building with image",
+				"imageHelp": "PNG, JPEG, or WebP, up to 5 MB. Then click the building's center.",
+				"polygonButton": "⬠ Polygon",
+				"polygonTooltip": "Place vertices on the map; close the polygon to finish",
+				"rectangleButton": "▭ Building",
+				"rectangleTooltip": "Drag two corners to create a rectangular building",
+				"square": "Square"
+			},
+			"buildingEditor": {
+				"angle": "Angle (°):",
+				"basicInfo": "📋 Basic Information",
+				"cancel": "✖ Cancel",
+				"create": "✓ Create Building",
+				"editButton": "✏️ Edit Building",
+				"editTooltip": "Edit the selected building's configuration (Ctrl+Click to select)",
+				"height": "Height:",
+				"name": "Name:",
+				"namePlaceholder": "e.g., Central Building",
+				"positionX": "X position:",
+				"positionY": "Y position:",
+				"titleEdit": "✏️ Edit Building",
+				"titleNew": "🏢 Add New Building",
+				"update": "✓ Update Building",
+				"width": "Width:"
+			},
+			"buildingInspector": {
+				"angle": "Angle (°)",
+				"close": "Close the building inspector",
+				"color": "Color",
+				"colorPalette": "Building color",
+				"colors": {
+					"blue": "Blue",
+					"brown": "Brown",
+					"gray": "Gray",
+					"green": "Green",
+					"legacyBrown": "Legacy brown",
+					"sky": "Sky"
+				},
+				"confirmDelete": "Delete the building \"{{name}}\"?",
+				"defaultName": "Building {{number}}",
+				"deleteBuilding": "Delete building",
+				"draw": {
+					"cancel": "Cancel",
+					"finish": "Close / finish",
+					"minimumVertices": "At least three vertices are required.",
+					"placeImage": "Click the center of the image building.",
+					"placeVertices": "Place vertices on the map.",
+					"vertices_many": "{{count}} vertices. Click the first one or «Close / finish».",
+					"vertices_one": "{{count}} vertex. Click the first one or «Close / finish».",
+					"vertices_other": "{{count}} vertices. Click the first one or «Close / finish»."
+				},
+				"errors": {
+					"imageFormat": "Unsupported format. Use PNG, JPEG, or WebP.",
+					"imageRead": "The image could not be read. Choose a valid PNG, JPEG, or WebP.",
+					"imageSize": "The image cannot exceed 5 MB.",
+					"invalidDrag": "Drag a valid area to create the building.",
+					"invalidNumber": "Enter a valid number.",
+					"nameRequired": "The name cannot be empty.",
+					"polygon": {
+						"invalidVertices": "Coordinates must be finite numbers, and at least three vertices are required.",
+						"selfIntersection": "The polygon cannot cross itself.",
+						"tooFewDistinctVertices": "The polygon needs at least three distinct vertices.",
+						"unknown": "Invalid geometry: {{reason}}.",
+						"zeroArea": "The polygon must enclose an area greater than zero.",
+						"zeroLengthEdge": "Two consecutive vertices cannot coincide."
+					},
+					"proportionalSize": "Enter a valid proportional size.",
+					"sizePositive": "The size must be greater than zero."
+				},
+				"handles": {
+					"move": "Move building",
+					"resize": "Resize building",
+					"rotate": "Rotate building",
+					"vertex": "Move building vertex"
+				},
+				"height": "Height",
+				"image": {
+					"created": "Image building created.",
+					"reading": "Checking image…",
+					"ready": "Image ready. Click its center on the map; Escape cancels.",
+					"replaced": "Image replaced."
+				},
+				"name": "Name",
+				"replaceImage": "Replace image",
+				"title": "Building inspector",
+				"width": "Width",
+				"x": "X",
+				"y": "Y"
+			},
 			"common": {
 				"cancel": "Cancel",
 				"close": "Close",
@@ -1357,6 +1549,16 @@ window.FLUVI_LOCALE_RESOURCES = {
 				"title": "Loading simulation..."
 			},
 			"notifications": {
+				"buildingEditor": {
+					"invalidNumbers": "Invalid values. Check every numeric field.",
+					"nameRequired": "The name is required.",
+					"noSelection": "No building is selected.",
+					"sizePositive": "Width and height must be greater than 0.",
+					"updated": "Building \"{{name}}\" updated successfully."
+				},
+				"buildingInspector": {
+					"deleted": "Building \"{{name}}\" deleted successfully."
+				},
 				"simulation": {
 					"changesAppliedGenerator": "Probabilities for «{{name}}» were updated:\n• Generation: {{generation}}%\n• Lane change: {{laneChange}}%",
 					"changesAppliedLaneChange": "Probabilities for «{{name}}» were updated:\n• Lane change: {{laneChange}}%",

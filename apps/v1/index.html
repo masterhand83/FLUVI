@@ -173,13 +173,13 @@
               <button type="button" id="drawStreetButton" class="btn btn-outline-primary btn-sm" data-bs-toggle="tooltip" data-bs-title="Dibujar una calle" data-i18n="streetDrawing.button" data-i18n-attr="data-bs-title:streetDrawing.buttonTooltip">✏️ Calle</button>
               <button type="button" id="drawRoundaboutButton" class="btn btn-outline-primary btn-sm" aria-pressed="false" data-bs-toggle="tooltip" data-bs-title="Arrastra del centro al radio interior" data-i18n="streetDrawing.roundaboutButton" data-i18n-attr="data-bs-title:streetDrawing.roundaboutTooltip">↻ Glorieta</button>
               <button type="button" id="createLinkButton" class="btn btn-outline-primary btn-sm" data-i18n="streetConnection.button">🔗 Crear enlace</button>
-              <button type="button" id="drawBuildingButton" class="btn btn-outline-success btn-sm" aria-pressed="false" data-bs-toggle="tooltip" data-bs-title="Arrastra dos esquinas para crear un edificio rectangular">▭ Edificio</button>
-              <label class="building-proportion-lock small"><input id="buildingProportionLock" type="checkbox"> Cuadrado</label>
-              <button type="button" id="drawPolygonBuildingButton" class="btn btn-outline-success btn-sm" aria-pressed="false" data-bs-toggle="tooltip" data-bs-title="Coloca vértices en el mapa; cierra el polígono para terminar">⬠ Polígono</button>
-              <button type="button" id="uploadBuildingImageButton" class="btn btn-outline-success btn-sm" aria-pressed="false">🖼️ Edificio con imagen</button>
+              <button type="button" id="drawBuildingButton" class="btn btn-outline-success btn-sm" aria-pressed="false" data-bs-toggle="tooltip" data-bs-title="Arrastra dos esquinas para crear un edificio rectangular" data-i18n="buildingDrawing.rectangleButton" data-i18n-attr="data-bs-title:buildingDrawing.rectangleTooltip">▭ Edificio</button>
+              <label class="building-proportion-lock small" data-i18n="buildingDrawing.square"><input id="buildingProportionLock" type="checkbox"> Cuadrado</label>
+              <button type="button" id="drawPolygonBuildingButton" class="btn btn-outline-success btn-sm" aria-pressed="false" data-bs-toggle="tooltip" data-bs-title="Coloca vértices en el mapa; cierra el polígono para terminar" data-i18n="buildingDrawing.polygonButton" data-i18n-attr="data-bs-title:buildingDrawing.polygonTooltip">⬠ Polígono</button>
+              <button type="button" id="uploadBuildingImageButton" class="btn btn-outline-success btn-sm" aria-pressed="false" data-i18n="buildingDrawing.imageButton">🖼️ Edificio con imagen</button>
               <input id="buildingImageInput" type="file" accept="image/png,image/jpeg,image/webp" hidden>
-              <small id="buildingImageStatus" role="status" aria-live="polite">PNG, JPEG o WebP, hasta 5 MB. Después, haz clic en el centro del edificio.</small>
-              <button type="button" id="buildingImageCancel" class="btn btn-outline-secondary btn-sm" hidden>Cancelar imagen</button>
+              <small id="buildingImageStatus" role="status" aria-live="polite" data-i18n="buildingDrawing.imageHelp">PNG, JPEG o WebP, hasta 5 MB. Después, haz clic en el centro del edificio.</small>
+              <button type="button" id="buildingImageCancel" class="btn btn-outline-secondary btn-sm" hidden data-i18n="buildingDrawing.cancelImage">Cancelar imagen</button>
               <label for="labelVisibility">Etiquetas del mapa</label>
               <select id="labelVisibility" class="form-select form-select-sm" aria-label="Etiquetas del mapa">
                 <option value="off">Sin etiquetas</option>
@@ -379,7 +379,7 @@
               <button type="button" id="btnAgregarEdificio" class="btn btn-outline-success btn-sm" data-bs-toggle="tooltip" data-bs-title="Arrastrar un edificio rectangular en el mapa" data-i18n="streetEditor.addBuilding" data-i18n-attr="data-bs-title:streetEditor.addBuildingTooltip">
                 🏢 Agregar Edificio
               </button>
-              <button type="button" id="btnEditarEdificio" class="btn btn-outline-warning btn-sm" style="display: none;" data-bs-toggle="tooltip" data-bs-title="Editar configuración del edificio seleccionado (Ctrl+Click para seleccionar)">
+              <button type="button" id="btnEditarEdificio" class="btn btn-outline-warning btn-sm" style="display: none;" data-bs-toggle="tooltip" data-bs-title="Editar configuración del edificio seleccionado (Ctrl+Click para seleccionar)" data-i18n="buildingEditor.editButton" data-i18n-attr="data-bs-title:buildingEditor.editTooltip">
                 ✏️ Editar Edificio
               </button>
               <button type="button" id="btnAgregarConexion" class="btn btn-outline-secondary btn-sm" data-bs-toggle="tooltip" data-bs-title="Crear una conexión entre calles para el flujo de tráfico" data-i18n="streetConnection.addButton" data-i18n-attr="data-bs-title:streetConnection.addTooltip">
@@ -1406,38 +1406,38 @@
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
       <div class="modal-content">
         <div class="modal-header bg-primary text-white">
-          <h5 class="modal-title fw-bold" id="modalNuevoEdificioLabel">🏢 Agregar Nuevo Edificio</h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+          <h5 class="modal-title fw-bold" id="modalNuevoEdificioLabel" data-i18n="buildingEditor.titleNew">🏢 Agregar Nuevo Edificio</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" data-i18n-attr="aria-label:common.close"></button>
         </div>
         <div class="modal-body">
           <!-- Información básica -->
-          <h6 class="border-bottom pb-2 mb-3 fw-semibold">📋 Información Básica</h6>
+          <h6 class="border-bottom pb-2 mb-3 fw-semibold" data-i18n="buildingEditor.basicInfo">📋 Información Básica</h6>
           <div class="mb-3">
-            <label for="inputNombreEdificio" class="form-label">Nombre:</label>
-            <input type="text" class="form-control" id="inputNombreEdificio" placeholder="Ej: Edificio Central">
+            <label for="inputNombreEdificio" class="form-label" data-i18n="buildingEditor.name">Nombre:</label>
+            <input type="text" class="form-control" id="inputNombreEdificio" placeholder="Ej: Edificio Central" data-i18n-attr="placeholder:buildingEditor.namePlaceholder">
           </div>
           <div class="row">
             <div class="col-md-6 mb-3">
-              <label for="inputXEdificio" class="form-label">Posición X:</label>
+              <label for="inputXEdificio" class="form-label" data-i18n="buildingEditor.positionX">Posición X:</label>
               <input type="number" class="form-control" id="inputXEdificio" placeholder="500" value="500">
             </div>
             <div class="col-md-6 mb-3">
-              <label for="inputYEdificio" class="form-label">Posición Y:</label>
+              <label for="inputYEdificio" class="form-label" data-i18n="buildingEditor.positionY">Posición Y:</label>
               <input type="number" class="form-control" id="inputYEdificio" placeholder="500" value="500">
             </div>
           </div>
           <div class="row">
             <div class="col-md-6 mb-3">
-              <label for="inputWidthEdificio" class="form-label">Ancho:</label>
+              <label for="inputWidthEdificio" class="form-label" data-i18n="buildingEditor.width">Ancho:</label>
               <input type="number" class="form-control" id="inputWidthEdificio" placeholder="100" min="1" value="100">
             </div>
             <div class="col-md-6 mb-3">
-              <label for="inputHeightEdificio" class="form-label">Alto:</label>
+              <label for="inputHeightEdificio" class="form-label" data-i18n="buildingEditor.height">Alto:</label>
               <input type="number" class="form-control" id="inputHeightEdificio" placeholder="100" min="1" value="100">
             </div>
           </div>
           <div class="mb-3">
-            <label for="inputAnguloEdificio" class="form-label">Ángulo (°):</label>
+            <label for="inputAnguloEdificio" class="form-label" data-i18n="buildingEditor.angle">Ángulo (°):</label>
             <input type="number" class="form-control" id="inputAnguloEdificio" placeholder="0" min="0" max="360" value="0">
           </div>
 
@@ -1501,8 +1501,8 @@
           </div>
         </div>
         <div class="modal-footer bg-light">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">✖ Cancelar</button>
-          <button type="button" class="btn btn-primary" id="btnConfirmarNuevoEdificio">✓ Crear Edificio</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n="buildingEditor.cancel">✖ Cancelar</button>
+          <button type="button" class="btn btn-primary" id="btnConfirmarNuevoEdificio" data-i18n="buildingEditor.create">✓ Crear Edificio</button>
         </div>
       </div>
     </div>
@@ -2439,27 +2439,27 @@
         <div id="streetInspectorError" class="street-inspector-error" role="alert" aria-live="assertive"></div>
       </aside>
 
-      <aside id="buildingInspector" class="street-inspector building-inspector" aria-live="polite" hidden>
+      <aside id="buildingInspector" class="street-inspector building-inspector" aria-live="polite" data-i18n-attr="aria-label:buildingInspector.title" hidden>
         <div class="street-inspector-heading">
-          <label class="street-inspector-field">Nombre <input id="buildingInspectorName" type="text" autocomplete="off"></label>
-          <button type="button" id="buildingInspectorClose" class="btn-close" aria-label="Cerrar"></button>
+          <label class="street-inspector-field" data-i18n="buildingInspector.name">Nombre <input id="buildingInspectorName" type="text" autocomplete="off"></label>
+          <button type="button" id="buildingInspectorClose" class="btn-close" aria-label="Cerrar" data-i18n-attr="aria-label:buildingInspector.close"></button>
         </div>
         <dl class="street-inspector-details">
-          <div><dt>X</dt><dd><input id="buildingInspectorX" type="number" step="any"></dd></div>
-          <div><dt>Y</dt><dd><input id="buildingInspectorY" type="number" step="any"></dd></div>
-          <div><dt>Ancho</dt><dd><input id="buildingInspectorWidth" type="number" min="1" step="any"></dd></div>
-          <div><dt>Alto</dt><dd><input id="buildingInspectorHeight" type="number" min="1" step="any"></dd></div>
-          <div><dt>Ángulo (°)</dt><dd><input id="buildingInspectorAngle" type="number" step="any"></dd></div>
-          <div class="building-color-row"><dt>Color</dt><dd id="buildingColorPalette" class="building-color-palette" aria-label="Color del edificio">
-            <button type="button" name="buildingColor" value="#A0522D" title="Café" aria-label="Café"></button>
-            <button type="button" name="buildingColor" value="#6C757D" title="Gris" aria-label="Gris"></button>
-            <button type="button" name="buildingColor" value="#1F4E9E" title="Azul" aria-label="Azul"></button>
-            <button type="button" name="buildingColor" value="#46B5D1" title="Cielo" aria-label="Cielo"></button>
-            <button type="button" name="buildingColor" value="#2E7D32" title="Verde" aria-label="Verde"></button>
-            <button type="button" name="buildingColor" value="#8B4513" title="Café heredado" aria-label="Café heredado"></button>
+          <div><dt data-i18n="buildingInspector.x">X</dt><dd><input id="buildingInspectorX" type="number" step="any"></dd></div>
+          <div><dt data-i18n="buildingInspector.y">Y</dt><dd><input id="buildingInspectorY" type="number" step="any"></dd></div>
+          <div><dt data-i18n="buildingInspector.width">Ancho</dt><dd><input id="buildingInspectorWidth" type="number" min="1" step="any"></dd></div>
+          <div><dt data-i18n="buildingInspector.height">Alto</dt><dd><input id="buildingInspectorHeight" type="number" min="1" step="any"></dd></div>
+          <div><dt data-i18n="buildingInspector.angle">Ángulo (°)</dt><dd><input id="buildingInspectorAngle" type="number" step="any"></dd></div>
+          <div class="building-color-row"><dt data-i18n="buildingInspector.color">Color</dt><dd id="buildingColorPalette" class="building-color-palette" aria-label="Color del edificio" data-i18n-attr="aria-label:buildingInspector.colorPalette">
+            <button type="button" name="buildingColor" value="#A0522D" title="Café" aria-label="Café" data-i18n-attr="title:buildingInspector.colors.brown;aria-label:buildingInspector.colors.brown"></button>
+            <button type="button" name="buildingColor" value="#6C757D" title="Gris" aria-label="Gris" data-i18n-attr="title:buildingInspector.colors.gray;aria-label:buildingInspector.colors.gray"></button>
+            <button type="button" name="buildingColor" value="#1F4E9E" title="Azul" aria-label="Azul" data-i18n-attr="title:buildingInspector.colors.blue;aria-label:buildingInspector.colors.blue"></button>
+            <button type="button" name="buildingColor" value="#46B5D1" title="Cielo" aria-label="Cielo" data-i18n-attr="title:buildingInspector.colors.sky;aria-label:buildingInspector.colors.sky"></button>
+            <button type="button" name="buildingColor" value="#2E7D32" title="Verde" aria-label="Verde" data-i18n-attr="title:buildingInspector.colors.green;aria-label:buildingInspector.colors.green"></button>
+            <button type="button" name="buildingColor" value="#8B4513" title="Café heredado" aria-label="Café heredado" data-i18n-attr="title:buildingInspector.colors.legacyBrown;aria-label:buildingInspector.colors.legacyBrown"></button>
           </dd></div>
         </dl>
-        <button type="button" id="buildingInspectorReplaceImage" class="btn btn-sm btn-outline-success mt-2" hidden>Reemplazar imagen</button>
+        <button type="button" id="buildingInspectorReplaceImage" class="btn btn-sm btn-outline-success mt-2" hidden data-i18n="buildingInspector.replaceImage">Reemplazar imagen</button>
         <input id="buildingInspectorImageInput" type="file" accept="image/png,image/jpeg,image/webp" hidden>
         <small id="buildingInspectorImageStatus" role="status" aria-live="polite" hidden></small>
         <section id="buildingInspectorParking" class="building-inspector-parking mt-2" aria-label="Estacionamiento funcional">
@@ -2477,7 +2477,7 @@
           </div>
           <div id="buildingInspectorParkingError" class="street-inspector-error" role="alert" aria-live="assertive"></div>
         </section>
-        <button type="button" id="buildingInspectorDeleteBuilding" class="btn btn-sm btn-outline-danger mt-2">Eliminar edificio</button>
+        <button type="button" id="buildingInspectorDeleteBuilding" class="btn btn-sm btn-outline-danger mt-2" data-i18n="buildingInspector.deleteBuilding">Eliminar edificio</button>
         <div id="buildingInspectorError" class="street-inspector-error" role="alert" aria-live="assertive"></div>
       </aside>
 

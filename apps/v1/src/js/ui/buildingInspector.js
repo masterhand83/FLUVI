@@ -337,12 +337,13 @@
 		error.textContent = message
 	}
 	const polygonReason = reason => ({
-		"invalid-vertices": "Las coordenadas deben ser números finitos y se necesitan al menos tres vértices.",
-		"too-few-distinct-vertices": "El polígono necesita al menos tres vértices distintos.",
-		"zero-area": "El polígono debe encerrar un área mayor que cero.",
-		"zero-length-edge": "Dos vértices consecutivos no pueden coincidir.",
-		"self-intersection": "El polígono no puede cruzarse a sí mismo.",
+		"invalid-vertices": tr("buildingInspector.errors.polygon.invalidVertices"),
+		"too-few-distinct-vertices": tr("buildingInspector.errors.polygon.tooFewDistinctVertices"),
+		"zero-area": tr("buildingInspector.errors.polygon.zeroArea"),
+		"zero-length-edge": tr("buildingInspector.errors.polygon.zeroLengthEdge"),
+		"self-intersection": tr("buildingInspector.errors.polygon.selfIntersection"),
 	})[reason]
+	const polygonError = reason => polygonReason(reason) || tr("buildingInspector.errors.polygon.unknown", { reason })
 	function validatePolygon(vertices) {
 		return window.edificioPolygonGeometry?.validate(vertices) || { valid: false, reason: "invalid-vertices" }
 	}
@@ -359,19 +360,19 @@
 		error.textContent = ""
 		if (field === fields.name) {
 			const value = field.value.trim()
-			if (!value) return fail(field, "El nombre no puede estar vacío.")
+			if (!value) return fail(field, tr("buildingInspector.errors.nameRequired"))
 			if (value !== selected.label) window.buildingImageAppearance?.preserveBundledIdentity(selected)
 			selected.label = value
 			window.actualizarSelectorEdificios?.()
 		} else {
 			const value = Number(field.value)
-			if (field.value.trim() === "" || !Number.isFinite(value)) return fail(field, "Introduce un número válido.")
+			if (field.value.trim() === "" || !Number.isFinite(value)) return fail(field, tr("buildingInspector.errors.invalidNumber"))
 			const key = Object.entries(fields).find(([, input]) => input === field)?.[0]
-			if ((key === "width" || key === "height") && value <= 0) return fail(field, "El tamaño debe ser mayor que cero.")
+			if ((key === "width" || key === "height") && value <= 0) return fail(field, tr("buildingInspector.errors.sizePositive"))
 			if (isImageBuilding(selected) && (key === "width" || key === "height")) {
 				const ratio = imageRatio(selected)
 				const other = key === "width" ? value / ratio : value * ratio
-				if (!Number.isFinite(other) || other <= 0) return fail(field, "Introduce un tamaño proporcional válido.")
+				if (!Number.isFinite(other) || other <= 0) return fail(field, tr("buildingInspector.errors.proportionalSize"))
 				selected[key === "width" ? "height" : "width"] = other
 			}
 			selected[key] = key === "angle" ? ((value % 360) + 360) % 360 : value
@@ -394,8 +395,8 @@
 	function nextName() {
 		const names = new Set((window.edificios || []).map(building => building.label))
 		let number = 1
-		while (names.has(`Edificio ${number}`)) number++
-		return `Edificio ${number}`
+		while (names.has(tr("buildingInspector.defaultName", { number }))) number++
+		return tr("buildingInspector.defaultName", { number })
 	}
 	function selectBuilding(building) {
 		const index = window.edificios.indexOf(building)
@@ -427,10 +428,27 @@
 		drawPanel = document.createElement("div")
 		drawPanel.className = "building-draw-panel"
 		drawPanel.hidden = true
-		drawPanel.innerHTML = '<span id="buildingDrawStatus">Coloca vértices en el mapa.</span><button type="button" id="buildingDrawFinish" class="btn btn-sm btn-success">Cerrar / terminar</button><button type="button" id="buildingDrawCancel" class="btn btn-sm btn-outline-secondary">Cancelar</button>'
+		const drawStatus = document.createElement("span")
+		drawStatus.id = "buildingDrawStatus"
+		drawStatus.textContent = tr("buildingInspector.draw.placeVertices")
+		const finishButton = document.createElement("button")
+		Object.assign(finishButton, {
+			type: "button",
+			id: "buildingDrawFinish",
+			className: "btn btn-sm btn-success",
+			textContent: tr("buildingInspector.draw.finish"),
+		})
+		const cancelButton = document.createElement("button")
+		Object.assign(cancelButton, {
+			type: "button",
+			id: "buildingDrawCancel",
+			className: "btn btn-sm btn-outline-secondary",
+			textContent: tr("buildingInspector.draw.cancel"),
+		})
+		drawPanel.append(drawStatus, finishButton, cancelButton)
 		canvas.parentElement.append(drawPanel)
-		drawPanel.querySelector("#buildingDrawFinish").addEventListener("click", createPolygon)
-		drawPanel.querySelector("#buildingDrawCancel").addEventListener("click", deactivate)
+		finishButton.addEventListener("click", createPolygon)
+		cancelButton.addEventListener("click", deactivate)
 	}
 	function updatePreview(event) {
 		if (!gesture || !preview) return
@@ -497,7 +515,7 @@
 			deactivate()
 			redraw(building)
 			selectBuilding(building)
-			imageStatus.textContent = "Edificio con imagen creado."
+			imageStatus.textContent = tr("buildingInspector.image.created")
 			return
 		}
 		if (polygonMode) {
@@ -525,7 +543,7 @@
 		const width = Math.abs(end.x - origin.x)
 		const height = Math.abs(end.y - origin.y)
 		if (width < 1 || height < 1) {
-			error.textContent = "Arrastra un área válida para crear el edificio."
+			error.textContent = tr("buildingInspector.errors.invalidDrag")
 			return
 		}
 		const building = window.agregarEdificio(nextName(), (origin.x + end.x) / 2, (origin.y + end.y) / 2, width, height, 0)
@@ -541,16 +559,16 @@
 			const screen = screenPoint(point)
 			return `${screen.x},${screen.y}`
 		}).join(" "))
-		drawPanel?.querySelector("#buildingDrawStatus")?.replaceChildren(document.createTextNode(`${polygonPoints.length} vértice(s). Clic en el primero o «Cerrar / terminar».`))
+		drawPanel?.querySelector("#buildingDrawStatus")?.replaceChildren(document.createTextNode(tr("buildingInspector.draw.vertices", { count: polygonPoints.length })))
 	}
 	function createPolygon() {
 		if (!polygonMode || polygonPoints.length < 3) {
-			if (drawPanel) drawPanel.querySelector("#buildingDrawStatus").textContent = "Se necesitan al menos tres vértices."
+			if (drawPanel) drawPanel.querySelector("#buildingDrawStatus").textContent = tr("buildingInspector.draw.minimumVertices")
 			return
 		}
 		const result = validatePolygon(polygonPoints)
 		if (!result.valid) {
-			drawPanel.querySelector("#buildingDrawStatus").textContent = polygonReason(result.reason) || `Geometría inválida: ${result.reason}.`
+			drawPanel.querySelector("#buildingDrawStatus").textContent = polygonError(result.reason)
 			return
 		}
 		const center = window.edificioPolygonGeometry.center(polygonPoints)
@@ -591,7 +609,7 @@
 		drawPanel.hidden = !polygonMode && !placementImage
 		if (placementImage) {
 			drawPanel.querySelector("#buildingDrawFinish").hidden = true
-			drawPanel.querySelector("#buildingDrawStatus").textContent = "Haz clic en el centro del edificio con imagen."
+			drawPanel.querySelector("#buildingDrawStatus").textContent = tr("buildingInspector.draw.placeImage")
 		}
 		document.addEventListener("pointerdown", onDrawDown, true)
 		document.addEventListener("pointermove", onDrawMove, true)
@@ -654,8 +672,8 @@
 		})
 	}
 	function imageFileError(file) {
-		if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) return "Formato no admitido. Usa PNG, JPEG o WebP."
-		if (file.size > window.buildingImageCodec.maxBytes) return "La imagen no puede superar 5 MB."
+		if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) return tr("buildingInspector.errors.imageFormat")
+		if (file.size > window.buildingImageCodec.maxBytes) return tr("buildingInspector.errors.imageSize")
 		return ""
 	}
 	function replacementIsCurrent(token, building, buildings) {
@@ -664,7 +682,7 @@
 	}
 	function replacementFailed(token, building, buildings) {
 		if (replacementIsCurrent(token, building, buildings)) {
-			replacementStatus.textContent = "No se pudo leer la imagen. Elige un PNG, JPEG o WebP válido."
+			replacementStatus.textContent = tr("buildingInspector.errors.imageRead")
 		}
 	}
 	replaceImageButton?.addEventListener("click", () => {
@@ -687,7 +705,7 @@
 			replacementStatus.textContent = message
 			return
 		}
-		replacementStatus.textContent = "Comprobando imagen…"
+		replacementStatus.textContent = tr("buildingInspector.image.reading")
 		try {
 			const imageData = await readImageFile(file)
 			if (!current()) return
@@ -705,7 +723,7 @@
 			readModel(building)
 			redraw(building)
 			syncHandles()
-			replacementStatus.textContent = "Imagen reemplazada."
+			replacementStatus.textContent = tr("buildingInspector.image.replaced")
 		} catch {
 			replacementFailed(token, building, buildings)
 		}
@@ -722,7 +740,7 @@
 		const token = ++uploadToken
 		uploadPending = true
 		imageCancel.hidden = false
-		imageStatus.textContent = "Comprobando imagen…"
+		imageStatus.textContent = tr("buildingInspector.image.reading")
 		try {
 			const imageData = await readImageFile(file)
 			if (token !== uploadToken) return
@@ -730,12 +748,12 @@
 			if (token !== uploadToken) return
 			uploadPending = false
 			activate(false, { imageData, imageElement })
-			imageStatus.textContent = "Imagen lista. Haz clic en su centro en el mapa; Escape cancela."
+			imageStatus.textContent = tr("buildingInspector.image.ready")
 		} catch {
 			if (token !== uploadToken) return
 			uploadPending = false
 			imageCancel.hidden = true
-			imageStatus.textContent = "No se pudo leer la imagen. Elige un PNG, JPEG o WebP válido."
+			imageStatus.textContent = tr("buildingInspector.errors.imageRead")
 		}
 	})
 	document.addEventListener("keydown", event => {
@@ -747,7 +765,7 @@
 		const handle = document.createElement("button")
 		handle.type = "button"
 		handle.className = `building-map-handle building-${kind}-handle`
-		handle.setAttribute("aria-label", kind === "move" ? "Mover edificio" : kind === "resize" ? "Cambiar tamaño del edificio" : "Girar edificio")
+		handle.setAttribute("aria-label", kind === "move" ? tr("buildingInspector.handles.move") : kind === "resize" ? tr("buildingInspector.handles.resize") : tr("buildingInspector.handles.rotate"))
 		handle.hidden = true
 		canvas.parentElement.append(handle)
 		handle.dataset.buildingHandle = kind
@@ -770,7 +788,7 @@
 				const handle = document.createElement("button")
 				handle.type = "button"
 				handle.className = "building-map-handle building-vertex-handle"
-				handle.setAttribute("aria-label", "Mover vértice del edificio")
+				handle.setAttribute("aria-label", tr("buildingInspector.handles.vertex"))
 				handle.dataset.buildingHandle = "vertex"
 				canvas.parentElement.append(handle)
 				vertexHandles.push(handle)
@@ -837,7 +855,7 @@
 			const validation = validatePolygon(next)
 			if (!validation.valid) {
 				selected.vertices = handleGesture.lastValidVertices.map(vertex => ({ ...vertex }))
-				error.textContent = polygonReason(validation.reason) || `Geometría inválida: ${validation.reason}.`
+				error.textContent = polygonError(validation.reason)
 			} else {
 				selected.vertices = next
 				handleGesture.lastValidVertices = next.map(vertex => ({ ...vertex }))

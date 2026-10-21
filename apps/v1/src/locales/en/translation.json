@@ -101,6 +101,97 @@
       "title": "Warnings"
     }
   },
+  "buildingDrawing": {
+    "cancelImage": "Cancel image",
+    "imageButton": "🖼️ Building with image",
+    "imageHelp": "PNG, JPEG, or WebP, up to 5 MB. Then click the building's center.",
+    "polygonButton": "⬠ Polygon",
+    "polygonTooltip": "Place vertices on the map; close the polygon to finish",
+    "rectangleButton": "▭ Building",
+    "rectangleTooltip": "Drag two corners to create a rectangular building",
+    "square": "Square"
+  },
+  "buildingEditor": {
+    "angle": "Angle (°):",
+    "basicInfo": "📋 Basic Information",
+    "cancel": "✖ Cancel",
+    "create": "✓ Create Building",
+    "editButton": "✏️ Edit Building",
+    "editTooltip": "Edit the selected building's configuration (Ctrl+Click to select)",
+    "height": "Height:",
+    "name": "Name:",
+    "namePlaceholder": "e.g., Central Building",
+    "positionX": "X position:",
+    "positionY": "Y position:",
+    "titleEdit": "✏️ Edit Building",
+    "titleNew": "🏢 Add New Building",
+    "update": "✓ Update Building",
+    "width": "Width:"
+  },
+  "buildingInspector": {
+    "angle": "Angle (°)",
+    "close": "Close the building inspector",
+    "color": "Color",
+    "colorPalette": "Building color",
+    "colors": {
+      "blue": "Blue",
+      "brown": "Brown",
+      "gray": "Gray",
+      "green": "Green",
+      "legacyBrown": "Legacy brown",
+      "sky": "Sky"
+    },
+    "confirmDelete": "Delete the building \"{{name}}\"?",
+    "defaultName": "Building {{number}}",
+    "deleteBuilding": "Delete building",
+    "draw": {
+      "cancel": "Cancel",
+      "finish": "Close / finish",
+      "minimumVertices": "At least three vertices are required.",
+      "placeImage": "Click the center of the image building.",
+      "placeVertices": "Place vertices on the map.",
+      "vertices_many": "{{count}} vertices. Click the first one or «Close / finish».",
+      "vertices_one": "{{count}} vertex. Click the first one or «Close / finish».",
+      "vertices_other": "{{count}} vertices. Click the first one or «Close / finish»."
+    },
+    "errors": {
+      "imageFormat": "Unsupported format. Use PNG, JPEG, or WebP.",
+      "imageRead": "The image could not be read. Choose a valid PNG, JPEG, or WebP.",
+      "imageSize": "The image cannot exceed 5 MB.",
+      "invalidDrag": "Drag a valid area to create the building.",
+      "invalidNumber": "Enter a valid number.",
+      "nameRequired": "The name cannot be empty.",
+      "polygon": {
+        "invalidVertices": "Coordinates must be finite numbers, and at least three vertices are required.",
+        "selfIntersection": "The polygon cannot cross itself.",
+        "tooFewDistinctVertices": "The polygon needs at least three distinct vertices.",
+        "unknown": "Invalid geometry: {{reason}}.",
+        "zeroArea": "The polygon must enclose an area greater than zero.",
+        "zeroLengthEdge": "Two consecutive vertices cannot coincide."
+      },
+      "proportionalSize": "Enter a valid proportional size.",
+      "sizePositive": "The size must be greater than zero."
+    },
+    "handles": {
+      "move": "Move building",
+      "resize": "Resize building",
+      "rotate": "Rotate building",
+      "vertex": "Move building vertex"
+    },
+    "height": "Height",
+    "image": {
+      "created": "Image building created.",
+      "reading": "Checking image…",
+      "ready": "Image ready. Click its center on the map; Escape cancels.",
+      "replaced": "Image replaced."
+    },
+    "name": "Name",
+    "replaceImage": "Replace image",
+    "title": "Building inspector",
+    "width": "Width",
+    "x": "X",
+    "y": "Y"
+  },
   "common": {
     "cancel": "Cancel",
     "close": "Close",
@@ -382,6 +473,16 @@
     "title": "Loading simulation..."
   },
   "notifications": {
+    "buildingEditor": {
+      "invalidNumbers": "Invalid values. Check every numeric field.",
+      "nameRequired": "The name is required.",
+      "noSelection": "No building is selected.",
+      "sizePositive": "Width and height must be greater than 0.",
+      "updated": "Building \"{{name}}\" updated successfully."
+    },
+    "buildingInspector": {
+      "deleted": "Building \"{{name}}\" deleted successfully."
+    },
     "simulation": {
       "changesAppliedGenerator": "Probabilities for «{{name}}» were updated:\n• Generation: {{generation}}%\n• Lane change: {{laneChange}}%",
       "changesAppliedLaneChange": "Probabilities for «{{name}}» were updated:\n• Lane change: {{laneChange}}%",
