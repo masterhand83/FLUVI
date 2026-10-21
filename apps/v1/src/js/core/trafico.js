@@ -5708,12 +5708,12 @@ function aplicarModoOscuro(activar) {
         // Agregar clase a HTML y body para evitar bordes blancos en iOS
         document.documentElement.classList.add('dark-mode');
         document.body.classList.add('dark-mode');
-        labelModoOscuro.textContent = '☀️ Modo Claro';
+        labelModoOscuro.textContent = tr('settings.darkMode.light');
         localStorage.setItem('modoOscuro', 'true');
     } else {
         document.documentElement.classList.remove('dark-mode');
         document.body.classList.remove('dark-mode');
-        labelModoOscuro.textContent = '🌙 Modo Oscuro';
+        labelModoOscuro.textContent = tr('settings.darkMode.dark');
         localStorage.setItem('modoOscuro', 'false');
     }
 

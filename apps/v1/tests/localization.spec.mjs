@@ -533,3 +533,326 @@ describe("startup language and simulator controls", () => {
 		}
 	})
 })
+
+const openLocalizedModal = async (page, modalId) => {
+	await page.$eval(
+		`#collapseAbout [data-bs-target="#${modalId}"]`,
+		(button) => button.click(),
+	)
+	await page.waitForSelector(`#${modalId}.show`, { visible: true })
+	await page.waitForFunction(
+		(id) => document.getElementById(id).getAttribute("aria-modal") === "true",
+		{ polling: 100 },
+		modalId,
+	)
+	await page.waitForFunction(
+		(id) => !document.querySelector(`#${id} .modal-dialog`)?.getAnimations().length,
+		{ polling: 100 },
+		modalId,
+	)
+}
+
+const closeLocalizedModal = async (page, modalId) => {
+	await page.$eval(`#${modalId} [data-bs-dismiss="modal"]`, (button) =>
+		button.click(),
+	)
+	await page.waitForSelector(`#${modalId}`, { hidden: true })
+	await page.waitForFunction(
+		() => !document.querySelector(".modal-backdrop"),
+		{ polling: 100 },
+	)
+}
+
+const readModalLayout = (page, modalId) =>
+	page.evaluate((id) => {
+		const modal = document.getElementById(id)
+		const dialog = modal.querySelector(".modal-dialog").getBoundingClientRect()
+		const body = modal.querySelector(".modal-body")
+		const title = modal.querySelector(".modal-title")
+		const styles = getComputedStyle(body)
+		return {
+			fits:
+				dialog.left >= -1 &&
+				dialog.top >= -1 &&
+				dialog.right <= window.innerWidth + 1 &&
+				dialog.bottom <= window.innerHeight + 1,
+			overflowX: body.scrollWidth - body.clientWidth,
+			titleSize: Number.parseFloat(getComputedStyle(title).fontSize),
+			readable:
+				styles.color !== "rgba(0, 0, 0, 0)" &&
+				styles.color !== styles.backgroundColor,
+			text: body.innerText,
+			title: title.textContent.trim(),
+			close: modal
+				.querySelector(".modal-header [data-bs-dismiss='modal']")
+				.getAttribute("aria-label"),
+		}
+	}, modalId)
+
+const expectUsableModal = (layout, title) => {
+	expect(layout.title).toBe(title)
+	expect(layout.fits).toBe(true)
+	expect(layout.overflowX).toBeLessThanOrEqual(1)
+	expect(layout.readable).toBe(true)
+}
+
+const settingsCopy = {
+	en: {
+		language: "Language",
+		dark: "🌙 Dark mode",
+		darkActive: "☀️ Light mode",
+		consoleLogs: "🚫 Hide console logs",
+		consoleActive: "📝 Show console logs",
+		debug: "🐛 Visual debug",
+		cell: "🔢 Cell detection (Off)",
+		cellActive: "🔢 Cell detection (On)",
+		cellTooltipStart: "Shows the cell number when hovering over streets.",
+		projectTitle:
+			"Vehicular Flow Management System Simulator for Roads Near Academic Areas of IPN - ESCOM",
+		aboutButton: "📖 View Full Information",
+		aboutTooltip: "View complete information about the FLUVI project",
+		guideButton: "📚 View Full Guide",
+		guideTooltip: "Open the complete simulator guide with detailed instructions",
+		guideTitle: "📚 FLUVI Traffic Simulator Guide",
+		guideCard: "🖱️ Basic Controls",
+		guideItem: "Quick selection:",
+		guideNumberedSection: "1 Temporal Analysis",
+		aboutTitle: "ℹ️ About FLUVI",
+		aboutNumberedSection: "1 Introduction",
+		aboutProse: "cellular automata",
+		developerRole: "Developer",
+	},
+	es: {
+		language: "Idioma",
+		dark: "🌙 Modo Oscuro",
+		darkActive: "☀️ Modo Claro",
+		consoleLogs: "🚫 Ocultar Logs en Consola",
+		consoleActive: "📝 Mostrar Logs en Consola",
+		debug: "🐛 Debug Visual",
+		cell: "🔢 Activador de Celdas (Desactivado)",
+		cellActive: "🔢 Activador de Celdas (Activo)",
+		cellTooltipStart:
+			"Muestra el número de celda en el hover sobre calles.",
+		projectTitle:
+			"Simulador de Sistema de Gestión del Flujo Vehicular en Vialidades Cercanas a Áreas Académicas de IPN - ESCOM",
+		aboutButton: "📖 Ver Información Completa",
+		aboutTooltip: "Ver información completa sobre el proyecto FLUVI",
+		guideButton: "📚 Ver Guía Completa",
+		guideTooltip:
+			"Abrir la guía completa del simulador con instrucciones detalladas",
+		guideTitle: "📚 Guía del Simulador de Tráfico FLUVI",
+		guideCard: "🖱️ Controles Básicos",
+		guideItem: "Selección rápida:",
+		guideNumberedSection: "1 Análisis Temporal",
+		aboutTitle: "ℹ️ Acerca de FLUVI",
+		aboutNumberedSection: "1 Introducción",
+		aboutProse: "autómatas celulares",
+		developerRole: "Desarrollador",
+	},
+}
+
+describe("settings, help, and project information", () => {
+	for (const [language, copy] of Object.entries(settingsCopy)) {
+		it(`keeps settings and help reachable and readable in ${language} across themes and viewports`, async () => {
+			const simulator = await openSimulator({ languagePreference: language })
+			try {
+				const { page } = simulator
+				await hideLoadingScreen(page)
+
+				const settings = await page.evaluate(() => {
+					const label = (id) =>
+						document.getElementById(id)?.textContent.trim() ?? null
+					const rectVisible = (id) => {
+						const element = document.getElementById(id)
+						if (!element) return false
+						const rect = element.getBoundingClientRect()
+						const styles = getComputedStyle(element)
+						return (
+							rect.width > 0 &&
+							rect.height > 0 &&
+							styles.display !== "none" &&
+							styles.visibility !== "hidden"
+						)
+					}
+					const cellTooltip = document
+						.getElementById("switchCellDetection")
+						.closest(".form-check")
+						.querySelector('[data-bs-toggle="tooltip"]')
+					return {
+						language: document
+							.querySelector('label[for="languagePreference"]')
+							.textContent.trim(),
+						languageOptions: [
+							...document.getElementById("languagePreference").options,
+						].map((option) => option.textContent.trim()),
+						dark: label("labelModoOscuro"),
+						consoleLogs: label("labelConsoleLogs"),
+						debug: label("labelDebugMovil"),
+						cell: label("labelCellDetection"),
+						cellTooltip:
+							cellTooltip.getAttribute("data-bs-original-title") ||
+							cellTooltip.getAttribute("title"),
+						cellTooltipTitle: cellTooltip.getAttribute("data-bs-title"),
+						desktopControls: [
+							"languagePreference",
+							"switchModoOscuro",
+							"switchConsoleLogs",
+							"switchCellDetection",
+						].every(rectVisible),
+					}
+				})
+				expect(settings.language).toBe(copy.language)
+				expect(settings.languageOptions).toEqual(["Español", "English"])
+				expect(settings.dark).toBe(copy.dark)
+				expect(settings.consoleLogs).toBe(copy.consoleLogs)
+				expect(settings.debug).toBe(copy.debug)
+				expect(settings.cell).toBe(copy.cell)
+				expect(settings.cellTooltip).toContain(copy.cellTooltipStart)
+				expect(settings.cellTooltipTitle).toContain(copy.cellTooltipStart)
+				expect(settings.desktopControls).toBe(true)
+
+				const aboutPanel = await page.evaluate(() => ({
+					title: document.querySelector("#collapseAbout h6").textContent.trim(),
+					aboutButton: document
+						.querySelector('#collapseAbout [data-bs-target="#aboutModal"]')
+						.textContent.trim(),
+					aboutTooltip: document
+						.querySelector('#collapseAbout [data-bs-target="#aboutModal"]')
+						.getAttribute("data-bs-title"),
+					guideButton: document
+						.querySelector('#collapseAbout [data-bs-target="#instructionsModal"]')
+						.textContent.trim(),
+					guideTooltip: document
+						.querySelector('#collapseAbout [data-bs-target="#instructionsModal"]')
+						.getAttribute("data-bs-title"),
+					version: document
+						.querySelector('#collapseAbout strong[data-i18n="about.versionLabel"]')
+						.textContent.trim(),
+				}))
+				expect(aboutPanel.title).toBe(copy.projectTitle)
+				expect(aboutPanel.aboutButton).toBe(copy.aboutButton)
+				expect(aboutPanel.aboutTooltip).toBe(copy.aboutTooltip)
+				expect(aboutPanel.guideButton).toBe(copy.guideButton)
+				expect(aboutPanel.guideTooltip).toBe(copy.guideTooltip)
+				expect(aboutPanel.version).toBe(
+					language === "en" ? "Version:" : "Versión:",
+				)
+
+				await page.click("#switchCellDetection")
+				expect(
+					await page.$eval(
+						"#labelCellDetection",
+						(element) => element.textContent.trim(),
+					),
+				).toBe(copy.cellActive)
+				await page.click("#switchCellDetection")
+
+				await page.click("#switchConsoleLogs")
+				expect(
+					await page.$eval(
+						"#labelConsoleLogs",
+						(element) => element.textContent.trim(),
+					),
+				).toBe(copy.consoleActive)
+				await page.click("#switchConsoleLogs")
+
+				await openLocalizedModal(page, "instructionsModal")
+				let layout = await readModalLayout(page, "instructionsModal")
+				expect(layout.close).toBe(language === "en" ? "Close" : "Cerrar")
+				expect(layout.text).toContain(copy.guideCard)
+				expect(layout.text).toContain(copy.guideItem)
+				expect(layout.text).toContain("Z")
+				expect(layout.text).toContain(copy.guideNumberedSection)
+				expect(layout.text).not.toMatch(
+					/\b(?:guide|aboutModal|about|settings)\.[a-zA-Z]/,
+				)
+				expect(layout.titleSize).toBeGreaterThan(12)
+				expectUsableModal(layout, copy.guideTitle)
+				await closeLocalizedModal(page, "instructionsModal")
+
+				await openLocalizedModal(page, "aboutModal")
+				layout = await readModalLayout(page, "aboutModal")
+				expect(layout.text).toContain(copy.aboutNumberedSection)
+				expect(layout.text).toContain(copy.aboutProse)
+				expect(layout.text).toContain("Connor Urbano Mendoza")
+				expect(layout.text).toContain("Luis Gael Molina Figueroa")
+				expect(layout.text).toContain("Denisse Márquez Morales")
+				expect(layout.text).toContain("Instituto Politécnico Nacional")
+				expect(layout.text).toContain("ESCOM")
+				expect(layout.text).toContain(copy.developerRole)
+				expect(layout.text).not.toMatch(
+					/\b(?:guide|aboutModal|about|settings)\.[a-zA-Z]/,
+				)
+				expectUsableModal(layout, copy.aboutTitle)
+				await closeLocalizedModal(page, "aboutModal")
+
+				await page.click("#switchModoOscuro")
+				await page.waitForFunction(
+					() => document.body.classList.contains("dark-mode"),
+					{ polling: 100 },
+				)
+				expect(
+					await page.$eval(
+						"#labelModoOscuro",
+						(element) => element.textContent.trim(),
+					),
+				).toBe(copy.darkActive)
+
+				await openLocalizedModal(page, "instructionsModal")
+				layout = await readModalLayout(page, "instructionsModal")
+				expectUsableModal(layout, copy.guideTitle)
+				await closeLocalizedModal(page, "instructionsModal")
+
+				await page.setViewport({ width: 390, height: 844 })
+				await new Promise((resolve) => setTimeout(resolve, 400))
+				const mobileSettings = await page.evaluate(() => {
+					const visible = (id) => {
+						const element = document.getElementById(id)
+						if (!element) return false
+						const rect = element.getBoundingClientRect()
+						const styles = getComputedStyle(element)
+						return (
+							rect.width > 0 &&
+							rect.height > 0 &&
+							styles.display !== "none" &&
+							styles.visibility !== "hidden"
+						)
+					}
+					return {
+						language: visible("languagePreference"),
+						dark: visible("switchModoOscuro"),
+						debug: visible("switchDebugMovil"),
+					}
+				})
+				expect(mobileSettings).toEqual({
+					language: true,
+					dark: true,
+					debug: true,
+				})
+
+				await openLocalizedModal(page, "aboutModal")
+				layout = await readModalLayout(page, "aboutModal")
+				expectUsableModal(layout, copy.aboutTitle)
+				await closeLocalizedModal(page, "aboutModal")
+
+				await openLocalizedModal(page, "instructionsModal")
+				layout = await readModalLayout(page, "instructionsModal")
+				expect(layout.text).toContain(copy.guideCard)
+				expectUsableModal(layout, copy.guideTitle)
+				await closeLocalizedModal(page, "instructionsModal")
+
+				await page.click("#switchModoOscuro")
+				await page.waitForFunction(
+					() => !document.body.classList.contains("dark-mode"),
+					{ polling: 100 },
+				)
+				await openLocalizedModal(page, "instructionsModal")
+				layout = await readModalLayout(page, "instructionsModal")
+				expectUsableModal(layout, copy.guideTitle)
+				await closeLocalizedModal(page, "instructionsModal")
+			} finally {
+				await simulator.close()
+			}
+		})
+	}
+})

@@ -145,6 +145,36 @@ interpolated names and numbers cannot inject markup. Confirmation defaults are
 translated (`common.confirm`, `common.cancel`) while caller-supplied button text
 is preserved.
 
+## Settings, help, and project information
+
+The sidebar's application settings and the About/Instructions modals are
+annotated with `data-i18n` and `data-i18n-attr` like the rest of the static UI:
+
+- `settings.*` owns the language description, dark-mode, console-log, visual
+  debug, and cell-detection labels and tooltip. `cellDetectionControl.js`,
+  `consoleControl.js`, and the dark-mode handler in `core/trafico.js` replace
+  their stateful labels through `tr()` so switching a setting does not fall
+  back to hard-coded Spanish.
+- `about.*` owns the Sobre FLUVI summary, the shared project title used by the
+  about dialog, its modal buttons, and the version/year labels.
+- `guide.*` owns the complete instructions modal, including navigation,
+  editing, shortcut explanations, metric interpretation, and analyzer guidance.
+  Shortcut keys stay in `<kbd>` elements.
+- `aboutModal.*` owns the about-dialog prose, algorithm descriptions, warnings,
+  and credit headings. Developer/director names, emails, institution names,
+  `FLUVI`, `IPN`, and `ESCOM` remain untranslated proper names.
+
+When adding prose to those dialogs, annotate the leaf that owns the text. For a
+sentence with nested `<strong>`, `<kbd>`, badges, or icons, split the surrounding
+text into spans and translate the nested element separately; do not annotate a
+container that already has emphasised child text, or the translated sentence
+would duplicate the child.
+
+Focused coverage lives in `tests/localization.spec.mjs`: both languages, desktop
+and mobile viewports, light and dark themes, settings control reachability,
+translated labels/tooltips, preserved shortcut/credit content, and modal bounds
+without horizontal overflow.
+
 ## Terminology
 
 Keep the distinction from `CONTEXT.md`:

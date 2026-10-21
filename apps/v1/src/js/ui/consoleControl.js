@@ -74,13 +74,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Actualizar label según el estado
   function updateLabel(enabled) {
-    if (enabled) {
-      labelConsoleLogs.innerHTML = '📝 Mostrar Logs en Consola';
-      labelConsoleLogs.style.color = '#28a745';
-    } else {
-      labelConsoleLogs.innerHTML = '🚫 Ocultar Logs en Consola';
-      labelConsoleLogs.style.color = '#6c757d';
-    }
+    const key = enabled
+      ? 'settings.consoleLogs.show'
+      : 'settings.consoleLogs.hide';
+    labelConsoleLogs.textContent = tr(key);
+    labelConsoleLogs.style.color = enabled ? '#28a745' : '#6c757d';
   }
 
   updateLabel(consoleLogsEnabled);

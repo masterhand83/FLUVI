@@ -19,13 +19,12 @@ document.addEventListener('DOMContentLoaded', () => {
   // Establecer estado inicial del switch
   switchCellDetection.checked = window.cellDetectionEnabled;
 
-  // Actualizar label según el estado
+  // Actualizar label según el estado, conservando el idioma activo
   function updateLabel(enabled) {
-    if (enabled) {
-      labelCellDetection.innerHTML = '🔢 Activador de Celdas (Activo)';
-    } else {
-      labelCellDetection.innerHTML = '🔢 Activador de Celdas (Desactivado)';
-    }
+    const key = enabled
+      ? 'settings.cellDetection.active'
+      : 'settings.cellDetection.inactive';
+    labelCellDetection.textContent = tr(key);
   }
 
   updateLabel(window.cellDetectionEnabled);

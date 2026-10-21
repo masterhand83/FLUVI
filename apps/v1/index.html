@@ -135,25 +135,25 @@
         </h2>
         <div id="collapseAbout" class="accordion-collapse collapse show" data-bs-parent="#controlPanelAccordion" aria-labelledby="headingAbout">
           <div class="accordion-body">
-            <h6 class="mb-3">Simulador de Sistema de Gestión del Flujo Vehicular en Vialidades Cercanas a Áreas Académicas de IPN - ESCOM</h6>
+            <h6 class="mb-3" data-i18n="about.projectTitle">Simulador de Sistema de Gestión del Flujo Vehicular en Vialidades Cercanas a Áreas Académicas de IPN - ESCOM</h6>
 
-            <p class="text-muted small mb-3">Sistema de simulación basado en autómatas celulares para el análisis de tráfico vehicular.</p>
+            <p class="text-muted small mb-3" data-i18n="about.projectDescription">Sistema de simulación basado en autómatas celulares para el análisis de tráfico vehicular.</p>
 
-            <button type="button" class="btn btn-info w-100" data-bs-toggle="modal" data-bs-target="#aboutModal" data-bs-title="Ver información completa sobre el proyecto FLUVI">
+            <button type="button" class="btn btn-info w-100" data-bs-toggle="modal" data-bs-target="#aboutModal" data-bs-title="Ver información completa sobre el proyecto FLUVI" data-i18n="about.aboutButton" data-i18n-attr="data-bs-title:about.aboutTooltip">
               📖 Ver Información Completa
             </button>
 
             <hr class="my-3">
 
-            <p class="text-muted small mb-3">Aprende a usar el simulador de tráfico</p>
-            <button type="button" class="btn btn-info w-100" data-bs-toggle="modal" data-bs-target="#instructionsModal" data-bs-title="Abrir la guía completa del simulador con instrucciones detalladas">
+            <p class="text-muted small mb-3" data-i18n="about.learn">Aprende a usar el simulador de tráfico</p>
+            <button type="button" class="btn btn-info w-100" data-bs-toggle="modal" data-bs-target="#instructionsModal" data-bs-title="Abrir la guía completa del simulador con instrucciones detalladas" data-i18n="about.guideButton" data-i18n-attr="data-bs-title:about.guideTooltip">
               📚 Ver Guía Completa
             </button>
 
             <div class="mt-3">
               <small class="text-muted">
-                <strong>Versión:</strong> 1.0.0<br>
-                <strong>Año:</strong> 2025
+                <strong data-i18n="about.versionLabel">Versión:</strong> 1.0.0<br>
+                <strong data-i18n="about.yearLabel">Año:</strong> 2025
               </small>
             </div>
           </div>
@@ -881,7 +881,7 @@
         <div class="form-check form-switch mb-3">
           <input class="form-check-input" type="checkbox" id="switchModoOscuro">
           <label class="form-check-label" for="switchModoOscuro">
-            <span id="labelModoOscuro">🌙 Modo Oscuro</span>
+            <span id="labelModoOscuro" data-i18n="settings.darkMode.dark">🌙 Modo Oscuro</span>
           </label>
         </div>
 
@@ -889,7 +889,7 @@
         <div class="form-check form-switch d-none d-md-block">
           <input class="form-check-input" type="checkbox" id="switchConsoleLogs">
           <label class="form-check-label" for="switchConsoleLogs">
-            <span id="labelConsoleLogs">📝 Logs en Consola</span>
+            <span id="labelConsoleLogs" data-i18n="settings.consoleLogs.label">📝 Logs en Consola</span>
           </label>
         </div>
 
@@ -897,7 +897,7 @@
         <div class="form-check form-switch d-md-none">
           <input class="form-check-input" type="checkbox" id="switchDebugMovil">
           <label class="form-check-label" for="switchDebugMovil">
-            <span id="labelDebugMovil">🐛 Debug Visual</span>
+            <span id="labelDebugMovil" data-i18n="settings.debugVisual">🐛 Debug Visual</span>
           </label>
         </div>
 
@@ -905,11 +905,13 @@
         <div class="form-check form-switch mt-2 d-none d-md-block">
           <input class="form-check-input" type="checkbox" id="switchCellDetection">
           <label class="form-check-label" for="switchCellDetection">
-            <span id="labelCellDetection">🔢 Activador de Celdas</span>
+            <span id="labelCellDetection" data-i18n="settings.cellDetection.label">🔢 Activador de Celdas</span>
             <span class="ms-1"
                   data-bs-toggle="tooltip"
                   data-bs-placement="right"
                   title="Muestra el número de celda en el hover sobre calles. Al activarlo se muestra 'NOMBRE_CALLE : NUMERO_CELDA'. Desactívalo para mejorar el rendimiento (solo mostrará el nombre de la calle)."
+                  data-bs-title="Muestra el número de celda en el hover sobre calles. Al activarlo se muestra 'NOMBRE_CALLE : NUMERO_CELDA'. Desactívalo para mejorar el rendimiento (solo mostrará el nombre de la calle)."
+                  data-i18n-attr="title:settings.cellDetection.tooltip;data-bs-title:settings.cellDetection.tooltip"
                   style="cursor: help;">
               <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle" viewBox="0 0 16 16">
                 <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"></path>
@@ -929,20 +931,20 @@
     <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
       <div class="modal-content">
         <div class="modal-header bg-primary text-white">
-          <h5 class="modal-title" id="instructionsModalLabel">📚 Guía del Simulador de Tráfico FLUVI</h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+          <h5 class="modal-title" id="instructionsModalLabel" data-i18n="guide.title">📚 Guía del Simulador de Tráfico FLUVI</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" data-i18n-attr="aria-label:common.close"></button>
         </div>
         <div class="modal-body">
           <div class="row">
             <div class="col-md-6 mb-4">
               <div class="card border-primary">
                 <div class="card-body">
-                  <h5 class="card-title text-primary">🖱️ Controles Básicos</h5>
+                  <h5 class="card-title text-primary" data-i18n="guide.basicControls.title">🖱️ Controles Básicos</h5>
                   <ul class="list-unstyled">
-                    <li><strong>Zoom:</strong> Rueda del mouse</li>
-                    <li><strong>Mover vista:</strong> Arrastrar con el mouse</li>
-                    <li><strong>Agregar/quitar vehículos:</strong> Clic en celdas</li>
-                    <li><strong>Minimapa:</strong> Clic para teletransportarse</li>
+                    <li><strong data-i18n="guide.basicControls.zoomLabel">Zoom:</strong> <span data-i18n="guide.basicControls.zoomBody">Rueda del mouse</span></li>
+                    <li><strong data-i18n="guide.basicControls.panLabel">Mover vista:</strong> <span data-i18n="guide.basicControls.panBody">Arrastrar con el mouse</span></li>
+                    <li><strong data-i18n="guide.basicControls.vehiclesLabel">Agregar/quitar vehículos:</strong> <span data-i18n="guide.basicControls.vehiclesBody">Clic en celdas</span></li>
+                    <li><strong data-i18n="guide.basicControls.minimapLabel">Minimapa:</strong> <span data-i18n="guide.basicControls.minimapBody">Clic para teletransportarse</span></li>
                   </ul>
                 </div>
               </div>
@@ -951,12 +953,12 @@
             <div class="col-md-6 mb-4">
               <div class="card border-success">
                 <div class="card-body">
-                  <h5 class="card-title text-success">⚙️ Panel de Control</h5>
+                  <h5 class="card-title text-success" data-i18n="guide.controlPanel.title">⚙️ Panel de Control</h5>
                   <ul class="list-unstyled">
-                    <li><strong>Selección rápida:</strong> Ctrl+Clic sobre calles o edificios en el canvas</li>
-                    <li><strong>Menú desplegable:</strong> Selecciona objetos manualmente</li>
-                    <li><strong>Probabilidades:</strong> Ajusta generación y cambio de carril</li>
-                    <li><strong>Aplicar cambios:</strong> Botón azul al final</li>
+                    <li><strong data-i18n="guide.controlPanel.quickSelectLabel">Selección rápida:</strong> <span data-i18n="guide.controlPanel.quickSelectBody">Ctrl+Clic sobre calles o edificios en el canvas</span></li>
+                    <li><strong data-i18n="guide.controlPanel.dropdownLabel">Menú desplegable:</strong> <span data-i18n="guide.controlPanel.dropdownBody">Selecciona objetos manualmente</span></li>
+                    <li><strong data-i18n="guide.controlPanel.probabilitiesLabel">Probabilidades:</strong> <span data-i18n="guide.controlPanel.probabilitiesBody">Ajusta generación y cambio de carril</span></li>
+                    <li><strong data-i18n="guide.controlPanel.applyLabel">Aplicar cambios:</strong> <span data-i18n="guide.controlPanel.applyBody">Botón azul al final</span></li>
                   </ul>
                 </div>
               </div>
@@ -965,13 +967,13 @@
             <div class="col-md-6 mb-4">
               <div class="card border-warning">
                 <div class="card-body">
-                  <h5 class="card-title text-warning">✏️ Modo Edición</h5>
+                  <h5 class="card-title text-warning" data-i18n="guide.editMode.title">✏️ Modo Edición</h5>
                   <ul class="list-unstyled">
-                    <li>1. Selecciona una calle o edificio</li>
-                    <li>2. Activa "Modo Edición"</li>
-                    <li>3. Arrastra el handle azul para mover</li>
-                    <li>4. Arrastra el handle verde para rotar</li>
-                    <li>5. Guarda o cancela los cambios</li>
+                    <li data-i18n="guide.editMode.select">1. Selecciona una calle o edificio</li>
+                    <li data-i18n="guide.editMode.activate">2. Activa "Modo Edición"</li>
+                    <li data-i18n="guide.editMode.dragBlue">3. Arrastra el handle azul para mover</li>
+                    <li data-i18n="guide.editMode.dragGreen">4. Arrastra el handle verde para rotar</li>
+                    <li data-i18n="guide.editMode.saveOrCancel">5. Guarda o cancela los cambios</li>
                   </ul>
                 </div>
               </div>
@@ -980,16 +982,16 @@
             <div class="col-md-6 mb-4">
               <div class="card border-info">
                 <div class="card-body">
-                  <h5 class="card-title text-info">🌊 Calles Curvas</h5>
+                  <h5 class="card-title text-info" data-i18n="guide.curvedStreets.title">🌊 Calles Curvas</h5>
                   <ul class="list-unstyled">
-                    <li>1. Selecciona una calle</li>
-                    <li>2. Activa "Modo Edición"</li>
-                    <li>3. Haz clic en "Editar Vértices"</li>
-                    <li>4. Presiona <kbd>Z</kbd> para activar edición de vértices</li>
-                    <li>5. Arrastra vértices para crear curvas</li>
-                    <li>6. Presiona <kbd>Z</kbd> nuevamente para desactivar</li>
-                    <li>7. Ángulo máximo: ±40° por celda</li>
-                    <li>8. Usa "Resetear Vértices" para restaurar</li>
+                    <li data-i18n="guide.curvedStreets.select">1. Selecciona una calle</li>
+                    <li data-i18n="guide.curvedStreets.activate">2. Activa "Modo Edición"</li>
+                    <li data-i18n="guide.curvedStreets.clickEdit">3. Haz clic en "Editar Vértices"</li>
+                    <li><span data-i18n="guide.curvedStreets.pressZBefore">4. Presiona</span> <kbd>Z</kbd> <span data-i18n="guide.curvedStreets.pressZAfter">para activar edición de vértices</span></li>
+                    <li data-i18n="guide.curvedStreets.dragVertices">5. Arrastra vértices para crear curvas</li>
+                    <li><span data-i18n="guide.curvedStreets.pressZDisableBefore">6. Presiona</span> <kbd>Z</kbd> <span data-i18n="guide.curvedStreets.pressZDisableAfter">nuevamente para desactivar</span></li>
+                    <li data-i18n="guide.curvedStreets.maxAngle">7. Ángulo máximo: ±40° por celda</li>
+                    <li data-i18n="guide.curvedStreets.reset">8. Usa "Resetear Vértices" para restaurar</li>
                   </ul>
                 </div>
               </div>
@@ -998,12 +1000,12 @@
             <div class="col-md-6 mb-4">
               <div class="card border-info">
                 <div class="card-body">
-                  <h5 class="card-title text-info">⏸️ Control de Simulación</h5>
+                  <h5 class="card-title text-info" data-i18n="guide.simulationControl.title">⏸️ Control de Simulación</h5>
                   <ul class="list-unstyled">
-                    <li><strong>Pause/Resume:</strong> Detener/continuar simulación</li>
-                    <li><strong>Paso a Paso:</strong> Avanzar frame por frame</li>
-                    <li><strong>Velocidad:</strong> Ajustar frames por segundo</li>
-                    <li><strong>Generación:</strong> % de aparición de vehículos</li>
+                    <li><strong data-i18n="guide.simulationControl.pauseLabel">Pause/Resume:</strong> <span data-i18n="guide.simulationControl.pauseBody">Detener/continuar simulación</span></li>
+                    <li><strong data-i18n="guide.simulationControl.stepLabel">Paso a Paso:</strong> <span data-i18n="guide.simulationControl.stepBody">Avanzar frame por frame</span></li>
+                    <li><strong data-i18n="guide.simulationControl.speedLabel">Velocidad:</strong> <span data-i18n="guide.simulationControl.speedBody">Ajustar frames por segundo</span></li>
+                    <li><strong data-i18n="guide.simulationControl.generationLabel">Generación:</strong> <span data-i18n="guide.simulationControl.generationBody">% de aparición de vehículos</span></li>
                   </ul>
                 </div>
               </div>
@@ -1012,11 +1014,11 @@
             <div class="col-md-6 mb-4">
               <div class="card border-success">
                 <div class="card-body">
-                  <h5 class="card-title text-success">⏰ Tiempo Virtual</h5>
+                  <h5 class="card-title text-success" data-i18n="guide.virtualTime.title">⏰ Tiempo Virtual</h5>
                   <ul class="list-unstyled">
-                    <li><strong>Cambiar Fecha y Hora:</strong> Establece día de la semana (Lun-Dom) y hora inicial (0-23)</li>
-                    <li><strong>Tiempo avanza automáticamente:</strong> 2 segundos virtuales por paso de simulación</li>
-                    <li><strong>Perfiles dinámicos:</strong> El tráfico varía según día y hora</li>
+                    <li><strong data-i18n="guide.virtualTime.dateLabel">Cambiar Fecha y Hora:</strong> <span data-i18n="guide.virtualTime.dateBody">Establece día de la semana (Lun-Dom) y hora inicial (0-23)</span></li>
+                    <li><strong data-i18n="guide.virtualTime.advanceLabel">Tiempo avanza automáticamente:</strong> <span data-i18n="guide.virtualTime.advanceBody">2 segundos virtuales por paso de simulación</span></li>
+                    <li><strong data-i18n="guide.virtualTime.profilesLabel">Perfiles dinámicos:</strong> <span data-i18n="guide.virtualTime.profilesBody">El tráfico varía según día y hora</span></li>
                   </ul>
                 </div>
               </div>
@@ -1025,13 +1027,13 @@
             <div class="col-md-6 mb-4">
               <div class="card border-success">
                 <div class="card-body">
-                  <h5 class="card-title text-success">📊 Multiplicadores de Generación</h5>
+                  <h5 class="card-title text-success" data-i18n="guide.multipliers.title">📊 Multiplicadores de Generación</h5>
                   <ul class="list-unstyled">
-                    <li><strong>Configuración por día:</strong> Ajusta multiplicadores para cada día de la semana</li>
-                    <li><strong>Configuración por hora:</strong> 24 valores (uno por cada hora del día)</li>
-                    <li><strong>Rango:</strong> 0.0 (sin tráfico) a 3.0 (tráfico muy intenso)</li>
-                    <li><strong>Presets:</strong> Día Laboral, Fin de Semana, Constante, Nocturno</li>
-                    <li><strong>Cada hora es independiente:</strong> 08:00 controla de 08:00 a 08:59</li>
+                    <li><strong data-i18n="guide.multipliers.dayLabel">Configuración por día:</strong> <span data-i18n="guide.multipliers.dayBody">Ajusta multiplicadores para cada día de la semana</span></li>
+                    <li><strong data-i18n="guide.multipliers.hourLabel">Configuración por hora:</strong> <span data-i18n="guide.multipliers.hourBody">24 valores (uno por cada hora del día)</span></li>
+                    <li><strong data-i18n="guide.multipliers.rangeLabel">Rango:</strong> <span data-i18n="guide.multipliers.rangeBody">0.0 (sin tráfico) a 3.0 (tráfico muy intenso)</span></li>
+                    <li><strong data-i18n="guide.multipliers.presetsLabel">Presets:</strong> <span data-i18n="guide.multipliers.presetsBody">Día Laboral, Fin de Semana, Constante, Nocturno</span></li>
+                    <li><strong data-i18n="guide.multipliers.independentLabel">Cada hora es independiente:</strong> <span data-i18n="guide.multipliers.independentBody">08:00 controla de 08:00 a 08:59</span></li>
                   </ul>
                 </div>
               </div>
@@ -1040,13 +1042,13 @@
             <div class="col-md-6 mb-4">
               <div class="card border-secondary">
                 <div class="card-body">
-                  <h5 class="card-title text-secondary">🔗 Conexiones</h5>
-                  <p>Tipos de conexiones entre calles:</p>
+                  <h5 class="card-title text-secondary" data-i18n="guide.connections.title">🔗 Conexiones</h5>
+                  <p data-i18n="guide.connections.intro">Tipos de conexiones entre calles:</p>
                   <ul class="list-unstyled">
-                    <li>🟢 <strong>Verde (Lineal):</strong> 1 a 1 entre carriles</li>
-                    <li>🟠 <strong>Naranja (Incorporación):</strong> Varios a uno</li>
-                    <li>🟣 <strong>Morado (Probabilística):</strong> Con probabilidad</li>
-                    <li>🔴 <strong>Roja:</strong> Conexión bloqueada</li>
+                    <li>🟢 <strong data-i18n="guide.connections.linearLabel">Verde (Lineal):</strong> <span data-i18n="guide.connections.linearBody">1 a 1 entre carriles</span></li>
+                    <li>🟠 <strong data-i18n="guide.connections.incorporationLabel">Naranja (Incorporación):</strong> <span data-i18n="guide.connections.incorporationBody">Varios a uno</span></li>
+                    <li>🟣 <strong data-i18n="guide.connections.probabilisticLabel">Morado (Probabilística):</strong> <span data-i18n="guide.connections.probabilisticBody">Con probabilidad</span></li>
+                    <li>🔴 <strong data-i18n="guide.connections.blockedLabel">Roja:</strong> <span data-i18n="guide.connections.blockedBody">Conexión bloqueada</span></li>
                   </ul>
                 </div>
               </div>
@@ -1055,14 +1057,14 @@
             <div class="col-md-6 mb-4">
               <div class="card border-success">
                 <div class="card-body">
-                  <h5 class="card-title text-success">🏗️ Constructor de Mapas</h5>
+                  <h5 class="card-title text-success" data-i18n="guide.mapConstructor.title">🏗️ Constructor de Mapas</h5>
                   <ul class="list-unstyled">
-                    <li><strong>Ctrl+Clic:</strong> Selecciona calles y edificios directamente en el canvas</li>
-                    <li><strong>Agregar objetos:</strong> Usa los botones para crear calles y edificios</li>
-                    <li><strong>Modo edición:</strong> Arrastra y rota objetos visualmente</li>
-                    <li><strong>Conexiones:</strong> Conecta calles para crear flujo de tráfico</li>
-                     <li><strong>Imagen de referencia:</strong> Carga una imagen local o enlaza una URL; puedes reemplazarla o quitarla. Las imágenes locales se incrustan en el JSON; las enlazadas guardan la URL y dependen de que la fuente siga disponible.</li>
-                    <li><strong>Guardar/Cargar:</strong> Exporta e importa simulaciones como JSON</li>
+                    <li><strong data-i18n="guide.mapConstructor.ctrlClickLabel">Ctrl+Clic:</strong> <span data-i18n="guide.mapConstructor.ctrlClickBody">Selecciona calles y edificios directamente en el canvas</span></li>
+                    <li><strong data-i18n="guide.mapConstructor.addLabel">Agregar objetos:</strong> <span data-i18n="guide.mapConstructor.addBody">Usa los botones para crear calles y edificios</span></li>
+                    <li><strong data-i18n="guide.mapConstructor.editLabel">Modo edición:</strong> <span data-i18n="guide.mapConstructor.editBody">Arrastra y rota objetos visualmente</span></li>
+                    <li><strong data-i18n="guide.mapConstructor.connectionsLabel">Conexiones:</strong> <span data-i18n="guide.mapConstructor.connectionsBody">Conecta calles para crear flujo de tráfico</span></li>
+                    <li><strong data-i18n="guide.mapConstructor.referenceLabel">Imagen de referencia:</strong> <span data-i18n="guide.mapConstructor.referenceBody">Carga una imagen local o enlaza una URL; puedes reemplazarla o quitarla. Las imágenes locales se incrustan en el JSON; las enlazadas guardan la URL y dependen de que la fuente siga disponible.</span></li>
+                    <li><strong data-i18n="guide.mapConstructor.saveLoadLabel">Guardar/Cargar:</strong> <span data-i18n="guide.mapConstructor.saveLoadBody">Exporta e importa simulaciones como JSON</span></li>
                   </ul>
                 </div>
               </div>
@@ -1071,14 +1073,14 @@
             <div class="col-md-6 mb-4">
               <div class="card border-warning">
                 <div class="card-body">
-                  <h5 class="card-title text-warning">🅿️ Estacionamientos</h5>
+                  <h5 class="card-title text-warning" data-i18n="guide.parking.title">🅿️ Estacionamientos</h5>
                   <ul class="list-unstyled">
-                    <li><strong>Configuración:</strong> Marca edificio como estacionamiento</li>
-                    <li><strong>Capacidad:</strong> Define máximo de vehículos</li>
-                    <li><strong>Conexiones:</strong> Pares de entrada/salida en calles</li>
-                    <li><strong>Probabilidades:</strong> Ajusta entrada/salida por cada hora (0-100%)</li>
-                    <li><strong>Perfiles:</strong> Normal, Oficina, Centro Comercial</li>
-                    <li><strong>Validación:</strong> Previene configuraciones inválidas</li>
+                    <li><strong data-i18n="guide.parking.configLabel">Configuración:</strong> <span data-i18n="guide.parking.configBody">Marca edificio como estacionamiento</span></li>
+                    <li><strong data-i18n="guide.parking.capacityLabel">Capacidad:</strong> <span data-i18n="guide.parking.capacityBody">Define máximo de vehículos</span></li>
+                    <li><strong data-i18n="guide.parking.connectionsLabel">Conexiones:</strong> <span data-i18n="guide.parking.connectionsBody">Pares de entrada/salida en calles</span></li>
+                    <li><strong data-i18n="guide.parking.probabilitiesLabel">Probabilidades:</strong> <span data-i18n="guide.parking.probabilitiesBody">Ajusta entrada/salida por cada hora (0-100%)</span></li>
+                    <li><strong data-i18n="guide.parking.profilesLabel">Perfiles:</strong> <span data-i18n="guide.parking.profilesBody">Normal, Oficina, Centro Comercial</span></li>
+                    <li><strong data-i18n="guide.parking.validationLabel">Validación:</strong> <span data-i18n="guide.parking.validationBody">Previene configuraciones inválidas</span></li>
                   </ul>
                 </div>
               </div>
@@ -1087,13 +1089,13 @@
             <div class="col-md-6 mb-4">
               <div class="card border-primary">
                 <div class="card-body">
-                  <h5 class="card-title text-primary">💾 Gestión de Escenarios</h5>
+                  <h5 class="card-title text-primary" data-i18n="guide.scenarios.title">💾 Gestión de Escenarios</h5>
                   <ul class="list-unstyled">
-                    <li><strong>Guardar:</strong> Exporta configuración completa como JSON</li>
-                    <li><strong>Cargar:</strong> Importa escenarios previamente guardados</li>
-                    <li><strong>Incluye:</strong> Calles, edificios, estacionamientos</li>
-                    <li><strong>Conexiones:</strong> Mantiene todas las conexiones entre calles</li>
-                    <li><strong>Probabilidades:</strong> Preserva configuraciones horarias</li>
+                    <li><strong data-i18n="guide.scenarios.saveLabel">Guardar:</strong> <span data-i18n="guide.scenarios.saveBody">Exporta configuración completa como JSON</span></li>
+                    <li><strong data-i18n="guide.scenarios.loadLabel">Cargar:</strong> <span data-i18n="guide.scenarios.loadBody">Importa escenarios previamente guardados</span></li>
+                    <li><strong data-i18n="guide.scenarios.includesLabel">Incluye:</strong> <span data-i18n="guide.scenarios.includesBody">Calles, edificios, estacionamientos</span></li>
+                    <li><strong data-i18n="guide.scenarios.connectionsLabel">Conexiones:</strong> <span data-i18n="guide.scenarios.connectionsBody">Mantiene todas las conexiones entre calles</span></li>
+                    <li><strong data-i18n="guide.scenarios.probabilitiesLabel">Probabilidades:</strong> <span data-i18n="guide.scenarios.probabilitiesBody">Preserva configuraciones horarias</span></li>
                   </ul>
                 </div>
               </div>
@@ -1102,44 +1104,44 @@
             <div class="col-12">
               <div class="card border-primary">
                 <div class="card-body">
-                  <h5 class="card-title">📊 Métricas del Simulador</h5>
+                  <h5 class="card-title" data-i18n="guide.metrics.title">📊 Métricas del Simulador</h5>
                   <div class="row">
                     <div class="col-md-6">
-                      <h6 class="text-primary mt-2">📈 Métricas Principales</h6>
+                      <h6 class="text-primary mt-2" data-i18n="guide.metrics.mainTitle">📈 Métricas Principales</h6>
                       <ul class="list-unstyled mb-3">
-                        <li><strong>Densidad:</strong> % de ocupación de las calles (0-100%)</li>
-                        <li><strong>Flujo Vehicular:</strong> Vehículos/segundo según Q=k×v</li>
-                        <li><strong>Tasa de Cambio:</strong> Crecimiento neto de población (veh/s)</li>
-                        <li><strong>Velocidad Promedio:</strong> % de vehículos en movimiento</li>
-                        <li><strong>Entropía de Shannon:</strong> Diversidad de las 8 transiciones del AC (bits)</li>
+                        <li><strong data-i18n="guide.metrics.densityLabel">Densidad:</strong> <span data-i18n="guide.metrics.densityBody">% de ocupación de las calles (0-100%)</span></li>
+                        <li><strong data-i18n="guide.metrics.flowLabel">Flujo Vehicular:</strong> <span data-i18n="guide.metrics.flowBody">Vehículos/segundo según Q=k×v</span></li>
+                        <li><strong data-i18n="guide.metrics.rateLabel">Tasa de Cambio:</strong> <span data-i18n="guide.metrics.rateBody">Crecimiento neto de población (veh/s)</span></li>
+                        <li><strong data-i18n="guide.metrics.speedLabel">Velocidad Promedio:</strong> <span data-i18n="guide.metrics.speedBody">% de vehículos en movimiento</span></li>
+                        <li><strong data-i18n="guide.metrics.entropyLabel">Entropía de Shannon:</strong> <span data-i18n="guide.metrics.entropyBody">Diversidad de las 8 transiciones del AC (bits)</span></li>
                       </ul>
                     </div>
                     <div class="col-md-6">
-                      <h6 class="text-success mt-2">📊 Interpretación Inteligente</h6>
+                      <h6 class="text-success mt-2" data-i18n="guide.metrics.interpretationTitle">📊 Interpretación Inteligente</h6>
                       <ul class="list-unstyled mb-3">
-                        <li>🟢 <strong>Óptimo:</strong> Máxima eficiencia del sistema</li>
-                        <li>🟡 <strong>Moderado:</strong> Condiciones aceptables</li>
-                        <li>🟠 <strong>Congestionado:</strong> Alta densidad con lentitud</li>
-                        <li>🔴 <strong>Colapso:</strong> Calles paralizadas</li>
-                        <li>🔵 <strong>Sub-utilizado:</strong> Baja ocupación</li>
+                        <li>🟢 <strong data-i18n="guide.metrics.optimalLabel">Óptimo:</strong> <span data-i18n="guide.metrics.optimalBody">Máxima eficiencia del sistema</span></li>
+                        <li>🟡 <strong data-i18n="guide.metrics.moderateLabel">Moderado:</strong> <span data-i18n="guide.metrics.moderateBody">Condiciones aceptables</span></li>
+                        <li>🟠 <strong data-i18n="guide.metrics.congestedLabel">Congestionado:</strong> <span data-i18n="guide.metrics.congestedBody">Alta densidad con lentitud</span></li>
+                        <li>🔴 <strong data-i18n="guide.metrics.collapseLabel">Colapso:</strong> <span data-i18n="guide.metrics.collapseBody">Calles paralizadas</span></li>
+                        <li>🔵 <strong data-i18n="guide.metrics.underusedLabel">Sub-utilizado:</strong> <span data-i18n="guide.metrics.underusedBody">Baja ocupación</span></li>
                       </ul>
                     </div>
                   </div>
                   <div class="row">
                     <div class="col-12">
-                      <h6 class="text-warning mt-2">🛠️ Herramientas Disponibles</h6>
+                      <h6 class="text-warning mt-2" data-i18n="guide.metrics.toolsTitle">🛠️ Herramientas Disponibles</h6>
                       <ul class="list-unstyled mb-2">
-                        <li><strong>5 Gráficas en Tiempo Real:</strong> Visualiza todas las métricas con Chart.js</li>
-                        <li><strong>Panel de Estado:</strong> Interpretación automática del tráfico con recomendaciones</li>
-                        <li><strong>Exportar CSV:</strong> Descarga historial completo con estadísticas</li>
-                        <li><strong>Exportar JSON:</strong> Formato estructurado con metadata</li>
-                        <li><strong>Limpiar Métricas:</strong> Reinicia el historial de mediciones</li>
-                        <li><strong>Mapa de Calor:</strong> Visualiza densidad por zona geográfica</li>
+                        <li><strong data-i18n="guide.metrics.chartsLabel">5 Gráficas en Tiempo Real:</strong> <span data-i18n="guide.metrics.chartsBody">Visualiza todas las métricas con Chart.js</span></li>
+                        <li><strong data-i18n="guide.metrics.statusLabel">Panel de Estado:</strong> <span data-i18n="guide.metrics.statusBody">Interpretación automática del tráfico con recomendaciones</span></li>
+                        <li><strong data-i18n="guide.metrics.csvLabel">Exportar CSV:</strong> <span data-i18n="guide.metrics.csvBody">Descarga historial completo con estadísticas</span></li>
+                        <li><strong data-i18n="guide.metrics.jsonLabel">Exportar JSON:</strong> <span data-i18n="guide.metrics.jsonBody">Formato estructurado con metadata</span></li>
+                        <li><strong data-i18n="guide.metrics.clearLabel">Limpiar Métricas:</strong> <span data-i18n="guide.metrics.clearBody">Reinicia el historial de mediciones</span></li>
+                        <li><strong data-i18n="guide.metrics.heatmapLabel">Mapa de Calor:</strong> <span data-i18n="guide.metrics.heatmapBody">Visualiza densidad por zona geográfica</span></li>
                       </ul>
                     </div>
                   </div>
                   <div class="alert alert-info mb-0 mt-2">
-                    <small><strong>💡 Tips:</strong> Las métricas se actualizan cada 5 frames para optimizar rendimiento. El historial de gráficas muestra últimos 50 puntos, pero el CSV exporta TODAS las mediciones desde el inicio.</small>
+                    <small><strong data-i18n="guide.metrics.tipLabel">💡 Tips:</strong> <span data-i18n="guide.metrics.tipBody">Las métricas se actualizan cada 5 frames para optimizar rendimiento. El historial de gráficas muestra últimos 50 puntos, pero el CSV exporta TODAS las mediciones desde el inicio.</span></small>
                   </div>
                 </div>
               </div>
@@ -1148,8 +1150,8 @@
             <div class="col-12 mt-3">
               <div class="card border-primary">
                 <div class="card-body">
-                  <h5 class="card-title text-primary mb-3">📊 Analizador de Métricas Avanzado</h5>
-                  <p class="text-center mb-4">
+                  <h5 class="card-title text-primary mb-3" data-i18n="guide.analyzer.title">📊 Analizador de Métricas Avanzado</h5>
+                  <p class="text-center mb-4" data-i18n="guide.analyzer.description">
                     Genera visualizaciones profesionales a partir de tus métricas exportadas directamente en el navegador
                   </p>
 
@@ -1160,13 +1162,13 @@
                         <div class="card-body">
                           <h6 class="text-primary fw-bold mb-3">
                             <span class="badge bg-primary bg-opacity-75 rounded-pill me-1">1</span>
-                            Análisis Temporal
+                            <span data-i18n="guide.analyzer.temporalTitle">Análisis Temporal</span>
                           </h6>
                           <ul class="list-unstyled small mb-0">
-                            <li class="mb-2">• Densidad vs Tiempo</li>
-                            <li class="mb-2">• Flujo vs Tiempo</li>
-                            <li class="mb-2">• Velocidad vs Tiempo</li>
-                            <li class="mb-2">• Estados de Tráfico clasificados</li>
+                            <li class="mb-2" data-i18n="guide.analyzer.temporalDensity">• Densidad vs Tiempo</li>
+                            <li class="mb-2" data-i18n="guide.analyzer.temporalFlow">• Flujo vs Tiempo</li>
+                            <li class="mb-2" data-i18n="guide.analyzer.temporalSpeed">• Velocidad vs Tiempo</li>
+                            <li class="mb-2" data-i18n="guide.analyzer.temporalStates">• Estados de Tráfico clasificados</li>
                           </ul>
                         </div>
                       </div>
@@ -1177,12 +1179,12 @@
                         <div class="card-body">
                           <h6 class="text-primary fw-bold mb-3">
                             <span class="badge bg-primary bg-opacity-75 rounded-pill me-1">2</span>
-                            Diagrama Fundamental
+                            <span data-i18n="guide.analyzer.fundamentalTitle">Diagrama Fundamental</span>
                           </h6>
                           <ul class="list-unstyled small mb-0">
-                            <li class="mb-2">• Entropía vs Densidad</li>
-                            <li class="mb-2">• Coloreado por Flujo</li>
-                            <li class="mb-2">• <strong>Mapa de Calor</strong> (Día/Hora)</li>
+                            <li class="mb-2" data-i18n="guide.analyzer.fundamentalEntropy">• Entropía vs Densidad</li>
+                            <li class="mb-2" data-i18n="guide.analyzer.fundamentalFlow">• Coloreado por Flujo</li>
+                            <li class="mb-2">• <strong data-i18n="guide.analyzer.fundamentalHeatmap">Mapa de Calor</strong> <span data-i18n="guide.analyzer.fundamentalHeatmapBody">(Día/Hora)</span></li>
                           </ul>
                         </div>
                       </div>
@@ -1193,12 +1195,12 @@
                         <div class="card-body">
                           <h6 class="text-primary fw-bold mb-3">
                             <span class="badge bg-primary bg-opacity-75 rounded-pill me-1">3</span>
-                            Distribuciones
+                            <span data-i18n="guide.analyzer.distributionsTitle">Distribuciones</span>
                           </h6>
                           <ul class="list-unstyled small mb-0">
-                            <li class="mb-2">• Histogramas (Densidad/Flujo)</li>
-                            <li class="mb-2">• Boxplots comparativos</li>
-                            <li class="mb-2">• Estadísticas descriptivas</li>
+                            <li class="mb-2" data-i18n="guide.analyzer.distributionsHistograms">• Histogramas (Densidad/Flujo)</li>
+                            <li class="mb-2" data-i18n="guide.analyzer.distributionsBoxplots">• Boxplots comparativos</li>
+                            <li class="mb-2" data-i18n="guide.analyzer.distributionsStats">• Estadísticas descriptivas</li>
                           </ul>
                         </div>
                       </div>
@@ -1210,15 +1212,15 @@
                     <div class="col-lg-6">
                       <div class="card">
                         <div class="card-body">
-                          <h6 class="fw-bold mb-3">🚀 Cómo Usar</h6>
+                          <h6 class="fw-bold mb-3" data-i18n="guide.analyzer.howToTitle">🚀 Cómo Usar</h6>
                           <ol class="small mb-0 ps-3">
-                            <li class="mb-2">Ejecuta una simulación en FLUVI</li>
-                            <li class="mb-2">Exporta métricas: <strong>"Descargar CSV"</strong></li>
-                            <li class="mb-2">Clic en <strong>"Analizar Métricas"</strong></li>
-                            <li class="mb-2">Carga el archivo CSV exportado</li>
-                            <li class="mb-2">Espera el procesamiento (~30-60 seg)</li>
-                            <li class="mb-2">Navega entre las 3 pestañas</li>
-                            <li>Descarga gráficas (individual o ZIP)</li>
+                            <li class="mb-2" data-i18n="guide.analyzer.step1">Ejecuta una simulación en FLUVI</li>
+                            <li class="mb-2"><span data-i18n="guide.analyzer.step2Before">Exporta métricas:</span> <strong data-i18n="guide.analyzer.step2Action">"Descargar CSV"</strong></li>
+                            <li class="mb-2"><span data-i18n="guide.analyzer.step3Before">Clic en</span> <strong data-i18n="guide.analyzer.step3Action">"Analizar Métricas"</strong></li>
+                            <li class="mb-2" data-i18n="guide.analyzer.step4">Carga el archivo CSV exportado</li>
+                            <li class="mb-2" data-i18n="guide.analyzer.step5">Espera el procesamiento (~30-60 seg)</li>
+                            <li class="mb-2" data-i18n="guide.analyzer.step6">Navega entre las 3 pestañas</li>
+                            <li data-i18n="guide.analyzer.step7">Descarga gráficas (individual o ZIP)</li>
                           </ol>
                         </div>
                       </div>
@@ -1227,14 +1229,14 @@
                     <div class="col-lg-6">
                       <div class="card">
                         <div class="card-body">
-                          <h6 class="fw-bold mb-3">📈 Métricas Calculadas</h6>
+                          <h6 class="fw-bold mb-3" data-i18n="guide.analyzer.calculatedTitle">📈 Métricas Calculadas</h6>
                           <ul class="small mb-0 list-unstyled">
-                            <li class="mb-2">• Clasificación de estados del sistema</li>
-                            <li class="mb-2">• Estadísticas por día de la semana</li>
-                            <li class="mb-2">• Capacidad crítica del sistema</li>
-                            <li class="mb-2">• Correlaciones entre variables</li>
-                            <li class="mb-2">• Detección de eventos anómalos</li>
-                            <li>• Análisis temporal con tendencias</li>
+                            <li class="mb-2" data-i18n="guide.analyzer.calculated1">• Clasificación de estados del sistema</li>
+                            <li class="mb-2" data-i18n="guide.analyzer.calculated2">• Estadísticas por día de la semana</li>
+                            <li class="mb-2" data-i18n="guide.analyzer.calculated3">• Capacidad crítica del sistema</li>
+                            <li class="mb-2" data-i18n="guide.analyzer.calculated4">• Correlaciones entre variables</li>
+                            <li class="mb-2" data-i18n="guide.analyzer.calculated5">• Detección de eventos anómalos</li>
+                            <li data-i18n="guide.analyzer.calculated6">• Análisis temporal con tendencias</li>
                           </ul>
                         </div>
                       </div>
@@ -1243,29 +1245,31 @@
 
                   <!-- Mapa de Calor Destacado -->
                   <div class="border rounded p-3 mb-3">
-                    <h6 class="fw-bold mb-3">🔥 Mapa de Calor</h6>
+                    <h6 class="fw-bold mb-3" data-i18n="guide.analyzer.heatmapTitle">🔥 Mapa de Calor</h6>
                     <p class="small mb-3">
-                      Visualización que organiza la <strong>densidad promedio</strong> en una matriz de:
-                      <span class="badge bg-secondary bg-opacity-50 ms-1">Días de la semana (filas)</span>
-                      <span class="badge bg-secondary bg-opacity-50 ms-1">Horas del día 0-23 (columnas)</span>
+                      <span data-i18n="guide.analyzer.heatmapIntroBefore">Visualización que organiza la</span>
+                      <strong data-i18n="guide.analyzer.heatmapIntroStrong">densidad promedio</strong>
+                      <span data-i18n="guide.analyzer.heatmapIntroAfter">en una matriz de:</span>
+                      <span class="badge bg-secondary bg-opacity-50 ms-1" data-i18n="guide.analyzer.heatmapDays">Días de la semana (filas)</span>
+                      <span class="badge bg-secondary bg-opacity-50 ms-1" data-i18n="guide.analyzer.heatmapHours">Horas del día 0-23 (columnas)</span>
                     </p>
                     <div class="row g-3">
                       <div class="col-md-6">
                         <div class="d-flex align-items-center mb-2 small">
-                          <span class="badge me-2" style="background-color: #fffbeb; border: 1px solid #fde68a; color: #92400e;">Amarillo</span>
-                          <span>→ Baja densidad de vehículos</span>
+                          <span class="badge me-2" style="background-color: #fffbeb; border: 1px solid #fde68a; color: #92400e;" data-i18n="guide.analyzer.heatmapYellow">Amarillo</span>
+                          <span data-i18n="guide.analyzer.heatmapLow">→ Baja densidad de vehículos</span>
                         </div>
                         <div class="d-flex align-items-center small">
-                          <span class="badge bg-danger bg-opacity-75 me-2">Rojo</span>
-                          <span>→ Alta densidad de vehículos</span>
+                          <span class="badge bg-danger bg-opacity-75 me-2" data-i18n="guide.analyzer.heatmapRed">Rojo</span>
+                          <span data-i18n="guide.analyzer.heatmapHigh">→ Alta densidad de vehículos</span>
                         </div>
                       </div>
                       <div class="col-md-6">
                         <ul class="small mb-0 list-unstyled">
-                          <li class="mb-1">• <strong>Horas pico:</strong> Columnas rojas intensas</li>
-                          <li class="mb-1">• <strong>Patrones semanales:</strong> Diferencias entre días</li>
-                          <li class="mb-1">• <strong>Comparativa:</strong> Laboral vs fin de semana</li>
-                          <li>• <strong>Valle:</strong> Madrugada (tonos claros)</li>
+                          <li class="mb-1">• <strong data-i18n="guide.analyzer.heatmapPeakLabel">Horas pico:</strong> <span data-i18n="guide.analyzer.heatmapPeakBody">Columnas rojas intensas</span></li>
+                          <li class="mb-1">• <strong data-i18n="guide.analyzer.heatmapWeeklyLabel">Patrones semanales:</strong> <span data-i18n="guide.analyzer.heatmapWeeklyBody">Diferencias entre días</span></li>
+                          <li class="mb-1">• <strong data-i18n="guide.analyzer.heatmapComparisonLabel">Comparativa:</strong> <span data-i18n="guide.analyzer.heatmapComparisonBody">Laboral vs fin de semana</span></li>
+                          <li>• <strong data-i18n="guide.analyzer.heatmapValleyLabel">Valle:</strong> <span data-i18n="guide.analyzer.heatmapValleyBody">Madrugada (tonos claros)</span></li>
                         </ul>
                       </div>
                     </div>
@@ -1274,9 +1278,8 @@
                   <!-- Footer con información de rendimiento -->
                   <div class="alert alert-info mb-0">
                     <small>
-                      <strong>⏱️ Tiempo de procesamiento:</strong>
-                      Primera carga ~60-90 segundos (inicialización de librerías),
-                      cargas posteriores ~5-12 segundos (datos en caché).
+                      <strong data-i18n="guide.analyzer.processingLabel">⏱️ Tiempo de procesamiento:</strong>
+                      <span data-i18n="guide.analyzer.processingBody">Primera carga ~60-90 segundos (inicialización de librerías), cargas posteriores ~5-12 segundos (datos en caché).</span>
                     </small>
                   </div>
                 </div>
@@ -1285,7 +1288,7 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n="common.close">Cerrar</button>
         </div>
       </div>
     </div>
@@ -1654,8 +1657,8 @@
     <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
       <div class="modal-content">
         <div class="modal-header bg-primary text-white">
-          <h5 class="modal-title" id="aboutModalLabel">ℹ️ Acerca de FLUVI</h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+          <h5 class="modal-title" id="aboutModalLabel" data-i18n="aboutModal.title">ℹ️ Acerca de FLUVI</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" data-i18n-attr="aria-label:common.close"></button>
         </div>
         <div class="modal-body">
           <div class="container-fluid">
@@ -1663,7 +1666,7 @@
             <!-- Título del Proyecto -->
             <div class="text-center mb-4">
               <h4 class="text-primary fw-bold">FLUVI</h4>
-              <p class="lead">Simulador de Sistema de Gestión del Flujo Vehicular en Vialidades Cercanas a Áreas Académicas de IPN - ESCOM</p>
+              <p class="lead" data-i18n="about.projectTitle">Simulador de Sistema de Gestión del Flujo Vehicular en Vialidades Cercanas a Áreas Académicas de IPN - ESCOM</p>
             </div>
 
             <hr class="my-4">
@@ -1672,25 +1675,27 @@
             <section class="mb-5">
               <h5 class="text-primary mb-3">
                 <span class="badge bg-primary me-2">1</span>
-                Introducción
+                <span data-i18n="aboutModal.introduction.title">Introducción</span>
               </h5>
               <div class="card">
                 <div class="card-body">
                   <p>
-                    FLUVI es un simulador de tráfico vehicular basado en <strong>autómatas celulares</strong> diseñado específicamente para analizar y optimizar el flujo de vehículos en vialidades cercanas a áreas académicas del Instituto Politécnico Nacional, con enfoque en la Escuela Superior de Cómputo (ESCOM).
+                    <span data-i18n="aboutModal.introduction.summaryBefore">FLUVI es un simulador de tráfico vehicular basado en</span>
+                    <strong data-i18n="aboutModal.introduction.summaryStrong">autómatas celulares</strong>
+                    <span data-i18n="aboutModal.introduction.summaryAfter">diseñado específicamente para analizar y optimizar el flujo de vehículos en vialidades cercanas a áreas académicas del Instituto Politécnico Nacional, con enfoque en la Escuela Superior de Cómputo (ESCOM).</span>
                   </p>
-                  <p>
+                  <p data-i18n="aboutModal.introduction.models">
                     El sistema permite modelar escenarios complejos de tráfico urbano, incluyendo:
                   </p>
                   <ul>
-                    <li>Múltiples carriles y calles interconectadas</li>
-                    <li>Generación dinámica de vehículos</li>
-                    <li>Cambios de carril con probabilidades configurables</li>
-                    <li>Detección y resolución de intersecciones</li>
-                    <li>Visualización en tiempo real de métricas de tráfico</li>
-                    <li>Calles con curvaturas personalizables</li>
+                    <li data-i18n="aboutModal.introduction.item1">Múltiples carriles y calles interconectadas</li>
+                    <li data-i18n="aboutModal.introduction.item2">Generación dinámica de vehículos</li>
+                    <li data-i18n="aboutModal.introduction.item3">Cambios de carril con probabilidades configurables</li>
+                    <li data-i18n="aboutModal.introduction.item4">Detección y resolución de intersecciones</li>
+                    <li data-i18n="aboutModal.introduction.item5">Visualización en tiempo real de métricas de tráfico</li>
+                    <li data-i18n="aboutModal.introduction.item6">Calles con curvaturas personalizables</li>
                   </ul>
-                  <p>
+                  <p data-i18n="aboutModal.introduction.purpose">
                     Este proyecto surge de la necesidad de comprender y mejorar la circulación vehicular en zonas académicas, permitiendo a investigadores y planificadores urbanos simular diferentes escenarios antes de implementar cambios en la infraestructura real.
                   </p>
                 </div>
@@ -1701,32 +1706,33 @@
             <section class="mb-5">
               <h5 class="text-primary mb-3">
                 <span class="badge bg-primary me-2">2</span>
-                Algoritmos
+                <span data-i18n="aboutModal.algorithms.title">Algoritmos</span>
               </h5>
               <div class="card">
                 <div class="card-body">
-                  <h6 class="fw-bold mb-3">Regla 184 de Autómatas Celulares</h6>
+                  <h6 class="fw-bold mb-3" data-i18n="aboutModal.algorithms.ruleTitle">Regla 184 de Autómatas Celulares</h6>
                   <p>
-                    FLUVI implementa una versión modificada de la <strong>Regla 184</strong>, un autómata celular unidimensional que simula el flujo de tráfico de manera eficiente.
+                    <span data-i18n="aboutModal.algorithms.ruleBefore">FLUVI implementa una versión modificada de la</span>
+                    <strong data-i18n="aboutModal.algorithms.ruleStrong">Regla 184</strong><span data-i18n="aboutModal.algorithms.ruleAfter">, un autómata celular unidimensional que simula el flujo de tráfico de manera eficiente.</span>
                   </p>
 
                   <div class="alert alert-info">
-                    <h6 class="alert-heading">📚 ¿Qué es la Regla 184?</h6>
-                    <p class="mb-0">
+                    <h6 class="alert-heading" data-i18n="aboutModal.algorithms.whatTitle">📚 ¿Qué es la Regla 184?</h6>
+                    <p class="mb-0" data-i18n="aboutModal.algorithms.whatBody">
                       La Regla 184 es un autómata celular que modela el tráfico vehicular donde cada celda puede estar vacía (0) o ocupada por un vehículo (1). Los vehículos se mueven hacia adelante si la celda siguiente está vacía, creando un flujo natural de tráfico.
                     </p>
                   </div>
 
-                  <h6 class="fw-bold mt-4 mb-3">Funcionamiento Básico de la Regla 184</h6>
+                  <h6 class="fw-bold mt-4 mb-3" data-i18n="aboutModal.algorithms.howTitle">Funcionamiento Básico de la Regla 184</h6>
                   <div class="table-responsive">
                     <table class="table table-bordered table-sm">
                       <thead class="table-primary">
                         <tr>
-                          <th>Izquierda</th>
-                          <th>Centro</th>
-                          <th>Derecha</th>
+                          <th data-i18n="aboutModal.algorithms.tableLeft">Izquierda</th>
+                          <th data-i18n="aboutModal.algorithms.tableCenter">Centro</th>
+                          <th data-i18n="aboutModal.algorithms.tableRight">Derecha</th>
                           <th>→</th>
-                          <th>Nuevo Estado (Centro)</th>
+                          <th data-i18n="aboutModal.algorithms.tableNewState">Nuevo Estado (Centro)</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1790,16 +1796,17 @@
                     </table>
                   </div>
 
-                  <h6 class="fw-bold mt-4 mb-3">🔧 Modificaciones Implementadas en FLUVI</h6>
-                  <p>Hemos adaptado y extendido la Regla 184 clásica para soportar escenarios de tráfico más complejos y realistas:</p>
+                  <h6 class="fw-bold mt-4 mb-3" data-i18n="aboutModal.algorithms.modsTitle">🔧 Modificaciones Implementadas en FLUVI</h6>
+                  <p data-i18n="aboutModal.algorithms.modsIntro">Hemos adaptado y extendido la Regla 184 clásica para soportar escenarios de tráfico más complejos y realistas:</p>
 
                   <div class="row g-3">
                     <div class="col-md-6">
                       <div class="card border-primary">
                         <div class="card-body">
-                          <h6 class="card-title text-primary">1️⃣ Multi-carril</h6>
+                          <h6 class="card-title text-primary" data-i18n="aboutModal.algorithms.multiLaneTitle">1️⃣ Multi-carril</h6>
                           <p class="card-text small">
-                            Expandimos la regla unidimensional a un sistema de <strong>múltiples carriles</strong>, permitiendo que los vehículos cambien de carril basándose en probabilidades configurables.
+                            <span data-i18n="aboutModal.algorithms.multiLaneBefore">Expandimos la regla unidimensional a un sistema de</span>
+                            <strong data-i18n="aboutModal.algorithms.multiLaneStrong">múltiples carriles</strong><span data-i18n="aboutModal.algorithms.multiLaneAfter">, permitiendo que los vehículos cambien de carril basándose en probabilidades configurables.</span>
                           </p>
                         </div>
                       </div>
@@ -1808,9 +1815,10 @@
                     <div class="col-md-6">
                       <div class="card border-success">
                         <div class="card-body">
-                          <h6 class="card-title text-success">2️⃣ Celdas de Espera</h6>
+                          <h6 class="card-title text-success" data-i18n="aboutModal.algorithms.waitingTitle">2️⃣ Celdas de Espera</h6>
                           <p class="card-text small">
-                            Introducimos el concepto de <strong>celdas en espera</strong> para manejar bloqueos temporales (como intersecciones o conexiones congestionadas), previniendo colisiones.
+                            <span data-i18n="aboutModal.algorithms.waitingBefore">Introducimos el concepto de</span>
+                            <strong data-i18n="aboutModal.algorithms.waitingStrong">celdas en espera</strong> <span data-i18n="aboutModal.algorithms.waitingAfter">para manejar bloqueos temporales (como intersecciones o conexiones congestionadas), previniendo colisiones.</span>
                           </p>
                         </div>
                       </div>
@@ -1819,9 +1827,12 @@
                     <div class="col-md-6">
                       <div class="card border-warning">
                         <div class="card-body">
-                          <h6 class="card-title text-warning">3️⃣ Conexiones entre Calles</h6>
+                          <h6 class="card-title text-warning" data-i18n="aboutModal.algorithms.connectionsTitle">3️⃣ Conexiones entre Calles</h6>
                           <p class="card-text small">
-                            Implementamos tres tipos de conexiones: <strong>lineales</strong> (1-a-1), <strong>incorporación</strong> (N-a-1) y <strong>probabilísticas</strong> (1-a-N con distribución).
+                            <span data-i18n="aboutModal.algorithms.connectionsBefore">Implementamos tres tipos de conexiones:</span>
+                            <strong data-i18n="aboutModal.algorithms.connectionsLinearStrong">lineales</strong><span data-i18n="aboutModal.algorithms.connectionsAfterLinear"> (1-a-1),</span>
+                            <strong data-i18n="aboutModal.algorithms.connectionsIncorporationStrong">incorporación</strong><span data-i18n="aboutModal.algorithms.connectionsAfterIncorporation"> (N-a-1) y</span>
+                            <strong data-i18n="aboutModal.algorithms.connectionsProbabilisticStrong">probabilísticas</strong><span data-i18n="aboutModal.algorithms.connectionsAfterProbabilistic"> (1-a-N con distribución).</span>
                           </p>
                         </div>
                       </div>
@@ -1830,9 +1841,10 @@
                     <div class="col-md-6">
                       <div class="card border-danger">
                         <div class="card-body">
-                          <h6 class="card-title text-danger">4️⃣ Resolución de Intersecciones</h6>
+                          <h6 class="card-title text-danger" data-i18n="aboutModal.algorithms.intersectionsTitle">4️⃣ Resolución de Intersecciones</h6>
                           <p class="card-text small">
-                            Agregamos un sistema de <strong>prioridad alternante</strong> para resolver conflictos en intersecciones, simulando semáforos o reglas de paso.
+                            <span data-i18n="aboutModal.algorithms.intersectionsBefore">Agregamos un sistema de</span>
+                            <strong data-i18n="aboutModal.algorithms.intersectionsStrong">prioridad alternante</strong> <span data-i18n="aboutModal.algorithms.intersectionsAfter">para resolver conflictos en intersecciones, simulando semáforos o reglas de paso.</span>
                           </p>
                         </div>
                       </div>
@@ -1841,9 +1853,10 @@
                     <div class="col-md-6">
                       <div class="card border-info">
                         <div class="card-body">
-                          <h6 class="card-title text-info">5️⃣ Prevención de Cruces en X</h6>
+                          <h6 class="card-title text-info" data-i18n="aboutModal.algorithms.crossingsTitle">5️⃣ Prevención de Cruces en X</h6>
                           <p class="card-text small">
-                            Implementamos lógica para <strong>prevenir cambios de carril cruzados</strong> (patrón X) donde dos vehículos adyacentes intentan intercambiar carriles simultáneamente.
+                            <span data-i18n="aboutModal.algorithms.crossingsBefore">Implementamos lógica para</span>
+                            <strong data-i18n="aboutModal.algorithms.crossingsStrong">prevenir cambios de carril cruzados</strong> <span data-i18n="aboutModal.algorithms.crossingsAfter">(patrón X) donde dos vehículos adyacentes intentan intercambiar carriles simultáneamente.</span>
                           </p>
                         </div>
                       </div>
@@ -1852,9 +1865,10 @@
                     <div class="col-md-6">
                       <div class="card border-secondary">
                         <div class="card-body">
-                          <h6 class="card-title text-secondary">6️⃣ Calles Curvas</h6>
+                          <h6 class="card-title text-secondary" data-i18n="aboutModal.algorithms.curvesTitle">6️⃣ Calles Curvas</h6>
                           <p class="card-text small">
-                            Extendimos el modelo a <strong>geometrías no lineales</strong> mediante sistema de vértices con interpolación angular para calles con curvaturas.
+                            <span data-i18n="aboutModal.algorithms.curvesBefore">Extendimos el modelo a</span>
+                            <strong data-i18n="aboutModal.algorithms.curvesStrong">geometrías no lineales</strong> <span data-i18n="aboutModal.algorithms.curvesAfter">mediante sistema de vértices con interpolación angular para calles con curvaturas.</span>
                           </p>
                         </div>
                       </div>
@@ -1862,8 +1876,8 @@
                   </div>
 
                   <div class="alert alert-success mt-4">
-                    <h6 class="alert-heading">✅ Resultado</h6>
-                    <p class="mb-0">
+                    <h6 class="alert-heading" data-i18n="aboutModal.algorithms.resultTitle">✅ Resultado</h6>
+                    <p class="mb-0" data-i18n="aboutModal.algorithms.resultBody">
                       Estas modificaciones permiten simular escenarios de tráfico urbano complejos manteniendo la eficiencia computacional de los autómatas celulares, con actualizaciones en tiempo real y soporte para miles de vehículos simultáneos.
                     </p>
                   </div>
@@ -1875,13 +1889,17 @@
             <section class="mb-5">
               <h5 class="text-primary mb-3">
                 <span class="badge bg-primary me-2">3</span>
-                Formato de Archivos
+                <span data-i18n="aboutModal.fileFormat.title">Formato de Archivos</span>
               </h5>
               <div class="card">
                 <div class="card-body">
-                  <p>FLUVI utiliza formato <strong>JSON</strong> para guardar y cargar simulaciones completas.</p>
+                  <p>
+                    <span data-i18n="aboutModal.fileFormat.summaryBefore">FLUVI utiliza formato</span>
+                    <strong>JSON</strong>
+                    <span data-i18n="aboutModal.fileFormat.summaryAfter">para guardar y cargar simulaciones completas.</span>
+                  </p>
 
-                  <h6 class="fw-bold mt-3 mb-2">Estructura del archivo JSON:</h6>
+                  <h6 class="fw-bold mt-3 mb-2" data-i18n="aboutModal.fileFormat.structureTitle">Estructura del archivo JSON:</h6>
                   <pre class="bg-light p-3 rounded"><code>{
   "version": "1.0",
   "nombre": "Nombre de la Simulación",
@@ -1922,7 +1940,7 @@
 }</code></pre>
 
                   <div class="alert alert-info mt-3">
-                    <strong>💡 Consejo:</strong> Puedes exportar tu simulación actual usando el botón "Guardar Simulación" en el Constructor de Mapas.
+                    <strong data-i18n="aboutModal.fileFormat.tipLabel">💡 Consejo:</strong> <span data-i18n="aboutModal.fileFormat.tipBody">Puedes exportar tu simulación actual usando el botón "Guardar Simulación" en el Constructor de Mapas.</span>
                   </div>
                 </div>
               </div>
@@ -1932,19 +1950,19 @@
             <section class="mb-5">
               <h5 class="text-primary mb-3">
                 <span class="badge bg-primary me-2">4</span>
-                Advertencias
+                <span data-i18n="aboutModal.warnings.title">Advertencias</span>
               </h5>
               <div class="card">
                 <div class="card-body">
-                  <p>Algunos problemas conocidos y limitaciones actuales del sistema:</p>
+                  <p data-i18n="aboutModal.warnings.intro">Algunos problemas conocidos y limitaciones actuales del sistema:</p>
                   <ul>
-                    <li><strong>Rendimiento en simulaciones muy grandes:</strong> Simulaciones con más de 50 calles largas pueden experimentar caídas de FPS.</li>
-                    <li><strong>Colisiones en curvas muy cerradas:</strong> Curvaturas extremas (±40°) pueden generar ocasionalmente solapamientos visuales.</li>
-                    <li><strong>Compatibilidad con navegadores antiguos:</strong> Requiere soporte de ES6+ y Canvas API.</li>
+                    <li><strong data-i18n="aboutModal.warnings.performanceLabel">Rendimiento en simulaciones muy grandes:</strong> <span data-i18n="aboutModal.warnings.performanceBody">Simulaciones con más de 50 calles largas pueden experimentar caídas de FPS.</span></li>
+                    <li><strong data-i18n="aboutModal.warnings.curvesLabel">Colisiones en curvas muy cerradas:</strong> <span data-i18n="aboutModal.warnings.curvesBody">Curvaturas extremas (±40°) pueden generar ocasionalmente solapamientos visuales.</span></li>
+                    <li><strong data-i18n="aboutModal.warnings.browserLabel">Compatibilidad con navegadores antiguos:</strong> <span data-i18n="aboutModal.warnings.browserBody">Requiere soporte de ES6+ y Canvas API.</span></li>
                   </ul>
 
                   <div class="alert alert-warning">
-                    <strong>⚠️ Nota:</strong> Estamos trabajando continuamente en mejoras y correcciones. Si encuentras algún problema, por favor repórtalo al equipo de desarrollo.
+                    <strong data-i18n="aboutModal.warnings.noteLabel">⚠️ Nota:</strong> <span data-i18n="aboutModal.warnings.noteBody">Estamos trabajando continuamente en mejoras y correcciones. Si encuentras algún problema, por favor repórtalo al equipo de desarrollo.</span>
                   </div>
                 </div>
               </div>
@@ -1954,11 +1972,11 @@
             <section class="mb-4">
               <h5 class="text-primary mb-3">
                 <span class="badge bg-primary me-2">5</span>
-                Créditos 
+                <span data-i18n="aboutModal.credits.title">Créditos</span>
               </h5>
               <div class="card">
                 <div class="card-body">
-                  <h6 class="fw-bold mb-3">👥 Equipo de Desarrollo</h6>
+                  <h6 class="fw-bold mb-3" data-i18n="aboutModal.credits.teamTitle">👥 Equipo de Desarrollo</h6>
 
                   <div class="row mb-4">
                     <div class="col-md-4 mb-3">
@@ -1967,7 +1985,7 @@
                           <div class="mb-2">👨‍💻</div>
                           <h6 class="card-title">Connor Urbano Mendoza</h6>
                           <p class="card-text small text-muted">soyconnor@outlook.com</p>
-                          <p class="card-text small text-muted">Desarrollador</p>
+                          <p class="card-text small text-muted" data-i18n="aboutModal.credits.roleDeveloper">Desarrollador</p>
                         </div>
                       </div>
                     </div>
@@ -1977,7 +1995,7 @@
                           <div class="mb-2">👨‍💻</div>
                           <h6 class="card-title">Luis Gael Molina Figueroa</h6>
                           <p class="card-text small text-muted">luisgaelmf@gmail.com </p>
-                          <p class="card-text small text-muted">Desarrollador</p>
+                          <p class="card-text small text-muted" data-i18n="aboutModal.credits.roleDeveloper">Desarrollador</p>
                         </div>
                       </div>
                     </div>
@@ -1987,13 +2005,13 @@
                           <div class="mb-2">👩‍💻</div>
                           <h6 class="card-title">Denisse Márquez Morales</h6>
                           <p class="card-text small text-muted">denissemarquez2704@gmail.com</p>
-                          <p class="card-text small text-muted">Desarrolladora</p>
+                          <p class="card-text small text-muted" data-i18n="aboutModal.credits.roleDeveloperFemale">Desarrolladora</p>
                         </div>
                       </div>
                     </div>
                   </div>
 
-<h6 class="fw-bold mb-3 text-center">Directores del Proyecto</h6>
+<h6 class="fw-bold mb-3 text-center" data-i18n="aboutModal.credits.directorsTitle">Directores del Proyecto</h6>
 
 <ul class="list-unstyled text-center mb-0">
   <li>Juárez Martínez Genaro </li>
@@ -2001,7 +2019,7 @@
 </ul>
 
                   <div class="alert alert-info mt-4 mb-0">
-                    <h6 class="alert-heading">🏛️ Institución</h6>
+                    <h6 class="alert-heading" data-i18n="aboutModal.credits.institutionTitle">🏛️ Institución</h6>
                     <p class="mb-1"><strong>Instituto Politécnico Nacional (IPN)</strong></p>
                     <p class="mb-0">Escuela Superior de Cómputo (ESCOM)</p>
                     <p class="mb-0">Artificial Life Robotics (ALIROB)</p>
@@ -2013,7 +2031,7 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Cerrar</button>
+          <button type="button" class="btn btn-primary" data-bs-dismiss="modal" data-i18n="common.close">Cerrar</button>
         </div>
       </div>
     </div>
