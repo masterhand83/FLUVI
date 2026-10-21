@@ -5,12 +5,14 @@ class ReferenceImageEditor {
         this.drag = null;
         this.frame = document.createElement('div');
         this.frame.className = 'reference-image-frame';
-        this.frame.setAttribute('aria-label', 'Imagen de referencia seleccionada; arrastra para mover');
-        this.frame.innerHTML = '<span class="reference-image-rotate-stem"></span><span class="reference-image-handle reference-image-rotate" data-reference-image-handle="rotate" title="Girar imagen" aria-label="Girar imagen"></span><span class="reference-image-handle reference-image-resize" data-reference-image-handle="resize" title="Cambiar tamaño proporcionalmente" aria-label="Cambiar tamaño proporcionalmente"></span>';
+        this.frame.setAttribute('aria-label', tr('referenceImage.selected'));
+        const rotateLabel = tr('referenceImage.rotate');
+        const resizeLabel = tr('referenceImage.resize');
+        this.frame.innerHTML = `<span class="reference-image-rotate-stem"></span><span class="reference-image-handle reference-image-rotate" data-reference-image-handle="rotate" title="${rotateLabel}" aria-label="${rotateLabel}"></span><span class="reference-image-handle reference-image-resize" data-reference-image-handle="resize" title="${resizeLabel}" aria-label="${resizeLabel}"></span>`;
         document.body.appendChild(this.frame);
         this.unavailable = document.createElement('div');
         this.unavailable.className = 'reference-image-unavailable';
-        this.unavailable.textContent = 'Image unavailable';
+        this.unavailable.textContent = tr('referenceImage.unavailable');
         document.body.appendChild(this.unavailable);
 
         this.button = document.getElementById('btnBloquearImagenReferencia');
@@ -87,7 +89,7 @@ class ReferenceImageEditor {
         if (this.button) {
             this.button.disabled = !image;
             this.button.setAttribute('aria-pressed', String(image?.locked === true));
-            this.button.textContent = image?.locked ? '🔒 Desbloquear imagen para alinearla' : '🔓 Bloquear imagen para editar el mapa';
+            this.button.textContent = tr(image?.locked ? 'referenceImage.unlock' : 'referenceImage.lock');
         }
         if (this.visibility) {
             this.visibility.disabled = !image;

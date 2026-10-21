@@ -472,6 +472,31 @@
     },
     "title": "Cargando simulación..."
   },
+  "mapConstructor": {
+    "defaultSimulationName": "Nueva Simulación",
+    "invalidFormat": "Formato de archivo inválido.",
+    "loadConfirm": "¿Cargar simulación «{{name}}»?\nEsto eliminará la simulación actual.",
+    "loadSimulation": "📂 Cargar Simulación",
+    "loadSimulationTooltip": "Cargar una simulación desde un archivo JSON guardado previamente",
+    "newConfirm": "¿Crear una nueva simulación?\nEsto eliminará la simulación actual.",
+    "newSimulation": "➕ Nueva Simulación",
+    "newSimulationTooltip": "Crear una nueva simulación desde cero, borrando todo el contenido actual",
+    "savePromptTitle": "Nombre de la simulación:",
+    "saveSimulation": "💾 Guardar Simulación",
+    "saveSimulationTooltip": "Guardar la simulación actual como archivo JSON",
+    "title": "🗺️ Gestión de Simulación"
+  },
+  "mapLabels": {
+    "fontSize": "Tamaño de etiqueta (px)",
+    "fontSizeError": "Ingresa un número entero de al menos 1 píxel.",
+    "title": "Etiquetas del mapa",
+    "visibility": {
+      "both": "Ambos",
+      "buildings": "Edificios",
+      "off": "Sin etiquetas",
+      "streets": "Calles"
+    }
+  },
   "notifications": {
     "buildingEditor": {
       "invalidNumbers": "Valores inválidos. Verifica todos los campos numéricos.",
@@ -482,6 +507,13 @@
     },
     "buildingInspector": {
       "deleted": "Edificio «{{name}}» eliminado correctamente."
+    },
+    "map": {
+      "created": "Nueva simulación creada.",
+      "loadFailed": "No se pudo cargar la simulación: {{reason}}",
+      "loaded": "Simulación «{{name}}» cargada correctamente.\n\n📊 Resumen:\n  • Calles: {{streets}}\n  • Edificios: {{buildings}}\n  • Conexiones entre calles: {{connections}}",
+      "loadedOmissions": "Parte del contenido guardado no se restauró.\n  • Calles: {{streets}}\n  • Edificios: {{buildings}}",
+      "saved": "Simulación «{{name}}» guardada correctamente como JSON."
     },
     "simulation": {
       "changesAppliedGenerator": "Se actualizaron las probabilidades de «{{name}}»:\n• Generación: {{generation}}%\n• Cambio de carril: {{laneChange}}%",
@@ -610,6 +642,30 @@
       "pairCount": "Configura entre 1 y 10 pares completos de entrada y salida.",
       "unavailable": "No se puede validar el estacionamiento. Intenta de nuevo cuando el mapa termine de cargar."
     }
+  },
+  "referenceImage": {
+    "fileReadFailed": "no se pudo leer el archivo",
+    "help": "Arrastra la imagen para moverla, la esquina para cambiar su tamaño y el círculo para girarla. Bloquéala para seleccionar objetos bajo ella. Las imágenes locales se incluyen en el JSON; las enlazadas guardan solo la URL y sus ajustes y dependen de que la fuente siga disponible. Si falla el enlace, aparece una marca «Imagen no disponible» en su posición y puedes reemplazarlo.",
+    "intro": "Añade una imagen local o enlaza una URL como guía del mapa. Se ajusta inicialmente a la vista y queda alineada al mover o ampliar el mapa.",
+    "invalidUrl": "introduce una URL HTTP o HTTPS de imagen",
+    "link": "🔗 Enlazar o reemplazar imagen",
+    "linkFailed": "No se pudo enlazar la imagen: {{reason}}.",
+    "loadFailed": "el archivo no es una imagen legible",
+    "lock": "🔓 Bloquear imagen para editar el mapa",
+    "missingData": "la imagen de referencia no contiene datos ni URL",
+    "opacity": "Opacidad: ",
+    "remove": "🗑️ Quitar imagen",
+    "resize": "Cambiar tamaño proporcionalmente",
+    "rotate": "Girar imagen",
+    "selected": "Imagen de referencia seleccionada; arrastra para mover",
+    "show": "Mostrar imagen de referencia",
+    "title": "🖼️ Imagen de referencia",
+    "unavailable": "Imagen no disponible",
+    "unlock": "🔒 Desbloquear imagen para alinearla",
+    "upload": "📷 Cargar o reemplazar imagen",
+    "uploadFailed": "No se pudo cargar la imagen: {{reason}}.",
+    "urlLabel": "URL de la imagen",
+    "urlPlaceholder": "https://ejemplo.org/mapa.png"
   },
   "settings": {
     "cellDetection": {

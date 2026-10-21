@@ -479,6 +479,31 @@ window.FLUVI_LOCALE_RESOURCES = {
 				},
 				"title": "Cargando simulación..."
 			},
+			"mapConstructor": {
+				"defaultSimulationName": "Nueva Simulación",
+				"invalidFormat": "Formato de archivo inválido.",
+				"loadConfirm": "¿Cargar simulación «{{name}}»?\nEsto eliminará la simulación actual.",
+				"loadSimulation": "📂 Cargar Simulación",
+				"loadSimulationTooltip": "Cargar una simulación desde un archivo JSON guardado previamente",
+				"newConfirm": "¿Crear una nueva simulación?\nEsto eliminará la simulación actual.",
+				"newSimulation": "➕ Nueva Simulación",
+				"newSimulationTooltip": "Crear una nueva simulación desde cero, borrando todo el contenido actual",
+				"savePromptTitle": "Nombre de la simulación:",
+				"saveSimulation": "💾 Guardar Simulación",
+				"saveSimulationTooltip": "Guardar la simulación actual como archivo JSON",
+				"title": "🗺️ Gestión de Simulación"
+			},
+			"mapLabels": {
+				"fontSize": "Tamaño de etiqueta (px)",
+				"fontSizeError": "Ingresa un número entero de al menos 1 píxel.",
+				"title": "Etiquetas del mapa",
+				"visibility": {
+					"both": "Ambos",
+					"buildings": "Edificios",
+					"off": "Sin etiquetas",
+					"streets": "Calles"
+				}
+			},
 			"notifications": {
 				"buildingEditor": {
 					"invalidNumbers": "Valores inválidos. Verifica todos los campos numéricos.",
@@ -489,6 +514,13 @@ window.FLUVI_LOCALE_RESOURCES = {
 				},
 				"buildingInspector": {
 					"deleted": "Edificio «{{name}}» eliminado correctamente."
+				},
+				"map": {
+					"created": "Nueva simulación creada.",
+					"loadFailed": "No se pudo cargar la simulación: {{reason}}",
+					"loaded": "Simulación «{{name}}» cargada correctamente.\n\n📊 Resumen:\n  • Calles: {{streets}}\n  • Edificios: {{buildings}}\n  • Conexiones entre calles: {{connections}}",
+					"loadedOmissions": "Parte del contenido guardado no se restauró.\n  • Calles: {{streets}}\n  • Edificios: {{buildings}}",
+					"saved": "Simulación «{{name}}» guardada correctamente como JSON."
 				},
 				"simulation": {
 					"changesAppliedGenerator": "Se actualizaron las probabilidades de «{{name}}»:\n• Generación: {{generation}}%\n• Cambio de carril: {{laneChange}}%",
@@ -617,6 +649,30 @@ window.FLUVI_LOCALE_RESOURCES = {
 					"pairCount": "Configura entre 1 y 10 pares completos de entrada y salida.",
 					"unavailable": "No se puede validar el estacionamiento. Intenta de nuevo cuando el mapa termine de cargar."
 				}
+			},
+			"referenceImage": {
+				"fileReadFailed": "no se pudo leer el archivo",
+				"help": "Arrastra la imagen para moverla, la esquina para cambiar su tamaño y el círculo para girarla. Bloquéala para seleccionar objetos bajo ella. Las imágenes locales se incluyen en el JSON; las enlazadas guardan solo la URL y sus ajustes y dependen de que la fuente siga disponible. Si falla el enlace, aparece una marca «Imagen no disponible» en su posición y puedes reemplazarlo.",
+				"intro": "Añade una imagen local o enlaza una URL como guía del mapa. Se ajusta inicialmente a la vista y queda alineada al mover o ampliar el mapa.",
+				"invalidUrl": "introduce una URL HTTP o HTTPS de imagen",
+				"link": "🔗 Enlazar o reemplazar imagen",
+				"linkFailed": "No se pudo enlazar la imagen: {{reason}}.",
+				"loadFailed": "el archivo no es una imagen legible",
+				"lock": "🔓 Bloquear imagen para editar el mapa",
+				"missingData": "la imagen de referencia no contiene datos ni URL",
+				"opacity": "Opacidad: ",
+				"remove": "🗑️ Quitar imagen",
+				"resize": "Cambiar tamaño proporcionalmente",
+				"rotate": "Girar imagen",
+				"selected": "Imagen de referencia seleccionada; arrastra para mover",
+				"show": "Mostrar imagen de referencia",
+				"title": "🖼️ Imagen de referencia",
+				"unavailable": "Imagen no disponible",
+				"unlock": "🔒 Desbloquear imagen para alinearla",
+				"upload": "📷 Cargar o reemplazar imagen",
+				"uploadFailed": "No se pudo cargar la imagen: {{reason}}.",
+				"urlLabel": "URL de la imagen",
+				"urlPlaceholder": "https://ejemplo.org/mapa.png"
 			},
 			"settings": {
 				"cellDetection": {
@@ -1644,6 +1700,31 @@ window.FLUVI_LOCALE_RESOURCES = {
 				},
 				"title": "Loading simulation..."
 			},
+			"mapConstructor": {
+				"defaultSimulationName": "New Simulation",
+				"invalidFormat": "Invalid file format.",
+				"loadConfirm": "Load simulation \"{{name}}\"?\nThis will delete the current simulation.",
+				"loadSimulation": "📂 Load Simulation",
+				"loadSimulationTooltip": "Load a simulation from a previously saved JSON file",
+				"newConfirm": "Create a new simulation?\nThis will delete the current simulation.",
+				"newSimulation": "➕ New Simulation",
+				"newSimulationTooltip": "Create a new simulation from scratch, deleting all current content",
+				"savePromptTitle": "Simulation name:",
+				"saveSimulation": "💾 Save Simulation",
+				"saveSimulationTooltip": "Save the current simulation as a JSON file",
+				"title": "🗺️ Simulation Management"
+			},
+			"mapLabels": {
+				"fontSize": "Label size (px)",
+				"fontSizeError": "Enter a whole number of at least 1 pixel.",
+				"title": "Map labels",
+				"visibility": {
+					"both": "Both",
+					"buildings": "Buildings",
+					"off": "No labels",
+					"streets": "Streets"
+				}
+			},
 			"notifications": {
 				"buildingEditor": {
 					"invalidNumbers": "Invalid values. Check every numeric field.",
@@ -1654,6 +1735,13 @@ window.FLUVI_LOCALE_RESOURCES = {
 				},
 				"buildingInspector": {
 					"deleted": "Building \"{{name}}\" deleted successfully."
+				},
+				"map": {
+					"created": "New simulation created.",
+					"loadFailed": "The simulation could not be loaded: {{reason}}",
+					"loaded": "Simulation \"{{name}}\" loaded successfully.\n\n📊 Summary:\n  • Streets: {{streets}}\n  • Buildings: {{buildings}}\n  • Street connections: {{connections}}",
+					"loadedOmissions": "Some saved content was not restored.\n  • Streets: {{streets}}\n  • Buildings: {{buildings}}",
+					"saved": "Simulation \"{{name}}\" saved successfully as JSON."
 				},
 				"simulation": {
 					"changesAppliedGenerator": "Probabilities for «{{name}}» were updated:\n• Generation: {{generation}}%\n• Lane change: {{laneChange}}%",
@@ -1779,6 +1867,30 @@ window.FLUVI_LOCALE_RESOURCES = {
 					"pairCount": "Configure between 1 and 10 complete entrance and exit pairs.",
 					"unavailable": "Parking cannot be validated. Try again when the map finishes loading."
 				}
+			},
+			"referenceImage": {
+				"fileReadFailed": "the file could not be read",
+				"help": "Drag the image to move it, drag its corner to resize it, and drag the circle to rotate it. Lock it to select objects underneath. Local images are embedded in the JSON; linked images save only the URL and their settings and depend on the source staying available. If the link fails, an «Image unavailable» marker appears at its position and you can replace it.",
+				"intro": "Add a local image or link a URL as a map guide. It initially fits the view and stays aligned as you move or zoom the map.",
+				"invalidUrl": "enter an HTTP or HTTPS image URL",
+				"link": "🔗 Link or replace image",
+				"linkFailed": "The image could not be linked: {{reason}}.",
+				"loadFailed": "the file is not a readable image",
+				"lock": "🔓 Lock image to edit the map",
+				"missingData": "the reference image contains neither data nor a URL",
+				"opacity": "Opacity: ",
+				"remove": "🗑️ Remove image",
+				"resize": "Resize proportionally",
+				"rotate": "Rotate image",
+				"selected": "Selected reference image; drag to move",
+				"show": "Show reference image",
+				"title": "🖼️ Reference image",
+				"unavailable": "Image unavailable",
+				"unlock": "🔒 Unlock image to align it",
+				"upload": "📷 Upload or replace image",
+				"uploadFailed": "The image could not be loaded: {{reason}}.",
+				"urlLabel": "Image URL",
+				"urlPlaceholder": "https://example.org/map.png"
 			},
 			"settings": {
 				"cellDetection": {

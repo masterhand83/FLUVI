@@ -343,6 +343,43 @@ and both themes). Existing behavior regressions remain in
 `tests/parking-configuration.spec.mjs`, `tests/parking-building-inspector.spec.mjs`,
 and `tests/parking-conservation.spec.mjs`.
 
+## Map constructor, reference images, and map labels
+
+The map lifecycle, reference-image, and label controls use three catalog owners:
+
+- `mapConstructor.*` and `notifications.map.*` cover the simulation-management
+  heading, new/save/load buttons and tooltips, the save-name prompt, the
+  new/load confirmations, and success/error toasts. The load summary reports
+  street, building, and street-connection counts with named interpolation;
+  omitted content produces a separate warning toast. Cancelling a prompt,
+  confirmation, or load leaves the current map and unsaved edits untouched.
+- `referenceImage.*` covers the upload/link/remove controls, URL field and
+  placeholder, lock/unlock wording, show/opacity labels, alignment help,
+  selection and handle accessible names, the broken-link marker, and failure
+  messages. Upload and link failures use `fluviNotify` error severity with a
+  translated reason. A failed linked image keeps its placement and settings so
+  it can be replaced, and replacing a local image validates before mutation.
+- `mapLabels.*` covers the visibility dropdown (including its accessible name),
+  its No labels/Streets/Buildings/Both options, the pixel-size field, and the
+  positive-integer validation message. `ui/etiquetas.js` and both renderers
+  continue to draw the stored street/building name unchanged; label visibility
+  and font size remain session-only and are not persisted.
+
+Map saves contain no language or localization preference field, and choosing a
+different startup language never rewrites map names, geometry, lane settings,
+transfer mappings, parking configuration, reference images, uploaded artwork,
+bundled-image keys, or JSON identifiers. `ui/constructor.js` keeps its existing
+replacement and asynchronous-load guards: a cancelled confirmation returns
+before `limpiarSimulacionActual`, and newer requests invalidate older image or
+map loads.
+
+Browser coverage lives in `tests/map-constructor-localization.spec.mjs`
+(Spanish/English, Canvas/Pixi, reference image upload/link/removal/alignment,
+lock/visibility/opacity, broken-link recovery, save/load/new cancellation and
+confirmation, malformed imports, notification severities, safe names, map-label
+names, cross-language map round trips in both directions, desktop/mobile, and
+both themes).
+
 ## Terminology
 
 Keep the distinction from `CONTEXT.md`:

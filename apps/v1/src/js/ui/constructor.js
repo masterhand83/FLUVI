@@ -4,7 +4,7 @@
 // Variables globales del constructor
 const modoConstructor = false;
 let simulacionActual = {
-    nombre: "Nueva Simulación",
+    nombre: tr('mapConstructor.defaultSimulationName'),
     calles: [],
     conexiones: [],
     edificios: []
@@ -74,7 +74,7 @@ function loadReferenceImage(source) {
     const image = new Image();
     return new Promise((resolve, reject) => {
         image.onload = () => resolve(image);
-        image.onerror = () => reject(new Error('No se pudo cargar la imagen de referencia.'));
+        image.onerror = () => reject(new Error(tr('referenceImage.loadFailed')));
         image.src = source;
     });
 }
@@ -82,8 +82,8 @@ function loadReferenceImage(source) {
 function referenceInput(data) {
     const dataUrl = typeof data === 'string' ? data : data.dataUrl;
     const url = typeof data === 'object' ? data.url : null;
-    if (!dataUrl && !url) throw new Error('La imagen de referencia no contiene datos ni URL.');
-    if (url && !/^https?:\/\//i.test(url)) throw new Error('Introduce una URL HTTP o HTTPS de imagen.');
+    if (!dataUrl && !url) throw new Error(tr('referenceImage.missingData'));
+    if (url && !/^https?:\/\//i.test(url)) throw new Error(tr('referenceImage.invalidUrl'));
     const savedPlacement = typeof data === 'object' &&
         Number.isFinite(data.x) && Number.isFinite(data.y) &&
         Number.isFinite(data.width) && Number.isFinite(data.height);
@@ -161,12 +161,12 @@ function configurarEventosConstructor() {
             const dataUrl = await new Promise((resolve, reject) => {
                 const reader = new FileReader();
                 reader.onload = () => resolve(reader.result);
-                reader.onerror = () => reject(new Error('No se pudo leer el archivo.'));
+                reader.onerror = () => reject(new Error(tr('referenceImage.fileReadFailed')));
                 reader.readAsDataURL(file);
             });
             await window.setReferenceImage({ dataUrl });
         } catch (error) {
-            alert(`No se pudo cargar la imagen: ${error.message}`);
+            window.fluviNotify?.error('referenceImage.uploadFailed', { reason: error.message });
         } finally {
             event.target.value = '';
         }
@@ -177,7 +177,7 @@ function configurarEventosConstructor() {
         try {
             await window.setReferenceImage({ url });
         } catch (error) {
-            alert(`No se pudo enlazar la imagen: ${error.message}`);
+            window.fluviNotify?.error('referenceImage.linkFailed', { reason: error.message });
         }
     });
     document.getElementById('btnEliminarImagenReferencia')?.addEventListener('click', () => window.setReferenceImage(null));
@@ -2343,7 +2343,8 @@ async function restaurarEdificios(edificios) {
 
 function guardarSimulacion() {
     // Obtener nombre de la simulación
-    const nombreSimulacion = prompt("Nombre de la simulación:", simulacionActual.nombre || "Nueva Simulación");
+    const nombreSimulacion = prompt(tr('mapConstructor.savePromptTitle'),
+        simulacionActual.nombre || tr('mapConstructor.defaultSimulationName'));
     if (!nombreSimulacion) return;
 
     simulacionActual.nombre = nombreSimulacion;
@@ -2432,7 +2433,7 @@ function guardarSimulacion() {
     URL.revokeObjectURL(url);
 
     console.log(`💾 Simulación "${nombreSimulacion}" guardada`);
-    alert(`Simulación "${nombreSimulacion}" guardada exitosamente como JSON`);
+    window.fluviNotify?.success('notifications.map.saved', { name: nombreSimulacion });
 }
 
 // ==================== CARGAR SIMULACIÓN ====================
@@ -2451,11 +2452,11 @@ function cargarSimulacion(event) {
 
             // Validar estructura
             if (!datosSimulacion.calles || !Array.isArray(datosSimulacion.calles)) {
-                throw new Error("Formato de archivo inválido");
+                throw new Error(tr('mapConstructor.invalidFormat'));
             }
 
             // Confirmar carga
-            const confirmacion = confirm(`¿Cargar simulación "${datosSimulacion.nombre}"?\nEsto eliminará la simulación actual.`);
+            const confirmacion = confirm(tr('mapConstructor.loadConfirm', { name: datosSimulacion.nombre }));
             if (!confirmacion) return;
 
             // Limpiar simulación actual
@@ -2696,24 +2697,27 @@ function cargarSimulacion(event) {
             window.simulacionActual = simulacionActual;
 
             // Mostrar resumen de la carga
-            let mensaje = `✅ Simulación "${datosSimulacion.nombre}" cargada exitosamente\n\n`;
-            mensaje += `📊 Resumen:\n`;
-            mensaje += `  • Calles: ${callesExitosas} cargadas`;
-            if (callesFallidas > 0) {
-                mensaje += ` (${callesFallidas} fallidas)`;
-            }
-            mensaje += `\n  • Edificios: ${window.edificios ? window.edificios.length : 0} cargados\n`;
+            const edificiosCargados = window.edificios ? window.edificios.length : 0;
+            const conexionesCargadas = datosSimulacion.conexiones ? datosSimulacion.conexiones.length : 0;
             const edificiosOmitidos = (datosSimulacion.edificios?.length || 0) - edificiosRestaurados.length;
-            if (edificiosOmitidos > 0) mensaje += `    (${edificiosOmitidos} omitidos por imagen o dimensiones inválidas)\n`;
-            mensaje += `  • Conexiones: ${datosSimulacion.conexiones ? datosSimulacion.conexiones.length : 0} configuradas`;
-
-            alert(mensaje);
+            window.fluviNotify?.success('notifications.map.loaded', {
+                name: datosSimulacion.nombre,
+                streets: callesExitosas,
+                buildings: edificiosCargados,
+                connections: conexionesCargadas
+            });
+            if (callesFallidas > 0 || edificiosOmitidos > 0) {
+                window.fluviNotify?.warning('notifications.map.loadedOmissions', {
+                    streets: callesFallidas,
+                    buildings: edificiosOmitidos
+                });
+            }
 
             console.log(`✅ Simulación "${datosSimulacion.nombre}" cargada completamente`);
 
         } catch (error) {
             console.error("❌ Error al cargar simulación:", error);
-            alert(`❌ Error al cargar simulación: ${error.message}`);
+            window.fluviNotify?.error('notifications.map.loadFailed', { reason: error.message });
         }
     };
 
@@ -2726,20 +2730,20 @@ function cargarSimulacion(event) {
 // ==================== NUEVA SIMULACIÓN ====================
 
 function nuevaSimulacion() {
-    const confirmacion = confirm("¿Crear una nueva simulación?\nEsto eliminará la simulación actual.");
+    const confirmacion = confirm(tr('mapConstructor.newConfirm'));
     if (!confirmacion) return;
 
     limpiarSimulacionActual();
 
     simulacionActual = {
-        nombre: "Nueva Simulación",
+        nombre: tr('mapConstructor.defaultSimulationName'),
         calles: [],
         conexiones: [],
         edificios: []
     };
     window.simulacionActual = simulacionActual;
 
-    alert("Nueva simulación creada");
+    window.fluviNotify?.success('notifications.map.created');
 }
 
 // ==================== LIMPIAR SIMULACIÓN ====================

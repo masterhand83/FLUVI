@@ -180,14 +180,14 @@
               <input id="buildingImageInput" type="file" accept="image/png,image/jpeg,image/webp" hidden>
               <small id="buildingImageStatus" role="status" aria-live="polite" data-i18n="buildingDrawing.imageHelp">PNG, JPEG o WebP, hasta 5 MB. Después, haz clic en el centro del edificio.</small>
               <button type="button" id="buildingImageCancel" class="btn btn-outline-secondary btn-sm" hidden data-i18n="buildingDrawing.cancelImage">Cancelar imagen</button>
-              <label for="labelVisibility">Etiquetas del mapa</label>
-              <select id="labelVisibility" class="form-select form-select-sm" aria-label="Etiquetas del mapa">
-                <option value="off">Sin etiquetas</option>
-                <option value="streets">Calles</option>
-                <option value="buildings">Edificios</option>
-                <option value="both">Ambos</option>
+              <label for="labelVisibility" data-i18n="mapLabels.title">Etiquetas del mapa</label>
+              <select id="labelVisibility" class="form-select form-select-sm" aria-label="Etiquetas del mapa" data-i18n-attr="aria-label:mapLabels.title">
+                <option value="off" data-i18n="mapLabels.visibility.off">Sin etiquetas</option>
+                <option value="streets" data-i18n="mapLabels.visibility.streets">Calles</option>
+                <option value="buildings" data-i18n="mapLabels.visibility.buildings">Edificios</option>
+                <option value="both" data-i18n="mapLabels.visibility.both">Ambos</option>
               </select>
-              <label for="labelFontSize">Tamaño de etiqueta (px)</label>
+              <label for="labelFontSize" data-i18n="mapLabels.fontSize">Tamaño de etiqueta (px)</label>
               <input id="labelFontSize" class="form-control form-control-sm" type="number" min="1" step="1" value="14" aria-describedby="labelFontSizeError">
               <small id="labelFontSizeError" role="alert" aria-live="polite"></small>
             </div>
@@ -204,42 +204,42 @@
         </h2>
         <div id="collapseConstructor" class="accordion-collapse collapse" data-bs-parent="#controlPanelAccordion">
           <div class="accordion-body">
-            <h6 class="mb-3">🗺️ Gestión de Simulación</h6>
+            <h6 class="mb-3" data-i18n="mapConstructor.title">🗺️ Gestión de Simulación</h6>
 
 
             <!-- Botones de gestión de archivo -->
             <div class="d-grid gap-2 mb-3">
-              <button type="button" id="btnNuevaSimulacion" class="btn btn-success btn-sm" data-bs-toggle="tooltip" data-bs-title="Crear una nueva simulación desde cero, borrando todo el contenido actual">
+              <button type="button" id="btnNuevaSimulacion" class="btn btn-success btn-sm" data-bs-toggle="tooltip" data-bs-title="Crear una nueva simulación desde cero, borrando todo el contenido actual" data-i18n="mapConstructor.newSimulation" data-i18n-attr="data-bs-title:mapConstructor.newSimulationTooltip">
                 ➕ Nueva Simulación
               </button>
-              <button type="button" id="btnGuardarSimulacion" class="btn btn-primary btn-sm" data-bs-toggle="tooltip" data-bs-title="Guardar la simulación actual como archivo JSON">
+              <button type="button" id="btnGuardarSimulacion" class="btn btn-primary btn-sm" data-bs-toggle="tooltip" data-bs-title="Guardar la simulación actual como archivo JSON" data-i18n="mapConstructor.saveSimulation" data-i18n-attr="data-bs-title:mapConstructor.saveSimulationTooltip">
                 💾 Guardar Simulación
               </button>
-              <button type="button" id="btnCargarSimulacion" class="btn btn-info btn-sm" data-bs-toggle="tooltip" data-bs-title="Cargar una simulación desde un archivo JSON guardado previamente">
+              <button type="button" id="btnCargarSimulacion" class="btn btn-info btn-sm" data-bs-toggle="tooltip" data-bs-title="Cargar una simulación desde un archivo JSON guardado previamente" data-i18n="mapConstructor.loadSimulation" data-i18n-attr="data-bs-title:mapConstructor.loadSimulationTooltip">
                 📂 Cargar Simulación
               </button>
               <input type="file" id="inputCargarSimulacion" accept=".json" style="display: none;">
             </div>
 
             <hr class="my-3">
-            <h6 class="mb-2">🖼️ Imagen de referencia</h6>
-            <p class="small text-muted">Añade una imagen local o enlaza una URL como guía del mapa. Se ajusta inicialmente a la vista y queda alineada al mover o ampliar el mapa.</p>
+            <h6 class="mb-2" data-i18n="referenceImage.title">🖼️ Imagen de referencia</h6>
+            <p class="small text-muted" data-i18n="referenceImage.intro">Añade una imagen local o enlaza una URL como guía del mapa. Se ajusta inicialmente a la vista y queda alineada al mover o ampliar el mapa.</p>
             <div class="d-grid gap-2 mb-3">
-              <label for="inputImagenReferencia" class="btn btn-outline-primary btn-sm mb-0">📷 Cargar o reemplazar imagen</label>
+              <label for="inputImagenReferencia" class="btn btn-outline-primary btn-sm mb-0" data-i18n="referenceImage.upload">📷 Cargar o reemplazar imagen</label>
               <input type="file" id="inputImagenReferencia" accept="image/*" class="form-control form-control-sm">
-              <label for="inputUrlImagenReferencia" class="form-label mb-0">URL de la imagen</label>
-              <input type="url" id="inputUrlImagenReferencia" class="form-control form-control-sm" placeholder="https://ejemplo.org/mapa.png">
-              <button type="button" id="btnAgregarUrlImagenReferencia" class="btn btn-outline-primary btn-sm">🔗 Enlazar o reemplazar imagen</button>
-              <button type="button" id="btnEliminarImagenReferencia" class="btn btn-outline-danger btn-sm">🗑️ Quitar imagen</button>
+              <label for="inputUrlImagenReferencia" class="form-label mb-0" data-i18n="referenceImage.urlLabel">URL de la imagen</label>
+              <input type="url" id="inputUrlImagenReferencia" class="form-control form-control-sm" placeholder="https://ejemplo.org/mapa.png" data-i18n-attr="placeholder:referenceImage.urlPlaceholder">
+              <button type="button" id="btnAgregarUrlImagenReferencia" class="btn btn-outline-primary btn-sm" data-i18n="referenceImage.link">🔗 Enlazar o reemplazar imagen</button>
+              <button type="button" id="btnEliminarImagenReferencia" class="btn btn-outline-danger btn-sm" data-i18n="referenceImage.remove">🗑️ Quitar imagen</button>
             </div>
-            <button type="button" id="btnBloquearImagenReferencia" class="btn btn-outline-secondary btn-sm mb-2" aria-pressed="false">🔓 Bloquear imagen para editar el mapa</button>
+            <button type="button" id="btnBloquearImagenReferencia" class="btn btn-outline-secondary btn-sm mb-2" aria-pressed="false" data-i18n="referenceImage.lock">🔓 Bloquear imagen para editar el mapa</button>
             <div class="form-check mb-2">
               <input class="form-check-input" type="checkbox" id="mostrarImagenReferencia" checked>
-              <label class="form-check-label" for="mostrarImagenReferencia">Mostrar imagen de referencia</label>
+              <label class="form-check-label" for="mostrarImagenReferencia" data-i18n="referenceImage.show">Mostrar imagen de referencia</label>
             </div>
-            <label for="opacidadImagenReferencia" class="form-label">Opacidad: <output id="valorOpacidadImagenReferencia" for="opacidadImagenReferencia">70%</output></label>
+            <label for="opacidadImagenReferencia" class="form-label" data-i18n="referenceImage.opacity">Opacidad: <output id="valorOpacidadImagenReferencia" for="opacidadImagenReferencia">70%</output></label>
             <input type="range" id="opacidadImagenReferencia" class="form-range mb-2" min="0" max="100" value="70">
-            <p class="small text-muted">Arrastra la imagen para moverla, la esquina para cambiar su tamaño y el círculo para girarla. Bloquéala para seleccionar objetos bajo ella. Las imágenes locales se incluyen en el JSON; las enlazadas guardan solo la URL y sus ajustes y dependen de que la fuente siga disponible. Si falla el enlace, aparece «Image unavailable» en su posición y puedes reemplazarlo.</p>
+            <p class="small text-muted" data-i18n="referenceImage.help">Arrastra la imagen para moverla, la esquina para cambiar su tamaño y el círculo para girarla. Bloquéala para seleccionar objetos bajo ella. Las imágenes locales se incluyen en el JSON; las enlazadas guardan solo la URL y sus ajustes y dependen de que la fuente siga disponible. Si falla el enlace, aparece una marca «Imagen no disponible» en su posición y puedes reemplazarlo.</p>
 
             <hr class="my-3">
 

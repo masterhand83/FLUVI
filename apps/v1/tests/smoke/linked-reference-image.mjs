@@ -78,13 +78,14 @@ for (const usePixi of [false, true]) {
 			const width = window.USE_PIXI ? window.pixiApp.app.renderer.screen.width : canvas.width
 			const height = window.USE_PIXI ? window.pixiApp.app.renderer.screen.height : canvas.height
 			return {
-				text: element.textContent, pointerEvents: getComputedStyle(element).pointerEvents,
+				text: element.textContent, expectedText: window.tr("referenceImage.unavailable"),
+				pointerEvents: getComputedStyle(element).pointerEvents,
 				width: rect.width, height: rect.height,
 				dx: rect.left + rect.width / 2 - (view.left + ((image.x + image.width / 2) * window.escala + window.offsetX) * view.width / width),
 				dy: rect.top + rect.height / 2 - (view.top + ((image.y + image.height / 2) * window.escala + window.offsetY) * view.height / height),
 			}
 		})
-		assert.equal(marker.text, "Image unavailable")
+		assert.equal(marker.text, marker.expectedText)
 		assert.equal(marker.pointerEvents, "none", "marker does not intercept map editing")
 		assert.ok(marker.width < 180 && marker.height < 45, "marker stays small")
 		assert.ok(Math.abs(marker.dx) < 3 && Math.abs(marker.dy) < 3, "marker follows saved map coordinates")

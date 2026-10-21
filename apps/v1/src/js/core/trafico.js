@@ -4630,7 +4630,7 @@ function iniciarSimulacion() {
     labelFontSize?.addEventListener('input', () => {
         const value = labelFontSize.valueAsNumber;
         const valid = Number.isFinite(value) && Number.isInteger(value) && value >= 1;
-        labelFontSize.setCustomValidity(valid ? '' : 'Ingresa un número entero de al menos 1 píxel.');
+        labelFontSize.setCustomValidity(valid ? '' : tr('mapLabels.fontSizeError'));
         labelFontSizeError.textContent = valid ? '' : labelFontSize.validationMessage;
         if (!valid) return;
         window.labelFontSize = value;

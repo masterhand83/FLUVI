@@ -472,6 +472,31 @@
     },
     "title": "Loading simulation..."
   },
+  "mapConstructor": {
+    "defaultSimulationName": "New Simulation",
+    "invalidFormat": "Invalid file format.",
+    "loadConfirm": "Load simulation \"{{name}}\"?\nThis will delete the current simulation.",
+    "loadSimulation": "📂 Load Simulation",
+    "loadSimulationTooltip": "Load a simulation from a previously saved JSON file",
+    "newConfirm": "Create a new simulation?\nThis will delete the current simulation.",
+    "newSimulation": "➕ New Simulation",
+    "newSimulationTooltip": "Create a new simulation from scratch, deleting all current content",
+    "savePromptTitle": "Simulation name:",
+    "saveSimulation": "💾 Save Simulation",
+    "saveSimulationTooltip": "Save the current simulation as a JSON file",
+    "title": "🗺️ Simulation Management"
+  },
+  "mapLabels": {
+    "fontSize": "Label size (px)",
+    "fontSizeError": "Enter a whole number of at least 1 pixel.",
+    "title": "Map labels",
+    "visibility": {
+      "both": "Both",
+      "buildings": "Buildings",
+      "off": "No labels",
+      "streets": "Streets"
+    }
+  },
   "notifications": {
     "buildingEditor": {
       "invalidNumbers": "Invalid values. Check every numeric field.",
@@ -482,6 +507,13 @@
     },
     "buildingInspector": {
       "deleted": "Building \"{{name}}\" deleted successfully."
+    },
+    "map": {
+      "created": "New simulation created.",
+      "loadFailed": "The simulation could not be loaded: {{reason}}",
+      "loaded": "Simulation \"{{name}}\" loaded successfully.\n\n📊 Summary:\n  • Streets: {{streets}}\n  • Buildings: {{buildings}}\n  • Street connections: {{connections}}",
+      "loadedOmissions": "Some saved content was not restored.\n  • Streets: {{streets}}\n  • Buildings: {{buildings}}",
+      "saved": "Simulation \"{{name}}\" saved successfully as JSON."
     },
     "simulation": {
       "changesAppliedGenerator": "Probabilities for «{{name}}» were updated:\n• Generation: {{generation}}%\n• Lane change: {{laneChange}}%",
@@ -607,6 +639,30 @@
       "pairCount": "Configure between 1 and 10 complete entrance and exit pairs.",
       "unavailable": "Parking cannot be validated. Try again when the map finishes loading."
     }
+  },
+  "referenceImage": {
+    "fileReadFailed": "the file could not be read",
+    "help": "Drag the image to move it, drag its corner to resize it, and drag the circle to rotate it. Lock it to select objects underneath. Local images are embedded in the JSON; linked images save only the URL and their settings and depend on the source staying available. If the link fails, an «Image unavailable» marker appears at its position and you can replace it.",
+    "intro": "Add a local image or link a URL as a map guide. It initially fits the view and stays aligned as you move or zoom the map.",
+    "invalidUrl": "enter an HTTP or HTTPS image URL",
+    "link": "🔗 Link or replace image",
+    "linkFailed": "The image could not be linked: {{reason}}.",
+    "loadFailed": "the file is not a readable image",
+    "lock": "🔓 Lock image to edit the map",
+    "missingData": "the reference image contains neither data nor a URL",
+    "opacity": "Opacity: ",
+    "remove": "🗑️ Remove image",
+    "resize": "Resize proportionally",
+    "rotate": "Rotate image",
+    "selected": "Selected reference image; drag to move",
+    "show": "Show reference image",
+    "title": "🖼️ Reference image",
+    "unavailable": "Image unavailable",
+    "unlock": "🔒 Unlock image to align it",
+    "upload": "📷 Upload or replace image",
+    "uploadFailed": "The image could not be loaded: {{reason}}.",
+    "urlLabel": "Image URL",
+    "urlPlaceholder": "https://example.org/map.png"
   },
   "settings": {
     "cellDetection": {

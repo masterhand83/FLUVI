@@ -189,6 +189,9 @@ describe.each([["Canvas", false], ["Pixi", true]])("uploaded-image Edificio in %
 	beforeEach(async () => {
 		await sim.page.evaluate(() => document.getElementById("btnNuevaSimulacion").click())
 		await sim.page.waitForFunction(() => window.edificios.length === 0)
+		await sim.page.evaluate(() => {
+			for (const toast of document.querySelectorAll(".toast")) toast.remove()
+		})
 	})
 
 	afterAll(async () => {
