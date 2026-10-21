@@ -482,6 +482,7 @@ window.FLUVI_LOCALE_RESOURCES = {
 			"mapConstructor": {
 				"defaultSimulationName": "Nueva Simulación",
 				"invalidFormat": "Formato de archivo inválido.",
+				"invalidJson": "El archivo no es JSON válido.",
 				"loadConfirm": "¿Cargar simulación «{{name}}»?\nEsto eliminará la simulación actual.",
 				"loadSimulation": "📂 Cargar Simulación",
 				"loadSimulationTooltip": "Cargar una simulación desde un archivo JSON guardado previamente",
@@ -519,7 +520,7 @@ window.FLUVI_LOCALE_RESOURCES = {
 					"created": "Nueva simulación creada.",
 					"loadFailed": "No se pudo cargar la simulación: {{reason}}",
 					"loaded": "Simulación «{{name}}» cargada correctamente.\n\n📊 Resumen:\n  • Calles: {{streets}}\n  • Edificios: {{buildings}}\n  • Conexiones entre calles: {{connections}}",
-					"loadedOmissions": "Parte del contenido guardado no se restauró.\n  • Calles: {{streets}}\n  • Edificios: {{buildings}}",
+					"loadedOmissions": "Parte del contenido guardado no se restauró (calles inválidas o edificios cuya imagen o dimensiones no se pudieron cargar).\n  • Calles no restauradas: {{streets}}\n  • Edificios no restaurados: {{buildings}}",
 					"saved": "Simulación «{{name}}» guardada correctamente como JSON."
 				},
 				"simulation": {
@@ -660,7 +661,7 @@ window.FLUVI_LOCALE_RESOURCES = {
 				"loadFailed": "el archivo no es una imagen legible",
 				"lock": "🔓 Bloquear imagen para editar el mapa",
 				"missingData": "la imagen de referencia no contiene datos ni URL",
-				"opacity": "Opacidad: ",
+				"opacity": "Opacidad:",
 				"remove": "🗑️ Quitar imagen",
 				"resize": "Cambiar tamaño proporcionalmente",
 				"rotate": "Girar imagen",
@@ -1703,6 +1704,7 @@ window.FLUVI_LOCALE_RESOURCES = {
 			"mapConstructor": {
 				"defaultSimulationName": "New Simulation",
 				"invalidFormat": "Invalid file format.",
+				"invalidJson": "The file is not valid JSON.",
 				"loadConfirm": "Load simulation \"{{name}}\"?\nThis will delete the current simulation.",
 				"loadSimulation": "📂 Load Simulation",
 				"loadSimulationTooltip": "Load a simulation from a previously saved JSON file",
@@ -1740,7 +1742,7 @@ window.FLUVI_LOCALE_RESOURCES = {
 					"created": "New simulation created.",
 					"loadFailed": "The simulation could not be loaded: {{reason}}",
 					"loaded": "Simulation \"{{name}}\" loaded successfully.\n\n📊 Summary:\n  • Streets: {{streets}}\n  • Buildings: {{buildings}}\n  • Street connections: {{connections}}",
-					"loadedOmissions": "Some saved content was not restored.\n  • Streets: {{streets}}\n  • Buildings: {{buildings}}",
+					"loadedOmissions": "Some saved content was not restored (invalid streets or buildings whose images or dimensions could not be loaded).\n  • Streets not restored: {{streets}}\n  • Buildings not restored: {{buildings}}",
 					"saved": "Simulation \"{{name}}\" saved successfully as JSON."
 				},
 				"simulation": {
@@ -1878,7 +1880,7 @@ window.FLUVI_LOCALE_RESOURCES = {
 				"loadFailed": "the file is not a readable image",
 				"lock": "🔓 Lock image to edit the map",
 				"missingData": "the reference image contains neither data nor a URL",
-				"opacity": "Opacity: ",
+				"opacity": "Opacity:",
 				"remove": "🗑️ Remove image",
 				"resize": "Resize proportionally",
 				"rotate": "Rotate image",

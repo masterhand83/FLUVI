@@ -351,8 +351,11 @@ The map lifecycle, reference-image, and label controls use three catalog owners:
   heading, new/save/load buttons and tooltips, the save-name prompt, the
   new/load confirmations, and success/error toasts. The load summary reports
   street, building, and street-connection counts with named interpolation;
-  omitted content produces a separate warning toast. Cancelling a prompt,
-  confirmation, or load leaves the current map and unsaved edits untouched.
+  omitted content produces a separate warning toast, and malformed JSON reports
+  a translated reason. Cancelling a prompt, confirmation, or load leaves the
+  current map and unsaved edits untouched. A generated default simulation name
+  follows the active language and is then stored as ordinary map data, like a
+  street or building name; no language field is added to the payload.
 - `referenceImage.*` covers the upload/link/remove controls, URL field and
   placeholder, lock/unlock wording, show/opacity labels, alignment help,
   selection and handle accessible names, the broken-link marker, and failure

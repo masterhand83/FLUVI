@@ -146,7 +146,7 @@ Para dar forma a una calle seleccionada, pulsa **+ Añadir control** en el inspe
 3. Ajusta **Opacidad** (la imagen nueva empieza al 70 %) o desmarca **Mostrar imagen de referencia** para ocultarla sin perder su posición.
 4. Pulsa **Bloquear imagen para editar el mapa** para ocultar sus controles de alineación y poder seleccionar y arrastrar calles y edificios bajo ella. Desbloquéala desde el mismo botón para volver a moverla, girarla o cambiar su tamaño.
 5. Pulsa **Quitar imagen** para retirarla del mapa.
-6. Al guardar, la imagen local y sus ajustes se incrustan en el JSON. Una imagen enlazada guarda solo la URL y sus ajustes: depende de que la fuente siga disponible al cargar la simulación. Si no carga, aparece «Image unavailable» en su ubicación; puedes sustituir la URL sin perder la alineación. «Nueva Simulación» quita también la imagen.
+6. Al guardar, la imagen local y sus ajustes se incrustan en el JSON. Una imagen enlazada guarda solo la URL y sus ajustes: depende de que la fuente siga disponible al cargar la simulación. Si no carga, aparece una marca «Imagen no disponible» («Image unavailable» en la interfaz inglesa) en su ubicación; puedes sustituir la URL sin perder la alineación. «Nueva Simulación» quita también la imagen.
 
 ## 📝 Formato del Archivo JSON
 

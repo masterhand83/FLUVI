@@ -475,6 +475,7 @@
   "mapConstructor": {
     "defaultSimulationName": "Nueva Simulación",
     "invalidFormat": "Formato de archivo inválido.",
+    "invalidJson": "El archivo no es JSON válido.",
     "loadConfirm": "¿Cargar simulación «{{name}}»?\nEsto eliminará la simulación actual.",
     "loadSimulation": "📂 Cargar Simulación",
     "loadSimulationTooltip": "Cargar una simulación desde un archivo JSON guardado previamente",
@@ -512,7 +513,7 @@
       "created": "Nueva simulación creada.",
       "loadFailed": "No se pudo cargar la simulación: {{reason}}",
       "loaded": "Simulación «{{name}}» cargada correctamente.\n\n📊 Resumen:\n  • Calles: {{streets}}\n  • Edificios: {{buildings}}\n  • Conexiones entre calles: {{connections}}",
-      "loadedOmissions": "Parte del contenido guardado no se restauró.\n  • Calles: {{streets}}\n  • Edificios: {{buildings}}",
+      "loadedOmissions": "Parte del contenido guardado no se restauró (calles inválidas o edificios cuya imagen o dimensiones no se pudieron cargar).\n  • Calles no restauradas: {{streets}}\n  • Edificios no restaurados: {{buildings}}",
       "saved": "Simulación «{{name}}» guardada correctamente como JSON."
     },
     "simulation": {
@@ -653,7 +654,7 @@
     "loadFailed": "el archivo no es una imagen legible",
     "lock": "🔓 Bloquear imagen para editar el mapa",
     "missingData": "la imagen de referencia no contiene datos ni URL",
-    "opacity": "Opacidad: ",
+    "opacity": "Opacidad:",
     "remove": "🗑️ Quitar imagen",
     "resize": "Cambiar tamaño proporcionalmente",
     "rotate": "Girar imagen",

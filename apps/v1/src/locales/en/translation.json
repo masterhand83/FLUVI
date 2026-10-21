@@ -475,6 +475,7 @@
   "mapConstructor": {
     "defaultSimulationName": "New Simulation",
     "invalidFormat": "Invalid file format.",
+    "invalidJson": "The file is not valid JSON.",
     "loadConfirm": "Load simulation \"{{name}}\"?\nThis will delete the current simulation.",
     "loadSimulation": "📂 Load Simulation",
     "loadSimulationTooltip": "Load a simulation from a previously saved JSON file",
@@ -512,7 +513,7 @@
       "created": "New simulation created.",
       "loadFailed": "The simulation could not be loaded: {{reason}}",
       "loaded": "Simulation \"{{name}}\" loaded successfully.\n\n📊 Summary:\n  • Streets: {{streets}}\n  • Buildings: {{buildings}}\n  • Street connections: {{connections}}",
-      "loadedOmissions": "Some saved content was not restored.\n  • Streets: {{streets}}\n  • Buildings: {{buildings}}",
+      "loadedOmissions": "Some saved content was not restored (invalid streets or buildings whose images or dimensions could not be loaded).\n  • Streets not restored: {{streets}}\n  • Buildings not restored: {{buildings}}",
       "saved": "Simulation \"{{name}}\" saved successfully as JSON."
     },
     "simulation": {
@@ -650,7 +651,7 @@
     "loadFailed": "the file is not a readable image",
     "lock": "🔓 Lock image to edit the map",
     "missingData": "the reference image contains neither data nor a URL",
-    "opacity": "Opacity: ",
+    "opacity": "Opacity:",
     "remove": "🗑️ Remove image",
     "resize": "Resize proportionally",
     "rotate": "Rotate image",

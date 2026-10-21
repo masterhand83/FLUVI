@@ -166,7 +166,7 @@ function configurarEventosConstructor() {
             });
             await window.setReferenceImage({ dataUrl });
         } catch (error) {
-            window.fluviNotify?.error('referenceImage.uploadFailed', { reason: error.message });
+            window.fluviNotify.error('referenceImage.uploadFailed', { reason: error.message });
         } finally {
             event.target.value = '';
         }
@@ -177,7 +177,7 @@ function configurarEventosConstructor() {
         try {
             await window.setReferenceImage({ url });
         } catch (error) {
-            window.fluviNotify?.error('referenceImage.linkFailed', { reason: error.message });
+            window.fluviNotify.error('referenceImage.linkFailed', { reason: error.message });
         }
     });
     document.getElementById('btnEliminarImagenReferencia')?.addEventListener('click', () => window.setReferenceImage(null));
@@ -2433,7 +2433,7 @@ function guardarSimulacion() {
     URL.revokeObjectURL(url);
 
     console.log(`💾 Simulación "${nombreSimulacion}" guardada`);
-    window.fluviNotify?.success('notifications.map.saved', { name: nombreSimulacion });
+    window.fluviNotify.success('notifications.map.saved', { name: nombreSimulacion });
 }
 
 // ==================== CARGAR SIMULACIÓN ====================
@@ -2448,7 +2448,12 @@ function cargarSimulacion(event) {
     reader.onload = async (e) => {
         try {
             if (requestVersion !== simulationVersion) return;
-            const datosSimulacion = JSON.parse(e.target.result);
+            let datosSimulacion;
+            try {
+                datosSimulacion = JSON.parse(e.target.result);
+            } catch {
+                throw new Error(tr('mapConstructor.invalidJson'));
+            }
 
             // Validar estructura
             if (!datosSimulacion.calles || !Array.isArray(datosSimulacion.calles)) {
@@ -2700,14 +2705,14 @@ function cargarSimulacion(event) {
             const edificiosCargados = window.edificios ? window.edificios.length : 0;
             const conexionesCargadas = datosSimulacion.conexiones ? datosSimulacion.conexiones.length : 0;
             const edificiosOmitidos = (datosSimulacion.edificios?.length || 0) - edificiosRestaurados.length;
-            window.fluviNotify?.success('notifications.map.loaded', {
+            window.fluviNotify.success('notifications.map.loaded', {
                 name: datosSimulacion.nombre,
                 streets: callesExitosas,
                 buildings: edificiosCargados,
                 connections: conexionesCargadas
             });
             if (callesFallidas > 0 || edificiosOmitidos > 0) {
-                window.fluviNotify?.warning('notifications.map.loadedOmissions', {
+                window.fluviNotify.warning('notifications.map.loadedOmissions', {
                     streets: callesFallidas,
                     buildings: edificiosOmitidos
                 });
@@ -2717,7 +2722,7 @@ function cargarSimulacion(event) {
 
         } catch (error) {
             console.error("❌ Error al cargar simulación:", error);
-            window.fluviNotify?.error('notifications.map.loadFailed', { reason: error.message });
+            window.fluviNotify.error('notifications.map.loadFailed', { reason: error.message });
         }
     };
 
@@ -2743,7 +2748,7 @@ function nuevaSimulacion() {
     };
     window.simulacionActual = simulacionActual;
 
-    window.fluviNotify?.success('notifications.map.created');
+    window.fluviNotify.success('notifications.map.created');
 }
 
 // ==================== LIMPIAR SIMULACIÓN ====================

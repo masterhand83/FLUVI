@@ -80,6 +80,9 @@ const copy = {
 			loadFailed: (reason) =>
 				`The simulation could not be loaded: ${reason}`,
 			invalidFormat: "Invalid file format.",
+			invalidJson: "The file is not valid JSON.",
+			loadedOmissions: (streets, buildings) =>
+				`Some saved content was not restored (invalid streets or buildings whose images or dimensions could not be loaded).\n  • Streets not restored: ${streets}\n  • Buildings not restored: ${buildings}`,
 		},
 		labels: {
 			title: "Map labels",
@@ -138,6 +141,9 @@ const copy = {
 			loadFailed: (reason) =>
 				`No se pudo cargar la simulación: ${reason}`,
 			invalidFormat: "Formato de archivo inválido.",
+			invalidJson: "El archivo no es JSON válido.",
+			loadedOmissions: (streets, buildings) =>
+				`Parte del contenido guardado no se restauró (calles inválidas o edificios cuya imagen o dimensiones no se pudieron cargar).\n  • Calles no restauradas: ${streets}\n  • Edificios no restaurados: ${buildings}`,
 		},
 		labels: {
 			title: "Etiquetas del mapa",
@@ -883,14 +889,69 @@ describe.each([
 				expect(toast.markup).toBe(0)
 
 				await clearToasts(page)
+				const partial = JSON.parse(savedJson)
+				partial.calles.push({
+					nombre: "Invalid roundabout",
+					geometryType: "roundabout",
+					tipo: "conexion",
+					x: 0,
+					y: 0,
+					innerRadius: -5,
+					startAngle: 0,
+					carriles: 2,
+					tamano: 8,
+					angulo: 0,
+					probabilidadGeneracion: 0,
+					probabilidadSaltoDeCarril: 0.05,
+					vertices: [],
+					esCurva: false,
+				})
+				partial.edificios.push({
+					label: "Broken artwork",
+					appearanceMode: "uploaded-image",
+					x: 0,
+					y: 0,
+					width: 10,
+					height: 10,
+					angle: 0,
+					imageData: "data:image/png;base64,AAAA",
+				})
+				await importJson(page, JSON.stringify(partial), true)
+				await page.waitForFunction(
+					() => Boolean(document.querySelector(".toast-header.bg-warning")),
+					{ polling: 100, timeout: 10000 },
+				)
+				const warning = await page.evaluate(() => {
+					const toast = [
+						...document.querySelectorAll(".toast"),
+					].find((element) =>
+						element
+							.querySelector(".toast-header")
+							.classList.contains("bg-warning"),
+					)
+					return {
+						body: toast.querySelector(".toast-body").textContent,
+						markup: toast.querySelectorAll(".toast-body *").length,
+					}
+				})
+				expect(warning.body).toBe(
+					labels.constructor.loadedOmissions(1, 1),
+				)
+				expect(warning.markup).toBe(0)
+				expect(await page.evaluate(() => window.calles.length)).toBe(1)
+				expect(
+					await page.evaluate(() => window.edificios.length),
+				).toBe(1)
+
+				await clearToasts(page)
 				await importJson(page, "{", true)
 				toast = await waitForToast(page)
 				expect(toast.header).toContain("bg-danger")
-				expect(
-					toast.body.startsWith(
-						labels.constructor.loadFailed(""),
+				expect(toast.body).toBe(
+					labels.constructor.loadFailed(
+						labels.constructor.invalidJson,
 					),
-				).toBe(true)
+				)
 				expect(toast.markup).toBe(0)
 
 				await clearToasts(page)
