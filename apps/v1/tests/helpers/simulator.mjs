@@ -131,6 +131,24 @@ export async function openSimulator({
 	}
 }
 
+// Loads the application markup without executing application scripts. Focused
+// static-text audits use this so generated runtime controls are not mistaken for
+// untranslated source content.
+export async function openStaticDocument({ root = V1_ROOT } = {}) {
+	const server = await startStaticServer(root)
+	const { browser, close: closeBrowser } = await launchBrowser()
+	const page = await browser.newPage()
+	await page.setJavaScriptEnabled(false)
+	await page.goto(server.url, { waitUntil: "domcontentloaded" })
+	return {
+		page,
+		close: async () => {
+			await closeBrowser()
+			await server.close()
+		},
+	}
+}
+
 export async function waitForSimulator(page) {
 	await page.waitForFunction(
 		() =>

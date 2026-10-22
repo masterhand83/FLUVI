@@ -1,10 +1,9 @@
 # v1 localization ownership and startup contract
 
 This document is the navigation reference for the Spanish/English interface. The
-feature ticket is `.scratch/v1-english-localization/issues/02-startup-language-and-simulator-controls.md`.
-The first slice covers language selection, loading, sidebar headings, simulation
-controls, a minimal street inspector, and notification plumbing. Later tickets
-own the remaining workflows.
+feature ticket is `.scratch/v1-english-localization/issues/14-bilingual-completeness-and-regression-gates.md`.
+The startup slice and every editor, scenario, metric, image-export, and analyzer
+workflow are implemented; the regression gates below keep the interface complete.
 
 ## Ownership
 
@@ -560,6 +559,63 @@ lock/visibility/opacity, broken-link recovery, save/load/new cancellation and
 confirmation, malformed imports, notification severities, safe names, map-label
 names, cross-language map round trips in both directions, desktop/mobile, and
 both themes).
+
+## Approved untranslated exceptions
+
+The audit deliberately keeps the following content in its source language. They
+are not missing catalog entries, and a reviewer should not "fix" them by
+translating identifiers, saved content, or legacy data formats:
+
+- **Proper names and credits.** People, emails, institutions, `FLUVI`, `IPN`,
+  `ESCOM`, `ALIROB`, developer/director names, and artwork titles keep their
+  spelling in both interface languages.
+- **User-authored content.** Street, building, map, scenario, and Etiqueta names;
+  descriptions; uploaded image data; and any name generated once and then stored
+  are data. They are never renamed by a later language change.
+- **Technical identifiers and developer diagnostics.** Stored enum/model values
+  (`generador`, `conexion`, `devorador`, `lineal`, `incorporacion`,
+  `probabilistica`, `entrada`, `salida`, geometry modes, obstacle textures), JSON
+  keys, DOM IDs, CSS classes, artwork keys, physical lane/cell indexes, public
+  globals, shortcut keys such as `Ctrl`, `Z`, and `⌘ Cmd`, coordinate labels
+  `X:`/`Y:`, JSON/CSV format samples, source comments, and console diagnostics.
+- **Machine-readable compatibility exports.** The CSV metadata headings, column
+  order, `ESTADISTICAS` markers, legacy Spanish weekday names, dot decimals, and
+  download filenames; JSON keys, types, persisted `metricsDescription`/
+  `trafficDescription` values, and history shape; Python internal DataFrame
+  columns, result keys, state/day identifiers, and accepted input formats. The
+  translated export help explains this exception to users.
+- **Artwork.** Bundled building/vehicle/road images and uploaded image bytes are
+  shown as artwork, not translated into replacement images.
+- **Language-neutral values.** Numbers, percentages, units (`c/s`, `ms`, `s`,
+  `×`), timestamps, filenames, and generated runtime measurements.
+
+Residual Spanish **interface prose** is never an approved exception. Visible
+labels, help, validation, confirmations, notifications, renderer-owned text,
+charts, downloaded image text, and Python presentation must be sourced from the
+catalogs, annotated with `data-i18n`, or set through `tr()`.
+
+## Bilingual acceptance gates
+
+Run these focused checks when changing shared localization behavior or preparing
+a release. They supplement the per-workflow browser specs rather than replacing
+them.
+
+| Gate | Coverage |
+| --- | --- |
+| Catalog parity and JavaScript keys | `tests/locales.spec.mjs`; `scripts/validate-locales.mjs` checks literals used through `tr`, `fluviI18n.t`, analyzer/metric/heatmap/image helpers, and `fluviNotify` severities against both catalogs. `pnpm --filter v1 test` also runs the repository validation. |
+| HTML/Python/dynamic inventory and extraction scope | `tests/locales.spec.mjs` checks the non-JavaScript inventory, generated Python messages, extraction inputs/ignores, primary/secondary languages, and the shared call patterns. |
+| Static text and designated attributes | `tests/bilingual-completeness.spec.mjs` loads the markup without scripts, checks every unannotated static string/attribute against the approved exceptions, and asserts that the former Spanish gaps are absent. |
+| Runtime generated controls and renderer-owned text | `tests/bilingual-completeness.spec.mjs` exercises the English street/building surfaces and the vertex-edit badge; per-workflow specs cover Canvas/Pixi panels, charts, tooltips, images, and analyzer states. |
+| Deterministic simulation independence | `tests/language-invariance.spec.mjs` runs the seeded baseline workflow in Spanish and English and compares scenario invariants, occupancy hashes, clock state, and errors with `tests/baseline/baseline.json`. |
+| Cross-language map and scenario contracts | `tests/map-constructor-localization.spec.mjs`, `tests/scenario-localization.spec.mjs`; payloads gain no language field and preserve names, enums, geometry, link mappings, parking, and image identities. |
+| CSV/JSON machine contracts and Python analysis | `tests/export-timestamps.spec.mjs` (legacy and newly generated downloads parsed by the real Python reader) and `tests/analizador-python-localization.spec.mjs` (numerical equivalence and selected-language plot text). |
+| Static deployment | `tests/static-build.spec.mjs`; the build freshness check and copied `src/libs/i18next`, catalogs, and Python messages are required. |
+| Representative complete workflows | Startup/preferences and notification severities: `tests/localization.spec.mjs`; streets: `tests/street-localization.spec.mjs`; connections: `tests/connection-localization.spec.mjs`; buildings/parking: `tests/{building,parking}-localization.spec.mjs`; scenarios: `tests/scenario-localization.spec.mjs`; metrics/heatmaps: `tests/{metrics,heatmap-metric-images}-localization.spec.mjs`; analyzer: `tests/analizador-localization.spec.mjs`. |
+
+`pnpm --filter v1 test` is the fast default and intentionally skips most
+Puppeteer specs. Run the affected workflow spec directly, and run
+`pnpm --filter v1 test:full` plus the quarantined compatibility specs before
+shipping browser-sensitive changes.
 
 ## Terminology
 

@@ -11,8 +11,10 @@ import {
 } from "../scripts/build-locales.mjs"
 import {
 	collectHtmlMessageKeys,
+	collectJavaScriptMessageKeys,
 	flattenCatalog,
 	validateCatalogParity,
+	validateJavaScriptKeys,
 	validateNonJsInventory,
 	validateRepositoryLocales,
 } from "../scripts/validate-locales.mjs"
@@ -39,6 +41,53 @@ async function createInstance(resources, language, fallbackLng = "es") {
 describe("repository locale catalogs", () => {
 	it("keeps Spanish and English keys, placeholders, and plural forms aligned", async () => {
 		expect(await validateRepositoryLocales()).toEqual([])
+	})
+
+	it("checks every literal JavaScript message key against both catalogs", async () => {
+		const catalogs = await readLocaleCatalogs()
+		const keys = await collectJavaScriptMessageKeys()
+		expect(keys.size).toBeGreaterThan(300)
+		expect(validateJavaScriptKeys({ keys, catalogs })).toEqual([])
+	})
+
+	it("rejects a missing English key used through the shared JavaScript call pattern", async () => {
+		const catalogs = structuredClone(await readLocaleCatalogs())
+		delete catalogs.en.translation.streetInspector.name
+		const keys = new Map([["streetInspector.name", "ui/example.js"]])
+		expect(validateJavaScriptKeys({ keys, catalogs })).toEqual([
+			'en: JavaScript key "streetInspector.name" from src/js/ui/example.js is missing from the catalog',
+		])
+	})
+
+	it("configures extraction for classic app scripts and shared integrations only", async () => {
+		const { default: config } = await import("../i18next.config.ts")
+		const html = await readFile(new URL("index.html", v1Root), "utf8")
+		expect(html).not.toMatch(/<script[^>]+type=["']module["']/)
+		expect(config.extract.input).toEqual(["src/js/**/*.js"])
+		expect(config.extract.output).toBe(
+			"src/locales/{{language}}/{{namespace}}.json",
+		)
+		expect(config.extract.ignore).toEqual(
+			expect.arrayContaining(["src/libs/**", "src/bootstrap-5.0.2-dist/**"]),
+		)
+		expect(config.extract.primaryLanguage).toBe("es")
+		expect(config.extract.secondaryLanguages).toEqual(["en"])
+		expect(config.extract.removeUnusedKeys).toBe(false)
+		expect(config.extract.defaultNS).toBe("translation")
+		for (const call of [
+			"tr",
+			"fluviI18n.t",
+			"analyzerText",
+			"metricText",
+			"heatmapText",
+			"imageText",
+			"fluviNotify.success",
+			"fluviNotify.error",
+			"fluviNotify.warning",
+			"fluviNotify.info",
+		]) {
+			expect(config.extract.functions).toContain(call)
+		}
 	})
 
 	it("rejects a missing production key and a mismatched placeholder", async () => {

@@ -569,6 +569,14 @@
   },
   "mapConstructor": {
     "defaultSimulationName": "Nueva Simulación",
+    "help": {
+      "createObjects": "Crea calles y edificios con los botones",
+      "editMode": "Usa el modo edición para posicionarlos",
+      "loadJson": "Carga mapas guardados anteriormente",
+      "quickSelect": "+Clic en el canvas para seleccionar objetos rápidamente",
+      "saveJson": "Guarda tu mapa como archivo JSON",
+      "title": "💡 Cómo usar:"
+    },
     "invalidFormat": "Formato de archivo inválido.",
     "invalidJson": "El archivo no es JSON válido.",
     "loadConfirm": "¿Cargar simulación «{{name}}»?\nEsto eliminará la simulación actual.",
@@ -1316,6 +1324,9 @@
       "generator": "🚗 Generador",
       "sink": "🏁 Devorador"
     },
+    "vertexEditBadgeBody": "Arrastra los vértices para crear curvas",
+    "vertexEditBadgeHint": "Presiona {{key}} para desactivar",
+    "vertexEditBadgeTitle": "🎯 Modo Edición de Vértices",
     "visualEditTitle": "🛠️ Modo Edición Visual"
   },
   "streetGeometry": {
@@ -1472,6 +1483,7 @@
       "restoreDaySuccess": "Multiplicadores de {{day}} restaurados.",
       "restoreDefaults": "🔄 Restaurar Default",
       "restoreOnlyDay": "Solo este día ({{day}})",
+      "restoreOnlyDayOption": "Solo este día",
       "restoreQuestion": "¿Qué deseas restaurar a valores por defecto?",
       "restoreTitle": "Restaurar multiplicadores",
       "sliderTitle": "Controla el rango {{range}}",

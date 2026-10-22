@@ -569,6 +569,14 @@
   },
   "mapConstructor": {
     "defaultSimulationName": "New Simulation",
+    "help": {
+      "createObjects": "Create streets and buildings with the buttons",
+      "editMode": "Use edit mode to position them",
+      "loadJson": "Load previously saved maps",
+      "quickSelect": "+Click on the canvas to select objects quickly",
+      "saveJson": "Save your map as a JSON file",
+      "title": "💡 How to use:"
+    },
     "invalidFormat": "Invalid file format.",
     "invalidJson": "The file is not valid JSON.",
     "loadConfirm": "Load simulation \"{{name}}\"?\nThis will delete the current simulation.",
@@ -1301,6 +1309,9 @@
       "generator": "🚗 Generator",
       "sink": "🏁 Sink"
     },
+    "vertexEditBadgeBody": "Drag vertices to create curves",
+    "vertexEditBadgeHint": "Press {{key}} to disable",
+    "vertexEditBadgeTitle": "🎯 Vertex Edit Mode",
     "visualEditTitle": "🛠️ Visual Edit Mode"
   },
   "streetGeometry": {
@@ -1455,6 +1466,7 @@
       "restoreDaySuccess": "Multipliers for {{day}} restored.",
       "restoreDefaults": "🔄 Restore Defaults",
       "restoreOnlyDay": "Only this day ({{day}})",
+      "restoreOnlyDayOption": "Only this day",
       "restoreQuestion": "What do you want to restore to default values?",
       "restoreTitle": "Restore multipliers",
       "sliderTitle": "Controls the {{range}} range",

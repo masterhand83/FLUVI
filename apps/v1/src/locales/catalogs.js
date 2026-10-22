@@ -576,6 +576,14 @@ window.FLUVI_LOCALE_RESOURCES = {
 			},
 			"mapConstructor": {
 				"defaultSimulationName": "Nueva Simulación",
+				"help": {
+					"createObjects": "Crea calles y edificios con los botones",
+					"editMode": "Usa el modo edición para posicionarlos",
+					"loadJson": "Carga mapas guardados anteriormente",
+					"quickSelect": "+Clic en el canvas para seleccionar objetos rápidamente",
+					"saveJson": "Guarda tu mapa como archivo JSON",
+					"title": "💡 Cómo usar:"
+				},
 				"invalidFormat": "Formato de archivo inválido.",
 				"invalidJson": "El archivo no es JSON válido.",
 				"loadConfirm": "¿Cargar simulación «{{name}}»?\nEsto eliminará la simulación actual.",
@@ -1323,6 +1331,9 @@ window.FLUVI_LOCALE_RESOURCES = {
 					"generator": "🚗 Generador",
 					"sink": "🏁 Devorador"
 				},
+				"vertexEditBadgeBody": "Arrastra los vértices para crear curvas",
+				"vertexEditBadgeHint": "Presiona {{key}} para desactivar",
+				"vertexEditBadgeTitle": "🎯 Modo Edición de Vértices",
 				"visualEditTitle": "🛠️ Modo Edición Visual"
 			},
 			"streetGeometry": {
@@ -1479,6 +1490,7 @@ window.FLUVI_LOCALE_RESOURCES = {
 					"restoreDaySuccess": "Multiplicadores de {{day}} restaurados.",
 					"restoreDefaults": "🔄 Restaurar Default",
 					"restoreOnlyDay": "Solo este día ({{day}})",
+					"restoreOnlyDayOption": "Solo este día",
 					"restoreQuestion": "¿Qué deseas restaurar a valores por defecto?",
 					"restoreTitle": "Restaurar multiplicadores",
 					"sliderTitle": "Controla el rango {{range}}",
@@ -2349,6 +2361,14 @@ window.FLUVI_LOCALE_RESOURCES = {
 			},
 			"mapConstructor": {
 				"defaultSimulationName": "New Simulation",
+				"help": {
+					"createObjects": "Create streets and buildings with the buttons",
+					"editMode": "Use edit mode to position them",
+					"loadJson": "Load previously saved maps",
+					"quickSelect": "+Click on the canvas to select objects quickly",
+					"saveJson": "Save your map as a JSON file",
+					"title": "💡 How to use:"
+				},
 				"invalidFormat": "Invalid file format.",
 				"invalidJson": "The file is not valid JSON.",
 				"loadConfirm": "Load simulation \"{{name}}\"?\nThis will delete the current simulation.",
@@ -3081,6 +3101,9 @@ window.FLUVI_LOCALE_RESOURCES = {
 					"generator": "🚗 Generator",
 					"sink": "🏁 Sink"
 				},
+				"vertexEditBadgeBody": "Drag vertices to create curves",
+				"vertexEditBadgeHint": "Press {{key}} to disable",
+				"vertexEditBadgeTitle": "🎯 Vertex Edit Mode",
 				"visualEditTitle": "🛠️ Visual Edit Mode"
 			},
 			"streetGeometry": {
@@ -3235,6 +3258,7 @@ window.FLUVI_LOCALE_RESOURCES = {
 					"restoreDaySuccess": "Multipliers for {{day}} restored.",
 					"restoreDefaults": "🔄 Restore Defaults",
 					"restoreOnlyDay": "Only this day ({{day}})",
+					"restoreOnlyDayOption": "Only this day",
 					"restoreQuestion": "What do you want to restore to default values?",
 					"restoreTitle": "Restore multipliers",
 					"sliderTitle": "Controls the {{range}} range",

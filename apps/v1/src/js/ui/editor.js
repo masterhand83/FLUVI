@@ -1085,8 +1085,19 @@ class EditorCalles {
         }
         
         const editedBuilding = this.tipoObjetoEditando === 'edificio';
+        const editedBuildingLabel = editedBuilding ? this.objetoEditando.label : null;
         this.salirModoEdicion();
-        if (editedBuilding) alert('✅ Cambios guardados correctamente');
+        if (editedBuilding) {
+            if (window.fluviNotify) {
+                window.fluviNotify.success('notifications.buildingEditor.updated', {
+                    name: editedBuildingLabel
+                });
+            } else {
+                alert(tr('notifications.buildingEditor.updated', {
+                    name: editedBuildingLabel
+                }));
+            }
+        }
     }
     
     cancelarEdicion() {

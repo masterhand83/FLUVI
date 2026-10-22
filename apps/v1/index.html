@@ -410,15 +410,15 @@
             <hr class="my-3">
 
             <div class="alert alert-info p-2 small mb-0">
-              <strong>💡 Cómo usar:</strong>
+              <strong data-i18n="mapConstructor.help.title">💡 Cómo usar:</strong>
               <ul class="mb-0 mt-1 ps-3">
-                <li>Crea calles y edificios con los botones</li>
-                <li><kbd>Ctrl</kbd>+Clic en el canvas para seleccionar objetos rápidamente</li>
-                <li>Usa el modo edición para posicionarlos</li>
+                <li data-i18n="mapConstructor.help.createObjects">Crea calles y edificios con los botones</li>
+                <li><kbd>Ctrl</kbd><span data-i18n="mapConstructor.help.quickSelect">+Clic en el canvas para seleccionar objetos rápidamente</span></li>
+                <li data-i18n="mapConstructor.help.editMode">Usa el modo edición para posicionarlos</li>
                 <li data-i18n="streetConnection.list.howToConnect">Conecta calles con «Agregar Conexión»</li>
                 <li data-i18n="streetConnection.list.howToManage">Gestiona las conexiones existentes con «Ver Conexiones»</li>
-                <li>Guarda tu mapa como archivo JSON</li>
-                <li>Carga mapas guardados anteriormente</li>
+                <li data-i18n="mapConstructor.help.saveJson">Guarda tu mapa como archivo JSON</li>
+                <li data-i18n="mapConstructor.help.loadJson">Carga mapas guardados anteriormente</li>
               </ul>
             </div>
           </div>
@@ -690,7 +690,7 @@
 
               <!-- Escenario actual cargado -->
               <div id="escenarioActualInfo" class="alert alert-success p-2 small mb-2" style="display: none;">
-                <strong data-i18n="scenarios.current.active">✓ Escenario activo:</strong> <span id="escenarioActualNombre">Ninguno</span><br>
+                <strong data-i18n="scenarios.current.active">✓ Escenario activo:</strong> <span id="escenarioActualNombre" data-i18n="scenarios.current.none">Ninguno</span><br>
                 <small class="text-muted"><span data-i18n="scenarios.current.savedAt">Guardado:</span> <span id="escenarioActualFecha">-</span></small>
               </div>
 
@@ -2210,7 +2210,7 @@
           <p data-i18n="virtualTime.profiles.restoreQuestion">¿Qué deseas restaurar a valores por defecto?</p>
           <div class="form-check mb-2">
             <input class="form-check-input" type="radio" name="restaurarMultiplicadoresAlcance" id="restaurarMultiplicadoresSoloDia" value="dia" checked>
-            <label class="form-check-label" for="restaurarMultiplicadoresSoloDia" id="restaurarMultiplicadoresSoloDiaLabel">Solo este día (Lunes)</label>
+            <label class="form-check-label" for="restaurarMultiplicadoresSoloDia" id="restaurarMultiplicadoresSoloDiaLabel" data-i18n="virtualTime.profiles.restoreOnlyDayOption">Solo este día</label>
           </div>
           <div class="form-check">
             <input class="form-check-input" type="radio" name="restaurarMultiplicadoresAlcance" id="restaurarMultiplicadoresTodosDias" value="todos">

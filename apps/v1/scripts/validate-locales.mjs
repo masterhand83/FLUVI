@@ -1,5 +1,5 @@
-import { readFile } from "node:fs/promises"
-import { resolve } from "node:path"
+import { readdir, readFile } from "node:fs/promises"
+import { relative, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import { ANALYZER_MESSAGE_PREFIX, buildLocaleCatalogs, flattenCatalog, readLocaleCatalogs } from "./build-locales.mjs"
 
@@ -11,9 +11,18 @@ export const NON_JS_INVENTORY_PATH = fileURLToPath(
 export const INDEX_HTML_PATH = fileURLToPath(
 	new URL("../index.html", import.meta.url),
 )
+export const JS_MESSAGE_ROOT_PATH = fileURLToPath(
+	new URL("../src/js", import.meta.url),
+)
 
 const PLACEHOLDER_PATTERN = /\{\{\s*([^{}\s]+)\s*\}\}/g
 const PLURAL_SUFFIX_PATTERN = /_(zero|one|two|few|many|other)$/
+
+// The application's actual shared call pattern. i18next-cli extracts the same
+// names; this literal-key scan is the focused fast check that does not need the
+// extractor to rewrite catalogs.
+const JS_MESSAGE_CALL_PATTERN =
+	/\b(?:tr|fluviI18n\.t|analyzerText|metricText|heatmapText|imageText|fluviNotify\.(?:success|error|warning|info))\s*\(\s*(["'])((?:\\.|(?!\1).)+)\1/g
 
 export function interpolatedNames(value) {
 	const names = new Set()
@@ -128,6 +137,56 @@ export function validateCatalogParity(catalogs) {
 	]
 }
 
+async function collectJavascriptFiles(directory) {
+	const files = []
+	for (const entry of await readdir(directory, { withFileTypes: true })) {
+		const path = resolve(directory, entry.name)
+		if (entry.isDirectory()) {
+			files.push(...(await collectJavascriptFiles(path)))
+		} else if (entry.name.endsWith(".js")) {
+			files.push(path)
+		}
+	}
+	return files.sort()
+}
+
+export async function collectJavaScriptMessageKeys(root = JS_MESSAGE_ROOT_PATH) {
+	const keys = new Map()
+	for (const file of await collectJavascriptFiles(root)) {
+		const source = await readFile(file, "utf8")
+		for (const match of source.matchAll(JS_MESSAGE_CALL_PATTERN)) {
+			const key = match[2].replace(/\\(["'\\])/g, "$1")
+			if (!keys.has(key)) {
+				keys.set(key, relative(JS_MESSAGE_ROOT_PATH, file))
+			}
+		}
+	}
+	return keys
+}
+
+function catalogHasBaseKey(entries, key) {
+	if (entries.has(key)) return true
+	for (const candidate of entries.keys()) {
+		if (candidate.startsWith(`${key}_`) && pluralBase(candidate)) return true
+	}
+	return false
+}
+
+export function validateJavaScriptKeys({ keys, catalogs }) {
+	const flattened = flattenCatalogs(catalogs)
+	const errors = []
+	for (const [key, source] of keys) {
+		for (const [language, entries] of flattened) {
+			if (!catalogHasBaseKey(entries, key)) {
+				errors.push(
+					`${language}: JavaScript key "${key}" from src/js/${source} is missing from the catalog`,
+				)
+			}
+		}
+	}
+	return errors
+}
+
 export function collectHtmlMessageKeys(html) {
 	const keys = new Set()
 	for (const match of html.matchAll(/\bdata-i18n="([^"]+)"/g)) {
@@ -213,9 +272,10 @@ export function validateNonJsInventory({ inventory, htmlKeys, catalogs }) {
 
 export async function validateRepositoryLocales() {
 	const catalogs = await readLocaleCatalogs()
-	const [html, inventoryRaw] = await Promise.all([
+	const [html, inventoryRaw, javaScriptKeys] = await Promise.all([
 		readFile(INDEX_HTML_PATH, "utf8"),
 		readFile(NON_JS_INVENTORY_PATH, "utf8"),
+		collectJavaScriptMessageKeys(),
 	])
 	let inventory
 	try {
@@ -225,6 +285,7 @@ export async function validateRepositoryLocales() {
 	}
 	return [
 		...validateCatalogParity(catalogs),
+		...validateJavaScriptKeys({ keys: javaScriptKeys, catalogs }),
 		...validateNonJsInventory({
 			inventory,
 			htmlKeys: collectHtmlMessageKeys(html),

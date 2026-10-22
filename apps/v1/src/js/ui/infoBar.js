@@ -378,11 +378,18 @@
         // Crear badge si no existe
         badge = document.createElement('div');
         badge.id = 'vertexEditModeBadge';
-        badge.innerHTML = `
-          <span style="font-weight: bold;">🎯 Modo Edición de Vértices</span>
-          <br>
-          <small>Arrastra los vértices para crear curvas<br>Presiona <kbd>Z</kbd> para desactivar</small>
-        `;
+        const title = document.createElement('span');
+        title.style.fontWeight = 'bold';
+        title.textContent = tr('streetEditor.vertexEditBadgeTitle');
+        const small = document.createElement('small');
+        small.append(
+          document.createTextNode(tr('streetEditor.vertexEditBadgeBody')),
+          document.createElement('br'),
+          document.createTextNode(
+            tr('streetEditor.vertexEditBadgeHint', { key: 'Z' })
+          )
+        );
+        badge.append(title, document.createElement('br'), small);
         badge.style.cssText = `
           position: fixed;
           top: 80px;
