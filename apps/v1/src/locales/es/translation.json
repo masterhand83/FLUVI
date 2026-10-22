@@ -557,7 +557,11 @@
       "cleared": "Todas las métricas han sido eliminadas exitosamente.",
       "csvExported_one": "Se exportó {{count}} medición a {{file}}.",
       "csvExported_other": "Se exportaron {{count}} mediciones a {{file}}.",
+      "heatmapDimensionsFailed": "No se pudo calcular las dimensiones del mapa.",
+      "heatmapFailed": "No se pudo generar el mapa de calor.",
+      "heatmapNoStreets": "No hay calles en el mapa para generar el mapa de calor.",
       "heatmapUnavailable": "El módulo de mapa de calor no está cargado.",
+      "imagesExportFailed": "No se pudieron exportar las imágenes. Intenta nuevamente.",
       "jsonExported_one": "Se exportó {{count}} medición a {{file}}.",
       "jsonExported_other": "Se exportaron {{count}} mediciones a {{file}}.",
       "nothingToClear": "No hay métricas para limpiar.",
@@ -1468,11 +1472,79 @@
       "csvButton": "Descargar CSV",
       "csvTooltip": "Exportar todas las métricas recolectadas en formato CSV",
       "imagesButton": "Exportar imágenes",
+      "imagesExporting": "Exportando imágenes…",
       "imagesHelp": "ZIP con las cinco gráficas, el resumen y el mapa de calor en PNG.",
       "jsonButton": "Descargar JSON",
       "jsonTooltip": "Exportar todas las métricas recolectadas en formato JSON",
       "legacyNotice": "Los archivos CSV y JSON conservan los encabezados en español y el separador decimal con punto para seguir siendo compatibles con las herramientas de análisis existentes. La interfaz puede estar en otro idioma; el formato de los datos no cambia.",
       "title": "💾 Exportar Métricas"
+    },
+    "heatmap": {
+      "footerNote": "💡 Snapshot de todas las calles. El color de cada vehículo indica la ocupación de hasta 5 celdas de su carril (2 a cada lado); los obstáculos no cuentan como vehículos, pero sí como celdas. La ventana se recorta en extremos y se envuelve en glorietas sin repetir celdas.",
+      "legend": {
+        "congested": {
+          "description": "Congestionamiento - Velocidad baja",
+          "label": "Rojo"
+        },
+        "empty": {
+          "description": "Sin vehículos - Celdas vacías",
+          "label": "Gris"
+        },
+        "fluid": {
+          "description": "Tráfico fluido - Alta velocidad",
+          "label": "Verde"
+        },
+        "moderate": {
+          "description": "Tráfico moderado - Velocidad media",
+          "label": "Amarillo"
+        },
+        "title": "📊 Interpretación del Mapa"
+      },
+      "loading": "Generando mapa de calor...",
+      "loadingDetail": "Analizando densidad de tráfico en tiempo real",
+      "stats": {
+        "renderTime": "Tiempo de Generación",
+        "simTime": "Hora Simulada",
+        "streets": "Calles Renderizadas",
+        "vehicles": "Vehículos Activos"
+      },
+      "subtitle": "Snapshot del estado actual",
+      "title": "Mapa de Calor - Análisis de Tráfico"
+    },
+    "imageExport": {
+      "axis": {
+        "density": "Densidad (%)",
+        "entropy": "Entropía (bits)",
+        "netGeneration": "Cambio neto (veh/s)",
+        "speed": "Velocidad (% movimiento)",
+        "throughput": "Flujo (veh/s)"
+      },
+      "heatmapLegend": {
+        "high": "Mayor congestión",
+        "low": "Menor congestión"
+      },
+      "notes": {
+        "charts_one": "Gráficas: historial completo ({{count}} medición desde la última limpieza o reinicio).",
+        "charts_many": "Gráficas: historial completo ({{count}} mediciones desde la última limpieza o reinicio).",
+        "charts_other": "Gráficas: historial completo ({{count}} mediciones desde la última limpieza o reinicio).",
+        "heatmap": "Mapa de calor: estado actual de todas las calles. La escala verde–rojo representa menor–mayor congestión.",
+        "streets": "Calles incluidas en métricas: {{included}}/{{total}}.",
+        "summary": "Resumen: última medición disponible, no un promedio histórico.",
+        "title": "Alcance de los datos"
+      },
+      "summary": {
+        "entropyDescription": "Diversidad de transiciones del autómata",
+        "entropyLabel": "Entropía de Shannon",
+        "entropyValue": "{{value}} bits",
+        "noObservations": "Sin observaciones adicionales.",
+        "observationsTitle": "Observaciones",
+        "table": {
+          "indicator": "Indicador",
+          "interpretation": "Interpretación",
+          "value": "Valor"
+        }
+      },
+      "timeAxis": "Tiempo virtual"
     },
     "labels": {
       "density": {

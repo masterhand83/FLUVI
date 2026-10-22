@@ -68,14 +68,26 @@ test('exports seven readable PNGs in a ZIP without changing hidden charts or ope
 }, 30000)
 
 test('warns rather than downloading when no metrics are available', async () => {
-    const result = await simulator.page.evaluate(() => {
+    const result = await simulator.page.evaluate(async () => {
         clearMetricHistories()
-        let warned = false
-        const original = window.mostrarAdvertencia
-        window.mostrarAdvertencia = () => { warned = true }
+        for (const toast of document.querySelectorAll('.toast')) toast.remove()
+        const originalCreate = URL.createObjectURL
+        let downloaded = false
+        URL.createObjectURL = blob => { downloaded = true; return originalCreate(blob) }
         document.getElementById('btnExportarImagenes').click()
-        window.mostrarAdvertencia = original
-        return { warned, disabled: document.getElementById('btnExportarImagenes').disabled }
+        URL.createObjectURL = originalCreate
+        await new Promise(resolve => setTimeout(resolve, 250))
+        const toast = document.querySelector('.toast')
+        return {
+            downloaded,
+            disabled: document.getElementById('btnExportarImagenes').disabled,
+            severity: toast?.querySelector('.toast-header')?.className,
+            body: toast?.querySelector('.toast-body')?.textContent,
+            expected: tr('notifications.metrics.nothingToExport'),
+        }
     })
-    expect(result).toEqual({ warned: true, disabled: false })
+    expect(result.downloaded).toBe(false)
+    expect(result.disabled).toBe(false)
+    expect(result.severity).toContain('bg-warning')
+    expect(result.body).toBe(result.expected)
 })

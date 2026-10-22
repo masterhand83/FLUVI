@@ -12,6 +12,9 @@ export default defineConfig({
 		functions: [
 			"tr",
 			"fluviI18n.t",
+			"metricText",
+			"heatmapText",
+			"imageText",
 			"fluviNotify.success",
 			"fluviNotify.error",
 			"fluviNotify.warning",

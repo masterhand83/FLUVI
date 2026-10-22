@@ -1,12 +1,13 @@
 // Exportación independiente del tamaño, visibilidad y tema del panel lateral.
 (() => {
     const WIDTH = 1600;
+    const imageText = (key, options) => typeof window.tr === 'function' ? window.tr(key, options) : key;
     const chartDefinitions = [
-        ['densidad', 'Densidad (%)', () => densityChartInstance, 'density'],
-        ['flujo_vehicular', 'Flujo (veh/s)', () => throughputChartInstance, 'throughput'],
-        ['velocidad', 'Velocidad (% movimiento)', () => speedChartInstance, 'speed'],
-        ['tasa_de_cambio', 'Cambio neto (veh/s)', () => netGenerationChartInstance, 'netGeneration'],
-        ['entropia', 'Entropía (bits)', () => entropyChartInstance, 'entropy']
+        ['densidad', 'metrics.imageExport.axis.density', () => densityChartInstance, 'density'],
+        ['flujo_vehicular', 'metrics.imageExport.axis.throughput', () => throughputChartInstance, 'throughput'],
+        ['velocidad', 'metrics.imageExport.axis.speed', () => speedChartInstance, 'speed'],
+        ['tasa_de_cambio', 'metrics.imageExport.axis.netGeneration', () => netGenerationChartInstance, 'netGeneration'],
+        ['entropia', 'metrics.imageExport.axis.entropy', () => entropyChartInstance, 'entropy']
     ];
 
     function reportCanvas(height) {
@@ -29,7 +30,7 @@
         return value;
     }
 
-    function chartImage(source, name, unit, metric) {
+    function chartImage(source, name, unitKey, metric) {
         if (!source) throw new Error('Las gráficas todavía no están disponibles');
         const plot = document.createElement('canvas');
         plot.width = WIDTH - 96;
@@ -38,8 +39,8 @@
         options.responsive = false;
         options.animation = false;
         options.devicePixelRatio = 1;
-        options.scales.x.title = { ...options.scales.x.title, display: true, text: 'Tiempo virtual' };
-        options.scales.y.title = { ...options.scales.y.title, display: true, text: unit };
+        options.scales.x.title = { ...options.scales.x.title, display: true, text: imageText('metrics.imageExport.timeAxis') };
+        options.scales.y.title = { ...options.scales.y.title, display: true, text: imageText(unitKey) };
         if (name === 'tasa_de_cambio') delete options.scales.y.min;
         for (const axis of Object.values(options.scales || {})) {
             axis.ticks = { ...axis.ticks, color: '#334155', font: { ...axis.ticks?.font, size: 24 } };
@@ -90,15 +91,22 @@
             text(item.querySelector('.metric-value')),
             text(item.querySelector('.metric-desc')).replace(/^→\s*/, '')
         ]);
-        rows.push(['Entropía de Shannon', `${metricsHistory.entropy.at(-1)} bits`, 'Diversidad de transiciones del autómata']);
+        rows.push([
+            imageText('metrics.imageExport.summary.entropyLabel'),
+            imageText('metrics.imageExport.summary.entropyValue', { value: metricsHistory.entropy.at(-1) }),
+            imageText('metrics.imageExport.summary.entropyDescription')
+        ]);
         const observations = [...panel.querySelectorAll('.observation-item')]
             .map(item => wrap(text(item).replace(/^•\s*/, ''), WIDTH - 216));
-        if (!observations.length) observations.push(['Sin observaciones adicionales.']);
+        if (!observations.length) observations.push([imageText('metrics.imageExport.summary.noObservations')]);
+        const includedStreets = window.calles.filter(
+            (_, index) => callesIncluidasEnMetricas === null || callesIncluidasEnMetricas.has(index)
+        ).length;
         const notes = [
-            `Gráficas: historial completo (${completeMetricsHistory.timestamps.length} mediciones desde la última limpieza o reinicio).`,
-            'Resumen: última medición disponible, no un promedio histórico.',
-            `Calles incluidas en métricas: ${window.calles.filter((_, index) => callesIncluidasEnMetricas === null || callesIncluidasEnMetricas.has(index)).length}/${window.calles.length}.`,
-            'Mapa de calor: estado actual de todas las calles. La escala verde–rojo representa menor–mayor congestión.'
+            imageText('metrics.imageExport.notes.charts', { count: completeMetricsHistory.timestamps.length }),
+            imageText('metrics.imageExport.notes.summary'),
+            imageText('metrics.imageExport.notes.streets', { included: includedStreets, total: window.calles.length }),
+            imageText('metrics.imageExport.notes.heatmap')
         ].flatMap(note => wrap(note, WIDTH - 160));
         const bandHeight = 110 + description.length * 38;
         const tableTop = 48 + bandHeight + 48;
@@ -121,7 +129,11 @@
         ctx.fillRect(48, tableTop, WIDTH - 96, 64);
         ctx.fillStyle = '#ffffff';
         ctx.font = 'bold 26px sans-serif';
-        ['Indicador', 'Valor', 'Interpretación'].forEach((label, index) => ctx.fillText(label, [80, 510, 800][index], tableTop + 42));
+        [
+            imageText('metrics.imageExport.summary.table.indicator'),
+            imageText('metrics.imageExport.summary.table.value'),
+            imageText('metrics.imageExport.summary.table.interpretation')
+        ].forEach((label, index) => ctx.fillText(label, [80, 510, 800][index], tableTop + 42));
         rows.forEach((row, index) => {
             const y = tableTop + 64 + index * 76;
             ctx.fillStyle = index % 2 === 0 ? '#f5f7fa' : '#ffffff';
@@ -140,7 +152,7 @@
 
         ctx.fillStyle = '#244663';
         ctx.font = 'bold 28px sans-serif';
-        ctx.fillText('Observaciones', 80, observationsTop + 32);
+        ctx.fillText(imageText('metrics.imageExport.summary.observationsTitle'), 80, observationsTop + 32);
         ctx.font = '26px sans-serif';
         ctx.fillStyle = '#334155';
         let y = observationsTop + 80;
@@ -156,7 +168,7 @@
         ctx.stroke();
         ctx.fillStyle = '#475569';
         ctx.font = 'bold 24px sans-serif';
-        ctx.fillText('Alcance de los datos', 80, notesTop + 42);
+        ctx.fillText(imageText('metrics.imageExport.notes.title'), 80, notesTop + 42);
         ctx.font = '24px sans-serif';
         notes.forEach((line, index) => ctx.fillText(line, 80, notesTop + 82 + index * 38));
         return image;
@@ -172,12 +184,13 @@
     async function exportImages(button) {
         if (button.disabled) return;
         if (!completeMetricsHistory.timestamps.length) {
-            mostrarAdvertencia('Sin métricas', 'Ejecuta la simulación antes de exportar imágenes.');
+            window.fluviNotify?.warning('notifications.metrics.nothingToExport');
             return;
         }
-        const label = button.textContent;
+        const labelElement = button.querySelector('[data-i18n="metrics.export.imagesButton"]') || button;
+        const label = labelElement.textContent;
         button.disabled = true;
-        button.textContent = 'Exportando imágenes…';
+        labelElement.textContent = imageText('metrics.export.imagesExporting');
         try {
             if (!window.JSZip || !window.heatmapModal) throw new Error('No se cargaron los módulos de exportación');
             // Capturar todo antes del primer await: la simulación puede seguir corriendo.
@@ -193,9 +206,9 @@
             ctx.fillRect(48, map.height + 78, WIDTH - 96, 20);
             ctx.fillStyle = '#172033';
             ctx.font = '26px sans-serif';
-            ctx.fillText('Menor congestión', 48, map.height + 135);
+            ctx.fillText(imageText('metrics.imageExport.heatmapLegend.low'), 48, map.height + 135);
             ctx.textAlign = 'right';
-            ctx.fillText('Mayor congestión', WIDTH - 48, map.height + 135);
+            ctx.fillText(imageText('metrics.imageExport.heatmapLegend.high'), WIDTH - 48, map.height + 135);
             images.push(['mapa_de_calor', heatmap]);
             const zip = new JSZip();
             await Promise.all(images.map(async ([name, image]) => {
@@ -212,10 +225,10 @@
             setTimeout(() => URL.revokeObjectURL(url), 1000);
         } catch (error) {
             console.error('Error al exportar imágenes de métricas:', error);
-            mostrarError('Error de exportación', 'No se pudieron exportar las imágenes. Intenta nuevamente.');
+            window.fluviNotify?.error('notifications.metrics.imagesExportFailed');
         } finally {
             button.disabled = false;
-            button.textContent = label;
+            labelElement.textContent = label;
         }
     }
 

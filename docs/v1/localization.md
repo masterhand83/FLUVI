@@ -426,6 +426,51 @@ compatibility is covered by `tests/export-timestamps.spec.mjs`, which downloads
 CSV/JSON in both interface languages and parses them with the real Python reader
 alongside the legacy fixtures.
 
+## Heatmaps and metric images
+
+The heatmap modal and the seven-image metric archive use two catalog owners:
+
+- `metrics.heatmap.*` covers the modal title/subtitle, statistics labels, legend
+  labels and descriptions, loading text, and footer explanation. The shared
+  close action uses `common.close`. Static content is annotated in
+  `index.html`.
+  `notifications.metrics.heatmapNoStreets`, `heatmapDimensionsFailed`,
+  `heatmapFailed`, and `heatmapUnavailable` use explicit warning/error severity
+  and keyed catalog messages. The no-streets path reports a warning instead of
+  opening an empty modal. A missing bounding box reports the specific dimensions
+  failure in the modal and supplies the thrown reason for the offscreen export
+  path, whose caller still reports the generic image-export failure.
+- `metrics.imageExport.*` covers the five chart y-axis unit titles, the virtual
+  time axis, the summary table headers, entropy row, observations heading,
+  no-observation fallback, data-scope notes (including plural chart counts and
+  included/total street interpolation), heatmap scale labels, and the
+  `metrics.export.imagesExporting` temporary button label. Export failures use
+  `notifications.metrics.imagesExportFailed`; an empty history uses the existing
+  `notifications.metrics.nothingToExport` warning.
+
+The image archive keeps its existing seven filenames, white background, 1600px
+width, chart layout, table/notes placement, legend geometry, and no added titles
+or subtitles. Only human-readable drawing text follows the active session
+language. Dataset labels already come from the localized live chart
+configuration; exported charts still clone and replace the full
+`completeMetricsHistory` window, while live charts and JSON keep the latest-50
+window. The offscreen heatmap render uses the same `getLocalDensity`,
+`getColorForDensity`, street iteration, and map bounds in both languages, and
+never opens or changes the modal. Exporting also does not mutate live chart
+data, selection state, or the active simulation.
+
+Browser coverage lives in `tests/heatmap-metric-images-localization.spec.mjs`:
+Spanish and English with both Canvas and Pixi, translated modal/legend/stat
+content, accessible close labels, actual downloaded ZIP inspection for all seven
+PNGs, captured text from the exported chart/summary/heatmap rendering, absent
+foreign-language sentinels, unchanged live chart data, no modal opening, and
+desktop/mobile plus light/dark layout checks. Existing regressions remain in
+`tests/heatmap-density.spec.mjs` (five-cell density, roundabout wrapping,
+obstacle handling, lane locality, and full street coverage),
+`tests/metrics-images.spec.mjs` (readable ZIP contents and warning severity),
+and `tests/metric-image-export.spec.mjs` (full-history export without mutating
+live charts or JSON).
+
 ## Map constructor, reference images, and map labels
 
 The map lifecycle, reference-image, and label controls use three catalog owners:

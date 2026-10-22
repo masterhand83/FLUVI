@@ -2234,11 +2234,11 @@
           <div class="d-flex align-items-center gap-3">
             <div class="heatmap-icon">🌡️</div>
             <div>
-              <h5 class="modal-title mb-0" id="modalMapaCalorLabel">Mapa de Calor - Análisis de Tráfico</h5>
-              <small class="text-muted" id="heatmapSubtitle">Snapshot del estado actual</small>
+              <h5 class="modal-title mb-0" id="modalMapaCalorLabel" data-i18n="metrics.heatmap.title">Mapa de Calor - Análisis de Tráfico</h5>
+              <small class="text-muted" id="heatmapSubtitle" data-i18n="metrics.heatmap.subtitle">Snapshot del estado actual</small>
             </div>
           </div>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" data-i18n-attr="aria-label:common.close"></button>
         </div>
 
         <div class="modal-body heatmap-body">
@@ -2250,7 +2250,7 @@
                 <div class="stat-card">
                   <div class="stat-icon">🚗</div>
                   <div class="stat-content">
-                    <div class="stat-label">Vehículos Activos</div>
+                    <div class="stat-label" data-i18n="metrics.heatmap.stats.vehicles">Vehículos Activos</div>
                     <div class="stat-value" id="heatmapVehicles">--</div>
                   </div>
                 </div>
@@ -2259,7 +2259,7 @@
                 <div class="stat-card">
                   <div class="stat-icon">🛣️</div>
                   <div class="stat-content">
-                    <div class="stat-label">Calles Renderizadas</div>
+                    <div class="stat-label" data-i18n="metrics.heatmap.stats.streets">Calles Renderizadas</div>
                     <div class="stat-value" id="heatmapStreets">--</div>
                   </div>
                 </div>
@@ -2268,7 +2268,7 @@
                 <div class="stat-card">
                   <div class="stat-icon">⏱️</div>
                   <div class="stat-content">
-                    <div class="stat-label">Tiempo de Generación</div>
+                    <div class="stat-label" data-i18n="metrics.heatmap.stats.renderTime">Tiempo de Generación</div>
                     <div class="stat-value" id="heatmapTime">--</div>
                   </div>
                 </div>
@@ -2277,7 +2277,7 @@
                 <div class="stat-card">
                   <div class="stat-icon">🕐</div>
                   <div class="stat-content">
-                    <div class="stat-label">Hora Simulada</div>
+                    <div class="stat-label" data-i18n="metrics.heatmap.stats.simTime">Hora Simulada</div>
                     <div class="stat-value" id="heatmapSimTime">--</div>
                   </div>
                 </div>
@@ -2286,34 +2286,34 @@
 
             <!-- Leyenda mejorada -->
             <div class="heatmap-legend">
-              <h6 class="legend-title">📊 Interpretación del Mapa</h6>
+              <h6 class="legend-title" data-i18n="metrics.heatmap.legend.title">📊 Interpretación del Mapa</h6>
               <div class="legend-items">
                 <div class="legend-item">
                   <div class="legend-color" style="background: linear-gradient(90deg, #00ff00 0%, #7fff00 100%);"></div>
                   <div class="legend-text">
-                    <strong>Verde</strong>
-                    <span>Tráfico fluido - Alta velocidad</span>
+                    <strong data-i18n="metrics.heatmap.legend.fluid.label">Verde</strong>
+                    <span data-i18n="metrics.heatmap.legend.fluid.description">Tráfico fluido - Alta velocidad</span>
                   </div>
                 </div>
                 <div class="legend-item">
                   <div class="legend-color" style="background: linear-gradient(90deg, #ffff00 0%, #ffa500 100%);"></div>
                   <div class="legend-text">
-                    <strong>Amarillo</strong>
-                    <span>Tráfico moderado - Velocidad media</span>
+                    <strong data-i18n="metrics.heatmap.legend.moderate.label">Amarillo</strong>
+                    <span data-i18n="metrics.heatmap.legend.moderate.description">Tráfico moderado - Velocidad media</span>
                   </div>
                 </div>
                 <div class="legend-item">
                   <div class="legend-color" style="background: linear-gradient(90deg, #ff6600 0%, #ff0000 100%);"></div>
                   <div class="legend-text">
-                    <strong>Rojo</strong>
-                    <span>Congestionamiento - Velocidad baja</span>
+                    <strong data-i18n="metrics.heatmap.legend.congested.label">Rojo</strong>
+                    <span data-i18n="metrics.heatmap.legend.congested.description">Congestionamiento - Velocidad baja</span>
                   </div>
                 </div>
                 <div class="legend-item">
                   <div class="legend-color" style="background: #e0e0e0;"></div>
                   <div class="legend-text">
-                    <strong>Gris</strong>
-                    <span>Sin vehículos - Celdas vacías</span>
+                    <strong data-i18n="metrics.heatmap.legend.empty.label">Gris</strong>
+                    <span data-i18n="metrics.heatmap.legend.empty.description">Sin vehículos - Celdas vacías</span>
                   </div>
                 </div>
               </div>
@@ -2331,10 +2331,10 @@
           <div id="heatmapLoading" class="heatmap-loading">
             <div class="loading-content">
               <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Generando mapa de calor...</span>
+                <span class="visually-hidden" data-i18n="metrics.heatmap.loading">Generando mapa de calor...</span>
               </div>
-              <p class="loading-text">Generando mapa de calor...</p>
-              <small class="text-muted">Analizando densidad de tráfico en tiempo real</small>
+              <p class="loading-text" data-i18n="metrics.heatmap.loading">Generando mapa de calor...</p>
+              <small class="text-muted" data-i18n="metrics.heatmap.loadingDetail">Analizando densidad de tráfico en tiempo real</small>
             </div>
           </div>
         </div>
@@ -2342,12 +2342,12 @@
         <!-- Footer mejorado -->
         <div class="modal-footer heatmap-footer">
           <div class="footer-info">
-            <small class="text-muted">
+            <small class="text-muted" data-i18n="metrics.heatmap.footerNote">
               💡 Snapshot de todas las calles. El color de cada vehículo indica la ocupación de hasta 5 celdas de su carril (2 a cada lado); los obstáculos no cuentan como vehículos, pero sí como celdas. La ventana se recorta en extremos y se envuelve en glorietas sin repetir celdas.
             </small>
           </div>
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-            <i class="bi bi-x-circle"></i> Cerrar
+            <i class="bi bi-x-circle"></i> <span data-i18n="common.close">Cerrar</span>
           </button>
         </div>
       </div>

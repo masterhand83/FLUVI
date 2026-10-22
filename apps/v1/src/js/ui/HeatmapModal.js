@@ -5,6 +5,11 @@
 
 console.log('🌡️ HeatmapModal.js cargando...');
 
+/** Translate heatmap interface text without touching density data. */
+function heatmapText(key) {
+    return typeof window.tr === 'function' ? window.tr(key) : key;
+}
+
 class HeatmapModal {
     constructor() {
         this.modal = null;
@@ -23,7 +28,7 @@ class HeatmapModal {
         }
 
         if (!window.calles || window.calles.length === 0) {
-            mostrarAdvertencia('Sin calles', 'No hay calles en el mapa para generar el mapa de calor');
+            window.fluviNotify?.warning('notifications.metrics.heatmapNoStreets');
             return;
         }
 
@@ -66,7 +71,7 @@ class HeatmapModal {
                 this.render();
             } catch (error) {
                 console.error('❌ Error al renderizar:', error);
-                mostrarError('Error', 'No se pudo generar el mapa de calor');
+                window.fluviNotify?.error('notifications.metrics.heatmapFailed');
                 loadingDiv.style.display = 'none';
             } finally {
                 this.isRendering = false;
@@ -116,9 +121,10 @@ class HeatmapModal {
         });
 
         if (!isFinite(minX) || !isFinite(maxX)) {
-            if (exportCanvas) throw new Error('No se pudo calcular las dimensiones del mapa');
+            const message = heatmapText('notifications.metrics.heatmapDimensionsFailed');
+            if (exportCanvas) throw new Error(message);
             console.error('❌ No se pudo calcular el bounding box');
-            mostrarError('Error', 'No se pudo calcular las dimensiones del mapa');
+            window.fluviNotify?.error('notifications.metrics.heatmapDimensionsFailed');
             loadingDiv.style.display = 'none';
             return;
         }

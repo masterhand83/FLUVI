@@ -4,13 +4,31 @@ import { expect, it } from 'vitest';
 
 const metricsSource = readFileSync(new URL('../src/js/core/graficas.js', import.meta.url), 'utf8');
 const exportSource = readFileSync(new URL('../src/js/ui/exportarImagenesMetricas.js', import.meta.url), 'utf8');
+const esCatalog = JSON.parse(readFileSync(new URL('../src/locales/es/translation.json', import.meta.url), 'utf8'));
+
+function catalogValue(key) {
+    return key.split('.').reduce((value, part) => value?.[part], esCatalog);
+}
+
+function tr(key, params = {}) {
+    let value = catalogValue(key);
+    if (value === undefined && 'count' in params) {
+        value = catalogValue(`${key}_${params.count === 1 ? 'one' : 'other'}`);
+    }
+    if (value === undefined) throw new Error(`Missing catalog key: ${key}`);
+    return String(value).replace(/\{\{\s*([^{}\s]+)\s*\}\}/g, (match, name) => name in params ? String(params[name]) : match);
+}
 
 function openExport(sampleCount) {
     const charts = [];
     const texts = [];
     const files = [];
     const downloads = [];
-    const button = { disabled: false, textContent: 'Exportar imágenes', addEventListener(_, listener) { this.click = listener; } };
+    const button = {
+        disabled: false, textContent: 'Exportar imágenes',
+        addEventListener(_, listener) { this.click = listener; },
+        querySelector() { return null; }
+    };
     const context2d = new Proxy({}, { get: (_, key) => {
         if (key === 'measureText') return text => ({ width: text.length * 12 });
         if (key === 'fillText') return text => texts.push(text);
@@ -37,12 +55,12 @@ function openExport(sampleCount) {
         this.generateAsync = async () => new Blob(['zip']);
     }
     const window = {
-        calles: [], addEventListener() {}, JSZip, Chart,
+        calles: [], addEventListener() {}, JSZip, Chart, tr,
         obtenerTimestampCorto: () => '07:00:00',
         heatmapModal: { render: () => ({ width: 100, height: 100 }), getColorForDensity: () => '#ffffff' }
     };
     const context = {
-        window, document, Chart, JSZip, Blob, console, SEGUNDOS_POR_PASO: 2,
+        window, document, Chart, JSZip, Blob, console, SEGUNDOS_POR_PASO: 2, tr,
         URL: { createObjectURL(blob) { downloads.push(blob); return 'blob:export'; }, revokeObjectURL() {} },
         setTimeout() {}, mostrarAdvertencia() {}, mostrarError: message => { throw new Error(message); }
     };

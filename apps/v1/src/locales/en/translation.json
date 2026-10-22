@@ -557,7 +557,11 @@
       "cleared": "All metrics were cleared successfully.",
       "csvExported_one": "Exported {{count}} measurement to {{file}}.",
       "csvExported_other": "Exported {{count}} measurements to {{file}}.",
+      "heatmapDimensionsFailed": "The map dimensions could not be calculated.",
+      "heatmapFailed": "The heatmap could not be generated.",
+      "heatmapNoStreets": "There are no streets on the map to generate the heatmap.",
       "heatmapUnavailable": "The heatmap module is not loaded.",
+      "imagesExportFailed": "The images could not be exported. Try again.",
       "jsonExported_one": "Exported {{count}} measurement to {{file}}.",
       "jsonExported_other": "Exported {{count}} measurements to {{file}}.",
       "nothingToClear": "There are no metrics to clear.",
@@ -1451,11 +1455,78 @@
       "csvButton": "Download CSV",
       "csvTooltip": "Export all collected metrics in CSV format",
       "imagesButton": "Export Images",
+      "imagesExporting": "Exporting images…",
       "imagesHelp": "ZIP with the five charts, the summary, and the heatmap as PNG files.",
       "jsonButton": "Download JSON",
       "jsonTooltip": "Export all collected metrics in JSON format",
       "legacyNotice": "CSV and JSON files keep their Spanish headings and dot decimal separator so existing analysis tools can still read them. The interface may be in English; the data format does not change.",
       "title": "💾 Export Metrics"
+    },
+    "heatmap": {
+      "footerNote": "💡 Snapshot of all streets. Each vehicle's color indicates occupancy across up to 5 cells in its lane (2 on each side); obstacles do not count as vehicles but do count as cells. The window is clipped at endpoints and wraps around roundabouts without repeating cells.",
+      "legend": {
+        "congested": {
+          "description": "Congestion - Low speed",
+          "label": "Red"
+        },
+        "empty": {
+          "description": "No vehicles - Empty cells",
+          "label": "Gray"
+        },
+        "fluid": {
+          "description": "Fluid traffic - High speed",
+          "label": "Green"
+        },
+        "moderate": {
+          "description": "Moderate traffic - Medium speed",
+          "label": "Yellow"
+        },
+        "title": "📊 Map Interpretation"
+      },
+      "loading": "Generating heatmap...",
+      "loadingDetail": "Analyzing traffic density in real time",
+      "stats": {
+        "renderTime": "Generation Time",
+        "simTime": "Simulated Time",
+        "streets": "Rendered Streets",
+        "vehicles": "Active Vehicles"
+      },
+      "subtitle": "Snapshot of the current state",
+      "title": "Heatmap - Traffic Analysis"
+    },
+    "imageExport": {
+      "axis": {
+        "density": "Density (%)",
+        "entropy": "Entropy (bits)",
+        "netGeneration": "Net change (veh/s)",
+        "speed": "Speed (% moving)",
+        "throughput": "Flow (veh/s)"
+      },
+      "heatmapLegend": {
+        "high": "Higher congestion",
+        "low": "Lower congestion"
+      },
+      "notes": {
+        "charts_one": "Charts: full history ({{count}} measurement since the last clear or restart).",
+        "charts_other": "Charts: full history ({{count}} measurements since the last clear or restart).",
+        "heatmap": "Heatmap: current state of all streets. The green–red scale represents lower–higher congestion.",
+        "streets": "Streets included in metrics: {{included}}/{{total}}.",
+        "summary": "Summary: latest available measurement, not a historical average.",
+        "title": "Data scope"
+      },
+      "summary": {
+        "entropyDescription": "Diversity of automaton transitions",
+        "entropyLabel": "Shannon entropy",
+        "entropyValue": "{{value}} bits",
+        "noObservations": "No additional observations.",
+        "observationsTitle": "Observations",
+        "table": {
+          "indicator": "Indicator",
+          "interpretation": "Interpretation",
+          "value": "Value"
+        }
+      },
+      "timeAxis": "Virtual time"
     },
     "labels": {
       "density": {
