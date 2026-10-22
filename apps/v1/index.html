@@ -513,29 +513,29 @@
         </h2>
         <div id="collapseEscenarios" class="accordion-collapse collapse" data-bs-parent="#controlPanelAccordion">
           <div class="accordion-body">
-            <p class="text-muted small mb-3">Configura situaciones especiales de tráfico en el simulador.</p>
+            <p class="text-muted small mb-3" data-i18n="scenarios.intro">Configura situaciones especiales de tráfico en el simulador.</p>
 
             <!-- Bloqueo de Carril (ACTIVO) -->
             <div class="scenario-card scenario-active mb-3">
               <div class="scenario-header">
                 <div class="scenario-icon">🚧</div>
                 <div class="scenario-info">
-                  <h6 class="scenario-title mb-1">Bloqueo de Carril</h6>
-                  <p class="scenario-desc mb-2">Bloquea celdas específicas para simular obstáculos permanentes</p>
+                  <h6 class="scenario-title mb-1" data-i18n="scenarios.cards.block.title">Bloqueo de Carril</h6>
+                  <p class="scenario-desc mb-2" data-i18n="scenarios.cards.block.description">Bloquea celdas específicas para simular obstáculos permanentes</p>
                 </div>
               </div>
               <div class="scenario-controls">
                 <div class="form-check form-switch mb-2">
-                  <input class="form-check-input" type="checkbox" id="toggleBloqueoCarril" data-bs-toggle="tooltip" data-bs-title="Activar modo de pintado para bloquear celdas">
+                  <input class="form-check-input" type="checkbox" id="toggleBloqueoCarril" data-bs-toggle="tooltip" data-bs-title="Activar modo de pintado para bloquear celdas" data-i18n-attr="data-bs-title:scenarios.cards.block.toggleTooltip">
                   <label class="form-check-label" for="toggleBloqueoCarril">
-                    <strong>Activar modo bloqueo</strong>
+                    <strong data-i18n="scenarios.cards.block.toggle">Activar modo bloqueo</strong>
                   </label>
                 </div>
-                <div class="scenario-paint-mode" id="paintModeIndicator" style="display: none;">
-                  <div class="paint-mode-badge">
+                <div class="scenario-paint-mode" id="paintModeIndicator" style="display: none;" role="status" aria-live="polite">
+                  <div class="paint-mode-badge" data-i18n="scenarios.cards.block.badge">
                     ✏️ Modo Pintado Activo
                   </div>
-                  <p class="small text-muted mb-2">Haz clic o arrastra sobre las celdas de la calle para bloquearlas</p>
+                  <p class="small text-muted mb-2" data-i18n="scenarios.cards.block.instruction">Haz clic o arrastra sobre las celdas de la calle para bloquearlas</p>
                 </div>
               </div>
             </div>
@@ -545,20 +545,20 @@
               <div class="scenario-header">
                 <div class="scenario-icon">🌊</div>
                 <div class="scenario-info">
-                  <h6 class="scenario-title mb-1">Inundación</h6>
-                  <p class="scenario-desc mb-2">Simula áreas inundadas que bloquean el paso</p>
+                  <h6 class="scenario-title mb-1" data-i18n="scenarios.cards.flood.title">Inundación</h6>
+                  <p class="scenario-desc mb-2" data-i18n="scenarios.cards.flood.description">Simula áreas inundadas que bloquean el paso</p>
                 </div>
               </div>
               <div class="scenario-controls">
                 <div class="form-check form-switch mb-2">
-                  <input class="form-check-input" type="checkbox" id="toggleInundacion" data-bs-toggle="tooltip" data-bs-title="Activar modo de inundación">
+                  <input class="form-check-input" type="checkbox" id="toggleInundacion" data-bs-toggle="tooltip" data-bs-title="Activar modo de inundación" data-i18n-attr="data-bs-title:scenarios.cards.flood.toggleTooltip">
                   <label class="form-check-label" for="toggleInundacion">
-                    <strong>Activar modo inundación</strong>
+                    <strong data-i18n="scenarios.cards.flood.toggle">Activar modo inundación</strong>
                   </label>
                 </div>
-                <div class="scenario-paint-mode" id="paintModeIndicatorInundacion" style="display: none;">
-                  <div class="paint-mode-badge">🌊 Modo Inundación Activo</div>
-                  <p class="small text-muted mb-2">Haz clic sobre las celdas de la calle para inundarlas</p>
+                <div class="scenario-paint-mode" id="paintModeIndicatorInundacion" style="display: none;" role="status" aria-live="polite">
+                  <div class="paint-mode-badge" data-i18n="scenarios.cards.flood.badge">🌊 Modo Inundación Activo</div>
+                  <p class="small text-muted mb-2" data-i18n="scenarios.cards.flood.instruction">Haz clic sobre las celdas de la calle para inundarlas</p>
                 </div>
               </div>
             </div>
@@ -568,18 +568,18 @@
               <div class="scenario-header">
                 <div class="scenario-icon">🌧️</div>
                 <div class="scenario-info">
-                  <h6 class="scenario-title mb-1">Lluvia aleatoria</h6>
-                  <p class="scenario-desc mb-2">Inunda celdas vacías al azar mientras avanza la simulación</p>
+                  <h6 class="scenario-title mb-1" data-i18n="scenarios.cards.rain.title">Lluvia aleatoria</h6>
+                  <p class="scenario-desc mb-2" data-i18n="scenarios.cards.rain.description">Inunda celdas vacías al azar mientras avanza la simulación</p>
                 </div>
               </div>
               <div class="scenario-controls">
                 <div class="form-check form-switch mb-2">
                   <input class="form-check-input" type="checkbox" id="toggleLluviaAleatoria">
-                  <label class="form-check-label" for="toggleLluviaAleatoria"><strong>Activar lluvia aleatoria</strong></label>
+                  <label class="form-check-label" for="toggleLluviaAleatoria"><strong data-i18n="scenarios.cards.rain.toggle">Activar lluvia aleatoria</strong></label>
                 </div>
-                <label class="form-label small" for="probabilidadLluvia">Probabilidad de inundación por paso: <output id="probabilidadLluviaValor" for="probabilidadLluvia">10%</output></label>
+                <label class="form-label small" for="probabilidadLluvia"><span data-i18n="scenarios.cards.rain.probabilityLabel">Probabilidad de inundación por paso:</span> <output id="probabilidadLluviaValor" for="probabilidadLluvia">10%</output></label>
                 <input class="form-range" type="range" id="probabilidadLluvia" min="0" max="100" step="1" value="10">
-                <p class="small text-muted mb-0">Cada paso (2 segundos simulados) puede inundar una celda. 0%: sin inundaciones; 100%: una por paso. La pausa detiene la lluvia; al apagarla, las inundaciones permanecen hasta limpiarlas.</p>
+                <p class="small text-muted mb-0" data-i18n="scenarios.cards.rain.help">Cada paso (2 segundos simulados) puede inundar una celda. 0%: sin inundaciones; 100%: una por paso. La pausa detiene la lluvia; al apagarla, las inundaciones permanecen hasta limpiarlas.</p>
               </div>
             </div>
 
@@ -588,26 +588,26 @@
               <div class="scenario-header">
                 <div class="scenario-icon">⚠️</div>
                 <div class="scenario-info">
-                  <h6 class="scenario-title mb-1">Obstáculo</h6>
-                  <p class="scenario-desc mb-2">Coloca obstáculos específicos en las calles</p>
+                  <h6 class="scenario-title mb-1" data-i18n="scenarios.cards.obstacle.title">Obstáculo</h6>
+                  <p class="scenario-desc mb-2" data-i18n="scenarios.cards.obstacle.description">Coloca obstáculos específicos en las calles</p>
                 </div>
               </div>
               <div class="scenario-controls">
                 <div class="form-check form-switch mb-2">
-                  <input class="form-check-input" type="checkbox" id="toggleObstaculo" data-bs-toggle="tooltip" data-bs-title="Activar modo de obstáculos">
+                  <input class="form-check-input" type="checkbox" id="toggleObstaculo" data-bs-toggle="tooltip" data-bs-title="Activar modo de obstáculos" data-i18n-attr="data-bs-title:scenarios.cards.obstacle.toggleTooltip">
                   <label class="form-check-label" for="toggleObstaculo">
-                    <strong>Activar modo obstáculo</strong>
+                    <strong data-i18n="scenarios.cards.obstacle.toggle">Activar modo obstáculo</strong>
                   </label>
                 </div>
-                <div class="scenario-paint-mode" id="paintModeIndicatorObstaculo" style="display: none;">
-                  <div class="paint-mode-badge">⚠️ Modo Obstáculo Activo</div>
-                  <p class="small text-muted mb-2">Haz clic sobre las celdas para colocar obstáculos</p>
+                <div class="scenario-paint-mode" id="paintModeIndicatorObstaculo" style="display: none;" role="status" aria-live="polite">
+                  <div class="paint-mode-badge" data-i18n="scenarios.cards.obstacle.badge">⚠️ Modo Obstáculo Activo</div>
+                  <p class="small text-muted mb-2" data-i18n="scenarios.cards.obstacle.instruction">Haz clic sobre las celdas para colocar obstáculos</p>
                   <div id="selectorObstaculoContainer">
-                    <label for="selectorEmojiObstaculo" class="form-label small">Tipo de obstáculo:</label>
+                    <label for="selectorEmojiObstaculo" class="form-label small" data-i18n="scenarios.cards.obstacle.typeLabel">Tipo de obstáculo:</label>
                     <select id="selectorEmojiObstaculo" class="form-select form-select-sm mb-2">
-                      <option value="bache">🕳️ Bache</option>
-                      <option value="trabajador">👷🏽 Construcción</option>
-                      <option value="arbol">🌳 Árbol caído</option>
+                      <option value="bache" data-i18n="scenarios.cards.obstacle.types.pothole">🕳️ Bache</option>
+                      <option value="trabajador" data-i18n="scenarios.cards.obstacle.types.construction">👷🏽 Construcción</option>
+                      <option value="arbol" data-i18n="scenarios.cards.obstacle.types.fallenTree">🌳 Árbol caído</option>
                     </select>
                   </div>
                 </div>
@@ -616,8 +616,8 @@
 
             <!-- Botón para limpiar todos los bloqueos -->
             <div class="d-grid gap-2 mb-3">
-              <button type="button" class="btn btn-outline-danger" id="btnLimpiarTodosBloqueos" data-bs-toggle="tooltip" data-bs-title="Elimina todos los obstáculos, inundaciones y bloqueos del mapa (no afecta a los vehículos)">
-                <i class="bi bi-trash3"></i> 🗑️ Limpiar Todos los Bloqueos
+              <button type="button" class="btn btn-outline-danger" id="btnLimpiarTodosBloqueos" data-bs-toggle="tooltip" data-bs-title="Elimina todos los obstáculos, inundaciones y bloqueos del mapa (no afecta a los vehículos)" data-i18n-attr="data-bs-title:scenarios.clear.tooltip">
+                <i class="bi bi-trash3"></i> <span data-i18n="scenarios.clear.button">🗑️ Limpiar Todos los Bloqueos</span>
               </button>
             </div>
 
@@ -625,8 +625,8 @@
             <hr class="mt-4 mb-3">
             <div class="mb-3">
               <h6 class="mb-3 d-flex align-items-center">
-                🎯 Escenarios Base
-                <span class="info-icon ms-2" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="Escenarios predeterminados de ejemplo que demuestran diferentes situaciones de tráfico.">
+                <span data-i18n="scenarios.presets.title">🎯 Escenarios Base</span>
+                <span class="info-icon ms-2" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="Escenarios predeterminados de ejemplo que demuestran diferentes situaciones de tráfico." data-i18n-attr="data-bs-title:scenarios.presets.tooltip">
                   <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle" viewBox="0 0 16 16">
                     <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/>
                     <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533z"/>
@@ -635,27 +635,27 @@
                 </span>
               </h6>
 
-              <p class="text-muted small mb-3">Carga escenarios predeterminados de ejemplo para probar diferentes situaciones.</p>
+              <p class="text-muted small mb-3" data-i18n="scenarios.presets.intro">Carga escenarios predeterminados de ejemplo para probar diferentes situaciones.</p>
 
               <!-- Lista de escenarios base -->
               <div class="list-group mb-3">
-                <button type="button" class="list-group-item list-group-item-action" id="btnEscenarioInundacionMasiva" data-bs-toggle="tooltip" data-bs-title="Simula una inundación que deja solo un carril libre en cada calle">
+                <button type="button" class="list-group-item list-group-item-action" id="btnEscenarioInundacionMasiva" data-bs-toggle="tooltip" data-bs-title="Simula una inundación que deja solo un carril libre en cada calle" data-i18n-attr="data-bs-title:scenarios.presets.flood.tooltip">
                   <div class="d-flex w-100 justify-content-between align-items-center">
                     <div>
-                      <h6 class="mb-1">🌊 Inundación Masiva</h6>
-                      <p class="mb-0 small text-muted">Deja solo un carril libre en todas las calles</p>
+                      <h6 class="mb-1" data-i18n="scenarios.presets.flood.name">🌊 Inundación Masiva</h6>
+                      <p class="mb-0 small text-muted" data-i18n="scenarios.presets.flood.description">Deja solo un carril libre en todas las calles</p>
                     </div>
-                    <span class="badge bg-info">Cargar</span>
+                    <span class="badge bg-info" data-i18n="scenarios.presets.loadBadge">Cargar</span>
                   </div>
                 </button>
 
-                <button type="button" class="list-group-item list-group-item-action" id="btnEscenarioBachesAleatorios" data-bs-toggle="tooltip" data-bs-title="Coloca baches aleatoriamente con 5% de probabilidad en todas las calles">
+                <button type="button" class="list-group-item list-group-item-action" id="btnEscenarioBachesAleatorios" data-bs-toggle="tooltip" data-bs-title="Coloca baches aleatoriamente con 5% de probabilidad en todas las calles" data-i18n-attr="data-bs-title:scenarios.presets.potholes.tooltip">
                   <div class="d-flex w-100 justify-content-between align-items-center">
                     <div>
-                      <h6 class="mb-1">🕳️ Baches Aleatorios</h6>
-                      <p class="mb-0 small text-muted">5% de probabilidad de baches en cada celda</p>
+                      <h6 class="mb-1" data-i18n="scenarios.presets.potholes.name">🕳️ Baches Aleatorios</h6>
+                      <p class="mb-0 small text-muted" data-i18n="scenarios.presets.potholes.description">5% de probabilidad de baches en cada celda</p>
                     </div>
-                    <span class="badge bg-warning text-dark">Cargar</span>
+                    <span class="badge bg-warning text-dark" data-i18n="scenarios.presets.loadBadge">Cargar</span>
                   </div>
                 </button>
               </div>
@@ -665,8 +665,8 @@
             <hr class="mt-4 mb-3">
             <div class="mb-3">
               <h6 class="mb-3 d-flex align-items-center">
-                💾 Gestión de Escenarios
-                <span class="info-icon ms-2" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="Guarda y carga configuraciones completas de obstáculos, inundaciones y bloqueos.">
+                <span data-i18n="scenarios.management.title">💾 Gestión de Escenarios</span>
+                <span class="info-icon ms-2" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="Guarda y carga configuraciones completas de obstáculos, inundaciones y bloqueos." data-i18n-attr="data-bs-title:scenarios.management.tooltip">
                   <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle" viewBox="0 0 16 16">
                     <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/>
                     <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533z"/>
@@ -677,30 +677,30 @@
 
               <div class="row g-2 mb-3">
                 <div class="col-6">
-                  <button type="button" class="btn btn-success w-100" id="btnGuardarEscenario" data-bs-toggle="tooltip" data-bs-title="Guardar la configuración actual de obstáculos">
-                    <i class="bi bi-save"></i> 💾 Guardar
+                  <button type="button" class="btn btn-success w-100" id="btnGuardarEscenario" data-bs-toggle="tooltip" data-bs-title="Guardar la configuración actual de obstáculos" data-i18n-attr="data-bs-title:scenarios.management.saveTooltip">
+                    <i class="bi bi-save"></i> <span data-i18n="scenarios.management.save">💾 Guardar</span>
                   </button>
                 </div>
                 <div class="col-6">
-                  <button type="button" class="btn btn-primary w-100" id="btnCargarEscenario" data-bs-toggle="tooltip" data-bs-title="Cargar un escenario guardado previamente">
-                    <i class="bi bi-folder-open"></i> 📂 Cargar
+                  <button type="button" class="btn btn-primary w-100" id="btnCargarEscenario" data-bs-toggle="tooltip" data-bs-title="Cargar un escenario guardado previamente" data-i18n-attr="data-bs-title:scenarios.management.loadTooltip">
+                    <i class="bi bi-folder-open"></i> <span data-i18n="scenarios.management.load">📂 Cargar</span>
                   </button>
                 </div>
               </div>
 
               <!-- Escenario actual cargado -->
               <div id="escenarioActualInfo" class="alert alert-success p-2 small mb-2" style="display: none;">
-                <strong>✓ Escenario activo:</strong> <span id="escenarioActualNombre">Ninguno</span><br>
-                <small class="text-muted">Guardado: <span id="escenarioActualFecha">-</span></small>
+                <strong data-i18n="scenarios.current.active">✓ Escenario activo:</strong> <span id="escenarioActualNombre">Ninguno</span><br>
+                <small class="text-muted"><span data-i18n="scenarios.current.savedAt">Guardado:</span> <span id="escenarioActualFecha">-</span></small>
               </div>
 
               <p class="text-muted small mb-0">
-                <strong>ℹ️ Nota:</strong> Los escenarios incluyen todos los obstáculos, inundaciones y bloqueos configurados.
+                <strong data-i18n="scenarios.management.noteLabel">ℹ️ Nota:</strong> <span data-i18n="scenarios.management.noteBody">Los escenarios incluyen todos los obstáculos, inundaciones y bloqueos configurados.</span>
               </p>
             </div>
 
             <div class="alert alert-info p-2 small mt-3 mb-0">
-              <strong>💡 Toma en cuenta que:</strong> Los vehículos no podrán atravesar las celdas bloqueadas.
+              <strong data-i18n="scenarios.management.rememberLabel">💡 Toma en cuenta que:</strong> <span data-i18n="scenarios.management.rememberBody">Los vehículos no podrán atravesar las celdas bloqueadas.</span>
             </div>
 
             <!-- Control de Fecha y Hora del Simulador -->
@@ -2701,35 +2701,35 @@
     <div class="modal-dialog">
       <div class="modal-content">
         <div class="modal-header bg-success text-white">
-          <h5 class="modal-title" id="modalGuardarEscenarioLabel">💾 Guardar Escenario</h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+          <h5 class="modal-title" id="modalGuardarEscenarioLabel" data-i18n="scenarios.saveModal.title">💾 Guardar Escenario</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" data-i18n-attr="aria-label:common.close"></button>
         </div>
         <div class="modal-body">
           <div class="mb-3">
-            <label for="inputNombreEscenario" class="form-label">Nombre del Escenario:</label>
-            <input type="text" class="form-control" id="inputNombreEscenario" placeholder="Ej: Tráfico Pesado Día Lluvioso" required maxlength="50">
-            <div class="invalid-feedback">
+            <label for="inputNombreEscenario" class="form-label" data-i18n="scenarios.saveModal.nameLabel">Nombre del Escenario:</label>
+            <input type="text" class="form-control" id="inputNombreEscenario" placeholder="Ej: Tráfico Pesado Día Lluvioso" required maxlength="50" data-i18n-attr="placeholder:scenarios.saveModal.namePlaceholder">
+            <div class="invalid-feedback" data-i18n="scenarios.saveModal.nameInvalid">
               El nombre es obligatorio (máximo 50 caracteres).
             </div>
           </div>
           <div class="mb-3">
-            <label for="inputDescripcionEscenario" class="form-label">Descripción (opcional):</label>
-            <textarea class="form-control" id="inputDescripcionEscenario" rows="3" placeholder="Describe brevemente este escenario..." maxlength="200"></textarea>
-            <small class="form-text text-muted">Máximo 200 caracteres</small>
+            <label for="inputDescripcionEscenario" class="form-label" data-i18n="scenarios.saveModal.descriptionLabel">Descripción (opcional):</label>
+            <textarea class="form-control" id="inputDescripcionEscenario" rows="3" placeholder="Describe brevemente este escenario..." maxlength="200" data-i18n-attr="placeholder:scenarios.saveModal.descriptionPlaceholder"></textarea>
+            <small class="form-text text-muted" data-i18n="scenarios.saveModal.descriptionHelp">Máximo 200 caracteres</small>
           </div>
           <div class="alert alert-info p-2 small mb-0">
-            <strong>ℹ️ Se guardará:</strong>
+            <strong data-i18n="scenarios.saveModal.includesTitle">ℹ️ Se guardará:</strong>
             <ul class="mb-0 mt-1">
-              <li>Todos los obstáculos (baches, construcciones, árboles)</li>
-              <li>Todas las áreas inundadas</li>
-              <li>Todos los bloqueos de carril</li>
-              <li>Configuración de cada calle afectada</li>
+              <li data-i18n="scenarios.saveModal.includesObstacles">Todos los obstáculos (baches, construcciones, árboles)</li>
+              <li data-i18n="scenarios.saveModal.includesFloods">Todas las áreas inundadas</li>
+              <li data-i18n="scenarios.saveModal.includesBlocks">Todos los bloqueos de carril</li>
+              <li data-i18n="scenarios.saveModal.includesStreets">Configuración de cada calle afectada</li>
             </ul>
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-          <button type="button" class="btn btn-success" id="btnConfirmarGuardarEscenario">💾 Guardar Escenario</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n="scenarios.saveModal.cancel">Cancelar</button>
+          <button type="button" class="btn btn-success" id="btnConfirmarGuardarEscenario" data-i18n="scenarios.saveModal.save">💾 Guardar Escenario</button>
         </div>
       </div>
     </div>
@@ -2740,11 +2740,11 @@
     <div class="modal-dialog modal-lg">
       <div class="modal-content">
         <div class="modal-header bg-primary text-white">
-          <h5 class="modal-title" id="modalCargarEscenarioLabel">📂 Cargar Escenario</h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+          <h5 class="modal-title" id="modalCargarEscenarioLabel" data-i18n="scenarios.loadModal.title">📂 Cargar Escenario</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" data-i18n-attr="aria-label:common.close"></button>
         </div>
         <div class="modal-body">
-          <p class="text-muted small mb-3">Selecciona un escenario guardado para cargarlo. <strong>Nota:</strong> Se eliminarán todos los obstáculos actuales antes de cargar.</p>
+          <p class="text-muted small mb-3"><span data-i18n="scenarios.loadModal.introBefore">Selecciona un escenario guardado para cargarlo.</span> <strong data-i18n="scenarios.loadModal.noteLabel">Nota:</strong> <span data-i18n="scenarios.loadModal.noteBody">Se eliminarán todos los obstáculos actuales antes de cargar.</span></p>
 
           <!-- Botón para cargar desde archivo JSON -->
           <div class="mb-3">
@@ -2753,29 +2753,29 @@
                 <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5"/>
                 <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708z"/>
               </svg>
-              📤 Subir Archivo JSON
+              <span data-i18n="scenarios.loadModal.upload">📤 Subir Archivo JSON</span>
             </label>
             <input type="file" id="inputCargarJSON" class="d-none" accept=".json" onchange="cargarDesdeArchivoJSON(event)">
-            <small class="form-text text-muted d-block mt-1">
+            <small class="form-text text-muted d-block mt-1" data-i18n="scenarios.loadModal.uploadHelp">
               Carga un escenario desde un archivo .json previamente descargado
             </small>
           </div>
 
           <hr>
 
-          <h6 class="mb-2">Escenarios en el navegador:</h6>
+          <h6 class="mb-2" data-i18n="scenarios.loadModal.browserTitle">Escenarios en el navegador:</h6>
 
           <div id="listaEscenariosGuardados" class="list-group">
             <!-- Los escenarios se cargarán dinámicamente aquí -->
           </div>
 
           <div id="noEscenariosMessage" class="alert alert-warning text-center" style="display: none;">
-            <strong>⚠️ No hay escenarios guardados</strong><br>
-            <small>Guarda un escenario primero usando el botón "Guardar" o sube un archivo JSON</small>
+            <strong data-i18n="scenarios.loadModal.emptyTitle">⚠️ No hay escenarios guardados</strong><br>
+            <small data-i18n="scenarios.loadModal.emptyHelp">Guarda un escenario primero usando el botón "Guardar" o sube un archivo JSON</small>
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n="scenarios.loadModal.close">Cerrar</button>
         </div>
       </div>
     </div>

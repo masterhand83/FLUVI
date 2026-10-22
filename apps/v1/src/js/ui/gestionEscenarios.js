@@ -5,6 +5,10 @@
 
 console.log('📂 gestionEscenarios.js cargando...');
 
+// Una sola inicialización: los listeners y las instancias de Bootstrap no
+// deben duplicarse si el arranque y una prueba manual coinciden.
+let gestionEscenariosInicializada = false;
+
 // Referencias a elementos del DOM
 let btnGuardarEscenario;
 let btnCargarEscenario;
@@ -22,6 +26,45 @@ let escenarioActualFecha;
 // Botones de escenarios base
 let btnEscenarioInundacionMasiva;
 let btnEscenarioBachesAleatorios;
+
+const SCENARIO_DATE_LOCALES = Object.freeze({
+    es: 'es-MX',
+    en: 'en-US'
+});
+
+/**
+ * Locale used only to render dates. Scenario names, descriptions and saved
+ * timestamps remain user content and unchanged.
+ */
+function scenarioDateLocale() {
+    const language = window.fluviI18n?.activeLanguage || document.documentElement.lang;
+    return SCENARIO_DATE_LOCALES[language] || SCENARIO_DATE_LOCALES.es;
+}
+
+function formatScenarioDate(value) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '-';
+    return date.toLocaleString(scenarioDateLocale(), {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+/**
+ * Shows the result of a core scenario operation with an explicit severity and
+ * the catalog key returned by core/escenarios.js.
+ */
+function notifyScenarioResult(resultado) {
+    const tipo = resultado?.exito ? 'success' : 'error';
+    if (resultado?.notificationKey) {
+        window.fluviNotify[tipo](resultado.notificationKey, resultado.notificationParams);
+        return;
+    }
+    mostrarNotificacion(tipo, notificationTitle(tipo), resultado?.mensaje || '');
+}
 
 /**
  * Actualiza el estilo de los botones de escenarios base según modo oscuro/luz de la UI
@@ -68,6 +111,7 @@ function actualizarFondoEscenariosBase() {
  * Inicializa el módulo de gestión de escenarios
  */
 function inicializarGestionEscenarios() {
+    if (gestionEscenariosInicializada) return;
     console.log('📂 Inicializando gestión de escenarios...');
 
     // Obtener referencias a elementos del DOM
@@ -81,6 +125,9 @@ function inicializarGestionEscenarios() {
     escenarioActualInfo = document.getElementById('escenarioActualInfo');
     escenarioActualNombre = document.getElementById('escenarioActualNombre');
     escenarioActualFecha = document.getElementById('escenarioActualFecha');
+    if (escenarioActualNombre) {
+        escenarioActualNombre.textContent = tr('scenarios.current.none');
+    }
 
     // Botones de escenarios base
     btnEscenarioInundacionMasiva = document.getElementById('btnEscenarioInundacionMasiva');
@@ -153,6 +200,7 @@ function inicializarGestionEscenarios() {
         attributeFilter: ['class']
     });
 
+    gestionEscenariosInicializada = true;
     console.log('✅ Gestión de escenarios inicializada');
 }
 
@@ -166,7 +214,7 @@ function cargarEscenarioBaseUI(tipoEscenario) {
     // Verificar que la función existe
     if (typeof window.cargarEscenarioBase !== 'function') {
         console.error('❌ window.cargarEscenarioBase no está definido');
-        mostrarNotificacion('error', 'Error', 'El sistema de escenarios base no está disponible.');
+        window.fluviNotify.error('scenarios.notifications.baseUnavailable');
         return;
     }
 
@@ -178,18 +226,18 @@ function cargarEscenarioBaseUI(tipoEscenario) {
         switch (tipoEscenario) {
             case 'inundacion_masiva':
                 if (typeof window.generarEscenarioInundacionMasiva !== 'function') {
-                    throw new Error('Generador de inundación no disponible');
+                    throw new Error(tr('scenarios.notifications.baseUnavailable'));
                 }
                 escenarioGenerado = window.generarEscenarioInundacionMasiva();
                 break;
             case 'baches_aleatorios':
                 if (typeof window.generarEscenarioBachesAleatorios !== 'function') {
-                    throw new Error('Generador de baches aleatorios no disponible');
+                    throw new Error(tr('scenarios.notifications.baseUnavailable'));
                 }
                 escenarioGenerado = window.generarEscenarioBachesAleatorios();
                 break;
             default:
-                throw new Error(`Tipo de escenario desconocido: ${tipoEscenario}`);
+                throw new Error(tr('scenarios.notifications.unknownBaseType'));
         }
 
         // Cargar el escenario generado
@@ -201,23 +249,19 @@ function cargarEscenarioBaseUI(tipoEscenario) {
                 actualizarInfoEscenarioActual(escenarioGenerado);
 
                 // Mostrar notificación de éxito
-                const stats = escenarioGenerado.estadisticas;
-                let statsText = '📊 Estadísticas:\n';
-                if (stats.totalInundaciones > 0) statsText += `• ${stats.totalInundaciones} celdas inundadas\n`;
-                if (stats.totalBloqueos > 0) statsText += `• ${stats.totalBloqueos} bloqueos\n`;
-                if (stats.totalObstaculos > 0) statsText += `• ${stats.totalObstaculos} obstáculos colocados\n`;
-
-                mostrarNotificacion('success', 'Escenario Base Cargado',
-                    `✅ "${escenarioGenerado.nombre}" cargado exitosamente!\n\n${statsText}`
-                );
+                window.fluviNotify.success('scenarios.notifications.baseLoaded', {
+                    name: escenarioGenerado.nombre,
+                    stats: window.describirEstadisticasEscenario(escenarioGenerado.estadisticas)
+                });
             } else {
-                throw new Error(resultado.mensaje);
+                notifyScenarioResult(resultado);
             }
         }
     } catch (error) {
         console.error('❌ Error al cargar escenario base:', error);
-        mostrarNotificacion('error', 'Error al Cargar Escenario Base',
-            `No se pudo cargar el escenario:\n${error.message}`);
+        window.fluviNotify.error('scenarios.notifications.baseLoadFailed', {
+            reason: error.message
+        });
     }
 }
 
@@ -254,7 +298,7 @@ function confirmarGuardarEscenario() {
     // Validar nombre
     if (nombre === '') {
         inputNombreEscenario.classList.add('is-invalid');
-        mostrarNotificacion('error', 'Error de Validación', 'El nombre del escenario es obligatorio.');
+        window.fluviNotify.error('scenarios.notifications.nameRequired');
         return;
     }
 
@@ -271,17 +315,14 @@ function confirmarGuardarEscenario() {
         }
 
         // Mostrar notificación de éxito
-        mostrarNotificacion('success', 'Escenario Guardado',
-            `El escenario "${nombre}" se ha guardado exitosamente.\n` +
-            `El archivo JSON se ha descargado automáticamente.\n` +
-            `Guarda el archivo y cárgalo cuando quieras usar este escenario.`);
+        window.fluviNotify.success('scenarios.notifications.saved', { name: nombre });
 
         // Limpiar formulario
         inputNombreEscenario.value = '';
         inputNombreEscenario.classList.remove('is-invalid');
         inputDescripcionEscenario.value = '';
     } else {
-        mostrarNotificacion('error', 'Error al Guardar', 'No se pudo guardar el escenario. Inténtalo de nuevo.');
+        window.fluviNotify.error('scenarios.notifications.saveFailed');
     }
 }
 
@@ -316,8 +357,9 @@ function descargarEscenarioJSON(escenario, nombreArchivo) {
  * Abre el modal para cargar un escenario
  */
 function abrirModalCargar() {
-    // Solo mostrar el modal (sin listar escenarios de localStorage)
-    // Los usuarios cargarán archivos JSON directamente
+    // Los escenarios se cargan desde archivos JSON o desde la lista local
+    // heredada (compatible con versiones anteriores del simulador).
+    renderizarListaEscenarios();
 
     // Mostrar modal
     if (modalCargarEscenario) {
@@ -326,58 +368,118 @@ function abrirModalCargar() {
 }
 
 /**
- * Crea un elemento HTML para un escenario en la lista
+ * Crea un elemento HTML para un escenario en la lista. El nombre y la
+ * descripción se asignan como texto para conservar literalmente el contenido
+ * creado por el usuario.
  */
 function crearItemEscenario(escenario) {
     const div = document.createElement('div');
     div.className = 'list-group-item list-group-item-action';
 
-    // Formatear fecha
-    const fecha = new Date(escenario.fechaCreacion);
-    const fechaFormateada = fecha.toLocaleString('es-MX', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    });
+    const fila = document.createElement('div');
+    fila.className = 'd-flex w-100 justify-content-between align-items-start';
 
-    // Estadísticas
+    const contenido = document.createElement('div');
+    contenido.className = 'flex-grow-1';
+
+    const titulo = document.createElement('h6');
+    titulo.className = 'mb-1';
+    titulo.textContent = escenario.nombre;
+    contenido.appendChild(titulo);
+
+    if (escenario.descripcion) {
+        const descripcion = document.createElement('p');
+        descripcion.className = 'mb-1 small text-muted';
+        descripcion.textContent = escenario.descripcion;
+        contenido.appendChild(descripcion);
+    }
+
+    const fecha = document.createElement('small');
+    fecha.className = 'text-muted';
     const stats = escenario.estadisticas || {
         totalBloqueos: 0,
         totalInundaciones: 0,
         totalObstaculos: 0
     };
-
     const totalElementos = stats.totalBloqueos + stats.totalInundaciones + stats.totalObstaculos;
+    fecha.textContent = `📅 ${formatScenarioDate(escenario.fechaCreacion)} | ${tr('scenarios.list.elements', { count: totalElementos })}`;
+    contenido.appendChild(fecha);
 
-    div.innerHTML = `
-        <div class="d-flex w-100 justify-content-between align-items-start">
-            <div class="flex-grow-1">
-                <h6 class="mb-1">${escenario.nombre}</h6>
-                ${escenario.descripcion ? `<p class="mb-1 small text-muted">${escenario.descripcion}</p>` : ''}
-                <small class="text-muted">
-                    📅 ${fechaFormateada} |
-                    📊 ${totalElementos} elementos
-                </small>
-                <div class="mt-2 small">
-                    ${stats.totalBloqueos > 0 ? `<span class="badge bg-danger me-1">🚧 ${stats.totalBloqueos} bloqueos</span>` : ''}
-                    ${stats.totalInundaciones > 0 ? `<span class="badge bg-info me-1">🌊 ${stats.totalInundaciones} inundaciones</span>` : ''}
-                    ${stats.totalObstaculos > 0 ? `<span class="badge bg-warning me-1">⚠️ ${stats.totalObstaculos} obstáculos</span>` : ''}
-                </div>
-            </div>
-            <div class="btn-group-vertical ms-2" role="group">
-                <button class="btn btn-sm btn-primary" onclick="cargarEscenarioUI('${escenario.id}')">
-                    📂 Cargar
-                </button>
-                <button class="btn btn-sm btn-outline-danger" onclick="eliminarEscenarioUI('${escenario.id}', '${escenario.nombre}')">
-                    🗑️ Eliminar
-                </button>
-            </div>
-        </div>
-    `;
+    const insignias = document.createElement('div');
+    insignias.className = 'mt-2 small';
+    const insignia = (clase, key, count) => {
+        if (!(count > 0)) return;
+        const badge = document.createElement('span');
+        badge.className = `badge ${clase} me-1`;
+        badge.textContent = tr(key, { count });
+        insignias.appendChild(badge);
+    };
+    insignia('bg-danger', 'scenarios.list.blocks', stats.totalBloqueos);
+    insignia('bg-info', 'scenarios.list.floods', stats.totalInundaciones);
+    insignia('bg-warning', 'scenarios.list.obstacles', stats.totalObstaculos);
+    contenido.appendChild(insignias);
+
+    const acciones = document.createElement('div');
+    acciones.className = 'btn-group-vertical ms-2';
+    acciones.setAttribute('role', 'group');
+
+    const cargar = document.createElement('button');
+    cargar.type = 'button';
+    cargar.className = 'btn btn-sm btn-primary';
+    cargar.textContent = tr('scenarios.list.load');
+    cargar.addEventListener('click', () => cargarEscenarioUI(escenario));
+
+    const eliminar = document.createElement('button');
+    eliminar.type = 'button';
+    eliminar.className = 'btn btn-sm btn-outline-danger';
+    eliminar.textContent = tr('scenarios.list.delete');
+    eliminar.addEventListener('click', () => confirmarEliminarEscenario(escenario));
+
+    acciones.append(cargar, eliminar);
+    fila.append(contenido, acciones);
+    div.appendChild(fila);
 
     return div;
+}
+
+/**
+ * Pinta la lista de escenarios guardados en el navegador y su estado vacío.
+ */
+function renderizarListaEscenarios() {
+    if (!listaEscenariosGuardados) return;
+    const escenarios = typeof window.obtenerEscenariosGuardados === 'function'
+        ? window.obtenerEscenariosGuardados()
+        : [];
+    listaEscenariosGuardados.replaceChildren(...escenarios.map(crearItemEscenario));
+    if (noEscenariosMessage) {
+        noEscenariosMessage.style.display = escenarios.length > 0 ? 'none' : 'block';
+    }
+}
+
+/**
+ * Pide confirmación antes de eliminar un escenario de la lista local.
+ */
+function confirmarEliminarEscenario(escenario) {
+    mostrarConfirmacion(
+        tr('scenarios.list.deleteTitle'),
+        window.fluviI18n.tEscaped('scenarios.list.deleteQuestion', { name: escenario.nombre }),
+        () => {
+            const eliminado = typeof window.eliminarEscenario === 'function' &&
+                window.eliminarEscenario(escenario.id);
+            if (eliminado) {
+                window.fluviNotify.success('scenarios.list.deleted', { name: escenario.nombre });
+                renderizarListaEscenarios();
+            } else {
+                window.fluviNotify.error('scenarios.list.deleteFailed', { name: escenario.nombre });
+            }
+        },
+        null,
+        {
+            btnConfirmText: tr('scenarios.list.delete'),
+            btnConfirmClass: 'btn-danger',
+            btnCancelText: tr('common.cancel')
+        }
+    );
 }
 
 /**
@@ -394,15 +496,11 @@ function cargarEscenarioUI(escenarioObj) {
 
         // Actualizar info del escenario actual
         actualizarInfoEscenarioActual(resultado.escenario);
-
-        // Mostrar notificación de éxito
-        mostrarNotificacion('success', 'Escenario Cargado', resultado.mensaje);
-    } else {
-        // Mostrar notificación de error
-        mostrarNotificacion('error', 'Error al Cargar', resultado.mensaje);
     }
-}
 
+    // Mostrar notificación con la severidad y el mensaje traducidos
+    notifyScenarioResult(resultado);
+}
 
 /**
  * Actualiza la información del escenario actualmente cargado
@@ -410,16 +508,7 @@ function cargarEscenarioUI(escenarioObj) {
 function actualizarInfoEscenarioActual(escenario) {
     if (escenarioActualInfo && escenarioActualNombre && escenarioActualFecha) {
         escenarioActualNombre.textContent = escenario.nombre;
-
-        const fecha = new Date(escenario.fechaCreacion);
-        escenarioActualFecha.textContent = fecha.toLocaleString('es-MX', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-
+        escenarioActualFecha.textContent = formatScenarioDate(escenario.fechaCreacion);
         escenarioActualInfo.style.display = 'block';
     }
 }
@@ -430,6 +519,9 @@ function actualizarInfoEscenarioActual(escenario) {
 function limpiarInfoEscenarioActual() {
     if (escenarioActualInfo) {
         escenarioActualInfo.style.display = 'none';
+    }
+    if (escenarioActualNombre) {
+        escenarioActualNombre.textContent = tr('scenarios.current.none');
     }
 
     window.escenarioActualCargado = null;
@@ -447,55 +539,61 @@ function cargarDesdeArchivoJSON(event) {
 
     // Verificar que sea un archivo JSON
     if (!file.name.endsWith('.json')) {
-        mostrarNotificacion('error', 'Archivo Inválido', 'Por favor selecciona un archivo JSON válido.');
+        window.fluviNotify.error('scenarios.notifications.invalidFileType');
         return;
     }
 
     const reader = new FileReader();
 
     reader.onload = (e) => {
+        // Un error de sintaxis JSON es distinto de un archivo JSON válido que
+        // no tiene la forma de un escenario.
+        let escenario;
         try {
-            // Parsear JSON
-            const escenario = JSON.parse(e.target.result);
-
-            // Validar estructura básica
-            if (!escenario.version || !escenario.nombre || !escenario.celdasBloqueadas) {
-                throw new Error('El archivo JSON no tiene el formato correcto de un escenario.');
-            }
-
-            // Cargar el escenario directamente (sin localStorage)
-            const resultado = window.cargarEscenarioDesdeJSON(escenario);
-
-            if (resultado.exito) {
-                // Cerrar modal
-                if (modalCargarEscenario) {
-                    modalCargarEscenario.hide();
-                }
-
-                // Actualizar info del escenario actual
-                actualizarInfoEscenarioActual(escenario);
-
-                // Mostrar notificación de éxito
-                mostrarNotificacion('success', 'Escenario Cargado desde Archivo',
-                    `El escenario "${escenario.nombre}" se ha cargado exitosamente desde el archivo JSON.\n${resultado.mensaje}`);
-            } else {
-                mostrarNotificacion('error', 'Error al Cargar', resultado.mensaje);
-            }
-
-            // Limpiar input para permitir cargar el mismo archivo nuevamente
-            event.target.value = '';
-
+            escenario = JSON.parse(e.target.result);
         } catch (error) {
             console.error('❌ Error al parsear JSON:', error);
-            mostrarNotificacion('error', 'Error al Cargar Archivo',
-                `No se pudo leer el archivo JSON:\n${error.message}`);
-
+            window.fluviNotify.error('scenarios.notifications.parseFailed', {
+                reason: error.message
+            });
             event.target.value = ''; // Limpiar input
+            return;
         }
+
+        // Validar estructura básica
+        if (!escenario || !escenario.version || !escenario.nombre || !Array.isArray(escenario.celdasBloqueadas)) {
+            window.fluviNotify.error('scenarios.validation.invalidFormat');
+            event.target.value = '';
+            return;
+        }
+
+        // Cargar el escenario directamente (sin localStorage)
+        const resultado = window.cargarEscenarioDesdeJSON(escenario);
+
+        if (resultado.exito) {
+            // Cerrar modal
+            if (modalCargarEscenario) {
+                modalCargarEscenario.hide();
+            }
+
+            // Actualizar info del escenario actual
+            actualizarInfoEscenarioActual(escenario);
+
+            // Mostrar notificación de éxito
+            window.fluviNotify.success('scenarios.notifications.loadedFromFile', {
+                name: escenario.nombre,
+                count: resultado.celdasCargadas
+            });
+        } else {
+            notifyScenarioResult(resultado);
+        }
+
+        // Limpiar input para permitir cargar el mismo archivo nuevamente
+        event.target.value = '';
     };
 
     reader.onerror = () => {
-        mostrarNotificacion('error', 'Error de Lectura', 'No se pudo leer el archivo.');
+        window.fluviNotify.error('scenarios.notifications.readFailed');
         event.target.value = ''; // Limpiar input
     };
 

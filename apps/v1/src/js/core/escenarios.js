@@ -92,7 +92,21 @@ function aplicarLluviaAleatoria() {
 }
 
 /**
- * Muestra una alerta Bootstrap temporal
+ * Devuelve el nombre visible del modo de escenario sin traducir su valor interno.
+ * @param {string} tipo - 'bloqueo', 'inundacion' u 'obstaculo'
+ */
+function nombreModoEscenario(tipo) {
+    const keys = {
+        bloqueo: 'scenarios.cards.block.title',
+        inundacion: 'scenarios.cards.flood.title',
+        obstaculo: 'scenarios.cards.obstacle.title'
+    };
+    return tr(keys[tipo] || keys.bloqueo);
+}
+
+/**
+ * Muestra una alerta Bootstrap temporal. El mensaje se inserta como texto para
+ * que los nombres y números interpolados nunca se interpreten como marcado.
  * @param {string} mensaje - Mensaje a mostrar
  * @param {string} tipo - Tipo de alerta: 'warning', 'danger', 'info', 'success'
  * @param {number} duracion - Duración en ms (por defecto 4000)
@@ -117,11 +131,18 @@ function mostrarAlertaBootstrap(mensaje, tipo = 'warning', duracion = 4000) {
     alerta.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
     alerta.setAttribute('role', 'alert');
 
-    alerta.innerHTML = `
-        <strong>⚠️</strong> ${mensaje}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    `;
+    const icono = document.createElement('strong');
+    icono.textContent = '⚠️';
+    const texto = document.createElement('span');
+    texto.style.whiteSpace = 'pre-line';
+    texto.textContent = String(mensaje);
+    const cerrar = document.createElement('button');
+    cerrar.type = 'button';
+    cerrar.className = 'btn-close';
+    cerrar.dataset.bsDismiss = 'alert';
+    cerrar.setAttribute('aria-label', tr('common.close'));
 
+    alerta.append(icono, document.createTextNode(' '), texto, cerrar);
     contenedor.appendChild(alerta);
 
     // Auto-cerrar después de la duración especificada
@@ -130,6 +151,10 @@ function mostrarAlertaBootstrap(mensaje, tipo = 'warning', duracion = 4000) {
         setTimeout(() => alerta.remove(), 150);
     }, duracion);
 }
+
+// Una sola inicialización: añadir listeners dos veces duplicaría alertas y
+// alternaría los toggles dos veces por clic.
+let escenariosInicializados = false;
 
 // Referencias a elementos del DOM
 let toggleBloqueoCarril;
@@ -145,6 +170,7 @@ let canvasEscenarios;
  * Inicializa el módulo de escenarios
  */
 function inicializarEscenarios() {
+    if (escenariosInicializados) return;
     console.log('🎬 Inicializando módulo de escenarios...');
     inicializarLluviaAleatoria();
 
@@ -171,9 +197,10 @@ function inicializarEscenarios() {
             if (estadoEscenarios.tipoEscenarioActivo) {
                 e.preventDefault();
                 toggleBloqueoCarril.checked = false;
-                const modoActual = estadoEscenarios.tipoEscenarioActivo === 'inundacion' ? 'Inundación' : 'Obstáculo';
                 mostrarAlertaBootstrap(
-                    `Ya tienes el modo "<strong>${modoActual}</strong>" activo.<br>Debes desactivarlo primero antes de activar otro modo de escenario.`,
+                    tr('scenarios.alerts.modeConflict', {
+                        mode: nombreModoEscenario(estadoEscenarios.tipoEscenarioActivo)
+                    }),
                     'warning',
                     5000
                 );
@@ -193,9 +220,10 @@ function inicializarEscenarios() {
                 if (estadoEscenarios.tipoEscenarioActivo) {
                     e.preventDefault();
                     toggleInundacion.checked = false;
-                    const modoActual = estadoEscenarios.tipoEscenarioActivo === 'bloqueo' ? 'Bloqueo de Carril' : 'Obstáculo';
                     mostrarAlertaBootstrap(
-                        `Ya tienes el modo "<strong>${modoActual}</strong>" activo.<br>Debes desactivarlo primero antes de activar otro modo de escenario.`,
+                        tr('scenarios.alerts.modeConflict', {
+                            mode: nombreModoEscenario(estadoEscenarios.tipoEscenarioActivo)
+                        }),
                         'warning',
                         5000
                     );
@@ -216,9 +244,10 @@ function inicializarEscenarios() {
                 if (estadoEscenarios.tipoEscenarioActivo) {
                     e.preventDefault();
                     toggleObstaculo.checked = false;
-                    const modoActual = estadoEscenarios.tipoEscenarioActivo === 'bloqueo' ? 'Bloqueo de Carril' : 'Inundación';
                     mostrarAlertaBootstrap(
-                        `Ya tienes el modo "<strong>${modoActual}</strong>" activo.<br>Debes desactivarlo primero antes de activar otro modo de escenario.`,
+                        tr('scenarios.alerts.modeConflict', {
+                            mode: nombreModoEscenario(estadoEscenarios.tipoEscenarioActivo)
+                        }),
                         'warning',
                         5000
                     );
@@ -250,29 +279,32 @@ function inicializarEscenarios() {
     if (btnLimpiarTodosBloqueos) {
         btnLimpiarTodosBloqueos.addEventListener('click', () => {
             if (estadoEscenarios.celdasBloqueadas.size === 0) {
-                mostrarAdvertencia('Sin bloqueos', 'No hay obstáculos, inundaciones o bloqueos para limpiar.');
+                window.fluviNotify.warning('scenarios.notifications.nothingToClear');
                 return;
             }
 
             // Mostrar modal de confirmación
             mostrarConfirmacion(
-                '🗑️ Limpiar Todos los Bloqueos',
-                `¿Estás seguro de que deseas eliminar <strong>${estadoEscenarios.celdasBloqueadas.size} bloqueo(s)</strong>?<br><br>Se eliminarán todos los obstáculos, inundaciones y bloqueos del mapa.<br><br><strong>Los vehículos no serán afectados.</strong>`,
+                tr('scenarios.clear.title'),
+                window.fluviI18n.tEscaped('scenarios.alerts.clearQuestion', {
+                    count: estadoEscenarios.celdasBloqueadas.size
+                }),
                 () => {
                     // Callback si confirma - usar versión silenciosa sin confirmación adicional
                     limpiarTodosLosBloqueosSilencioso();
-                    mostrarExito('✅ Bloqueos eliminados', 'Todos los obstáculos, inundaciones y bloqueos han sido eliminados exitosamente.');
+                    window.fluviNotify.success('scenarios.notifications.cleared');
                 },
                 null, // No hay callback para cancelar
                 {
-                    btnConfirmText: '🗑️ Eliminar Todo',
+                    btnConfirmText: tr('scenarios.clear.confirmButton'),
                     btnConfirmClass: 'btn-danger',
-                    btnCancelText: 'Cancelar'
+                    btnCancelText: tr('common.cancel')
                 }
             );
         });
     }
 
+    escenariosInicializados = true;
     console.log('✅ Módulo de escenarios inicializado');
     console.log('ℹ️ Los clicks en el canvas son manejados por CalleRenderer con prioridad al modo bloqueo');
 }
@@ -431,7 +463,9 @@ function limpiarTodosLosBloqueos() {
         return;
     }
 
-    const confirmacion = confirm(`¿Estás seguro de que quieres eliminar ${estadoEscenarios.celdasBloqueadas.size} bloqueo(s)?`);
+    const confirmacion = confirm(window.fluviI18n.tEscaped('scenarios.alerts.clearNative', {
+        count: estadoEscenarios.celdasBloqueadas.size
+    }));
 
     if (!confirmacion) return;
 
@@ -587,22 +621,26 @@ function validarEscenario(escenario) {
         );
 
         if (!calleActual) {
-            errores.push(`La calle "${calleGuardada.nombre}" no existe en el simulador actual`);
+            errores.push(tr('scenarios.validation.missingStreet', {
+                name: calleGuardada.nombre
+            }));
         } else {
             // Validar longitud (tamano)
             if (calleActual.tamano !== calleGuardada.tamano) {
-                errores.push(
-                    `La calle "${calleGuardada.nombre}" tiene una longitud diferente ` +
-                    `(actual: ${calleActual.tamano} celdas, guardada: ${calleGuardada.tamano} celdas)`
-                );
+                errores.push(tr('scenarios.validation.differentLength', {
+                    name: calleGuardada.nombre,
+                    current: calleActual.tamano,
+                    saved: calleGuardada.tamano
+                }));
             }
 
             // Validar número de carriles
             if (calleActual.carriles !== calleGuardada.carriles) {
-                errores.push(
-                    `La calle "${calleGuardada.nombre}" tiene un número diferente de carriles ` +
-                    `(actual: ${calleActual.carriles}, guardado: ${calleGuardada.carriles})`
-                );
+                errores.push(tr('scenarios.validation.differentLanes', {
+                    name: calleGuardada.nombre,
+                    current: calleActual.carriles,
+                    saved: calleGuardada.carriles
+                }));
             }
         }
     });
@@ -614,6 +652,20 @@ function validarEscenario(escenario) {
 }
 
 /**
+ * Construye un resultado fallido con mensaje traducido y los datos necesarios
+ * para que el UI muestre la notificación con una severidad explícita.
+ */
+function resultadoEscenarioError(notificationKey, notificationParams, extra = {}) {
+    return {
+        exito: false,
+        mensaje: tr(notificationKey, notificationParams),
+        notificationKey,
+        notificationParams,
+        ...extra
+    };
+}
+
+/**
  * Carga un escenario desde un objeto JSON
  * @param {Object} escenario - Objeto del escenario a cargar
  * @returns {Object} - { exito: boolean, mensaje: string }
@@ -621,15 +673,17 @@ function validarEscenario(escenario) {
 function cargarEscenarioDesdeJSON(escenario) {
     try {
         if (!escenario) {
-            return { exito: false, mensaje: 'Escenario no válido' };
+            return resultadoEscenarioError('scenarios.validation.invalidScenario');
         }
 
         // Validar compatibilidad
         const validacion = validarEscenario(escenario);
         if (!validacion.valido) {
-            const mensajeError = 'No se puede cargar el escenario:\n\n' +
-                validacion.errores.map(e => `• ${e}`).join('\n');
-            return { exito: false, mensaje: mensajeError };
+            return resultadoEscenarioError(
+                'scenarios.validation.cannotLoad',
+                { errors: validacion.errores.map(e => `• ${e}`).join('\n') },
+                { errores: validacion.errores }
+            );
         }
 
         // Limpiar todos los bloqueos actuales (silenciosamente, sin confirmación)
@@ -696,15 +750,21 @@ function cargarEscenarioDesdeJSON(escenario) {
         }
 
         console.log(`✅ Escenario "${escenario.nombre}" cargado exitosamente. Celdas cargadas: ${celdasCargadas}`);
+        const notificationParams = { count: celdasCargadas };
         return {
             exito: true,
-            mensaje: `Escenario cargado exitosamente\n${celdasCargadas} celdas aplicadas`,
+            mensaje: tr('scenarios.notifications.loaded', notificationParams),
+            notificationKey: 'scenarios.notifications.loaded',
+            notificationParams,
+            celdasCargadas,
             escenario: escenario
         };
 
     } catch (error) {
         console.error('❌ Error al cargar escenario:', error);
-        return { exito: false, mensaje: 'Error al cargar el escenario: ' + error.message };
+        return resultadoEscenarioError('scenarios.notifications.loadError', {
+            reason: error.message
+        });
     }
 }
 
@@ -829,8 +889,8 @@ function generarEscenarioInundacionMasiva() {
     const escenario = {
         version: '1.0',
         id: 'base_inundacion_masiva',
-        nombre: 'Inundación Masiva (Base)',
-        descripcion: 'Escenario base que simula una inundación dejando solo un carril libre en cada calle',
+        nombre: tr('scenarios.base.floodName'),
+        descripcion: tr('scenarios.base.floodDescription'),
         fechaCreacion: new Date().toISOString(),
         esEscenarioBase: true, // Marcar como escenario base
         callesConfig: window.calles.map(c => ({
@@ -959,8 +1019,8 @@ function generarEscenarioBachesAleatorios() {
     const escenario = {
         version: '1.0',
         id: 'base_baches_aleatorios',
-        nombre: 'Baches Aleatorios (Base)',
-        descripcion: 'Escenario base que coloca baches aleatoriamente con 5% de probabilidad en todas las calles',
+        nombre: tr('scenarios.base.potholesName'),
+        descripcion: tr('scenarios.base.potholesDescription'),
         fechaCreacion: new Date().toISOString(),
         esEscenarioBase: true,
         callesConfig: window.calles.map(c => ({
@@ -999,6 +1059,24 @@ function generarEscenarioBachesAleatorios() {
 }
 
 /**
+ * Describe las estadísticas de un escenario como líneas traducidas.
+ * Se usa en las notificaciones de escenarios base y guardados.
+ */
+function describirEstadisticasEscenario(stats = {}) {
+    const lineas = [];
+    if (stats.totalInundaciones > 0) {
+        lineas.push(tr('scenarios.stats.floodedCells', { count: stats.totalInundaciones }));
+    }
+    if (stats.totalObstaculos > 0) {
+        lineas.push(tr('scenarios.stats.obstacles', { count: stats.totalObstaculos }));
+    }
+    if (stats.totalBloqueos > 0) {
+        lineas.push(tr('scenarios.stats.blocks', { count: stats.totalBloqueos }));
+    }
+    return lineas.join('\n');
+}
+
+/**
  * Carga un escenario base predeterminado
  * @param {string} tipoEscenario - Tipo de escenario base ('inundacion_masiva', 'baches_aleatorios', etc.)
  */
@@ -1016,7 +1094,7 @@ function cargarEscenarioBase(tipoEscenario) {
             break;
         default:
             console.error(`❌ Tipo de escenario base desconocido: ${tipoEscenario}`);
-            alert('Tipo de escenario no reconocido');
+            window.fluviNotify.error('scenarios.notifications.unknownBaseType');
             return;
     }
 
@@ -1025,15 +1103,14 @@ function cargarEscenarioBase(tipoEscenario) {
         const resultado = cargarEscenarioDesdeJSON(escenario);
 
         if (resultado.exito) {
-            const stats = escenario.estadisticas;
-            const mensaje = `✅ Escenario "${escenario.nombre}" cargado exitosamente!\n\n` +
-                `📊 Estadísticas:\n` +
-                (stats.totalInundaciones > 0 ? `• ${stats.totalInundaciones} celdas inundadas\n` : '') +
-                (stats.totalObstaculos > 0 ? `• ${stats.totalObstaculos} obstáculos colocados\n` : '') +
-                (stats.totalBloqueos > 0 ? `• ${stats.totalBloqueos} bloqueos\n` : '');
-            alert(mensaje);
+            window.fluviNotify.success('scenarios.notifications.baseLoaded', {
+                name: escenario.nombre,
+                stats: describirEstadisticasEscenario(escenario.estadisticas)
+            });
         } else {
-            alert(`❌ Error al cargar el escenario:\n${resultado.mensaje}`);
+            window.fluviNotify.error('scenarios.notifications.baseLoadFailed', {
+                reason: resultado.mensaje
+            });
         }
     }
 }
@@ -1048,6 +1125,9 @@ window.importarBloqueos = importarBloqueos;
 window.estadoEscenarios = estadoEscenarios;
 window.crearEscenarioJSON = crearEscenarioJSON;
 window.validarEscenario = validarEscenario;
+window.obtenerEscenariosGuardados = obtenerEscenariosGuardados;
+window.eliminarEscenario = eliminarEscenario;
+window.describirEstadisticasEscenario = describirEstadisticasEscenario;
 window.cargarEscenarioDesdeJSON = cargarEscenarioDesdeJSON;
 window.cargarEscenarioBase = cargarEscenarioBase;
 window.generarEscenarioInundacionMasiva = generarEscenarioInundacionMasiva;

@@ -343,6 +343,46 @@ and both themes). Existing behavior regressions remain in
 `tests/parking-configuration.spec.mjs`, `tests/parking-building-inspector.spec.mjs`,
 and `tests/parking-conservation.spec.mjs`.
 
+## Scenario configuration and exchange
+
+Scenario setup, presets, and exchange use one catalog owner, `scenarios.*`:
+
+- `scenarios.cards.*` covers the lane-block, flood, random-rain, and obstacle
+  cards: titles, descriptions, toggles, tooltips, paint-mode badges and
+  instructions, obstacle type labels/options, and the `role="status"`/
+  `aria-live="polite"` paint indicators. Random-rain probabilities remain
+  numeric percentages.
+- `scenarios.presets.*` covers the base-scenario cards and their Load badges;
+  `scenarios.management.*`, `scenarios.current.*`, `scenarios.saveModal.*`, and
+  `scenarios.loadModal.*` cover save/load/import controls, current-scenario
+  status, the naming and description form, the browser list, delete actions,
+  and empty states.
+- `scenarios.validation.*` reports missing streets, changed lengths or lane
+  counts, and malformed scenario files. `scenarios.clear.*`,
+  `scenarios.notifications.*`, `scenarios.alerts.*`, `scenarios.stats.*`, and
+  `scenarios.list.*` cover the clear-all button and confirmation actions,
+  explicit success/warning/error feedback, and interpolated counts. Toast bodies use text nodes; names and counts cannot
+  inject markup.
+- Base scenario names and descriptions (`scenarios.base.*`) are generated in
+  the active language and then stored like any other scenario content. Their
+  stable IDs remain `base_inundacion_masiva` and
+  `base_baches_aleatorios`.
+
+Stored scenario fields (`version`, `id`, `nombre`, `descripcion`,
+`callesConfig`, `celdasBloqueadas`, `lluviaAleatoria`, `estadisticas`), cell
+types (`bloqueo`, `inundacion`, `obstaculo`), obstacle textures (`bache`,
+`trabajador`, `arbol`, `inundacion`), street/building names, probabilities, and
+cell indexes are data. Scenario JSON never gains a language or localization
+field, and importing or re-saving in the other language preserves every stored
+value. Loading always turns random rain off while restoring the saved
+probability; older files without one use 10%.
+
+Browser coverage lives in `tests/scenario-localization.spec.mjs`: Spanish and
+English controls and accessible descriptions, base-scenario generation, Canvas
+and Pixi disruption rendering, cross-language save/load/import round trips,
+rain load-off behavior, safe names, notification severities, desktop/mobile
+reachability, and both themes.
+
 ## Map constructor, reference images, and map labels
 
 The map lifecycle, reference-image, and label controls use three catalog owners:

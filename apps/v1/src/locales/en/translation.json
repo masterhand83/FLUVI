@@ -665,6 +665,179 @@
     "urlLabel": "Image URL",
     "urlPlaceholder": "https://example.org/map.png"
   },
+  "scenarios": {
+    "alerts": {
+      "clearNative_one": "Delete {{count}} block from the map? Vehicles will not be affected.",
+      "clearNative_other": "Delete {{count}} blocks from the map? Vehicles will not be affected.",
+      "clearQuestion_one": "Delete {{count}} block? All obstacles, floods, and blocks will be removed from the map. Vehicles will not be affected.",
+      "clearQuestion_other": "Delete {{count}} blocks? All obstacles, floods, and blocks will be removed from the map. Vehicles will not be affected.",
+      "modeConflict": "You already have the \"{{mode}}\" mode active.\nTurn it off before activating another scenario mode."
+    },
+    "base": {
+      "floodDescription": "Base scenario that simulates a flood leaving only one free lane on each street",
+      "floodName": "Mass Flood (Base)",
+      "potholesDescription": "Base scenario that places potholes randomly with a 5% chance on every street",
+      "potholesName": "Random Potholes (Base)"
+    },
+    "cards": {
+      "block": {
+        "badge": "✏️ Paint Mode Active",
+        "description": "Blocks specific cells to simulate permanent obstacles",
+        "instruction": "Click or drag over street cells to block them",
+        "title": "Lane Block",
+        "toggle": "Enable block mode",
+        "toggleTooltip": "Enable paint mode to block cells"
+      },
+      "flood": {
+        "badge": "🌊 Flood Mode Active",
+        "description": "Simulates flooded areas that block traffic",
+        "instruction": "Click cells on the street to flood them",
+        "title": "Flood",
+        "toggle": "Enable flood mode",
+        "toggleTooltip": "Enable flood mode"
+      },
+      "obstacle": {
+        "badge": "⚠️ Obstacle Mode Active",
+        "description": "Place specific obstacles on streets",
+        "instruction": "Click cells to place obstacles",
+        "title": "Obstacle",
+        "toggle": "Enable obstacle mode",
+        "toggleTooltip": "Enable obstacle mode",
+        "typeLabel": "Obstacle type:",
+        "types": {
+          "construction": "👷🏽 Construction",
+          "fallenTree": "🌳 Fallen tree",
+          "pothole": "🕳️ Pothole"
+        }
+      },
+      "rain": {
+        "description": "Floods empty cells at random as the simulation runs",
+        "help": "Each step (2 simulated seconds) can flood one cell. 0%: no floods; 100%: one per step. Pausing stops the rain; turning it off leaves the floods in place until you clear them.",
+        "probabilityLabel": "Flood probability per step:",
+        "title": "Random Rain",
+        "toggle": "Enable random rain"
+      }
+    },
+    "clear": {
+      "button": "🗑️ Clear All Blocks",
+      "confirmButton": "🗑️ Delete All",
+      "title": "🗑️ Clear All Blocks",
+      "tooltip": "Removes every obstacle, flood, and block from the map (vehicles are not affected)"
+    },
+    "current": {
+      "active": "✓ Active scenario:",
+      "none": "None",
+      "savedAt": "Saved:"
+    },
+    "intro": "Configure special traffic situations in the simulator.",
+    "list": {
+      "blocks_one": "🚧 {{count}} block",
+      "blocks_other": "🚧 {{count}} blocks",
+      "delete": "🗑️ Delete",
+      "deleteFailed": "The scenario \"{{name}}\" could not be deleted.",
+      "deleteQuestion": "Delete the scenario \"{{name}}\"? This action cannot be undone.",
+      "deleteTitle": "🗑️ Delete Scenario",
+      "deleted": "Scenario \"{{name}}\" deleted successfully.",
+      "elements_one": "📊 {{count}} element",
+      "elements_other": "📊 {{count}} elements",
+      "floods_one": "🌊 {{count}} flood",
+      "floods_other": "🌊 {{count}} floods",
+      "load": "📂 Load",
+      "obstacles_one": "⚠️ {{count}} obstacle",
+      "obstacles_other": "⚠️ {{count}} obstacles"
+    },
+    "loadModal": {
+      "browserTitle": "Scenarios in this browser:",
+      "close": "Close",
+      "emptyHelp": "Upload a JSON file or load a scenario saved by an earlier version",
+      "emptyTitle": "⚠️ No saved scenarios",
+      "introBefore": "Select a saved scenario to load it.",
+      "noteBody": "All current obstacles will be removed before loading.",
+      "noteLabel": "Note:",
+      "title": "📂 Load Scenario",
+      "upload": "📤 Upload JSON File",
+      "uploadHelp": "Load a scenario from a previously downloaded .json file"
+    },
+    "management": {
+      "load": "📂 Load",
+      "loadTooltip": "Load a previously saved scenario",
+      "noteBody": "Scenarios include every configured obstacle, flood, and block.",
+      "noteLabel": "ℹ️ Note:",
+      "rememberBody": "Vehicles cannot cross blocked cells.",
+      "rememberLabel": "💡 Keep in mind:",
+      "save": "💾 Save",
+      "saveTooltip": "Save the current obstacle configuration",
+      "title": "💾 Scenario Management",
+      "tooltip": "Save and load complete obstacle, flood, and block configurations."
+    },
+    "notifications": {
+      "baseLoadFailed": "The base scenario could not be loaded:\n{{reason}}",
+      "baseLoaded": "✅ Scenario \"{{name}}\" loaded successfully.\n\n📊 Statistics:\n{{stats}}",
+      "baseUnavailable": "The base scenario system is unavailable.",
+      "cleared": "All obstacles, floods, and blocks were removed successfully.",
+      "invalidFileType": "Select a valid JSON file.",
+      "loadError": "The scenario could not be loaded:\n{{reason}}",
+      "loaded_one": "Scenario loaded successfully\n{{count}} cell applied",
+      "loaded_other": "Scenario loaded successfully\n{{count}} cells applied",
+      "loadedFromFile_one": "Scenario \"{{name}}\" loaded successfully from the JSON file.\n{{count}} cell applied",
+      "loadedFromFile_other": "Scenario \"{{name}}\" loaded successfully from the JSON file.\n{{count}} cells applied",
+      "nameRequired": "The scenario name is required.",
+      "nothingToClear": "There are no obstacles, floods, or blocks to clear.",
+      "parseFailed": "The JSON file could not be read:\n{{reason}}",
+      "readFailed": "The file could not be read.",
+      "saveFailed": "The scenario could not be saved. Try again.",
+      "saved": "Scenario \"{{name}}\" saved successfully.\nThe JSON file was downloaded automatically.\nKeep the file and load it whenever you want to use this scenario.",
+      "unknownBaseType": "Unrecognized scenario type."
+    },
+    "presets": {
+      "flood": {
+        "description": "Leaves only one free lane on every street",
+        "name": "🌊 Mass Flood",
+        "tooltip": "Simulates a flood that leaves only one free lane on each street"
+      },
+      "intro": "Load preset example scenarios to try different situations.",
+      "loadBadge": "Load",
+      "potholes": {
+        "description": "5% chance of potholes in each cell",
+        "name": "🕳️ Random Potholes",
+        "tooltip": "Places potholes randomly with a 5% chance on every street"
+      },
+      "title": "🎯 Base Scenarios",
+      "tooltip": "Preset example scenarios that demonstrate different traffic situations."
+    },
+    "saveModal": {
+      "cancel": "Cancel",
+      "descriptionHelp": "Maximum 200 characters",
+      "descriptionLabel": "Description (optional):",
+      "descriptionPlaceholder": "Briefly describe this scenario...",
+      "includesBlocks": "All lane blocks",
+      "includesFloods": "All flooded areas",
+      "includesObstacles": "All obstacles (potholes, construction, fallen trees)",
+      "includesStreets": "Settings for every affected street",
+      "includesTitle": "ℹ️ Will be saved:",
+      "nameInvalid": "The name is required (maximum 50 characters).",
+      "nameLabel": "Scenario name:",
+      "namePlaceholder": "E.g.: Heavy traffic on a rainy day",
+      "save": "💾 Save Scenario",
+      "title": "💾 Save Scenario"
+    },
+    "stats": {
+      "blocks_one": "• {{count}} block",
+      "blocks_other": "• {{count}} blocks",
+      "floodedCells_one": "• {{count}} flooded cell",
+      "floodedCells_other": "• {{count}} flooded cells",
+      "obstacles_one": "• {{count}} obstacle placed",
+      "obstacles_other": "• {{count}} obstacles placed"
+    },
+    "validation": {
+      "cannotLoad": "The scenario cannot be loaded:\n\n{{errors}}",
+      "differentLanes": "Street \"{{name}}\" has a different number of lanes (current: {{current}}, saved: {{saved}})",
+      "differentLength": "Street \"{{name}}\" has a different length (current: {{current}} cells, saved: {{saved}} cells)",
+      "invalidFormat": "The JSON file does not have the expected scenario format.",
+      "invalidScenario": "Invalid scenario.",
+      "missingStreet": "Street \"{{name}}\" does not exist in the current simulator"
+    }
+  },
   "settings": {
     "cellDetection": {
       "active": "🔢 Cell detection (On)",
