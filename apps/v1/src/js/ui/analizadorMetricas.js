@@ -12,6 +12,91 @@ let pyodideInitialization = null;
 let analysisGeneration = 0;
 let analysisQueue = Promise.resolve();
 
+function analyzerText(key, params) {
+  return typeof tr === 'function' ? tr(key, params) : key;
+}
+
+function analyzerNotify(severity, key, params) {
+  const notify = window.fluviNotify;
+  if (notify && typeof notify[severity] === 'function') {
+    notify[severity](key, params);
+    return;
+  }
+  if (typeof window.alert === 'function') {
+    window.alert(analyzerText(key, params));
+  }
+}
+
+function flattenAnalyzerMessages(source, prefix) {
+  const messages = {};
+  const visit = (value, path) => {
+    for (const [key, entry] of Object.entries(value ?? {})) {
+      const nextPath = `${path}.${key}`;
+      if (entry && typeof entry === 'object' && !Array.isArray(entry)) {
+        visit(entry, nextPath);
+      } else if (typeof entry === 'string') {
+        messages[nextPath] = entry;
+      }
+    }
+  };
+  visit(source, prefix);
+  return messages;
+}
+
+function analyzerMessagesForPyodide() {
+  const resources = window.FLUVI_LOCALE_RESOURCES;
+  if (!resources) return null;
+  const messages = {};
+  for (const [language, namespaces] of Object.entries(resources)) {
+    const python = namespaces?.translation?.analyzer?.python;
+    if (!python) continue;
+    messages[language] = flattenAnalyzerMessages(
+      python,
+      'analyzer.python',
+    );
+  }
+  return Object.keys(messages).length > 0 ? messages : null;
+}
+
+function setAnalyzerProgress(percent) {
+  const bar = document.getElementById('progressBarPython');
+  bar.style.width = `${percent}%`;
+  bar.setAttribute('aria-valuenow', String(percent));
+}
+
+function hideAnalyzerStatus() {
+  const estado = document.getElementById('estadoCargaPython');
+  estado.style.display = 'none';
+  estado.classList.remove('alert-danger');
+  estado.classList.add('alert-info');
+  estado.setAttribute('role', 'status');
+  const spinner = estado.querySelector('.spinner-border');
+  if (spinner) spinner.hidden = false;
+}
+
+function setAnalyzerStatus(kind, key, params) {
+  const estado = document.getElementById('estadoCargaPython');
+  estado.style.display = 'block';
+  estado.classList.remove('alert-info', 'alert-danger');
+  estado.classList.add(kind === 'error' ? 'alert-danger' : 'alert-info');
+  estado.setAttribute('role', kind === 'error' ? 'alert' : 'status');
+  const spinner = estado.querySelector('.spinner-border');
+  if (spinner) spinner.hidden = kind === 'error';
+  document.getElementById('mensajeEstadoPython').textContent =
+    analyzerText(key, params);
+}
+
+function analyzerErrorReason(error) {
+  const message = String(error?.message || error || '').trim();
+  if (!message) return '';
+  const lines = message
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const last = lines.at(-1) || message;
+  return last.replace(/^[\w.]*(?:Error|Exception):\s*/, '') || last;
+}
+
 function limpiarResultadosAnalisis() {
   currentImagenes = null;
   document.getElementById('resultadosAnalisis').style.display = 'none';
@@ -28,13 +113,10 @@ function resetearAnalizadorMetricas() {
   currentFileType = 'csv';
   limpiarResultadosAnalisis();
   document.getElementById('inputCSVAnalizador').value = '';
-  document.getElementById('nombreArchivoCSV').textContent = 'Ningún archivo seleccionado (CSV o JSON de métricas)';
-  const estado = document.getElementById('estadoCargaPython');
-  estado.style.display = 'none';
-  estado.classList.remove('alert-danger');
-  estado.classList.add('alert-info');
-  document.getElementById('mensajeEstadoPython').textContent = 'Inicializando Python (Pyodide)...';
-  document.getElementById('progressBarPython').style.width = '0%';
+  document.getElementById('nombreArchivoCSV').textContent = analyzerText('analyzer.modal.noFile');
+  hideAnalyzerStatus();
+  document.getElementById('mensajeEstadoPython').textContent = analyzerText('analyzer.modal.initializing');
+  setAnalyzerProgress(0);
   for (const tab of document.querySelectorAll('#tabsImagenes [role="tab"]')) {
     const active = tab.id === 'tab-temporal';
     tab.classList.toggle('active', active);
@@ -76,7 +158,18 @@ async function inicializarPyodide() {
 
     // Cargar el script del analizador
     const response = await fetch('src/python/analizador.py');
-    if (!response.ok) throw new Error('No se pudo cargar el script de análisis');
+    if (!response.ok) throw new Error(analyzerText('analyzer.modal.errors.runtimeLoadFailed'));
+
+    // Compartir los mensajes de Python del catálogo activo. Si no están
+    // disponibles, el analizador conserva su respaldo en español.
+    const analyzerMessages = analyzerMessagesForPyodide();
+    if (analyzerMessages && instance.globals && typeof instance.globals.set === 'function') {
+      instance.globals.set(
+        'FLUVI_ANALYZER_MESSAGES_JSON',
+        JSON.stringify(analyzerMessages),
+      );
+    }
+
     const analizadorScript = await response.text();
 
     // Ejecutar el script en Pyodide
@@ -106,9 +199,9 @@ async function cargarArchivoParaAnalisis(event) {
   const generation = ++analysisGeneration;
   currentFileContent = null;
   limpiarResultadosAnalisis();
-  document.getElementById('estadoCargaPython').style.display = 'none';
-  document.getElementById('progressBarPython').style.width = '0%';
-  document.getElementById('nombreArchivoCSV').textContent = 'Ningún archivo seleccionado (CSV o JSON de métricas)';
+  hideAnalyzerStatus();
+  setAnalyzerProgress(0);
+  document.getElementById('nombreArchivoCSV').textContent = analyzerText('analyzer.modal.noFile');
 
   // Determinar tipo de archivo por extensión
   const extension = file.name.split('.').pop().toLowerCase();
@@ -117,7 +210,7 @@ async function cargarArchivoParaAnalisis(event) {
   } else if (extension === 'json') {
     currentFileType = 'json';
   } else {
-    alert('⚠️ Formato de archivo no soportado. Use .csv o .json');
+    analyzerNotify('error', 'analyzer.modal.errors.unsupportedFormat');
     return;
   }
 
@@ -138,15 +231,16 @@ async function cargarArchivoParaAnalisis(event) {
     };
     reader.onerror = () => {
       if (generation !== analysisGeneration) return;
-      document.getElementById('estadoCargaPython').style.display = 'block';
-      document.getElementById('estadoCargaPython').classList.replace('alert-info', 'alert-danger');
-      document.getElementById('mensajeEstadoPython').textContent = '❌ Error al leer el archivo';
+      setAnalyzerStatus('error', 'analyzer.modal.errors.readFailed');
+      analyzerNotify('error', 'analyzer.modal.errors.readFailed');
     };
     reader.readAsText(file);
 
   } catch (error) {
+    if (generation !== analysisGeneration) return;
     console.error('❌ Error al cargar archivo:', error);
-    alert(`Error al cargar el archivo ${currentFileType.toUpperCase()}: ` + error.message);
+    setAnalyzerStatus('error', 'analyzer.modal.errors.readFailed');
+    analyzerNotify('error', 'analyzer.modal.errors.readFailed');
   }
 }
 
@@ -163,21 +257,18 @@ async function ejecutarAnalisis(job = null) {
     content: currentFileContent, type: currentFileType, generation: ++analysisGeneration
   };
   if (!content) {
-    document.getElementById('estadoCargaPython').style.display = 'block';
-    document.getElementById('estadoCargaPython').classList.remove('alert-info');
-    document.getElementById('estadoCargaPython').classList.add('alert-danger');
-    document.getElementById('mensajeEstadoPython').textContent = '❌ El archivo está vacío. Carga un archivo de métricas.';
+    setAnalyzerStatus('error', 'analyzer.modal.errors.emptyFile');
+    analyzerNotify('error', 'analyzer.modal.errors.emptyFile');
     return;
   }
 
   try {
     limpiarResultadosAnalisis();
     // Mostrar estado de carga
-    document.getElementById('estadoCargaPython').style.display = 'block';
-    document.getElementById('estadoCargaPython').classList.remove('alert-danger');
-    document.getElementById('estadoCargaPython').classList.add('alert-info');
-    document.getElementById('mensajeEstadoPython').textContent = `Procesando ${type.toUpperCase()}...`;
-    document.getElementById('progressBarPython').style.width = '20%';
+    setAnalyzerStatus('info', 'analyzer.modal.status.processing', {
+      format: type.toUpperCase(),
+    });
+    setAnalyzerProgress(20);
 
     // Inicializar Pyodide si no está inicializado
     if (!pyodideInitialized) {
@@ -185,11 +276,11 @@ async function ejecutarAnalisis(job = null) {
     }
     if (generation !== analysisGeneration) return;
 
-    document.getElementById('progressBarPython').style.width = '40%';
-    document.getElementById('mensajeEstadoPython').textContent = 'Analizando métricas...';
+    setAnalyzerProgress(40);
+    setAnalyzerStatus('info', 'analyzer.modal.status.analyzing');
 
-    document.getElementById('progressBarPython').style.width = '60%';
-    document.getElementById('mensajeEstadoPython').textContent = 'Generando visualizaciones...';
+    setAnalyzerProgress(60);
+    setAnalyzerStatus('info', 'analyzer.modal.status.generating');
 
     // Escapar el contenido para Python
     const contenidoEscapado = content
@@ -197,6 +288,11 @@ async function ejecutarAnalisis(job = null) {
       .replace(/"/g, '\\"')
       .replace(/\n/g, '\\n')
       .replace(/\r/g, '');
+
+    // El idioma activo de la sesión se fija al iniciar el análisis; cambiar la
+    // preferencia para el próximo inicio no altera esta ejecución.
+    const idiomaActivo = window.fluviI18n?.activeLanguage === 'en' ? 'en' : 'es';
+    const idiomaPythonLiteral = JSON.stringify(idiomaActivo);
 
     // Ejecutar el análisis según el tipo de archivo
     let pythonCode;
@@ -206,7 +302,7 @@ import json
 
 # Parsear el contenido JSON
 contenido_json = """${contenidoEscapado}"""
-analizador = AnalizadorTraficoFLUVI(contenido_json, tipo='json')
+analizador = AnalizadorTraficoFLUVI(contenido_json, tipo='json', idioma=${idiomaPythonLiteral})
 resultados = analizador.ejecutar_analisis_completo()
 resultados['imagenes']
       `;
@@ -217,7 +313,7 @@ import io
 # Leer el CSV desde el contenido
 contenido_csv = """${contenidoEscapado}"""
 archivo = io.StringIO(contenido_csv)
-analizador = AnalizadorTraficoFLUVI(archivo, tipo='csv')
+analizador = AnalizadorTraficoFLUVI(archivo, tipo='csv', idioma=${idiomaPythonLiteral})
 resultados = analizador.ejecutar_analisis_completo()
 resultados['imagenes']
       `;
@@ -236,8 +332,8 @@ resultados['imagenes']
       return;
     }
 
-    document.getElementById('progressBarPython').style.width = '90%';
-    document.getElementById('mensajeEstadoPython').textContent = 'Renderizando imágenes...';
+    setAnalyzerProgress(90);
+    setAnalyzerStatus('info', 'analyzer.modal.status.rendering');
 
     // Convertir el resultado de Python a JavaScript
     try {
@@ -249,8 +345,8 @@ resultados['imagenes']
     // Mostrar las imágenes
     mostrarImagenes(currentImagenes);
 
-    document.getElementById('progressBarPython').style.width = '100%';
-    document.getElementById('mensajeEstadoPython').textContent = '¡Análisis completado! ✓';
+    setAnalyzerProgress(100);
+    setAnalyzerStatus('info', 'analyzer.modal.status.completed');
 
     document.getElementById('estadoCargaPython').style.display = 'none';
     document.getElementById('resultadosAnalisis').style.display = 'block';
@@ -263,9 +359,12 @@ resultados['imagenes']
     if (generation !== analysisGeneration) return;
     limpiarResultadosAnalisis();
     console.error('❌ Error durante el análisis:', error);
-    document.getElementById('mensajeEstadoPython').textContent = '❌ Error durante el análisis: ' + error.message;
-    document.getElementById('estadoCargaPython').classList.remove('alert-info');
-    document.getElementById('estadoCargaPython').classList.add('alert-danger');
+    setAnalyzerStatus('error', 'analyzer.modal.errors.analysisFailed', {
+      reason: analyzerErrorReason(error),
+    });
+    analyzerNotify('error', 'analyzer.modal.errors.analysisFailed', {
+      reason: analyzerErrorReason(error),
+    });
   }
 }
 
@@ -326,7 +425,7 @@ function descargarImagenActual() {
  */
 async function descargarTodasImagenes() {
   if (!currentImagenes) {
-    alert('No hay imágenes para descargar');
+    analyzerNotify('warning', 'notifications.analyzer.noImages');
     return;
   }
   const generation = analysisGeneration;
@@ -336,7 +435,7 @@ async function descargarTodasImagenes() {
   // Nota: Necesitarás incluir la librería JSZip en tu HTML
   if (typeof JSZip === 'undefined') {
     // Si no está disponible JSZip, descargar una por una
-    alert('Descargando imágenes individualmente...');
+    analyzerNotify('info', 'notifications.analyzer.zipUnavailable');
     descargarTodasImagenesSeparadas();
     return;
   }
@@ -374,7 +473,7 @@ async function descargarTodasImagenes() {
   } catch (error) {
     if (generation !== analysisGeneration) return;
     console.error('❌ Error al crear ZIP:', error);
-    alert('Error al crear el archivo ZIP. Descargando imágenes individualmente...');
+    analyzerNotify('error', 'notifications.analyzer.zipFailed');
     descargarTodasImagenesSeparadas();
   }
 }

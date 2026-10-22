@@ -19,6 +19,7 @@ test("static deployment preserves classic scripts and ships local runtime resour
 		}
 		for (const entry of [
 			"src/python/analizador.py",
+			"src/python/analizador-mensajes.json",
 			"assets/images/vehicles",
 			"src/libs/i18next/i18next.min.js",
 			"src/libs/i18next/VERSION",

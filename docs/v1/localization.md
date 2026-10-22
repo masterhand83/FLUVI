@@ -15,6 +15,8 @@ own the remaining workflows.
 | Browser-ready catalog bundle (generated) | `src/locales/catalogs.js` |
 | Pinned browser dependency | `src/libs/i18next/i18next.min.js`, `src/libs/i18next/VERSION` |
 | Catalog generation and validation | `scripts/build-locales.mjs`, `scripts/validate-locales.mjs` |
+| Python analyzer plot/error messages | `analyzer.python.*` in the catalogs, generated to `src/python/analizador-mensajes.json` |
+| Python analyzer language boundary | `src/js/ui/analizadorMetricas.js` → `src/python/analizador.py` |
 | Extraction/status configuration | `i18next.config.ts` |
 | Notification severity and confirmation defaults | `src/js/ui/notifications.js` |
 | Language selector and settings notice | `index.html` (`#languagePreference`, `#languagePreferenceNotice`) |
@@ -81,7 +83,8 @@ suffixes (`_one`, `_other`, and locale-specific forms such as Spanish `_many`).
 
 - `src/locales/{es,en}/translation.json` are the source of truth. Edit them by
   hand, then run `pnpm --filter v1 locales:build` to regenerate
-  `src/locales/catalogs.js`.
+  `src/locales/catalogs.js` and `src/python/analizador-mensajes.json`. Keep both
+  generated files in sync; the build freshness check fails when either differs.
 - `pnpm --filter v1 locales:status` runs `i18next-cli status` plus repository
   validation: key/placeholder/plural parity, non-empty production values, and
   the HTML/Python inventory. The configured call patterns are `tr(...)`,
@@ -470,6 +473,53 @@ obstacle handling, lane locality, and full street coverage),
 `tests/metrics-images.spec.mjs` (readable ZIP contents and warning severity),
 and `tests/metric-image-export.spec.mjs` (full-history export without mutating
 live charts or JSON).
+
+## Metrics analyzer and Python output
+
+The analyzer workflow uses three catalog owners:
+
+- `analyzer.modal.*` covers the upload control and file status, the modal title
+  and introduction, progress/initialization/completion messages, result title,
+  tabs, image alternatives, download buttons, accessible loading text, and
+  translated analysis/read/empty/unsupported-format errors.
+  `notifications.analyzer.*` covers the no-images warning and ZIP
+  unavailable/failure paths. Migrated failures use explicit
+  `fluviNotify` severity; notification bodies are text nodes.
+- `analyzer.python.*` owns Python-generated presentation and errors: plot
+  titles, axes, legends, colorbar labels, displayed weekday names, traffic-state
+  labels used in legends, and the reader errors.
+  `scripts/build-locales.mjs` generates
+  `src/python/analizador-mensajes.json` from this subtree. The
+  `python` inventory in `src/locales/non-js-keys.json` lists every key, and
+  validation requires both catalogs to contain them with matching placeholders;
+  it also rejects any `analyzer.python.*` catalog key missing from the inventory.
+- The catalog is generated, never edited by hand. Python reads the injected
+  messages when running in Pyodide and falls back to the generated file beside
+  `analizador.py` for direct callers.
+
+`ui/analizadorMetricas.js` passes the active session language as `idioma` into
+the existing `AnalizadorTraficoFLUVI` and web wrapper entry points. Omitting
+`idioma` preserves Spanish output, and changing the saved next-startup
+preference does not change the language of an active session or an analysis
+already in progress.
+
+Python keeps the accepted CSV/JSON formats, internal DataFrame columns, result
+keys, state/day identifiers, and statistical calculations unchanged. Only the
+rendered presentation is translated: `Dia_Semana`, `Estado_Nombre`, and the
+numeric indexes remain stable internally, and display labels are mapped at the
+plotting boundary. Legacy Spanish exports remain readable in either language
+and produce the same numbers. Analyzer download filenames keep their historical
+stable names.
+
+Browser coverage lives in `tests/analizador-localization.spec.mjs` (both
+languages, translated controls/tabs/progress/download interface, active-language
+Pyodide boundary, selected-language current and ZIP downloads, notification
+severity, desktop/mobile, and both themes). Controlled lifecycle coverage stays
+in `tests/analizador-metricas.spec.mjs`. Focused Python checks live in
+`tests/analizador-python-localization.spec.mjs`: they parse the legacy fixtures
+with the real reader, compare numerical results and result keys across
+languages, assert default-Spanish presentation, and check translated plot text
+and errors.
 
 ## Map constructor, reference images, and map labels
 

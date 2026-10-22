@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url"
 export const LOCALE_LANGUAGES = ["es", "en"]
 export const LOCALE_NAMESPACES = ["translation"]
 export const FALLBACK_LANGUAGE = "es"
+export const ANALYZER_MESSAGE_PREFIX = "analyzer.python."
 
 const rootDir = fileURLToPath(new URL("../", import.meta.url))
 
@@ -14,6 +15,38 @@ export function localeCatalogPath(language, namespace = "translation") {
 
 export function localeCatalogModulePath() {
 	return resolve(rootDir, "src/locales/catalogs.js")
+}
+
+export function analyzerMessagesPath() {
+	return resolve(rootDir, "src/python/analizador-mensajes.json")
+}
+
+export function flattenCatalog(catalog, prefix = []) {
+	const entries = new Map()
+	for (const [key, value] of Object.entries(catalog ?? {})) {
+		const path = [...prefix, key]
+		if (value && typeof value === "object" && !Array.isArray(value)) {
+			for (const [nestedKey, nestedValue] of flattenCatalog(value, path)) {
+				entries.set(nestedKey, nestedValue)
+			}
+		} else {
+			entries.set(path.join("."), value)
+		}
+	}
+	return entries
+}
+
+export function renderAnalyzerMessages(catalogs) {
+	const messages = {}
+	for (const language of LOCALE_LANGUAGES) {
+		const flatten = flattenCatalog(
+			catalogs[language]?.translation ?? {},
+		)
+		messages[language] = Object.fromEntries(
+			[...flatten].filter(([key]) => key.startsWith(ANALYZER_MESSAGE_PREFIX)),
+		)
+	}
+	return `${JSON.stringify(messages, null, "\t")}\n`
 }
 
 export async function readLocaleCatalogs() {
@@ -46,29 +79,50 @@ export function renderLocaleCatalogModule(catalogs) {
 	].join("\n")
 }
 
+async function readIfPresent(path) {
+	try {
+		return await readFile(path, "utf8")
+	} catch {
+		return null
+	}
+}
+
 export async function buildLocaleCatalogs({ check = false } = {}) {
 	const catalogs = await readLocaleCatalogs()
 	const output = renderLocaleCatalogModule(catalogs)
+	const analyzerOutput = renderAnalyzerMessages(catalogs)
 	const outputPath = localeCatalogModulePath()
-	let current = null
-	try {
-		current = await readFile(outputPath, "utf8")
-	} catch {
-		current = null
-	}
+	const analyzerPath = analyzerMessagesPath()
+	const [current, currentAnalyzer] = await Promise.all([
+		readIfPresent(outputPath),
+		readIfPresent(analyzerPath),
+	])
 	if (check) {
 		if (current !== output) {
 			throw new Error(
 				"src/locales/catalogs.js is out of date. Run `pnpm --filter v1 locales:build`.",
 			)
 		}
-		return { outputPath, changed: false }
+		if (currentAnalyzer !== analyzerOutput) {
+			throw new Error(
+				"src/python/analizador-mensajes.json is out of date. Run `pnpm --filter v1 locales:build`.",
+			)
+		}
+		return { outputPath, analyzerPath, changed: false }
 	}
 	if (current !== output) {
 		await mkdir(dirname(outputPath), { recursive: true })
 		await writeFile(outputPath, output)
 	}
-	return { outputPath, changed: current !== output }
+	if (currentAnalyzer !== analyzerOutput) {
+		await mkdir(dirname(analyzerPath), { recursive: true })
+		await writeFile(analyzerPath, analyzerOutput)
+	}
+	return {
+		outputPath,
+		analyzerPath,
+		changed: current !== output || currentAnalyzer !== analyzerOutput,
+	}
 }
 
 if (

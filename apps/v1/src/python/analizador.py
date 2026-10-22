@@ -3,11 +3,67 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy import stats, signal
 from datetime import datetime, timedelta
+from pathlib import Path
 import warnings
 warnings.filterwarnings('ignore')
 import io
 import base64
 import json
+import re
+
+IDIOMAS_ANALIZADOR = ('es', 'en')
+DIAS_SEMANA = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
+CLAVES_DIAS_SEMANA = [
+    'weekdays.monday', 'weekdays.tuesday', 'weekdays.wednesday',
+    'weekdays.thursday', 'weekdays.friday', 'weekdays.saturday',
+    'weekdays.sunday',
+]
+ESTADOS_MENSAJE = {
+    '🔵 Sub-utilizado': 'states.underused',
+    '🟡 Moderado': 'states.moderate',
+    '🟢 Óptimo': 'states.optimal',
+    '🟠 Congestionado': 'states.congested',
+    '🔴 Colapso': 'states.collapse',
+}
+PLACEHOLDER_PATTERN = re.compile(r'\{\{\s*([^{}\s]+)\s*\}\}')
+
+
+def _cargar_mensajes_analizador():
+    """Carga los mensajes del analizador inyectados o junto a este archivo."""
+    inyectado = globals().get('FLUVI_ANALYZER_MESSAGES_JSON')
+    if inyectado:
+        try:
+            mensajes = json.loads(inyectado)
+            if isinstance(mensajes, dict):
+                return mensajes
+        except (TypeError, ValueError):
+            pass
+
+    archivo = globals().get('__file__')
+    if archivo:
+        try:
+            ruta = Path(archivo).with_name('analizador-mensajes.json')
+            with ruta.open(encoding='utf-8') as manejador:
+                mensajes = json.load(manejador)
+            if isinstance(mensajes, dict):
+                return mensajes
+        except (OSError, ValueError):
+            pass
+    return {}
+
+
+def _aplicar_placeholders(texto, params):
+    return PLACEHOLDER_PATTERN.sub(
+        lambda match: str(params.get(match.group(1), match.group(0))),
+        str(texto),
+    )
+
+
+MENSAJES_ANALIZADOR = _cargar_mensajes_analizador()
+
+
+class ErrorAnalizador(ValueError):
+    """Error visible al usuario, ya traducido al idioma activo."""
 
 # Importar seaborn solo si está disponible
 try:
@@ -26,15 +82,49 @@ except ImportError:
     print("⚠️ Scikit-learn no disponible")
 
 class AnalizadorTraficoFLUVI:
-    def __init__(self, archivo, tipo='csv'):
+    IDIOMAS = IDIOMAS_ANALIZADOR
+
+    def __init__(self, archivo, tipo='csv', idioma='es'):
         """Inicializa el analizador y carga los datos
 
         Args:
             archivo: Archivo o contenido a procesar (CSV o JSON)
             tipo: 'csv' o 'json' - tipo de archivo a procesar
+            idioma: 'es' o 'en' - idioma de las gráficas y mensajes visibles.
+                Al omitirlo se conserva la salida en español.
         """
+        self.idioma = idioma if idioma in self.IDIOMAS else 'es'
         self.df = self.cargar_datos(archivo, tipo)
         self.resultados = {}
+
+    def _texto(self, clave, **params):
+        """Devuelve un mensaje del idioma activo con respaldo en español."""
+        completo = f'analyzer.python.{clave}'
+        mensajes = MENSAJES_ANALIZADOR.get(self.idioma) or {}
+        texto = mensajes.get(completo)
+        if texto is None:
+            respaldo = MENSAJES_ANALIZADOR.get('es') or {}
+            texto = respaldo.get(completo, completo)
+        return _aplicar_placeholders(texto, params)
+
+    def _traducir_dia(self, dia):
+        try:
+            indice = DIAS_SEMANA.index(dia)
+        except ValueError:
+            return dia
+        return self._texto(CLAVES_DIAS_SEMANA[indice])
+
+    def _traducir_estado(self, estado):
+        clave = ESTADOS_MENSAJE.get(estado)
+        return self._texto(clave) if clave else estado
+
+    def _parsear_json(self, contenido):
+        try:
+            return json.loads(contenido)
+        except json.JSONDecodeError as error:
+            raise ErrorAnalizador(
+                self._texto('errors.invalidJson', reason=error.msg),
+            ) from error
 
     def cargar_datos(self, archivo, tipo='csv'):
         """Carga y limpia los datos desde CSV o JSON
@@ -46,10 +136,17 @@ class AnalizadorTraficoFLUVI:
         Returns:
             DataFrame de pandas con los datos procesados
         """
-        if tipo == 'json':
-            return self._cargar_desde_json(archivo)
-        else:
-            return self._cargar_desde_csv(archivo)
+        try:
+            if tipo == 'json':
+                return self._cargar_desde_json(archivo)
+            else:
+                return self._cargar_desde_csv(archivo)
+        except ErrorAnalizador:
+            raise
+        except Exception as error:
+            raise ErrorAnalizador(
+                self._texto('errors.readFailed', reason=str(error)),
+            ) from error
 
     def _cargar_desde_json(self, archivo):
         """Carga datos desde un archivo JSON de métricas exportado
@@ -62,19 +159,19 @@ class AnalizadorTraficoFLUVI:
         """
         # Si es un string, parsearlo como JSON
         if isinstance(archivo, str):
-            datos = json.loads(archivo)
+            datos = self._parsear_json(archivo)
         # Si es un archivo, leerlo
         elif hasattr(archivo, 'read'):
             contenido = archivo.read()
             if isinstance(contenido, bytes):
                 contenido = contenido.decode('utf-8')
-            datos = json.loads(contenido)
+            datos = self._parsear_json(contenido)
         else:
             datos = archivo
 
         # Validar estructura del JSON
         if 'metrics' not in datos:
-            raise ValueError("El archivo JSON debe contener una clave 'metrics' con los datos")
+            raise ErrorAnalizador(self._texto('errors.missingMetrics'))
 
         metricas = datos['metrics']
 
@@ -93,7 +190,7 @@ class AnalizadorTraficoFLUVI:
         claves_requeridas = ['timestamps', 'density', 'throughput', 'netGeneration', 'speed', 'entropy']
         for clave in claves_requeridas:
             if clave not in metricas:
-                raise ValueError(f"Clave requerida '{clave}' no encontrada en metrics")
+                raise ErrorAnalizador(self._texto('errors.missingKey', key=clave))
 
         # Crear DataFrame desde las listas
         df = pd.DataFrame({
@@ -198,7 +295,7 @@ class AnalizadorTraficoFLUVI:
 
     def _calcular_dias_semana(self, df):
         """Calcula el día de la semana detectando cambios de día correctamente"""
-        dias_semana = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
+        dias_semana = DIAS_SEMANA
 
         # Detectar cambios de día
         df['Cambio_Dia'] = 0
@@ -420,26 +517,38 @@ class AnalizadorTraficoFLUVI:
         if SEABORN_AVAILABLE:
             sns.set_palette("husl")
 
+        texto = self._texto
+        densidad = texto('plots.common.density')
+        densidad_pct = texto('plots.common.densityPercent')
+        flujo = texto('plots.common.flow')
+        flujo_veh_s = texto('plots.common.flowPerSecond')
+        entropia_bits = texto('plots.common.entropyBits')
+        velocidad_pct = texto('plots.common.speedPercent')
+        frecuencia = texto('plots.common.frequency')
+        tiempo_minutos = texto('plots.common.timeMinutes')
+        hora_dia = texto('plots.common.hourOfDay')
+        dia_semana = texto('plots.common.weekday')
+
         imagenes = {}
 
         # IMAGEN 1: analisis_temporal.png
         fig1, axes = plt.subplots(2, 2, figsize=(18, 10))
-        fig1.suptitle('Análisis Temporal de Métricas de Tráfico', fontsize=16, fontweight='bold')
+        fig1.suptitle(texto('plots.temporal.suptitle'), fontsize=16, fontweight='bold')
 
         axes[0,0].plot(self.df['Minuto'], self.df['Densidad'], linewidth=0.5, alpha=0.7)
-        axes[0,0].set_title('Densidad vs Tiempo', fontsize=12, fontweight='bold')
-        axes[0,0].set_ylabel('Densidad (%)', fontsize=11)
+        axes[0,0].set_title(texto('plots.temporal.densityTitle'), fontsize=12, fontweight='bold')
+        axes[0,0].set_ylabel(densidad_pct, fontsize=11)
         axes[0,0].grid(True, alpha=0.3)
 
         axes[0,1].plot(self.df['Minuto'], self.df['Flujo'], linewidth=0.5, alpha=0.7, color='orange')
-        axes[0,1].set_title('Flujo vs Tiempo', fontsize=12, fontweight='bold')
-        axes[0,1].set_ylabel('Flujo (veh/s)', fontsize=11)
+        axes[0,1].set_title(texto('plots.temporal.flowTitle'), fontsize=12, fontweight='bold')
+        axes[0,1].set_ylabel(flujo_veh_s, fontsize=11)
         axes[0,1].grid(True, alpha=0.3)
 
         axes[1,0].plot(self.df['Minuto'], self.df['Velocidad'], linewidth=0.5, alpha=0.7, color='green')
-        axes[1,0].set_title('Velocidad vs Tiempo', fontsize=12, fontweight='bold')
-        axes[1,0].set_ylabel('Velocidad (% movimiento)', fontsize=11)
-        axes[1,0].set_xlabel('Tiempo (minutos)', fontsize=11)
+        axes[1,0].set_title(texto('plots.temporal.speedTitle'), fontsize=12, fontweight='bold')
+        axes[1,0].set_ylabel(velocidad_pct, fontsize=11)
+        axes[1,0].set_xlabel(tiempo_minutos, fontsize=11)
         axes[1,0].grid(True, alpha=0.3)
 
         if 'Estado_Nombre' in self.df.columns:
@@ -459,14 +568,14 @@ class AnalizadorTraficoFLUVI:
                     mask = self.df['Estado_Nombre'] == estado
                     axes[1,1].scatter(self.df.loc[mask, 'Minuto'],
                                     self.df.loc[mask, 'Densidad'],
-                                    label=estado,
+                                    label=self._traducir_estado(estado),
                                     s=3,
                                     alpha=0.6,
                                     color=colores_estados[estado])
 
-            axes[1,1].set_title('Estados de Tráfico (Clasificación FLUVI)', fontsize=12, fontweight='bold')
-            axes[1,1].set_xlabel('Tiempo (minutos)', fontsize=11)
-            axes[1,1].set_ylabel('Densidad (%)', fontsize=11)
+            axes[1,1].set_title(texto('plots.temporal.statesTitle'), fontsize=12, fontweight='bold')
+            axes[1,1].set_xlabel(tiempo_minutos, fontsize=11)
+            axes[1,1].set_ylabel(densidad_pct, fontsize=11)
             axes[1,1].legend(loc='best', fontsize=9, framealpha=0.9)
             axes[1,1].grid(True, alpha=0.3)
         else:
@@ -477,16 +586,16 @@ class AnalizadorTraficoFLUVI:
 
         # IMAGEN 2: diagramas_fundamentales.png (CON MAPAS DE CALOR)
         fig2, axes = plt.subplots(1, 3, figsize=(24, 6))
-        fig2.suptitle('Diagrama Fundamental del Tráfico', fontsize=16, fontweight='bold')
+        fig2.suptitle(texto('plots.fundamental.suptitle'), fontsize=16, fontweight='bold')
 
         # Subplot 1: Entropía vs Densidad
         scatter = axes[0].scatter(self.df['Densidad'], self.df['Entropia'],
                              c=self.df['Flujo'], cmap='plasma',
                              s=5, alpha=0.6)
-        axes[0].set_xlabel('Densidad (%)', fontsize=12)
-        axes[0].set_ylabel('Entropía (bits)', fontsize=12)
-        axes[0].set_title('Entropía vs Densidad (color=Flujo)', fontsize=13, fontweight='bold')
-        plt.colorbar(scatter, ax=axes[0], label='Flujo (veh/s)')
+        axes[0].set_xlabel(densidad_pct, fontsize=12)
+        axes[0].set_ylabel(entropia_bits, fontsize=12)
+        axes[0].set_title(texto('plots.fundamental.entropyTitle'), fontsize=13, fontweight='bold')
+        plt.colorbar(scatter, ax=axes[0], label=flujo_veh_s)
         axes[0].grid(True, alpha=0.3)
 
         # Preparar datos para los mapas de calor
@@ -494,7 +603,6 @@ class AnalizadorTraficoFLUVI:
         self.df['Hora_Redondeada'] = self.df['Hora_Dia'].round().astype(int)
 
         # Crear tabla pivote para el heatmap
-        orden_dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
         heatmap_data = self.df.pivot_table(
             values='Densidad',
             index='Dia_Semana',
@@ -503,13 +611,17 @@ class AnalizadorTraficoFLUVI:
         )
 
         # Reordenar filas según el orden de días de la semana
-        heatmap_data = heatmap_data.reindex([dia for dia in orden_dias if dia in heatmap_data.index])
+        heatmap_data = heatmap_data.reindex([dia for dia in DIAS_SEMANA if dia in heatmap_data.index])
+
+        # Traducir solo las etiquetas visibles; los datos conservan sus claves internas.
+        etiquetas_dias = {dia: self._traducir_dia(dia) for dia in heatmap_data.index}
+        heatmap_data = heatmap_data.rename(index=etiquetas_dias)
 
         # Subplot 2: Mapa de Calor - Densidad con escala fija (0-100%)
         if SEABORN_AVAILABLE:
             sns.heatmap(heatmap_data,
                        cmap='YlOrRd',
-                       cbar_kws={'label': 'Densidad (%)'},
+                       cbar_kws={'label': densidad_pct},
                        ax=axes[1],
                        linewidths=0.5,
                        linecolor='white',
@@ -522,11 +634,11 @@ class AnalizadorTraficoFLUVI:
             axes[1].set_xticklabels(heatmap_data.columns)
             axes[1].set_yticks(range(len(heatmap_data.index)))
             axes[1].set_yticklabels(heatmap_data.index)
-            plt.colorbar(im, ax=axes[1], label='Densidad (%)')
+            plt.colorbar(im, ax=axes[1], label=densidad_pct)
 
-        axes[1].set_title('Densidad Promedio por Día y Hora\n(Escala Fija: 0-100%)', fontsize=13, fontweight='bold')
-        axes[1].set_xlabel('Hora del Día', fontsize=12)
-        axes[1].set_ylabel('Día de la Semana', fontsize=12)
+        axes[1].set_title(texto('plots.fundamental.fixedHeatmapTitle'), fontsize=13, fontweight='bold')
+        axes[1].set_xlabel(hora_dia, fontsize=12)
+        axes[1].set_ylabel(dia_semana, fontsize=12)
         axes[1].set_yticklabels(axes[1].get_yticklabels(), rotation=0)
 
         # Subplot 3: Mapa de Calor - Densidad con escala dinámica (0-máximo)
@@ -536,7 +648,7 @@ class AnalizadorTraficoFLUVI:
         if SEABORN_AVAILABLE:
             sns.heatmap(heatmap_data,
                        cmap='YlOrRd',
-                       cbar_kws={'label': 'Densidad (%)'},
+                       cbar_kws={'label': densidad_pct},
                        ax=axes[2],
                        linewidths=0.5,
                        linecolor='white',
@@ -549,11 +661,15 @@ class AnalizadorTraficoFLUVI:
             axes[2].set_xticklabels(heatmap_data.columns)
             axes[2].set_yticks(range(len(heatmap_data.index)))
             axes[2].set_yticklabels(heatmap_data.index)
-            plt.colorbar(im2, ax=axes[2], label='Densidad (%)')
+            plt.colorbar(im2, ax=axes[2], label=densidad_pct)
 
-        axes[2].set_title(f'Densidad Promedio por Día y Hora\n(Escala Dinámica: 0-{max_densidad:.1f}%)', fontsize=13, fontweight='bold')
-        axes[2].set_xlabel('Hora del Día', fontsize=12)
-        axes[2].set_ylabel('Día de la Semana', fontsize=12)
+        axes[2].set_title(
+            texto('plots.fundamental.dynamicHeatmapTitle', max=f'{max_densidad:.1f}'),
+            fontsize=13,
+            fontweight='bold',
+        )
+        axes[2].set_xlabel(hora_dia, fontsize=12)
+        axes[2].set_ylabel(dia_semana, fontsize=12)
         axes[2].set_yticklabels(axes[2].get_yticklabels(), rotation=0)
 
         plt.tight_layout()
@@ -561,32 +677,34 @@ class AnalizadorTraficoFLUVI:
 
         # IMAGEN 3: distribuciones_correlaciones.png
         fig3, axes = plt.subplots(2, 2, figsize=(14, 10))
-        fig3.suptitle('Distribuciones de Densidad y Flujo', fontsize=16, fontweight='bold')
+        fig3.suptitle(texto('plots.distributions.suptitle'), fontsize=16, fontweight='bold')
 
         axes[0,0].hist(self.df['Densidad'], bins=50, edgecolor='black', alpha=0.7, color='steelblue')
-        axes[0,0].set_title('Distribución de Densidad', fontsize=12, fontweight='bold')
-        axes[0,0].set_xlabel('Densidad (%)', fontsize=11)
-        axes[0,0].set_ylabel('Frecuencia', fontsize=11)
+        axes[0,0].set_title(texto('plots.distributions.densityTitle'), fontsize=12, fontweight='bold')
+        axes[0,0].set_xlabel(densidad_pct, fontsize=11)
+        axes[0,0].set_ylabel(frecuencia, fontsize=11)
         axes[0,0].grid(True, alpha=0.3, axis='y')
 
         axes[0,1].hist(self.df['Flujo'], bins=50, edgecolor='black', alpha=0.7, color='orange')
-        axes[0,1].set_title('Distribución de Flujo', fontsize=12, fontweight='bold')
-        axes[0,1].set_xlabel('Flujo (veh/s)', fontsize=11)
-        axes[0,1].set_ylabel('Frecuencia', fontsize=11)
+        axes[0,1].set_title(texto('plots.distributions.flowTitle'), fontsize=12, fontweight='bold')
+        axes[0,1].set_xlabel(flujo_veh_s, fontsize=11)
+        axes[0,1].set_ylabel(frecuencia, fontsize=11)
         axes[0,1].grid(True, alpha=0.3, axis='y')
 
-        bp1 = axes[1,0].boxplot([self.df['Densidad']], labels=['Densidad'], patch_artist=True)
+        bp1 = axes[1,0].boxplot([self.df['Densidad']], patch_artist=True)
         bp1['boxes'][0].set_facecolor('steelblue')
         bp1['boxes'][0].set_alpha(0.7)
-        axes[1,0].set_title('Boxplot Densidad', fontsize=12, fontweight='bold')
-        axes[1,0].set_ylabel('Densidad (%)', fontsize=11)
+        axes[1,0].set_xticklabels([densidad])
+        axes[1,0].set_title(texto('plots.distributions.densityBoxTitle'), fontsize=12, fontweight='bold')
+        axes[1,0].set_ylabel(densidad_pct, fontsize=11)
         axes[1,0].grid(True, alpha=0.3, axis='y')
 
-        bp2 = axes[1,1].boxplot([self.df['Flujo']], labels=['Flujo'], patch_artist=True)
+        bp2 = axes[1,1].boxplot([self.df['Flujo']], patch_artist=True)
         bp2['boxes'][0].set_facecolor('orange')
         bp2['boxes'][0].set_alpha(0.7)
-        axes[1,1].set_title('Boxplot Flujo', fontsize=12, fontweight='bold')
-        axes[1,1].set_ylabel('Flujo (veh/s)', fontsize=11)
+        axes[1,1].set_xticklabels([flujo])
+        axes[1,1].set_title(texto('plots.distributions.flowBoxTitle'), fontsize=12, fontweight='bold')
+        axes[1,1].set_ylabel(flujo_veh_s, fontsize=11)
         axes[1,1].grid(True, alpha=0.3, axis='y')
 
         plt.tight_layout()
@@ -609,31 +727,32 @@ class AnalizadorTraficoFLUVI:
 
 
 # Funciones para usar desde JavaScript con Pyodide
-def analizar_csv_web(contenido_csv):
+def analizar_csv_web(contenido_csv, idioma='es'):
     """Función wrapper para llamar desde JavaScript con CSV"""
     import io
     archivo = io.StringIO(contenido_csv)
-    analizador = AnalizadorTraficoFLUVI(archivo, tipo='csv')
+    analizador = AnalizadorTraficoFLUVI(archivo, tipo='csv', idioma=idioma)
     resultados = analizador.ejecutar_analisis_completo()
     return resultados['imagenes']
 
-def analizar_json_web(contenido_json):
+def analizar_json_web(contenido_json, idioma='es'):
     """Función wrapper para llamar desde JavaScript con JSON"""
-    analizador = AnalizadorTraficoFLUVI(contenido_json, tipo='json')
+    analizador = AnalizadorTraficoFLUVI(contenido_json, tipo='json', idioma=idioma)
     resultados = analizador.ejecutar_analisis_completo()
     return resultados['imagenes']
 
-def analizar_archivo_web(contenido, tipo='csv'):
+def analizar_archivo_web(contenido, tipo='csv', idioma='es'):
     """Función wrapper genérica para llamar desde JavaScript
 
     Args:
         contenido: Contenido del archivo (CSV como string o JSON como string)
         tipo: 'csv' o 'json'
+        idioma: 'es' o 'en'; al omitirlo se conserva la salida en español
 
     Returns:
         Diccionario con las imágenes generadas en base64
     """
     if tipo == 'json':
-        return analizar_json_web(contenido)
+        return analizar_json_web(contenido, idioma=idioma)
     else:
-        return analizar_csv_web(contenido)
+        return analizar_csv_web(contenido, idioma=idioma)

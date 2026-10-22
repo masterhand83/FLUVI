@@ -2785,15 +2785,15 @@
   </div>
 
   <!-- Modal: Analizador de Métricas -->
-  <div class="modal fade" id="modalAnalizadorMetricas" role="dialog" tabindex="-1" aria-labelledby="modalAnalizadorMetricasLabel" aria-hidden="true">
+  <div class="modal fade" id="modalAnalizadorMetricas" role="dialog" tabindex="-1" aria-labelledby="modalAnalizadorMetricasLabel" aria-describedby="analizadorMetricasDescripcion" aria-hidden="true">
     <div class="modal-dialog modal-xl">
       <div class="modal-content">
         <div class="modal-header bg-primary text-white">
-          <h5 class="modal-title" id="modalAnalizadorMetricasLabel">📊 Analizador de Métricas</h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+          <h5 class="modal-title" id="modalAnalizadorMetricasLabel" data-i18n="analyzer.modal.title">📊 Analizador de Métricas</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" data-i18n-attr="aria-label:common.close"></button>
         </div>
         <div class="modal-body">
-          <p class="text-muted small mb-3">Carga un archivo CSV de métricas exportado previamente para generar visualizaciones avanzadas usando Python.</p>
+          <p class="text-muted small mb-3" id="analizadorMetricasDescripcion" data-i18n="analyzer.modal.intro">Carga un archivo CSV de métricas exportado previamente para generar visualizaciones avanzadas usando Python.</p>
 
           <!-- Sección de carga de archivo -->
           <div class="mb-4">
@@ -2802,45 +2802,45 @@
                 <path d="M8.5 11.5a.5.5 0 0 1-1 0V7.707L6.354 8.854a.5.5 0 1 1-.708-.708l2-2a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 7.707z"/>
                 <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2M9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5z"/>
               </svg>
-              📤 Cargar archivo CSV o JSON
+              <span data-i18n="analyzer.modal.upload">📤 Cargar archivo CSV o JSON</span>
             </label>
-            <input type="file" id="inputCSVAnalizador" class="d-none" accept=".csv,.json" onchange="cargarArchivoParaAnalisis(event)">
-            <small class="form-text text-muted d-block mt-1" id="nombreArchivoCSV">
+            <input type="file" id="inputCSVAnalizador" class="d-none" accept=".csv,.json" aria-describedby="nombreArchivoCSV" onchange="cargarArchivoParaAnalisis(event)">
+            <small class="form-text text-muted d-block mt-1" id="nombreArchivoCSV" data-i18n="analyzer.modal.noFile">
               Ningún archivo seleccionado (CSV o JSON de métricas)
             </small>
           </div>
 
           <!-- Área de estado de carga -->
-          <div id="estadoCargaPython" class="alert alert-info" style="display: none;">
+          <div id="estadoCargaPython" class="alert alert-info" style="display: none;" aria-live="polite">
             <div class="d-flex align-items-center">
               <div class="spinner-border spinner-border-sm me-2" role="status">
-                <span class="visually-hidden">Cargando...</span>
+                <span class="visually-hidden" data-i18n="analyzer.modal.loading">Cargando...</span>
               </div>
-              <span id="mensajeEstadoPython">Inicializando Python (Pyodide)...</span>
+              <span id="mensajeEstadoPython" data-i18n="analyzer.modal.initializing">Inicializando Python (Pyodide)...</span>
             </div>
             <div class="progress mt-2" style="height: 5px;">
-              <div id="progressBarPython" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+              <div id="progressBarPython" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-labelledby="mensajeEstadoPython" style="width: 0%"></div>
             </div>
           </div>
 
           <!-- Área de resultados -->
           <div id="resultadosAnalisis" style="display: none;">
-            <h6 class="mb-3">📈 Resultados del Análisis</h6>
+            <h6 class="mb-3" data-i18n="analyzer.modal.resultsTitle">📈 Resultados del Análisis</h6>
 
             <!-- Tabs para las 3 imágenes -->
             <ul class="nav nav-tabs" id="tabsImagenes" role="tablist">
               <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="tab-temporal" data-bs-toggle="tab" data-bs-target="#img-temporal" type="button" role="tab">
+                <button class="nav-link active" id="tab-temporal" data-bs-toggle="tab" data-bs-target="#img-temporal" type="button" role="tab" data-i18n="analyzer.modal.tabs.temporal">
                   Análisis Temporal
                 </button>
               </li>
               <li class="nav-item" role="presentation">
-                <button class="nav-link" id="tab-fundamental" data-bs-toggle="tab" data-bs-target="#img-fundamental" type="button" role="tab">
+                <button class="nav-link" id="tab-fundamental" data-bs-toggle="tab" data-bs-target="#img-fundamental" type="button" role="tab" data-i18n="analyzer.modal.tabs.fundamental">
                   Diagrama Fundamental
                 </button>
               </li>
               <li class="nav-item" role="presentation">
-                <button class="nav-link" id="tab-distribuciones" data-bs-toggle="tab" data-bs-target="#img-distribuciones" type="button" role="tab">
+                <button class="nav-link" id="tab-distribuciones" data-bs-toggle="tab" data-bs-target="#img-distribuciones" type="button" role="tab" data-i18n="analyzer.modal.tabs.distributions">
                   Distribuciones
                 </button>
               </li>
@@ -2848,22 +2848,22 @@
 
             <div class="tab-content mt-3" id="tabsImagenesContent">
               <div class="tab-pane fade show active" id="img-temporal" role="tabpanel">
-                <img id="imgAnalisisTemporal" src="" alt="Análisis Temporal" class="img-fluid rounded shadow">
+                <img id="imgAnalisisTemporal" src="" alt="Análisis Temporal" data-i18n-attr="alt:analyzer.modal.images.temporal" class="img-fluid rounded shadow">
               </div>
               <div class="tab-pane fade" id="img-fundamental" role="tabpanel">
-                <img id="imgDiagramaFundamental" src="" alt="Diagrama Fundamental" class="img-fluid rounded shadow">
+                <img id="imgDiagramaFundamental" src="" alt="Diagrama Fundamental" data-i18n-attr="alt:analyzer.modal.images.fundamental" class="img-fluid rounded shadow">
               </div>
               <div class="tab-pane fade" id="img-distribuciones" role="tabpanel">
-                <img id="imgDistribuciones" src="" alt="Distribuciones" class="img-fluid rounded shadow">
+                <img id="imgDistribuciones" src="" alt="Distribuciones" data-i18n-attr="alt:analyzer.modal.images.distributions" class="img-fluid rounded shadow">
               </div>
             </div>
 
             <!-- Botones de descarga -->
             <div class="d-grid gap-2 mt-3">
-              <button type="button" id="btnDescargarImagenActual" class="btn btn-success btn-sm">
+              <button type="button" id="btnDescargarImagenActual" class="btn btn-success btn-sm" data-i18n="analyzer.modal.downloadCurrent">
                 💾 Descargar Imagen Actual
               </button>
-              <button type="button" id="btnDescargarTodasImagenes" class="btn btn-info btn-sm">
+              <button type="button" id="btnDescargarTodasImagenes" class="btn btn-info btn-sm" data-i18n="analyzer.modal.downloadAll">
                 📦 Descargar Todas las Imágenes (ZIP)
               </button>
             </div>
@@ -2871,7 +2871,7 @@
 
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n="common.close">Cerrar</button>
         </div>
       </div>
     </div>

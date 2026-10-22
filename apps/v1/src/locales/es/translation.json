@@ -101,6 +101,101 @@
       "title": "Advertencias"
     }
   },
+  "analyzer": {
+    "modal": {
+      "downloadAll": "📦 Descargar Todas las Imágenes (ZIP)",
+      "downloadCurrent": "💾 Descargar Imagen Actual",
+      "errors": {
+        "analysisFailed": "Error durante el análisis: {{reason}}",
+        "emptyFile": "El archivo está vacío. Carga un archivo de métricas.",
+        "readFailed": "No se pudo leer el archivo. Selecciona un archivo CSV o JSON válido.",
+        "runtimeLoadFailed": "No se pudo cargar el analizador de Python. Verifica tu conexión e inténtalo de nuevo.",
+        "unsupportedFormat": "Formato de archivo no soportado. Use .csv o .json."
+      },
+      "images": {
+        "distributions": "Distribuciones de densidad y flujo",
+        "fundamental": "Diagrama fundamental del tráfico",
+        "temporal": "Análisis temporal de métricas de tráfico"
+      },
+      "initializing": "Inicializando Python (Pyodide)...",
+      "intro": "Carga un archivo CSV o JSON de métricas exportado previamente para generar visualizaciones avanzadas usando Python.",
+      "loading": "Cargando...",
+      "noFile": "Ningún archivo seleccionado (CSV o JSON de métricas)",
+      "resultsTitle": "📈 Resultados del Análisis",
+      "status": {
+        "analyzing": "Analizando métricas...",
+        "completed": "¡Análisis completado! ✓",
+        "generating": "Generando visualizaciones...",
+        "processing": "Procesando {{format}}...",
+        "rendering": "Renderizando imágenes..."
+      },
+      "tabs": {
+        "distributions": "Distribuciones",
+        "fundamental": "Diagrama Fundamental",
+        "temporal": "Análisis Temporal"
+      },
+      "title": "📊 Analizador de Métricas",
+      "upload": "📤 Cargar archivo CSV o JSON"
+    },
+    "python": {
+      "errors": {
+        "invalidJson": "No se pudo leer el archivo JSON: {{reason}}",
+        "missingKey": "Clave requerida '{{key}}' no encontrada en metrics.",
+        "missingMetrics": "El archivo JSON debe contener una clave 'metrics' con los datos.",
+        "readFailed": "No se pudieron leer los datos de métricas: {{reason}}"
+      },
+      "plots": {
+        "common": {
+          "density": "Densidad",
+          "densityPercent": "Densidad (%)",
+          "entropyBits": "Entropía (bits)",
+          "flow": "Flujo",
+          "flowPerSecond": "Flujo (veh/s)",
+          "frequency": "Frecuencia",
+          "hourOfDay": "Hora del Día",
+          "speedPercent": "Velocidad (% movimiento)",
+          "timeMinutes": "Tiempo (minutos)",
+          "weekday": "Día de la Semana"
+        },
+        "distributions": {
+          "densityBoxTitle": "Boxplot Densidad",
+          "densityTitle": "Distribución de Densidad",
+          "flowBoxTitle": "Boxplot Flujo",
+          "flowTitle": "Distribución de Flujo",
+          "suptitle": "Distribuciones de Densidad y Flujo"
+        },
+        "fundamental": {
+          "dynamicHeatmapTitle": "Densidad Promedio por Día y Hora\n(Escala Dinámica: 0-{{max}}%)",
+          "entropyTitle": "Entropía vs Densidad (color=Flujo)",
+          "fixedHeatmapTitle": "Densidad Promedio por Día y Hora\n(Escala Fija: 0-100%)",
+          "suptitle": "Diagrama Fundamental del Tráfico"
+        },
+        "temporal": {
+          "densityTitle": "Densidad vs Tiempo",
+          "flowTitle": "Flujo vs Tiempo",
+          "speedTitle": "Velocidad vs Tiempo",
+          "statesTitle": "Estados de Tráfico (Clasificación FLUVI)",
+          "suptitle": "Análisis Temporal de Métricas de Tráfico"
+        }
+      },
+      "states": {
+        "collapse": "🔴 Colapso",
+        "congested": "🟠 Congestionado",
+        "moderate": "🟡 Moderado",
+        "optimal": "🟢 Óptimo",
+        "underused": "🔵 Sub-utilizado"
+      },
+      "weekdays": {
+        "friday": "Viernes",
+        "monday": "Lunes",
+        "saturday": "Sábado",
+        "sunday": "Domingo",
+        "thursday": "Jueves",
+        "tuesday": "Martes",
+        "wednesday": "Miércoles"
+      }
+    }
+  },
   "buildingDrawing": {
     "cancelImage": "Cancelar imagen",
     "imageButton": "🖼️ Edificio con imagen",
@@ -552,6 +647,11 @@
       "info": "Información",
       "success": "Éxito",
       "warning": "Advertencia"
+    },
+    "analyzer": {
+      "noImages": "No hay imágenes para descargar.",
+      "zipFailed": "No se pudo crear el archivo ZIP. Se descargarán las imágenes individualmente.",
+      "zipUnavailable": "JSZip no está disponible. Se descargarán las imágenes individualmente."
     },
     "metrics": {
       "cleared": "Todas las métricas han sido eliminadas exitosamente.",
@@ -1466,7 +1566,7 @@
     },
     "export": {
       "analyzeButton": "Analizar Métricas",
-      "analyzeTooltip": "Analizar métricas desde archivo CSV con Python",
+      "analyzeTooltip": "Analizar métricas desde un archivo CSV o JSON con Python",
       "clearButton": "Limpiar Métricas",
       "clearTooltip": "Borrar todos los datos de métricas recolectados y reiniciar gráficas",
       "csvButton": "Descargar CSV",

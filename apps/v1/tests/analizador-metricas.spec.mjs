@@ -21,6 +21,10 @@ beforeEach(async () => {
     await page.setContent(`<button id="btnAnalizarMetricas">Analyze</button>${modal}`)
     await page.addStyleTag({ path: new URL('src/bootstrap-5.0.2-dist/css/bootstrap.min.css', root).pathname })
     await page.addScriptTag({ path: new URL('src/bootstrap-5.0.2-dist/js/bootstrap.bundle.min.js', root).pathname })
+    await page.addScriptTag({ path: new URL('src/libs/i18next/i18next.min.js', root).pathname })
+    await page.addScriptTag({ path: new URL('src/locales/catalogs.js', root).pathname })
+    await page.addScriptTag({ path: new URL('src/js/ui/i18n.js', root).pathname })
+    await page.addScriptTag({ path: new URL('src/js/ui/notifications.js', root).pathname })
     await page.evaluate(() => {
         window.alert = () => {}
         window.testJobs = []
@@ -66,6 +70,102 @@ async function ready(index = 0, label = 'A') {
     await page.evaluate(([index, label]) => window.finishJob(index, label), [index, label])
     await page.waitForFunction(() => document.getElementById('resultadosAnalisis').style.display === 'block')
 }
+
+test('uses the shared catalog and sends the active language to Python', async () => {
+    expect(await page.$eval('#modalAnalizadorMetricasLabel', el => el.textContent.trim()))
+        .toBe('📊 Analizador de Métricas')
+    expect(await page.$eval('#nombreArchivoCSV', el => el.textContent.trim()))
+        .toBe('Ningún archivo seleccionado (CSV o JSON de métricas)')
+    await upload('a.csv', 'A')
+    await page.waitForFunction(() => window.testJobs.length === 1)
+    expect(await page.$eval('#mensajeEstadoPython', el => el.textContent.trim()))
+        .toBe('Generando visualizaciones...')
+    expect(await page.evaluate(() => window.testJobs[0].code)).toContain('idioma="es"')
+    await ready()
+    expect(await page.$eval('#mensajeEstadoPython', el => el.textContent.trim()))
+        .toBe('¡Análisis completado! ✓')
+    expect(await page.$eval('#progressBarPython', el => el.style.width)).toBe('100%')
+    expect(await page.$eval('#progressBarPython', el => el.getAttribute('aria-valuenow'))).toBe('100')
+    expect(await page.$eval('#progressBarPython', el => el.getAttribute('aria-labelledby'))).toBe('mensajeEstadoPython')
+})
+
+test('reports unsupported formats with an explicit error notification', async () => {
+    await page.evaluate(() => {
+        for (const toast of document.querySelectorAll('.toast')) toast.remove()
+    })
+    await upload('a.txt', 'A')
+    await page.waitForFunction(() => document.querySelector('.toast .toast-body') !== null)
+    const notification = await page.evaluate(() => ({
+        severity: document.querySelector('.toast .toast-header').className,
+        body: document.querySelector('.toast .toast-body').textContent,
+        jobs: window.testJobs.length,
+    }))
+    expect(notification.severity).toContain('bg-danger')
+    expect(notification.body).toBe('Formato de archivo no soportado. Use .csv o .json.')
+    expect(notification.jobs).toBe(0)
+})
+
+test('analysis failures keep a translated error and explicit notification severity', async () => {
+    await upload('a.csv', 'A')
+    await page.waitForFunction(() => window.testJobs.length === 1)
+    await page.evaluate(() => window.testJobs[0].reject(new Error('ValueError: No se pudieron leer los datos')))
+    await page.waitForFunction(() => document.getElementById('estadoCargaPython').classList.contains('alert-danger'))
+    expect(await page.$eval('#mensajeEstadoPython', el => el.textContent))
+        .toBe('Error durante el análisis: No se pudieron leer los datos')
+    expect(await page.$eval('.toast .toast-body', el => el.textContent))
+        .toBe('Error durante el análisis: No se pudieron leer los datos')
+    expect(await page.$eval('.toast .toast-header', el => el.className)).toContain('bg-danger')
+})
+
+test('ZIP failures report an error and still fall back to individual downloads', async () => {
+    await upload('a.csv', 'A')
+    await ready()
+    await page.evaluate(() => {
+        window.downloads = []
+        HTMLAnchorElement.prototype.click = function () { window.downloads.push(this.download) }
+        window.fetch = async url => ({ blob: async () => new Blob([atob(url.split(',')[1])]) })
+        window.JSZip = class {
+            folder() { return this }
+            file() {}
+            generateAsync() { return Promise.reject(new Error('ZIP failure')) }
+        }
+    })
+    await page.click('#btnDescargarTodasImagenes')
+    await page.waitForFunction(() => document.querySelector('.toast .toast-body') !== null)
+    expect(await page.$eval('.toast .toast-body', el => el.textContent))
+        .toBe('No se pudo crear el archivo ZIP. Se descargarán las imágenes individualmente.')
+    expect(await page.$eval('.toast .toast-header', el => el.className)).toContain('bg-danger')
+    await new Promise(resolve => setTimeout(resolve, 1200))
+    expect(await page.evaluate(() => window.downloads)).toEqual([
+        'analisis_temporal.png',
+        'diagrama_fundamental.png',
+        'distribuciones_correlaciones.png',
+    ])
+})
+
+test('missing results use a warning and file-read failures use an error', async () => {
+    await page.evaluate(() => {
+        for (const toast of document.querySelectorAll('.toast')) toast.remove()
+        descargarTodasImagenes()
+    })
+    await page.waitForFunction(() => document.querySelector('.toast .toast-body') !== null)
+    expect(await page.$eval('.toast .toast-body', el => el.textContent))
+        .toBe('No hay imágenes para descargar.')
+    expect(await page.$eval('.toast .toast-header', el => el.className)).toContain('bg-warning')
+
+    await page.evaluate(() => {
+        for (const toast of document.querySelectorAll('.toast')) toast.remove()
+        window.FileReader = class {
+            readAsText() { this.onerror() }
+        }
+    })
+    await upload('a.csv', 'A')
+    await page.waitForFunction(() => document.querySelector('.toast .toast-body') !== null)
+    expect(await page.$eval('#estadoCargaPython', el => el.classList.contains('alert-danger'))).toBe(true)
+    expect(await page.$eval('#mensajeEstadoPython', el => el.textContent))
+        .toBe('No se pudo leer el archivo. Selecciona un archivo CSV o JSON válido.')
+    expect(await page.$eval('.toast .toast-header', el => el.className)).toContain('bg-danger')
+})
 
 test('tabs remain mutually exclusive across repeated cycles', async () => {
     await upload('a.csv', 'A')

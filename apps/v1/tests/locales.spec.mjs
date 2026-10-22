@@ -6,9 +6,12 @@ import { describe, expect, it } from "vitest"
 import {
 	buildLocaleCatalogs,
 	readLocaleCatalogs,
+	renderAnalyzerMessages,
+	analyzerMessagesPath,
 } from "../scripts/build-locales.mjs"
 import {
 	collectHtmlMessageKeys,
+	flattenCatalog,
 	validateCatalogParity,
 	validateNonJsInventory,
 	validateRepositoryLocales,
@@ -80,6 +83,36 @@ describe("repository locale catalogs", () => {
 				catalogs,
 			}),
 		).toEqual([])
+	})
+
+	it("ships the generated Python analyzer catalog with aligned messages", async () => {
+		const catalogs = await readLocaleCatalogs()
+		expect(await readFile(analyzerMessagesPath(), "utf8")).toBe(
+			renderAnalyzerMessages(catalogs),
+		)
+		const generated = JSON.parse(
+			await readFile(analyzerMessagesPath(), "utf8"),
+		)
+		expect(Object.keys(generated).sort()).toEqual(["en", "es"])
+		const spanish = flattenCatalog(catalogs.es.translation)
+		const english = flattenCatalog(catalogs.en.translation)
+		const pythonKeys = [...spanish]
+			.filter(([key]) => key.startsWith("analyzer.python."))
+			.map(([key]) => key)
+		expect(Object.keys(generated.es).sort()).toEqual(pythonKeys.sort())
+		expect(Object.keys(generated.en).sort()).toEqual(pythonKeys.sort())
+		for (const key of pythonKeys) {
+			expect(english.has(key)).toBe(true)
+			expect(generated.es[key]).toBe(spanish.get(key))
+			expect(generated.en[key]).toBe(english.get(key))
+		}
+		const inventory = JSON.parse(
+			await readFile(
+				new URL("src/locales/non-js-keys.json", v1Root),
+				"utf8",
+			),
+		)
+		expect([...inventory.python].sort()).toEqual(pythonKeys.sort())
 	})
 
 	it("falls back to readable Spanish when an English key is missing", async () => {

@@ -1,7 +1,9 @@
 import { readFile } from "node:fs/promises"
 import { resolve } from "node:path"
 import { fileURLToPath } from "node:url"
-import { buildLocaleCatalogs, readLocaleCatalogs } from "./build-locales.mjs"
+import { ANALYZER_MESSAGE_PREFIX, buildLocaleCatalogs, flattenCatalog, readLocaleCatalogs } from "./build-locales.mjs"
+
+export { flattenCatalog }
 
 export const NON_JS_INVENTORY_PATH = fileURLToPath(
 	new URL("../src/locales/non-js-keys.json", import.meta.url),
@@ -12,21 +14,6 @@ export const INDEX_HTML_PATH = fileURLToPath(
 
 const PLACEHOLDER_PATTERN = /\{\{\s*([^{}\s]+)\s*\}\}/g
 const PLURAL_SUFFIX_PATTERN = /_(zero|one|two|few|many|other)$/
-
-export function flattenCatalog(catalog, prefix = []) {
-	const entries = new Map()
-	for (const [key, value] of Object.entries(catalog ?? {})) {
-		const path = [...prefix, key]
-		if (value && typeof value === "object" && !Array.isArray(value)) {
-			for (const [nestedKey, nestedValue] of flattenCatalog(value, path)) {
-				entries.set(nestedKey, nestedValue)
-			}
-		} else {
-			entries.set(path.join("."), value)
-		}
-	}
-	return entries
-}
 
 export function interpolatedNames(value) {
 	const names = new Set()
@@ -160,15 +147,10 @@ export function collectHtmlMessageKeys(html) {
 	return keys
 }
 
-export function validateNonJsInventory({ inventory, htmlKeys, catalogs }) {
+function validateHtmlInventory({ inventory, htmlKeys }) {
 	const errors = []
-	const flattened = flattenCatalogs(catalogs)
-	const inventoryKeys = new Set([
-		...(inventory.html ?? []),
-		...(inventory.python ?? []),
-	])
 	for (const key of htmlKeys) {
-		if (!inventoryKeys.has(key)) {
+		if (!(inventory.html ?? []).includes(key)) {
 			errors.push(`HTML key "${key}" is not listed in src/locales/non-js-keys.json`)
 		}
 	}
@@ -179,6 +161,37 @@ export function validateNonJsInventory({ inventory, htmlKeys, catalogs }) {
 			)
 		}
 	}
+	return errors
+}
+
+function validatePythonInventory({ inventory, flattened }) {
+	const errors = []
+	const pythonKeys = new Set(inventory.python ?? [])
+	for (const key of pythonKeys) {
+		if (!key.startsWith(ANALYZER_MESSAGE_PREFIX)) {
+			errors.push(
+				`Inventory Python key "${key}" must start with "${ANALYZER_MESSAGE_PREFIX}"`,
+			)
+		}
+	}
+	for (const entries of flattened.values()) {
+		for (const key of entries.keys()) {
+			if (key.startsWith(ANALYZER_MESSAGE_PREFIX) && !pythonKeys.has(key)) {
+				errors.push(
+					`Python-owned key "${key}" is not listed in the python inventory of src/locales/non-js-keys.json`,
+				)
+			}
+		}
+	}
+	return errors
+}
+
+function validateInventoryCoverage({ inventory, flattened }) {
+	const errors = []
+	const inventoryKeys = new Set([
+		...(inventory.html ?? []),
+		...(inventory.python ?? []),
+	])
 	for (const key of inventoryKeys) {
 		for (const [language, entries] of flattened) {
 			if (!entries.has(key)) {
@@ -187,6 +200,15 @@ export function validateNonJsInventory({ inventory, htmlKeys, catalogs }) {
 		}
 	}
 	return errors
+}
+
+export function validateNonJsInventory({ inventory, htmlKeys, catalogs }) {
+	const flattened = flattenCatalogs(catalogs)
+	return [
+		...validateHtmlInventory({ inventory, htmlKeys }),
+		...validatePythonInventory({ inventory, flattened }),
+		...validateInventoryCoverage({ inventory, flattened }),
+	]
 }
 
 export async function validateRepositoryLocales() {
