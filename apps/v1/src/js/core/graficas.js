@@ -113,10 +113,21 @@ console.log(`⚡ Entropía actualizándose cada ${ENTROPY_UPDATE_INTERVAL} frame
 
 // ==================== FUNCIONES DE INTERPRETACIÓN DE MÉTRICAS ====================
 
+/** Translate display-only metric text without touching measured values. */
+function metricText(key, options) {
+    return typeof window.tr === 'function' ? window.tr(key, options) : key;
+}
+
+/** Build a presentation-independent observation descriptor. */
+function metricObservation(name, params = {}) {
+    return { key: `metrics.status.observations.${name}`, params };
+}
+
 /**
- * Interpreta las métricas actuales y devuelve el estado del tráfico
- * @param {Object} metrics - Métricas calculadas (density, flow, speed)
- * @returns {Object} Estado interpretado con nivel, emoji, título, descripción y recomendaciones
+ * Clasifica las métricas actuales. El nivel es un identificador estable; el
+ * texto, las observaciones y las recomendaciones se traducen al presentarlos.
+ * @param {Object} metrics - Métricas calculadas (density, throughput, speed, netGeneration)
+ * @returns {Object} Nivel estable, emoji/color/clase de presentación y observaciones con clave
  */
 function interpretarMetricas(metrics) {
     const density = parseFloat(metrics.density);
@@ -124,95 +135,102 @@ function interpretarMetricas(metrics) {
     const speed = parseFloat(metrics.speed);
     const netGeneration = parseFloat(metrics.netGeneration);
 
-    // Determinar el estado del tráfico
     const estado = {
-        nivel: '',
+        level: '',
         emoji: '',
         color: '',
-        titulo: '',
-        descripcion: '',
-        observaciones: [],
-        clase: ''
+        className: '',
+        observations: []
     };
+
+    const rateObservation = () => metricObservation('rateChange', {
+        value: netGeneration.toFixed(1),
+        label: getNetGenerationLabel(netGeneration)
+    });
 
     // Análisis del estado del tráfico basado en la ecuación fundamental Q=k×v
     // Prioridad: 1) Colapso, 2) Óptimo (por throughput), 3) Congestionado, 4) Sub-utilizado, 5) Moderado
 
     if (density > 80 && speed < 15) {
         // COLAPSO CRÍTICO - Gridlock: alta densidad pero sin movimiento
-        estado.nivel = 'COLAPSO';
+        estado.level = 'collapse';
         estado.emoji = '🔴';
         estado.color = '#dc3545';
-        estado.titulo = 'COLAPSO DE TRÁFICO';
-        estado.descripcion = 'Las calles están severamente congestionadas y casi paralizadas';
-        estado.clase = 'status-critico';
-        estado.observaciones = [
-            'Densidad crítica detectada (>80%)',
-            'Velocidad extremadamente baja (<15%)',
-            `Flujo vehicular: ${throughput.toFixed(1)} veh/s - Casi nulo`,
-            `Tasa cambio: ${netGeneration.toFixed(1)} veh/s - ${getNetGenerationLabel(netGeneration)}`,
-            'Se requiere intervención: reducir generación o mejorar salidas'
+        estado.className = 'status-critico';
+        estado.observations = [
+            metricObservation('criticalDensity'),
+            metricObservation('extremelyLowSpeed'),
+            metricObservation('throughputNearZero', { value: throughput.toFixed(1) }),
+            rateObservation(),
+            metricObservation('interventionRequired')
         ];
     } else if (density >= 25 && density <= 60 && speed >= 50) {
         // ÓPTIMO - Basado en THROUGHPUT alto con condiciones balanceadas
         // Zona de máxima eficiencia según ecuación fundamental
-        estado.nivel = 'ÓPTIMO';
+        estado.level = 'optimal';
         estado.emoji = '🟢';
         estado.color = '#198754';
-        estado.titulo = 'FLUJO ÓPTIMO';
-        estado.descripcion = 'Máxima eficiencia del sistema: buen balance entre densidad y velocidad';
-        estado.clase = 'status-optimo';
-        estado.observaciones = [
-            `Densidad en zona óptima (${density.toFixed(0)}%)`,
-            `Velocidad fluida (${speed.toFixed(0)}%)`,
-            `Flujo vehicular alto: ${throughput.toFixed(1)} veh/s`,
-            `Tasa cambio: ${netGeneration.toFixed(1)} veh/s - ${getNetGenerationLabel(netGeneration)}`,
-            'Sistema funcionando al máximo rendimiento'
+        estado.className = 'status-optimo';
+        estado.observations = [
+            metricObservation('optimalDensity', { value: density.toFixed(0) }),
+            metricObservation('fluidSpeed', { value: speed.toFixed(0) }),
+            metricObservation('highThroughput', { value: throughput.toFixed(1) }),
+            rateObservation(),
+            metricObservation('maximumPerformance')
         ];
     } else if (density > 60 && speed < 35) {
         // CONGESTIONADO - Alta densidad con velocidad reducida
-        estado.nivel = 'CONGESTIONADO';
+        estado.level = 'congested';
         estado.emoji = '🟠';
         estado.color = '#fd7e14';
-        estado.titulo = 'TRÁFICO CONGESTIONADO';
-        estado.descripcion = 'Alta densidad vehicular con movimiento lento';
-        estado.clase = 'status-alto';
-        estado.observaciones = [
-            `Densidad alta (${density.toFixed(0)}%)`,
-            `Velocidad reducida (${speed.toFixed(0)}%)`,
-            `Flujo vehicular: ${throughput.toFixed(1)} veh/s - ${getThroughputLabel(throughput)}`,
-            `Tasa cambio: ${netGeneration.toFixed(1)} veh/s - ${getNetGenerationLabel(netGeneration)}`,
-            'Riesgo de colapso si aumenta densidad'
+        estado.className = 'status-alto';
+        estado.observations = [
+            metricObservation('highDensity', { value: density.toFixed(0) }),
+            metricObservation('reducedSpeed', { value: speed.toFixed(0) }),
+            metricObservation('throughputStatus', {
+                value: throughput.toFixed(1),
+                label: getThroughputLabel(throughput)
+            }),
+            rateObservation(),
+            metricObservation('collapseRisk')
         ];
     } else if (density < 25) {
         // SUB-UTILIZADO - Baja densidad Y bajo flujo
-        estado.nivel = 'SUB-UTILIZADO';
+        estado.level = 'underused';
         estado.emoji = '🔵';
         estado.color = '#0d6efd';
-        estado.titulo = 'SISTEMA SUB-UTILIZADO';
-        estado.descripcion = 'Baja ocupación de las calles, capacidad disponible';
-        estado.clase = 'status-bajo';
-        estado.observaciones = [
-            `Densidad muy baja (${density.toFixed(0)}%)`,
-            `Flujo vehicular bajo: ${throughput.toFixed(1)} veh/s`,
-            `Velocidad: ${speed.toFixed(0)}% - ${getSpeedLabel(speed)}`,
-            `Tasa cambio: ${netGeneration.toFixed(1)} veh/s - ${getNetGenerationLabel(netGeneration)}`,
-            'Considerar aumentar generación para aprovechar capacidad'
+        estado.className = 'status-bajo';
+        estado.observations = [
+            metricObservation('veryLowDensity', { value: density.toFixed(0) }),
+            metricObservation('lowThroughput', { value: throughput.toFixed(1) }),
+            metricObservation('speedStatus', {
+                value: speed.toFixed(0),
+                label: getSpeedLabel(speed)
+            }),
+            rateObservation(),
+            metricObservation('increaseGeneration')
         ];
     } else {
         // MODERADO - Condiciones aceptables pero no óptimas
-        estado.nivel = 'MODERADO';
+        estado.level = 'moderate';
         estado.emoji = '🟡';
         estado.color = '#ffc107';
-        estado.titulo = 'FLUJO MODERADO';
-        estado.descripcion = 'Condiciones de tráfico aceptables con margen de mejora';
-        estado.clase = 'status-moderado';
-        estado.observaciones = [
-            `Densidad: ${density.toFixed(0)}% - ${getDensityLabel(density)}`,
-            `Velocidad: ${speed.toFixed(0)}% - ${getSpeedLabel(speed)}`,
-            `Flujo vehicular: ${throughput.toFixed(1)} veh/s - ${getThroughputLabel(throughput)}`,
-            `Tasa cambio: ${netGeneration.toFixed(1)} veh/s - ${getNetGenerationLabel(netGeneration)}`,
-            throughput < 2.5 ? 'Puede optimizarse para aumentar flujo' : 'Sistema funcionando normalmente'
+        estado.className = 'status-moderado';
+        estado.observations = [
+            metricObservation('densityStatus', {
+                value: density.toFixed(0),
+                label: getDensityLabel(density)
+            }),
+            metricObservation('speedStatus', {
+                value: speed.toFixed(0),
+                label: getSpeedLabel(speed)
+            }),
+            metricObservation('throughputStatus', {
+                value: throughput.toFixed(1),
+                label: getThroughputLabel(throughput)
+            }),
+            rateObservation(),
+            metricObservation(throughput < 2.5 ? 'optimizationAvailable' : 'normalOperation')
         ];
     }
 
@@ -232,44 +250,46 @@ function actualizarPanelInterpretacion(estado, metrics) {
     const throughput = parseFloat(metrics.throughput);
     const netGeneration = parseFloat(metrics.netGeneration);
     const speed = parseFloat(metrics.speed);
+    const levelKey = `metrics.status.levels.${estado.level}`;
 
     // Actualizar clase del panel
-    panel.className = 'status-panel ' + estado.clase;
+    panel.className = 'status-panel ' + estado.className;
 
-    // Actualizar contenido
+    // Actualizar contenido. Los valores interpolados son números; el texto
+    // procede del catálogo activo.
     panel.innerHTML = `
         <div class="status-header">
             <span class="status-emoji">${estado.emoji}</span>
-            <span class="status-title">${estado.titulo}</span>
+            <span class="status-title">${metricText(`${levelKey}.title`)}</span>
         </div>
         <div class="status-description">
-            ${estado.descripcion}
+            ${metricText(`${levelKey}.description`)}
         </div>
         <div class="status-metrics">
             <div class="metric-item">
-                <span class="metric-label">Densidad:</span>
+                <span class="metric-label">${metricText('metrics.status.labels.density')}</span>
                 <span class="metric-value">${density.toFixed(1)}%</span>
                 <span class="metric-desc">→ ${getDensityLabel(density)}</span>
             </div>
             <div class="metric-item">
-                <span class="metric-label">Flujo vehicular:</span>
+                <span class="metric-label">${metricText('metrics.status.labels.throughput')}</span>
                 <span class="metric-value">${throughput.toFixed(1)} veh/s</span>
                 <span class="metric-desc">→ ${getThroughputLabel(throughput)}</span>
             </div>
             <div class="metric-item">
-                <span class="metric-label">Velocidad:</span>
+                <span class="metric-label">${metricText('metrics.status.labels.speed')}</span>
                 <span class="metric-value">${speed.toFixed(1)}%</span>
                 <span class="metric-desc">→ ${getSpeedLabel(speed)}</span>
             </div>
             <div class="metric-item">
-                <span class="metric-label">Tasa cambio:</span>
+                <span class="metric-label">${metricText('metrics.status.labels.rate')}</span>
                 <span class="metric-value">${netGeneration.toFixed(1)} veh/s</span>
                 <span class="metric-desc">→ ${getNetGenerationLabel(netGeneration)}</span>
             </div>
         </div>
         <div class="status-observations">
-            <div class="observations-title">💡 ${estado.observaciones.length > 0 ? 'Observaciones:' : ''}</div>
-            ${estado.observaciones.map(obs => `<div class="observation-item">• ${obs}</div>`).join('')}
+            <div class="observations-title">💡 ${metricText('metrics.status.observationsTitle')}</div>
+            ${estado.observations.map(obs => `<div class="observation-item">• ${metricText(obs.key, obs.params)}</div>`).join('')}
         </div>
     `;
 }
@@ -279,13 +299,13 @@ function actualizarPanelInterpretacion(estado, metrics) {
  * Basado en teoría de tráfico: óptimo ~40-60%, crítico >85%
  */
 function getDensityLabel(density) {
-    if (density < 15) return 'Muy baja';
-    if (density < 25) return 'Baja';
-    if (density < 45) return 'Moderada';
-    if (density < 60) return 'Buena ocupación';
-    if (density < 75) return 'Alta';
-    if (density < 85) return 'Muy alta';
-    return 'Crítica';
+    if (density < 15) return metricText('metrics.labels.density.veryLow');
+    if (density < 25) return metricText('metrics.labels.density.low');
+    if (density < 45) return metricText('metrics.labels.density.moderate');
+    if (density < 60) return metricText('metrics.labels.density.good');
+    if (density < 75) return metricText('metrics.labels.density.high');
+    if (density < 85) return metricText('metrics.labels.density.veryHigh');
+    return metricText('metrics.labels.density.critical');
 }
 
 /**
@@ -293,12 +313,12 @@ function getDensityLabel(density) {
  * Considera tanto crecimiento (+) como decrecimiento (-)
  */
 function getNetGenerationLabel(netGen) {
-    if (netGen < -3) return 'Decrecimiento rápido';
-    if (netGen < 0) return 'Decrecimiento lento';
-    if (netGen === 0) return 'Estable';
-    if (netGen < 3) return 'Crecimiento lento';
-    if (netGen < 6) return 'Crecimiento moderado';
-    return 'Crecimiento rápido';
+    if (netGen < -3) return metricText('metrics.labels.netGeneration.fastDecrease');
+    if (netGen < 0) return metricText('metrics.labels.netGeneration.slowDecrease');
+    if (netGen === 0) return metricText('metrics.labels.netGeneration.stable');
+    if (netGen < 3) return metricText('metrics.labels.netGeneration.slowGrowth');
+    if (netGen < 6) return metricText('metrics.labels.netGeneration.moderateGrowth');
+    return metricText('metrics.labels.netGeneration.fastGrowth');
 }
 
 /**
@@ -306,12 +326,12 @@ function getNetGenerationLabel(netGen) {
  * Máximo práctico: ~4.0 veh/s (density=50% × speed=80% × 10)
  */
 function getThroughputLabel(throughput) {
-    if (throughput < 0.8) return 'Muy bajo';
-    if (throughput < 2.0) return 'Bajo';
-    if (throughput < 3.0) return 'Moderado';
-    if (throughput < 4.0) return 'Bueno';
-    if (throughput < 4.5) return 'Alto';
-    return 'Excelente';
+    if (throughput < 0.8) return metricText('metrics.labels.throughput.veryLow');
+    if (throughput < 2.0) return metricText('metrics.labels.throughput.low');
+    if (throughput < 3.0) return metricText('metrics.labels.throughput.moderate');
+    if (throughput < 4.0) return metricText('metrics.labels.throughput.good');
+    if (throughput < 4.5) return metricText('metrics.labels.throughput.high');
+    return metricText('metrics.labels.throughput.excellent');
 }
 
 /**
@@ -319,12 +339,12 @@ function getThroughputLabel(throughput) {
  * Ajustado para autómata celular con intersecciones (difícil alcanzar >80%)
  */
 function getSpeedLabel(speed) {
-    if (speed < 15) return 'Detenido';
-    if (speed < 30) return 'Lento';
-    if (speed < 50) return 'Moderado';
-    if (speed < 70) return 'Fluido';
-    if (speed < 80) return 'Muy fluido';
-    return 'Excelente';
+    if (speed < 15) return metricText('metrics.labels.speed.stopped');
+    if (speed < 30) return metricText('metrics.labels.speed.slow');
+    if (speed < 50) return metricText('metrics.labels.speed.moderate');
+    if (speed < 70) return metricText('metrics.labels.speed.fluid');
+    if (speed < 80) return metricText('metrics.labels.speed.veryFluid');
+    return metricText('metrics.labels.speed.excellent');
 }
 
 // ==================== FUNCIONES DE CÁLCULO DE MÉTRICAS ====================
@@ -601,9 +621,9 @@ function resetSimulationMetrics() {
         statusPanel.innerHTML = `
             <div class="status-header">
                 <span class="status-emoji">🟡</span>
-                <span class="status-title">INICIANDO...</span>
+                <span class="status-title">${metricText('metrics.status.initializing.title')}</span>
             </div>
-            <div class="status-description">Esperando datos de simulación...</div>
+            <div class="status-description">${metricText('metrics.status.initializing.description')}</div>
         `;
     }
 
@@ -681,7 +701,7 @@ function initializeCharts() {
             data: {
                 labels: [],
                 datasets: [{
-                    label: '% Ocupación',
+                    label: metricText('metrics.charts.density.dataset'),
                     data: [],
                     borderColor: '#0d6efd',
                     backgroundColor: 'rgba(13, 110, 253, 0.2)',
@@ -703,11 +723,11 @@ function initializeCharts() {
                         titleFont: { size: 13, weight: 'bold' },
                         bodyFont: { size: 11 },
                         callbacks: {
-                            title: (context) => ['Densidad de Tráfico', context[0].label],
+                            title: (context) => [metricText('metrics.charts.density.tooltipTitle'), context[0].label],
                             label: (context) => {
                                 const value = context.parsed.y;
                                 return [
-                                    `${value.toFixed(1)}% de ocupación`,
+                                    metricText('metrics.charts.density.tooltipValue', { value: value.toFixed(1) }),
                                     getDensityLabel(value)
                                 ];
                             }
@@ -738,7 +758,7 @@ function initializeCharts() {
             data: {
                 labels: [],
                 datasets: [{
-                    label: 'veh/seg',
+                    label: metricText('metrics.units.vehiclesPerSecond'),
                     data: [],
                     borderColor: '#198754',
                     backgroundColor: 'rgba(25, 135, 84, 0.1)',
@@ -760,11 +780,11 @@ function initializeCharts() {
                         titleFont: { size: 13, weight: 'bold' },
                         bodyFont: { size: 11 },
                         callbacks: {
-                            title: (context) => ['Flujo vehicular', context[0].label],
+                            title: (context) => [metricText('metrics.charts.throughput.tooltipTitle'), context[0].label],
                             label: (context) => {
                                 const value = context.parsed.y;
                                 return [
-                                    `${value.toFixed(1)} vehículos/seg`,
+                                    metricText('metrics.charts.throughput.tooltipValue', { value: value.toFixed(1) }),
                                     getThroughputLabel(value)
                                 ];
                             }
@@ -791,7 +811,7 @@ function initializeCharts() {
             data: {
                 labels: [],
                 datasets: [{
-                    label: 'veh/seg',
+                    label: metricText('metrics.units.vehiclesPerSecond'),
                     data: [],
                     borderColor: '#fd7e14',
                     backgroundColor: 'rgba(253, 126, 20, 0.1)',
@@ -813,11 +833,11 @@ function initializeCharts() {
                         titleFont: { size: 13, weight: 'bold' },
                         bodyFont: { size: 11 },
                         callbacks: {
-                            title: (context) => ['Tasa de Cambio', context[0].label],
+                            title: (context) => [metricText('metrics.charts.netGeneration.tooltipTitle'), context[0].label],
                             label: (context) => {
                                 const value = context.parsed.y;
                                 return [
-                                    `${value.toFixed(1)} vehículos/seg simulado`,
+                                    metricText('metrics.charts.netGeneration.tooltipValue', { value: value.toFixed(1) }),
                                     getNetGenerationLabel(value)
                                 ];
                             }
@@ -844,7 +864,7 @@ function initializeCharts() {
             data: {
                 labels: [],
                 datasets: [{
-                    label: '% Movimiento',
+                    label: metricText('metrics.charts.speed.dataset'),
                     data: [],
                     borderColor: '#dc3545',
                     backgroundColor: 'rgba(220, 53, 69, 0.2)',
@@ -866,11 +886,11 @@ function initializeCharts() {
                         titleFont: { size: 13, weight: 'bold' },
                         bodyFont: { size: 11 },
                         callbacks: {
-                            title: (context) => ['Velocidad Promedio', context[0].label],
+                            title: (context) => [metricText('metrics.charts.speed.tooltipTitle'), context[0].label],
                             label: (context) => {
                                 const value = context.parsed.y;
                                 return [
-                                    `${value.toFixed(1)}% en movimiento`,
+                                    metricText('metrics.charts.speed.tooltipValue', { value: value.toFixed(1) }),
                                     getSpeedLabel(value)
                                 ];
                             }
@@ -901,7 +921,7 @@ function initializeCharts() {
             data: {
                 labels: [],
                 datasets: [{
-                    label: 'bits',
+                    label: metricText('metrics.units.bits'),
                     data: [],
                     borderColor: '#6f42c1',
                     backgroundColor: 'rgba(111, 66, 193, 0.2)',
@@ -923,11 +943,11 @@ function initializeCharts() {
                         titleFont: { size: 13, weight: 'bold' },
                         bodyFont: { size: 11 },
                         callbacks: {
-                            title: (context) => ['Entropía de Shannon (AC)', context[0].label],
+                            title: (context) => [metricText('metrics.charts.entropy.tooltipTitle'), context[0].label],
                             label: (context) => {
                                 const value = context.parsed.y;
                                 return [
-                                    `${value.toFixed(3)} bits`
+                                    metricText('metrics.charts.entropy.tooltipValue', { value: value.toFixed(3) })
                                 ];
                             }
                         }
@@ -941,7 +961,7 @@ function initializeCharts() {
                         max: 3.0,
                         ticks: {
                             ...commonOptions.scales.y.ticks,
-                            callback: (value) => value.toFixed(1) + ' bits'
+                            callback: (value) => metricText('metrics.charts.entropy.axisTick', { value: value.toFixed(1) })
                         }
                     }
                 }
@@ -1062,7 +1082,7 @@ function actualizarColoresGraficas(modoOscuro) {
  */
 function descargarMetricasCSV() {
     if (completeMetricsHistory.timestamps.length === 0) {
-        alert('No hay métricas para exportar. Ejecuta la simulación primero.');
+        window.fluviNotify?.warning('notifications.metrics.nothingToExport');
         return;
     }
 
@@ -1138,6 +1158,10 @@ function descargarMetricasCSV() {
     link.click();
     document.body.removeChild(link);
 
+    window.fluviNotify?.success('notifications.metrics.csvExported', {
+        count: completeMetricsHistory.timestamps.length,
+        file: fileName
+    });
     console.log(`✅ Métricas exportadas a CSV: ${fileName} (${completeMetricsHistory.timestamps.length} mediciones)`);
 }
 
@@ -1146,7 +1170,7 @@ function descargarMetricasCSV() {
  */
 function descargarMetricasJSON() {
     if (metricsHistory.timestamps.length === 0) {
-        alert('No hay métricas para exportar. Ejecuta la simulación primero.');
+        window.fluviNotify?.warning('notifications.metrics.nothingToExport');
         return;
     }
 
@@ -1234,6 +1258,10 @@ function descargarMetricasJSON() {
     link.click();
     document.body.removeChild(link);
 
+    window.fluviNotify?.success('notifications.metrics.jsonExported', {
+        count: metricsHistory.timestamps.length,
+        file: fileName
+    });
     console.log(`Métricas exportadas a JSON: ${fileName}`);
 }
 
@@ -1242,27 +1270,27 @@ function descargarMetricasJSON() {
  */
 function limpiarMetricas() {
     if (completeMetricsHistory.timestamps.length === 0) {
-        mostrarAdvertencia('Sin métricas', 'No hay métricas para limpiar.');
+        window.fluviNotify?.warning('notifications.metrics.nothingToClear');
         return;
     }
 
     // Usar modal de confirmación de Bootstrap en lugar de confirm() nativo
     mostrarConfirmacion(
-        '🗑️ Limpiar Métricas',
-        '¿Estás seguro de que deseas limpiar todas las métricas?<br><br><strong>Esta acción no se puede deshacer.</strong>',
+        tr('metrics.clear.title'),
+        tr('metrics.clear.confirm'),
         () => {
             // Callback si el usuario confirma
             clearMetricHistories();
             updateCharts();
 
             console.log('✅ Métricas limpiadas exitosamente (historial completo y gráficas)');
-            mostrarExito('✅ Métricas limpiadas', 'Todas las métricas han sido eliminadas exitosamente.');
+            window.fluviNotify?.success('notifications.metrics.cleared');
         },
         null, // No hay callback para cancelar
         {
-            btnConfirmText: '🗑️ Limpiar Todo',
+            btnConfirmText: tr('metrics.clear.confirmButton'),
             btnConfirmClass: 'btn-danger',
-            btnCancelText: 'Cancelar'
+            btnCancelText: tr('common.cancel')
         }
     );
 }
@@ -1303,7 +1331,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnMapaCalor) {
         btnMapaCalor.addEventListener('click', () => {
             if (!window.heatmapModal) {
-                mostrarError('Error', 'El módulo de mapa de calor no está cargado');
+                window.fluviNotify?.error('notifications.metrics.heatmapUnavailable');
                 return;
             }
 
@@ -1509,19 +1537,29 @@ function actualizarListaCallesEnModal() {
 
         const div = document.createElement('div');
         div.className = 'form-check';
-        div.innerHTML = `
-            <input class="form-check-input" type="checkbox" id="calleMetrica${idx}"
-                   data-calle-idx="${idx}" ${isIncluded ? 'checked' : ''}>
-            <label class="form-check-label" for="calleMetrica${idx}">
-                ${calle.nombre || `Calle ${idx + 1}`}
-                <span class="text-muted" style="font-size: 0.85em;">
-                    (${calle.carriles} carril${calle.carriles > 1 ? 'es' : ''}, ${calle.tamano} celdas)
-                </span>
-            </label>
-        `;
+        const checkboxId = `calleMetrica${idx}`;
+        const streetName = calle.nombre || tr('metrics.streetSelection.unnamedStreet', { index: idx + 1 });
+
+        const checkbox = document.createElement('input');
+        checkbox.className = 'form-check-input';
+        checkbox.type = 'checkbox';
+        checkbox.id = checkboxId;
+        checkbox.dataset.calleIdx = String(idx);
+        checkbox.checked = isIncluded;
+        checkbox.setAttribute('aria-label', tr('metrics.streetSelection.includeStreet', { name: streetName }));
+
+        const label = document.createElement('label');
+        label.className = 'form-check-label';
+        label.htmlFor = checkboxId;
+        label.append(document.createTextNode(streetName), ' ');
+        const detail = document.createElement('span');
+        detail.className = 'text-muted';
+        detail.style.fontSize = '0.85em';
+        detail.textContent = `(${tr('metrics.streetSelection.lanes', { count: calle.carriles })}, ${tr('metrics.streetSelection.cells', { count: calle.tamano })})`;
+        label.append(detail);
+        div.append(checkbox, label);
 
         // Agregar event listener al checkbox
-        const checkbox = div.querySelector('input');
         checkbox.addEventListener('change', (e) => {
             const calleIdx = parseInt(e.target.dataset.calleIdx);
             if (e.target.checked) {
@@ -1561,7 +1599,7 @@ function actualizarContadorCallesIncluidas() {
     if (contador) {
         const incluidas = obtenerCantidadCallesIncluidas();
         const total = window.calles ? window.calles.length : 0;
-        contador.textContent = `${incluidas} de ${total} calles incluidas`;
+        contador.textContent = tr('metrics.streetSelection.includedCount', { included: incluidas, total });
     }
 }
 
@@ -1581,13 +1619,13 @@ function activarModoSeleccionCalles(activar) {
             btn.classList.add('active');
             btn.classList.remove('btn-outline-primary');
             btn.classList.add('btn-primary');
-            btn.innerHTML = '🎯 Modo Selección: ON';
+            btn.textContent = `🎯 ${tr('metrics.streetSelection.modeOn')}`;
             console.log('✅ Modo de selección de calles ACTIVADO - Click en las calles para incluir/excluir');
         } else {
             btn.classList.remove('active');
             btn.classList.remove('btn-primary');
             btn.classList.add('btn-outline-primary');
-            btn.innerHTML = '🎯 Seleccionar desde Mapa';
+            btn.textContent = `🎯 ${tr('metrics.streetSelection.modeOff')}`;
             console.log('⏹️ Modo de selección de calles DESACTIVADO');
         }
     }
@@ -1668,6 +1706,8 @@ function toggleCalleEnMetricas(calleIdx) {
 
 // Exponer funciones necesarias para ser llamadas desde otros módulos
 window.updateMetrics = updateMetrics;
+window.interpretarMetricas = interpretarMetricas;
+window.actualizarPanelInterpretacion = actualizarPanelInterpretacion;
 window.actualizarColoresGraficas = actualizarColoresGraficas;
 window.initializeCharts = initializeCharts;
 window.updateCharts = updateCharts;

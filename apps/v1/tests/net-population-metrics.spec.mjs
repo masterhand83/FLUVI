@@ -102,8 +102,10 @@ it('allows negative rates on the chart and describes them as population decrease
     window.initializeCharts();
     expect(chart.options.scales.y.min).toBeUndefined();
     const tooltip = chart.options.plugins.tooltip.callbacks.label({ parsed: { y: -0.5 } });
-    expect(tooltip).toContain('Decrecimiento lento');
-    expect(tooltip).toContain('-0.5 vehículos/seg simulado');
+    expect(tooltip).toEqual([
+        'metrics.charts.netGeneration.tooltipValue',
+        'metrics.labels.netGeneration.slowDecrease'
+    ]);
 });
 
 it('uses all completed steps between throttled samples and stores signed values in both histories', () => {
@@ -140,7 +142,8 @@ it('describes population decreases consistently in every traffic-status branch',
     const metrics = openMetrics();
     for (const [density, speed] of [[90, 0], [40, 70], [70, 20], [10, 80], [50, 40]]) {
         const status = metrics.window.interpretarMetricas({ density, speed, throughput: 1, netGeneration: -0.5 });
-        expect(status.observaciones.join(' ')).toContain('Decrecimiento lento');
-        expect(status.observaciones).not.toContain('Población estable');
+        const rate = status.observations.find(observation => observation.key.endsWith('.rateChange'));
+        expect(rate.params.label).toBe('metrics.labels.netGeneration.slowDecrease');
+        expect(status.observations.map(observation => observation.key)).not.toContain('metrics.status.observations.stable');
     }
 });

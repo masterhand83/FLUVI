@@ -52,6 +52,8 @@ def main():
     parser.add_argument("--legacy-json", required=True)
     parser.add_argument("--new-csv", required=True)
     parser.add_argument("--new-json", required=True)
+    parser.add_argument("--english-csv")
+    parser.add_argument("--english-json")
     args = parser.parse_args()
 
     with contextlib.redirect_stdout(io.StringIO()):
@@ -62,6 +64,9 @@ def main():
             "newCsv": summarize(module, args.new_csv, "csv"),
             "newJson": summarize(module, args.new_json, "json"),
         }
+        if args.english_csv and args.english_json:
+            result["englishCsv"] = summarize(module, args.english_csv, "csv")
+            result["englishJson"] = summarize(module, args.english_json, "json")
     json.dump(result, sys.stdout)
 
 

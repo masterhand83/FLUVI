@@ -741,111 +741,114 @@
         <div id="collapseMetrics" class="accordion-collapse collapse" data-bs-parent="#controlPanelAccordion">
           <div class="accordion-body p-2">
             <!-- Panel de Interpretación de Métricas -->
-            <div id="statusPanel" class="status-panel status-moderado mb-3">
+            <div id="statusPanel" class="status-panel status-moderado mb-3" role="status" aria-live="polite">
               <div class="status-header">
                 <span class="status-emoji">🟡</span>
-                <span class="status-title">INICIANDO...</span>
+                <span class="status-title" data-i18n="metrics.status.initializing.title">INICIANDO...</span>
               </div>
-              <div class="status-description">
+              <div class="status-description" data-i18n="metrics.status.initializing.description">
                 Esperando datos de simulación...
               </div>
               <div class="status-metrics">
                 <div class="metric-item">
-                  <span class="metric-label">Densidad:</span>
+                  <span class="metric-label" data-i18n="metrics.status.labels.density">Densidad:</span>
                   <span class="metric-value">0.0%</span>
-                  <span class="metric-desc">→ Muy baja</span>
+                  <span class="metric-desc">→ <span data-i18n="metrics.labels.density.veryLow">Muy baja</span></span>
                 </div>
                 <div class="metric-item">
-                  <span class="metric-label">Flujo:</span>
+                  <span class="metric-label" data-i18n="metrics.status.labels.throughput">Flujo vehicular:</span>
                   <span class="metric-value">0.0 c/s</span>
-                  <span class="metric-desc">→ Muy bajo</span>
+                  <span class="metric-desc">→ <span data-i18n="metrics.labels.throughput.veryLow">Muy bajo</span></span>
                 </div>
                 <div class="metric-item">
-                  <span class="metric-label">Velocidad:</span>
+                  <span class="metric-label" data-i18n="metrics.status.labels.speed">Velocidad:</span>
                   <span class="metric-value">0.0%</span>
-                  <span class="metric-desc">→ Casi detenido</span>
+                  <span class="metric-desc">→ <span data-i18n="metrics.labels.speed.stopped">Casi detenido</span></span>
                 </div>
               </div>
               <div class="status-observations">
-                <div class="observations-title">!</div>
+                <div class="observations-title">💡 <span data-i18n="metrics.status.observationsTitle">Observaciones:</span></div>
               </div>
             </div>
 
             <div class="chart-container mt-3 mb-3">
-              <h6>🚗 Densidad de Tráfico</h6>
+              <h6 data-i18n="metrics.charts.density.title">🚗 Densidad de Tráfico</h6>
               <div style="position: relative; height: 180px;">
-                <canvas id="densityChart"></canvas>
+                <canvas id="densityChart" data-i18n-attr="aria-label:metrics.charts.density.ariaLabel"></canvas>
               </div>
             </div>
 
             <div class="chart-container mb-3">
-              <h6>🌊 Flujo vehicular</h6>
+              <h6 data-i18n="metrics.charts.throughput.title">🌊 Flujo vehicular</h6>
               <div style="position: relative; height: 180px;">
-                <canvas id="throughputChart"></canvas>
+                <canvas id="throughputChart" data-i18n-attr="aria-label:metrics.charts.throughput.ariaLabel"></canvas>
               </div>
             </div>
 
             <div class="chart-container mb-3">
-              <h6>⚡ Velocidad Promedio</h6>
+              <h6 data-i18n="metrics.charts.speed.title">⚡ Velocidad Promedio</h6>
               <div style="position: relative; height: 180px;">
-                <canvas id="speedChart"></canvas>
+                <canvas id="speedChart" data-i18n-attr="aria-label:metrics.charts.speed.ariaLabel"></canvas>
               </div>
             </div>
 
             <div class="chart-container mb-3">
-              <h6>📊 Tasa de Cambio</h6>
+              <h6 data-i18n="metrics.charts.netGeneration.title">📊 Tasa de Cambio</h6>
               <div style="position: relative; height: 180px;">
-                <canvas id="netGenerationChart"></canvas>
+                <canvas id="netGenerationChart" data-i18n-attr="aria-label:metrics.charts.netGeneration.ariaLabel"></canvas>
               </div>
             </div>
 
             <div class="chart-container mb-3">
-              <h6>🔬 Entropía de Shannon</h6>
+              <h6 data-i18n="metrics.charts.entropy.title">🔬 Entropía de Shannon</h6>
               <div style="position: relative; height: 180px;">
-                <canvas id="entropyChart"></canvas>
+                <canvas id="entropyChart" data-i18n-attr="aria-label:metrics.charts.entropy.ariaLabel"></canvas>
               </div>
             </div>
 
             <!-- Mapa de Calor -->
             <div class="mb-3">
-              <h6 class="mb-2">🌡️ Visualización</h6>
-              <button type="button" id="btnMapaCalor" class="btn btn-outline-primary btn-sm w-100" data-bs-toggle="tooltip" data-bs-title="Muestra un mapa de calor sobre las calles indicando densidad de tráfico">
-                <span id="iconMapaCalor">🔲</span> Activar Mapa de Calor
+              <h6 class="mb-2" data-i18n="metrics.actions.visualizationTitle">🌡️ Visualización</h6>
+              <button type="button" id="btnMapaCalor" class="btn btn-outline-primary btn-sm w-100" data-bs-toggle="tooltip" data-bs-title="Muestra un mapa de calor sobre las calles indicando densidad de tráfico" data-i18n-attr="data-bs-title:metrics.actions.heatmapTooltip">
+                <span id="iconMapaCalor">🔲</span> <span data-i18n="metrics.actions.heatmapButton">Activar Mapa de Calor</span>
               </button>
             </div>
 
             <hr class="my-3">
 
-            <h6 class="mb-3">⚙️ Configuración de Métricas</h6>
+            <h6 class="mb-3" data-i18n="metrics.settings.title">⚙️ Configuración de Métricas</h6>
             <div class="d-grid gap-2 mb-3">
-              <button type="button" id="btnConfigCallesMetricas" class="btn btn-outline-secondary btn-sm" data-bs-toggle="tooltip" data-bs-title="Abre el modal para seleccionar qué calles incluir en el cálculo de métricas">
-                📋 Seleccionar Calles (Modal)
+              <button type="button" id="btnConfigCallesMetricas" class="btn btn-outline-secondary btn-sm" data-bs-toggle="tooltip" data-bs-title="Abre el modal para seleccionar qué calles incluir en el cálculo de métricas" data-i18n-attr="data-bs-title:metrics.settings.selectStreetsTooltip">
+                <span data-i18n="metrics.settings.selectStreets">📋 Seleccionar Calles (Modal)</span>
               </button>
-              <button type="button" id="btnModoSeleccionCalles" class="btn btn-outline-primary btn-sm" data-bs-toggle="tooltip" data-bs-title="Activa el modo de selección. Las calles se resaltarán con bordes de color: VERDE = incluida, ROJO = excluida. Haz clic en una calle para cambiar su estado.">
-                🎯 Seleccionar desde Mapa
+              <button type="button" id="btnModoSeleccionCalles" class="btn btn-outline-primary btn-sm" data-bs-toggle="tooltip" data-bs-title="Activa el modo de selección. Las calles se resaltarán con bordes de color: VERDE = incluida, ROJO = excluida. Haz clic en una calle para cambiar su estado." data-i18n-attr="data-bs-title:metrics.streetSelection.modeTooltip">
+                <span data-i18n="metrics.streetSelection.modeOff">🎯 Seleccionar desde Mapa</span>
               </button>
             </div>
 
             <hr class="my-3">
 
-            <h6 class="mb-3">💾 Exportar Métricas</h6>
+            <h6 class="mb-3" data-i18n="metrics.export.title">💾 Exportar Métricas</h6>
             <div class="d-grid gap-2">
-              <button type="button" id="btnDescargarCSV" class="btn btn-success btn-sm" data-bs-toggle="tooltip" data-bs-title="Exportar todas las métricas recolectadas en formato CSV">
-                Descargar CSV
+              <button type="button" id="btnDescargarCSV" class="btn btn-success btn-sm" data-bs-toggle="tooltip" data-bs-title="Exportar todas las métricas recolectadas en formato CSV" data-i18n-attr="data-bs-title:metrics.export.csvTooltip">
+                <span data-i18n="metrics.export.csvButton">Descargar CSV</span>
               </button>
-              <button type="button" id="btnDescargarJSON" class="btn btn-info btn-sm" data-bs-toggle="tooltip" data-bs-title="Exportar todas las métricas recolectadas en formato JSON">
-                Descargar JSON
+              <button type="button" id="btnDescargarJSON" class="btn btn-info btn-sm" data-bs-toggle="tooltip" data-bs-title="Exportar todas las métricas recolectadas en formato JSON" data-i18n-attr="data-bs-title:metrics.export.jsonTooltip">
+                <span data-i18n="metrics.export.jsonButton">Descargar JSON</span>
               </button>
               <button type="button" id="btnExportarImagenes" class="btn btn-outline-success btn-sm">
-                Exportar imágenes
+                <span data-i18n="metrics.export.imagesButton">Exportar imágenes</span>
               </button>
-              <small class="text-muted">ZIP con las cinco gráficas, el resumen y el mapa de calor en PNG.</small>
-              <button type="button" id="btnLimpiarMetricas" class="btn btn-danger btn-sm" data-bs-toggle="tooltip" data-bs-title="Borrar todos los datos de métricas recolectados y reiniciar gráficas">
-                Limpiar Métricas
+              <small class="text-muted" data-i18n="metrics.export.imagesHelp">ZIP con las cinco gráficas, el resumen y el mapa de calor en PNG.</small>
+              <button type="button" id="btnLimpiarMetricas" class="btn btn-danger btn-sm" data-bs-toggle="tooltip" data-bs-title="Borrar todos los datos de métricas recolectados y reiniciar gráficas" data-i18n-attr="data-bs-title:metrics.export.clearTooltip">
+                <span data-i18n="metrics.export.clearButton">Limpiar Métricas</span>
               </button>
-              <button type="button" id="btnAnalizarMetricas" class="btn btn-primary btn-sm" data-bs-toggle="tooltip" data-bs-title="Analizar métricas desde archivo CSV con Python">
-                Analizar Métricas
+              <button type="button" id="btnAnalizarMetricas" class="btn btn-primary btn-sm" data-bs-toggle="tooltip" data-bs-title="Analizar métricas desde archivo CSV con Python" data-i18n-attr="data-bs-title:metrics.export.analyzeTooltip">
+                <span data-i18n="metrics.export.analyzeButton">Analizar Métricas</span>
               </button>
+              <small class="text-muted metrics-export-notice" data-i18n="metrics.export.legacyNotice">
+                Los archivos CSV y JSON conservan los encabezados en español y el separador decimal con punto para seguir siendo compatibles con las herramientas de análisis existentes.
+              </small>
             </div>
           </div>
         </div>
@@ -2642,26 +2645,26 @@
     <div class="modal-dialog modal-dialog-scrollable">
       <div class="modal-content">
         <div class="modal-header bg-primary text-white">
-          <h5 class="modal-title" id="modalConfigCallesMetricasLabel">📋 Configurar Calles en Métricas</h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+          <h5 class="modal-title" id="modalConfigCallesMetricasLabel" data-i18n="metrics.streetSelection.modalTitle">📋 Configurar Calles en Métricas</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" data-i18n-attr="aria-label:common.close"></button>
         </div>
         <div class="modal-body">
-          <p class="text-muted small mb-3">
+          <p class="text-muted small mb-3" data-i18n="metrics.streetSelection.intro">
             Selecciona qué calles deseas incluir en el cálculo de métricas (densidad, flujo, velocidad, entropía).
             Por defecto, todas las calles están incluidas.
           </p>
 
           <!-- Leyenda visual -->
           <div class="alert alert-light border mb-3">
-            <small class="fw-bold d-block mb-2">Indicadores visuales en el mapa:</small>
+            <small class="fw-bold d-block mb-2" data-i18n="metrics.streetSelection.legendTitle">Indicadores visuales en el mapa:</small>
             <div class="d-flex gap-3 small">
               <div class="d-flex align-items-center gap-1">
                 <div style="width: 20px; height: 20px; background-color: rgba(0, 255, 0, 0.3); border: 1px solid #28a745; border-radius: 3px;"></div>
-                <span>Verde = Incluida</span>
+                <span data-i18n="metrics.streetSelection.includedLegend">Verde = Incluida</span>
               </div>
               <div class="d-flex align-items-center gap-1">
                 <div style="width: 20px; height: 20px; background-color: rgba(255, 0, 0, 0.3); border: 1px solid #dc3545; border-radius: 3px;"></div>
-                <span>Rojo = Excluida</span>
+                <span data-i18n="metrics.streetSelection.excludedLegend">Rojo = Excluida</span>
               </div>
             </div>
           </div>
@@ -2669,15 +2672,15 @@
           <!-- Contador de calles incluidas -->
           <div class="alert alert-info d-flex align-items-center mb-3">
             <i class="bi bi-info-circle-fill me-2"></i>
-            <span id="contadorCallesIncluidas" class="fw-bold">-- de -- calles incluidas</span>
+            <span id="contadorCallesIncluidas" class="fw-bold" data-i18n="metrics.streetSelection.counterPlaceholder">-- de -- calles incluidas</span>
           </div>
 
           <!-- Botones de selección rápida -->
           <div class="d-flex gap-2 mb-3">
-            <button type="button" class="btn btn-sm btn-success" id="btnSeleccionarTodasCalles">
+            <button type="button" class="btn btn-sm btn-success" id="btnSeleccionarTodasCalles" data-i18n="metrics.streetSelection.selectAll">
               ✅ Seleccionar Todas
             </button>
-            <button type="button" class="btn btn-sm btn-warning" id="btnDeseleccionarTodasCalles">
+            <button type="button" class="btn btn-sm btn-warning" id="btnDeseleccionarTodasCalles" data-i18n="metrics.streetSelection.deselectAll">
               ❌ Deseleccionar Todas
             </button>
           </div>
@@ -2690,7 +2693,7 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n="common.close">Cerrar</button>
         </div>
       </div>
     </div>

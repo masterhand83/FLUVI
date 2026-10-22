@@ -383,6 +383,49 @@ and Pixi disruption rendering, cross-language save/load/import round trips,
 rain load-off behavior, safe names, notification severities, desktop/mobile
 reachability, and both themes.
 
+## Traffic metrics and compatible exports
+
+Traffic metrics use one catalog owner, `metrics.*`:
+
+- `metrics.status.*` covers the status panel: stable classification titles and
+  descriptions, metric labels, observation headings, and every observation and
+  recommendation. `interpretarMetricas` returns a stable `level` identifier
+  (`collapse`, `optimal`, `congested`, `underused`, `moderate`), presentation
+  emoji/color/CSS class, and observation descriptors (`{ key, params }`).
+  `actualizarPanelInterpretacion` translates those descriptors through the active
+  catalog. Classification thresholds, measured values, units, and the status CSS
+  classes remain unchanged by language.
+- `metrics.labels.*` covers the short density, throughput, speed, and
+  net-generation labels used by the status panel and chart tooltips.
+- `metrics.charts.*` covers the five chart headings and accessible names, dataset
+  labels, concise tooltip titles/values, and the entropy tick suffix. Tooltips keep
+  a timestamp title plus at most a value and one short status line; long
+  explanatory prose stays in the status panel.
+- `metrics.streetSelection.*` covers the street-selection modal, the generated
+  checkbox labels (stored street name plus lane/cell counts), accessible checkbox
+  names, the included-street counter, and the map-selection mode button. Stored
+  street names, physical indexes, and selection state are data.
+- `metrics.export.*` and `metrics.clear.*` cover the CSV/JSON/image/analyze
+  controls, help text, legacy-format notice, and the clear confirmation.
+  `notifications.metrics.*` covers empty-history, success, and missing-heatmap
+  feedback with explicit severity.
+
+CSV and JSON exports never change format with the interface language. The CSV
+keeps its Spanish metadata layout, column order, `ESTADISTICAS` markers, legacy
+Spanish weekday names, parser-compatible timestamps, and dot decimal separators.
+JSON keeps its keys, types, Spanish `metricsDescription`, and history behavior.
+The translated export notice explains this compatibility exception instead of
+introducing localized export variants. Download filenames also keep the legacy
+export day name.
+
+Browser coverage lives in `tests/metrics-localization.spec.mjs` (both languages,
+all five classifications, chart dataset/tooltip labels, actual pointer hover at
+low/middle/high values and after updates, street selection, export copy,
+notification severity, both themes, and mobile/desktop layouts). Export
+compatibility is covered by `tests/export-timestamps.spec.mjs`, which downloads
+CSV/JSON in both interface languages and parses them with the real Python reader
+alongside the legacy fixtures.
+
 ## Map constructor, reference images, and map labels
 
 The map lifecycle, reference-image, and label controls use three catalog owners:

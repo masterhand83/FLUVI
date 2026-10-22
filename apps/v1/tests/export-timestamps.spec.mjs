@@ -17,16 +17,24 @@ afterEach(async () => {
     simulator = undefined
 })
 
-async function captureExports({ localizeDisplay = false } = {}) {
-    simulator = await openSimulator()
+async function captureExports({ localizeDisplay = false, languagePreference } = {}) {
+    if (simulator) {
+        await simulator.close()
+        simulator = undefined
+    }
+    simulator = await openSimulator({ languagePreference })
     await simulator.page.waitForFunction(
         () => typeof Chart !== 'undefined' && typeof densityChartInstance !== 'undefined' && densityChartInstance !== null,
         { polling: 100, timeout: 10000 },
     )
 
     const result = await simulator.page.evaluate(async (localizeDisplay) => {
-        // Start from a known clock and no history from page startup.
+        // Start from a known clock, an empty deterministic map state, and no
+        // history from page startup.
         window.resetSimulationMetrics()
+        for (const street of window.calles) {
+            for (const lane of street.arreglo) lane.fill(0)
+        }
         Object.assign(window.configuracionTiempo, {
             activo: true,
             diaActual: 1, // Lunes
@@ -126,6 +134,10 @@ function parseWithAnalyzer(files) {
         '--legacy-json', files.legacyJson,
         '--new-csv', files.newCsv,
         '--new-json', files.newJson,
+        ...(files.englishCsv ? [
+            '--english-csv', files.englishCsv,
+            '--english-json', files.englishJson,
+        ] : []),
     ], {
         encoding: 'utf8',
         env: { ...process.env, MPLBACKEND: 'Agg', PYTHONDONTWRITEBYTECODE: '1' },
@@ -243,6 +255,79 @@ test('preserves Spanish clock displays and numeric day rollover', async () => {
         exportDay: 'Domingo',
     })
     expect(simulator.pageErrors).toEqual([])
+})
+
+test('interface language cannot change the CSV or JSON machine contract', async () => {
+    const spanish = await captureExports({ languagePreference: 'es' })
+    const english = await captureExports({ languagePreference: 'en' })
+
+    expect(english.csv).toBe(spanish.csv)
+    expect(english.names).toEqual(spanish.names)
+
+    const withoutExportDate = (exported) => {
+        const json = JSON.parse(exported.json)
+        return {
+            ...json,
+            metadata: { ...json.metadata, exportDate: '<generated-at-runtime>' },
+        }
+    }
+    expect(withoutExportDate(english)).toEqual(withoutExportDate(spanish))
+
+    const json = JSON.parse(english.json)
+    expect(json.metadata.virtualTime).toMatchObject({
+        currentTime: 'Lunes 07:00:02',
+        day: 'Lunes',
+        hour: 7,
+        minute: 0,
+        second: 2,
+    })
+    expect(json.metadata.metricsDescription).toEqual(
+        JSON.parse(spanish.json).metadata.metricsDescription,
+    )
+    expect(json.metrics.timestamps).toEqual(['07:00:00', '07:00:02'])
+    expect(Object.keys(json.metrics)).toEqual([
+        'timestamps', 'density', 'throughput', 'netGeneration', 'speed', 'entropy',
+    ])
+    expect(english.csv.split('\n')[0]).toBe(
+        'FLUVI - Simulador de Trafico - Exportacion de Metricas',
+    )
+    expect(english.csv).toContain('Marca de Tiempo,Densidad (%)')
+    expect(english.csv).toContain('\nESTADISTICAS\nMetrica,Promedio,Minimo,Maximo\n')
+
+    const directory = await mkdtemp(join(tmpdir(), 'fluvi-export-language-'))
+    const files = {
+        legacyCsv: legacyCsvPath,
+        legacyJson: legacyJsonPath,
+        newCsv: join(directory, 'spanish.csv'),
+        newJson: join(directory, 'spanish.json'),
+        englishCsv: join(directory, 'english.csv'),
+        englishJson: join(directory, 'english.json'),
+    }
+    try {
+        await Promise.all([
+            writeFile(files.newCsv, spanish.csv),
+            writeFile(files.newJson, spanish.json),
+            writeFile(files.englishCsv, english.csv),
+            writeFile(files.englishJson, english.json),
+        ])
+        const parsed = parseWithAnalyzer(files)
+        for (const key of ['newCsv', 'newJson', 'englishCsv', 'englishJson']) {
+            expect(parsed[key]).toMatchObject({
+                rows: 2,
+                timestamps: ['07:00:00', '07:00:02'],
+                days: ['Lunes', 'Lunes'],
+            })
+            expect(parsed[key].columns).toEqual(expect.arrayContaining([
+                'Marca_Tiempo', 'Densidad', 'Flujo', 'Generacion', 'Velocidad', 'Entropia',
+            ]))
+        }
+        expect(parsed.englishCsv).toEqual(parsed.newCsv)
+        expect(parsed.englishJson).toEqual(parsed.newJson)
+        expect(parsed.legacyCsv).toMatchObject({ rows: 3 })
+        expect(parsed.legacyJson).toMatchObject({ rows: 2 })
+    } finally {
+        await rm(directory, { recursive: true, force: true })
+    }
 })
 
 test('legacy and newly generated CSV/JSON remain readable by the Python analyzer', async () => {

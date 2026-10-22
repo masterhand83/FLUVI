@@ -559,6 +559,16 @@ window.FLUVI_LOCALE_RESOURCES = {
 					"info": "Información",
 					"success": "Éxito",
 					"warning": "Advertencia"
+				},
+				"metrics": {
+					"cleared": "Todas las métricas han sido eliminadas exitosamente.",
+					"csvExported_one": "Se exportó {{count}} medición a {{file}}.",
+					"csvExported_other": "Se exportaron {{count}} mediciones a {{file}}.",
+					"heatmapUnavailable": "El módulo de mapa de calor no está cargado.",
+					"jsonExported_one": "Se exportó {{count}} medición a {{file}}.",
+					"jsonExported_other": "Se exportaron {{count}} mediciones a {{file}}.",
+					"nothingToClear": "No hay métricas para limpiar.",
+					"nothingToExport": "No hay métricas para exportar. Ejecuta la simulación primero."
 				}
 			},
 			"parking": {
@@ -1407,6 +1417,191 @@ window.FLUVI_LOCALE_RESOURCES = {
 					"tuesday": "🟠 Martes",
 					"wednesday": "🟡 Miércoles"
 				}
+			},
+			"metrics": {
+				"actions": {
+					"heatmapButton": "Activar Mapa de Calor",
+					"heatmapTooltip": "Muestra un mapa de calor sobre las calles indicando densidad de tráfico",
+					"visualizationTitle": "🌡️ Visualización"
+				},
+				"charts": {
+					"density": {
+						"ariaLabel": "Gráfica de densidad de tráfico",
+						"dataset": "% Ocupación",
+						"title": "🚗 Densidad de Tráfico",
+						"tooltipTitle": "Densidad de Tráfico",
+						"tooltipValue": "{{value}}% de ocupación"
+					},
+					"entropy": {
+						"ariaLabel": "Gráfica de la entropía de Shannon",
+						"axisTick": "{{value}} bits",
+						"dataset": "bits",
+						"title": "🔬 Entropía de Shannon",
+						"tooltipTitle": "Entropía de Shannon (AC)",
+						"tooltipValue": "{{value}} bits"
+					},
+					"netGeneration": {
+						"ariaLabel": "Gráfica de la tasa de cambio de población",
+						"dataset": "veh/seg",
+						"title": "📊 Tasa de Cambio",
+						"tooltipTitle": "Tasa de Cambio",
+						"tooltipValue": "{{value}} vehículos/seg simulado"
+					},
+					"speed": {
+						"ariaLabel": "Gráfica de velocidad promedio",
+						"dataset": "% Movimiento",
+						"title": "⚡ Velocidad Promedio",
+						"tooltipTitle": "Velocidad Promedio",
+						"tooltipValue": "{{value}}% en movimiento"
+					},
+					"throughput": {
+						"ariaLabel": "Gráfica del flujo vehicular",
+						"dataset": "veh/seg",
+						"title": "🌊 Flujo vehicular",
+						"tooltipTitle": "Flujo vehicular",
+						"tooltipValue": "{{value}} vehículos/seg"
+					}
+				},
+				"clear": {
+					"confirm": "¿Estás seguro de que deseas limpiar todas las métricas?<br><br><strong>Esta acción no se puede deshacer.</strong>",
+					"confirmButton": "🗑️ Limpiar Todo",
+					"title": "🗑️ Limpiar Métricas"
+				},
+				"export": {
+					"analyzeButton": "Analizar Métricas",
+					"analyzeTooltip": "Analizar métricas desde archivo CSV con Python",
+					"clearButton": "Limpiar Métricas",
+					"clearTooltip": "Borrar todos los datos de métricas recolectados y reiniciar gráficas",
+					"csvButton": "Descargar CSV",
+					"csvTooltip": "Exportar todas las métricas recolectadas en formato CSV",
+					"imagesButton": "Exportar imágenes",
+					"imagesHelp": "ZIP con las cinco gráficas, el resumen y el mapa de calor en PNG.",
+					"jsonButton": "Descargar JSON",
+					"jsonTooltip": "Exportar todas las métricas recolectadas en formato JSON",
+					"legacyNotice": "Los archivos CSV y JSON conservan los encabezados en español y el separador decimal con punto para seguir siendo compatibles con las herramientas de análisis existentes. La interfaz puede estar en otro idioma; el formato de los datos no cambia.",
+					"title": "💾 Exportar Métricas"
+				},
+				"labels": {
+					"density": {
+						"critical": "Crítica",
+						"good": "Buena ocupación",
+						"high": "Alta",
+						"low": "Baja",
+						"moderate": "Moderada",
+						"veryHigh": "Muy alta",
+						"veryLow": "Muy baja"
+					},
+					"netGeneration": {
+						"fastDecrease": "Decrecimiento rápido",
+						"fastGrowth": "Crecimiento rápido",
+						"moderateGrowth": "Crecimiento moderado",
+						"slowDecrease": "Decrecimiento lento",
+						"slowGrowth": "Crecimiento lento",
+						"stable": "Estable"
+					},
+					"speed": {
+						"excellent": "Excelente",
+						"fluid": "Fluido",
+						"moderate": "Moderado",
+						"slow": "Lento",
+						"stopped": "Detenido",
+						"veryFluid": "Muy fluido"
+					},
+					"throughput": {
+						"excellent": "Excelente",
+						"good": "Bueno",
+						"high": "Alto",
+						"low": "Bajo",
+						"moderate": "Moderado",
+						"veryLow": "Muy bajo"
+					}
+				},
+				"settings": {
+					"selectStreets": "📋 Seleccionar Calles (Modal)",
+					"selectStreetsTooltip": "Abre el modal para seleccionar qué calles incluir en el cálculo de métricas",
+					"title": "⚙️ Configuración de Métricas"
+				},
+				"status": {
+					"initializing": {
+						"description": "Esperando datos de simulación...",
+						"title": "INICIANDO..."
+					},
+					"labels": {
+						"density": "Densidad:",
+						"rate": "Tasa cambio:",
+						"speed": "Velocidad:",
+						"throughput": "Flujo vehicular:"
+					},
+					"levels": {
+						"collapse": {
+							"description": "Las calles están severamente congestionadas y casi paralizadas",
+							"title": "COLAPSO DE TRÁFICO"
+						},
+						"congested": {
+							"description": "Alta densidad vehicular con movimiento lento",
+							"title": "TRÁFICO CONGESTIONADO"
+						},
+						"moderate": {
+							"description": "Condiciones de tráfico aceptables con margen de mejora",
+							"title": "FLUJO MODERADO"
+						},
+						"optimal": {
+							"description": "Máxima eficiencia del sistema: buen balance entre densidad y velocidad",
+							"title": "FLUJO ÓPTIMO"
+						},
+						"underused": {
+							"description": "Baja ocupación de las calles, capacidad disponible",
+							"title": "SISTEMA SUB-UTILIZADO"
+						}
+					},
+					"observations": {
+						"collapseRisk": "Riesgo de colapso si aumenta densidad",
+						"criticalDensity": "Densidad crítica detectada (>80%)",
+						"densityStatus": "Densidad: {{value}}% - {{label}}",
+						"extremelyLowSpeed": "Velocidad extremadamente baja (<15%)",
+						"fluidSpeed": "Velocidad fluida ({{value}}%)",
+						"highDensity": "Densidad alta ({{value}}%)",
+						"highThroughput": "Flujo vehicular alto: {{value}} veh/s",
+						"increaseGeneration": "Considerar aumentar generación para aprovechar capacidad",
+						"interventionRequired": "Se requiere intervención: reducir generación o mejorar salidas",
+						"lowThroughput": "Flujo vehicular bajo: {{value}} veh/s",
+						"maximumPerformance": "Sistema funcionando al máximo rendimiento",
+						"normalOperation": "Sistema funcionando normalmente",
+						"optimalDensity": "Densidad en zona óptima ({{value}}%)",
+						"optimizationAvailable": "Puede optimizarse para aumentar flujo",
+						"rateChange": "Tasa cambio: {{value}} veh/s - {{label}}",
+						"reducedSpeed": "Velocidad reducida ({{value}}%)",
+						"speedStatus": "Velocidad: {{value}}% - {{label}}",
+						"throughputNearZero": "Flujo vehicular: {{value}} veh/s - Casi nulo",
+						"throughputStatus": "Flujo vehicular: {{value}} veh/s - {{label}}",
+						"veryLowDensity": "Densidad muy baja ({{value}}%)"
+					},
+					"observationsTitle": "Observaciones:"
+				},
+				"streetSelection": {
+					"cells_one": "{{count}} celda",
+					"cells_other": "{{count}} celdas",
+					"counterPlaceholder": "-- de -- calles incluidas",
+					"deselectAll": "❌ Deseleccionar Todas",
+					"excludedLegend": "Rojo = Excluida",
+					"includeStreet": "Incluir {{name}} en las métricas",
+					"includedCount": "{{included}} de {{total}} calles incluidas",
+					"includedLegend": "Verde = Incluida",
+					"intro": "Selecciona qué calles deseas incluir en el cálculo de métricas (densidad, flujo, velocidad, entropía). Por defecto, todas las calles están incluidas.",
+					"lanes_one": "{{count}} carril",
+					"lanes_other": "{{count}} carriles",
+					"legendTitle": "Indicadores visuales en el mapa:",
+					"modalTitle": "📋 Configurar Calles en Métricas",
+					"modeOff": "🎯 Seleccionar desde Mapa",
+					"modeOn": "🎯 Modo Selección: ON",
+					"modeTooltip": "Activa el modo de selección. Las calles se resaltarán con bordes de color: VERDE = incluida, ROJO = excluida. Haz clic en una calle para cambiar su estado.",
+					"selectAll": "✅ Seleccionar Todas",
+					"unnamedStreet": "Calle {{index}}"
+				},
+				"units": {
+					"bits": "bits",
+					"vehiclesPerSecond": "veh/seg"
+				}
 			}
 		}
 	},
@@ -1965,6 +2160,16 @@ window.FLUVI_LOCALE_RESOURCES = {
 					"info": "Information",
 					"success": "Success",
 					"warning": "Warning"
+				},
+				"metrics": {
+					"cleared": "All metrics were cleared successfully.",
+					"csvExported_one": "Exported {{count}} measurement to {{file}}.",
+					"csvExported_other": "Exported {{count}} measurements to {{file}}.",
+					"heatmapUnavailable": "The heatmap module is not loaded.",
+					"jsonExported_one": "Exported {{count}} measurement to {{file}}.",
+					"jsonExported_other": "Exported {{count}} measurements to {{file}}.",
+					"nothingToClear": "There are no metrics to clear.",
+					"nothingToExport": "There are no metrics to export. Run the simulation first."
 				}
 			},
 			"parking": {
@@ -2795,6 +3000,191 @@ window.FLUVI_LOCALE_RESOURCES = {
 					"thursday": "🟢 Thursday",
 					"tuesday": "🟠 Tuesday",
 					"wednesday": "🟡 Wednesday"
+				}
+			},
+			"metrics": {
+				"actions": {
+					"heatmapButton": "Turn On Heatmap",
+					"heatmapTooltip": "Show a heatmap over the streets indicating traffic density",
+					"visualizationTitle": "🌡️ Visualization"
+				},
+				"charts": {
+					"density": {
+						"ariaLabel": "Traffic density chart",
+						"dataset": "% Occupancy",
+						"title": "🚗 Traffic Density",
+						"tooltipTitle": "Traffic Density",
+						"tooltipValue": "{{value}}% occupancy"
+					},
+					"entropy": {
+						"ariaLabel": "Shannon entropy chart",
+						"axisTick": "{{value}} bits",
+						"dataset": "bits",
+						"title": "🔬 Shannon Entropy",
+						"tooltipTitle": "Shannon Entropy (CA)",
+						"tooltipValue": "{{value}} bits"
+					},
+					"netGeneration": {
+						"ariaLabel": "Population rate-of-change chart",
+						"dataset": "veh/s",
+						"title": "📊 Rate of Change",
+						"tooltipTitle": "Rate of Change",
+						"tooltipValue": "{{value}} simulated vehicles/s"
+					},
+					"speed": {
+						"ariaLabel": "Average speed chart",
+						"dataset": "% Motion",
+						"title": "⚡ Average Speed",
+						"tooltipTitle": "Average Speed",
+						"tooltipValue": "{{value}}% in motion"
+					},
+					"throughput": {
+						"ariaLabel": "Vehicular flow chart",
+						"dataset": "veh/s",
+						"title": "🌊 Vehicular Flow",
+						"tooltipTitle": "Vehicular Flow",
+						"tooltipValue": "{{value}} vehicles/s"
+					}
+				},
+				"clear": {
+					"confirm": "Are you sure you want to clear all metrics?<br><br><strong>This action cannot be undone.</strong>",
+					"confirmButton": "🗑️ Clear Everything",
+					"title": "🗑️ Clear Metrics"
+				},
+				"export": {
+					"analyzeButton": "Analyze Metrics",
+					"analyzeTooltip": "Analyze metrics from a CSV file with Python",
+					"clearButton": "Clear Metrics",
+					"clearTooltip": "Delete all collected metric data and restart the charts",
+					"csvButton": "Download CSV",
+					"csvTooltip": "Export all collected metrics in CSV format",
+					"imagesButton": "Export Images",
+					"imagesHelp": "ZIP with the five charts, the summary, and the heatmap as PNG files.",
+					"jsonButton": "Download JSON",
+					"jsonTooltip": "Export all collected metrics in JSON format",
+					"legacyNotice": "CSV and JSON files keep their Spanish headings and dot decimal separator so existing analysis tools can still read them. The interface may be in English; the data format does not change.",
+					"title": "💾 Export Metrics"
+				},
+				"labels": {
+					"density": {
+						"critical": "Critical",
+						"good": "Good occupancy",
+						"high": "High",
+						"low": "Low",
+						"moderate": "Moderate",
+						"veryHigh": "Very high",
+						"veryLow": "Very low"
+					},
+					"netGeneration": {
+						"fastDecrease": "Fast decrease",
+						"fastGrowth": "Fast growth",
+						"moderateGrowth": "Moderate growth",
+						"slowDecrease": "Slow decrease",
+						"slowGrowth": "Slow growth",
+						"stable": "Stable"
+					},
+					"speed": {
+						"excellent": "Excellent",
+						"fluid": "Fluid",
+						"moderate": "Moderate",
+						"slow": "Slow",
+						"stopped": "Stopped",
+						"veryFluid": "Very fluid"
+					},
+					"throughput": {
+						"excellent": "Excellent",
+						"good": "Good",
+						"high": "High",
+						"low": "Low",
+						"moderate": "Moderate",
+						"veryLow": "Very low"
+					}
+				},
+				"settings": {
+					"selectStreets": "📋 Select Streets (Modal)",
+					"selectStreetsTooltip": "Open the modal to choose which streets are included in metric calculations",
+					"title": "⚙️ Metric Settings"
+				},
+				"status": {
+					"initializing": {
+						"description": "Waiting for simulation data...",
+						"title": "STARTING..."
+					},
+					"labels": {
+						"density": "Density:",
+						"rate": "Rate of change:",
+						"speed": "Speed:",
+						"throughput": "Vehicular flow:"
+					},
+					"levels": {
+						"collapse": {
+							"description": "The streets are severely congested and almost at a standstill",
+							"title": "TRAFFIC COLLAPSE"
+						},
+						"congested": {
+							"description": "High vehicle density with slow movement",
+							"title": "CONGESTED TRAFFIC"
+						},
+						"moderate": {
+							"description": "Acceptable traffic conditions with room for improvement",
+							"title": "MODERATE FLOW"
+						},
+						"optimal": {
+							"description": "Maximum system efficiency: a good balance between density and speed",
+							"title": "OPTIMAL FLOW"
+						},
+						"underused": {
+							"description": "Low street occupancy, capacity available",
+							"title": "UNDERUSED SYSTEM"
+						}
+					},
+					"observations": {
+						"collapseRisk": "Risk of collapse if density increases",
+						"criticalDensity": "Critical density detected (>80%)",
+						"densityStatus": "Density: {{value}}% - {{label}}",
+						"extremelyLowSpeed": "Extremely low speed (<15%)",
+						"fluidSpeed": "Fluid speed ({{value}}%)",
+						"highDensity": "High density ({{value}}%)",
+						"highThroughput": "High vehicular flow: {{value}} veh/s",
+						"increaseGeneration": "Consider increasing generation to use available capacity",
+						"interventionRequired": "Intervention required: reduce generation or improve exits",
+						"lowThroughput": "Low vehicular flow: {{value}} veh/s",
+						"maximumPerformance": "System running at maximum performance",
+						"normalOperation": "System operating normally",
+						"optimalDensity": "Density in the optimal range ({{value}}%)",
+						"optimizationAvailable": "Can be optimized to increase flow",
+						"rateChange": "Rate of change: {{value}} veh/s - {{label}}",
+						"reducedSpeed": "Reduced speed ({{value}}%)",
+						"speedStatus": "Speed: {{value}}% - {{label}}",
+						"throughputNearZero": "Vehicular flow: {{value}} veh/s - Nearly zero",
+						"throughputStatus": "Vehicular flow: {{value}} veh/s - {{label}}",
+						"veryLowDensity": "Very low density ({{value}}%)"
+					},
+					"observationsTitle": "Observations:"
+				},
+				"streetSelection": {
+					"cells_one": "{{count}} cell",
+					"cells_other": "{{count}} cells",
+					"counterPlaceholder": "-- of -- streets included",
+					"deselectAll": "❌ Deselect All",
+					"excludedLegend": "Red = Excluded",
+					"includeStreet": "Include {{name}} in metrics",
+					"includedCount": "{{included}} of {{total}} streets included",
+					"includedLegend": "Green = Included",
+					"intro": "Choose which streets to include in metric calculations (density, flow, speed, entropy). All streets are included by default.",
+					"lanes_one": "{{count}} lane",
+					"lanes_other": "{{count}} lanes",
+					"legendTitle": "Visual indicators on the map:",
+					"modalTitle": "📋 Configure Streets in Metrics",
+					"modeOff": "🎯 Select from Map",
+					"modeOn": "🎯 Selection Mode: ON",
+					"modeTooltip": "Turn on selection mode. Streets are highlighted with colored borders: GREEN = included, RED = excluded. Click a street to change its state.",
+					"selectAll": "✅ Select All",
+					"unnamedStreet": "Street {{index}}"
+				},
+				"units": {
+					"bits": "bits",
+					"vehiclesPerSecond": "veh/s"
 				}
 			}
 		}
