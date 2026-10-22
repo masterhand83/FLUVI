@@ -22,7 +22,7 @@ const PLURAL_SUFFIX_PATTERN = /_(zero|one|two|few|many|other)$/
 // names; this literal-key scan is the focused fast check that does not need the
 // extractor to rewrite catalogs.
 const JS_MESSAGE_CALL_PATTERN =
-	/\b(?:tr|fluviI18n\.t|analyzerText|metricText|heatmapText|imageText|fluviNotify\.(?:success|error|warning|info))\s*\(\s*(["'])((?:\\.|(?!\1).)+)\1/g
+	/\b(?:tr|fluviI18n\.t(?:Escaped)?|analyzerText|metricText|heatmapText|imageText|fluviNotify\.(?:success|error|warning|info))\s*\(\s*(["'])((?:\\.|(?!\1).)+)\1/g
 
 export function interpolatedNames(value) {
 	const names = new Set()
@@ -150,9 +150,9 @@ async function collectJavascriptFiles(directory) {
 	return files.sort()
 }
 
-export async function collectJavaScriptMessageKeys(root = JS_MESSAGE_ROOT_PATH) {
+export async function collectJavaScriptMessageKeys() {
 	const keys = new Map()
-	for (const file of await collectJavascriptFiles(root)) {
+	for (const file of await collectJavascriptFiles(JS_MESSAGE_ROOT_PATH)) {
 		const source = await readFile(file, "utf8")
 		for (const match of source.matchAll(JS_MESSAGE_CALL_PATTERN)) {
 			const key = match[2].replace(/\\(["'\\])/g, "$1")

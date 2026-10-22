@@ -1088,14 +1088,17 @@ class EditorCalles {
         const editedBuildingLabel = editedBuilding ? this.objetoEditando.label : null;
         this.salirModoEdicion();
         if (editedBuilding) {
+            const message = tr('notifications.buildingEditor.updated', {
+                name: editedBuildingLabel
+            });
             if (window.fluviNotify) {
                 window.fluviNotify.success('notifications.buildingEditor.updated', {
                     name: editedBuildingLabel
                 });
+            } else if (window.mostrarExito) {
+                window.mostrarExito(tr('notifications.title.success'), message);
             } else {
-                alert(tr('notifications.buildingEditor.updated', {
-                    name: editedBuildingLabel
-                }));
+                alert(message);
             }
         }
     }

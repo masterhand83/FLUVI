@@ -1332,7 +1332,8 @@ window.FLUVI_LOCALE_RESOURCES = {
 					"sink": "🏁 Devorador"
 				},
 				"vertexEditBadgeBody": "Arrastra los vértices para crear curvas",
-				"vertexEditBadgeHint": "Presiona {{key}} para desactivar",
+				"vertexEditBadgeHintAfter": "para desactivar",
+				"vertexEditBadgeHintBefore": "Presiona",
 				"vertexEditBadgeTitle": "🎯 Modo Edición de Vértices",
 				"visualEditTitle": "🛠️ Modo Edición Visual"
 			},
@@ -3102,7 +3103,8 @@ window.FLUVI_LOCALE_RESOURCES = {
 					"sink": "🏁 Sink"
 				},
 				"vertexEditBadgeBody": "Drag vertices to create curves",
-				"vertexEditBadgeHint": "Press {{key}} to disable",
+				"vertexEditBadgeHintAfter": "to disable",
+				"vertexEditBadgeHintBefore": "Press",
 				"vertexEditBadgeTitle": "🎯 Vertex Edit Mode",
 				"visualEditTitle": "🛠️ Visual Edit Mode"
 			},

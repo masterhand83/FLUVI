@@ -382,11 +382,17 @@
         title.style.fontWeight = 'bold';
         title.textContent = tr('streetEditor.vertexEditBadgeTitle');
         const small = document.createElement('small');
+        const hintKey = document.createElement('kbd');
+        hintKey.textContent = 'Z';
         small.append(
           document.createTextNode(tr('streetEditor.vertexEditBadgeBody')),
           document.createElement('br'),
           document.createTextNode(
-            tr('streetEditor.vertexEditBadgeHint', { key: 'Z' })
+            `${tr('streetEditor.vertexEditBadgeHintBefore')} `
+          ),
+          hintKey,
+          document.createTextNode(
+            ` ${tr('streetEditor.vertexEditBadgeHintAfter')}`
           )
         );
         badge.append(title, document.createElement('br'), small);

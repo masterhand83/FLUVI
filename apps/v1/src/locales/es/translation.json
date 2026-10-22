@@ -1325,7 +1325,8 @@
       "sink": "🏁 Devorador"
     },
     "vertexEditBadgeBody": "Arrastra los vértices para crear curvas",
-    "vertexEditBadgeHint": "Presiona {{key}} para desactivar",
+    "vertexEditBadgeHintAfter": "para desactivar",
+    "vertexEditBadgeHintBefore": "Presiona",
     "vertexEditBadgeTitle": "🎯 Modo Edición de Vértices",
     "visualEditTitle": "🛠️ Modo Edición Visual"
   },

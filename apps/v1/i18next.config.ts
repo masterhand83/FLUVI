@@ -12,6 +12,7 @@ export default defineConfig({
 		functions: [
 			"tr",
 			"fluviI18n.t",
+			"fluviI18n.tEscaped",
 			"analyzerText",
 			"metricText",
 			"heatmapText",

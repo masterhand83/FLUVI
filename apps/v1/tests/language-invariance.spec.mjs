@@ -28,15 +28,15 @@ async function runSeededWorkflow(language) {
 			seed: TRAFFIC_SEED,
 			steps: TRAFFIC_STEPS,
 		})
+		const { ocupacion, ...trafficInvariants } = traffic
 		return {
 			language: await simulator.page.evaluate(
 				() => document.documentElement.lang,
 			),
 			scenario,
 			traffic: {
-				...traffic,
-				ocupacion: undefined,
-				hashOcupacion: hashOcupacion(traffic.ocupacion),
+				...trafficInvariants,
+				hashOcupacion: hashOcupacion(ocupacion),
 			},
 			pageErrors: simulator.pageErrors,
 			consoleErrors: simulator.consoleErrors,

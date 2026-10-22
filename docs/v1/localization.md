@@ -206,8 +206,9 @@ The street workflow uses these catalog owners:
 - `streetDrawing.*`: Draw/roundabout tool labels, tooltips, and the short
   retry/invalid-radius cues.
 - `streetEditor.*`: the new-street modal, legacy visual editor controls,
-  dimension/position field labels, deletion and resize confirmations, and
-  geometry validation wording.
+  dimension/position field labels, deletion and resize confirmations,
+  geometry validation wording, and the generated vertex-edit badge in
+  `ui/infoBar.js` (including its `<kbd>Z</kbd>` shortcut).
 - `streetSettings.*`: global generation, street selection, generation and
   lane-change probabilities, the apply button, and related help text.
 - `streetGeometry.*`: accessible names for endpoint, control, anchor, and
@@ -526,7 +527,8 @@ The map lifecycle, reference-image, and label controls use three catalog owners:
 
 - `mapConstructor.*` and `notifications.map.*` cover the simulation-management
   heading, new/save/load buttons and tooltips, the save-name prompt, the
-  new/load confirmations, and success/error toasts. The load summary reports
+  new/load confirmations, success/error toasts, and the constructor's
+  `mapConstructor.help.*` how-to block (`Ctrl` stays in a `<kbd>`). The load summary reports
   street, building, and street-connection counts with named interpolation;
   omitted content produces a separate warning toast, and malformed JSON reports
   a translated reason. Cancelling a prompt, confirmation, or load leaves the
@@ -604,7 +606,7 @@ them.
 | --- | --- |
 | Catalog parity and JavaScript keys | `tests/locales.spec.mjs`; `scripts/validate-locales.mjs` checks literals used through `tr`, `fluviI18n.t`, analyzer/metric/heatmap/image helpers, and `fluviNotify` severities against both catalogs. `pnpm --filter v1 test` also runs the repository validation. |
 | HTML/Python/dynamic inventory and extraction scope | `tests/locales.spec.mjs` checks the non-JavaScript inventory, generated Python messages, extraction inputs/ignores, primary/secondary languages, and the shared call patterns. |
-| Static text and designated attributes | `tests/bilingual-completeness.spec.mjs` loads the markup without scripts, checks every unannotated static string/attribute against the approved exceptions, and asserts that the former Spanish gaps are absent. |
+| Static text and designated attributes | `tests/bilingual-completeness.spec.mjs` loads the markup without scripts, checks static text, form options, and each designated attribute against the approved exceptions (runtime-generated time/metric values are excluded), and asserts that the former Spanish gaps are absent. |
 | Runtime generated controls and renderer-owned text | `tests/bilingual-completeness.spec.mjs` exercises the English street/building surfaces and the vertex-edit badge; per-workflow specs cover Canvas/Pixi panels, charts, tooltips, images, and analyzer states. |
 | Deterministic simulation independence | `tests/language-invariance.spec.mjs` runs the seeded baseline workflow in Spanish and English and compares scenario invariants, occupancy hashes, clock state, and errors with `tests/baseline/baseline.json`. |
 | Cross-language map and scenario contracts | `tests/map-constructor-localization.spec.mjs`, `tests/scenario-localization.spec.mjs`; payloads gain no language field and preserve names, enums, geometry, link mappings, parking, and image identities. |

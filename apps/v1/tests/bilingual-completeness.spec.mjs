@@ -17,7 +17,6 @@ const IGNORED_STATIC_TAGS = [
 	"KBD",
 	"CODE",
 	"PRE",
-	"OPTION",
 ]
 
 // Approved untranslated exceptions. These are proper names, technical
@@ -41,6 +40,8 @@ const STATIC_TEXT_EXCEPTIONS = new Set([
 	"Instituto Politécnico Nacional (IPN)",
 	"Escuela Superior de Cómputo (ESCOM)",
 	"Artificial Life Robotics (ALIROB)",
+	"Español",
+	"English",
 ])
 
 const RUNTIME_TEXT_SELECTORS = [
@@ -77,12 +78,22 @@ const staticAudit = (page) =>
 			const excluded = (element) =>
 				!element ||
 				ignoredTagSet.has(element.tagName) ||
-				Boolean(element.closest("[data-i18n]")) ||
 				Boolean(element.closest(runtimeSelector)) ||
 				Boolean(
 					element.closest(
 						"script, style, noscript, template, #loadingScreen, .visually-hidden",
 					),
+				)
+			const ownsTextNode = (node) => {
+				const owner = node.parentElement?.closest("[data-i18n]")
+				return Boolean(owner && [...owner.childNodes].includes(node))
+			}
+			const translatedAttributes = (element) =>
+				new Set(
+					(element.getAttribute("data-i18n-attr") ?? "")
+						.split(";")
+						.map((pair) => pair.split(":")[0].trim())
+						.filter(Boolean),
 				)
 			let scannedTexts = 0
 			const texts = []
@@ -99,6 +110,7 @@ const staticAudit = (page) =>
 					if (
 						parent &&
 						!excluded(parent) &&
+						!ownsTextNode(node) &&
 						!exceptionSet.has(value)
 					) {
 						texts.push({ text: value, path: pathOf(parent) })
@@ -126,7 +138,7 @@ const staticAudit = (page) =>
 					}
 					scannedAttributes++
 					if (
-						!element.hasAttribute("data-i18n-attr") &&
+						!translatedAttributes(element).has(name) &&
 						!ignoredTagSet.has(element.tagName) &&
 						!element.closest(
 							"script, style, noscript, template, #loadingScreen, .visually-hidden",

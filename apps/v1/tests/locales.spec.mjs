@@ -77,6 +77,7 @@ describe("repository locale catalogs", () => {
 		for (const call of [
 			"tr",
 			"fluviI18n.t",
+			"fluviI18n.tEscaped",
 			"analyzerText",
 			"metricText",
 			"heatmapText",
