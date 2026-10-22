@@ -6,7 +6,7 @@ For work involving `apps/v1/`, read `docs/v1/application-map.md` **before search
 
 Run focused tests with `pnpm test`, filtering to the affected modules, files, or use cases rather than running the entire test suite by default.
 
-For quick iteration, `pnpm --filter v1 test:fast` keeps unit checks and the localization browser spec while skipping every other spec that imports the Puppeteer harness. Use the full `pnpm --filter v1 test` before shipping browser-sensitive changes.
+`pnpm --filter v1 test` is the fast default: it runs every unit check plus the core startup/localization and current metrics browser specs, while skipping every other spec that imports the Puppeteer harness. `pnpm --filter v1 test:fast` is an explicit alias for the same run. Run the affected feature spec directly when changing that feature. Use `pnpm --filter v1 test:full` before shipping browser-sensitive changes; it runs the complete suite, including i18next status, and takes roughly 15–20 minutes serially.
 
 ## Agent skills
 
