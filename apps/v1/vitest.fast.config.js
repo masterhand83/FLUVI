@@ -8,12 +8,11 @@ const browserSpecsToKeep = new Set([
 	"metrics-localization.spec.mjs",
 ])
 
-// `pnpm test` uses this config by default. The full suite intentionally
-// exercises the real browser and takes roughly 15-20 minutes serially;
-// `test:full` runs it. Fast mode keeps every unit check plus the core startup
-// and current metrics browser specs, and skips every other spec that imports
-// the Puppeteer harness. Run those focused specs directly when changing their
-// feature.
+// `pnpm test` uses this config by default. Fast mode keeps every unit check
+// plus the core startup and current metrics browser specs, and skips every
+// other spec that imports the Puppeteer harness. Run those focused specs
+// directly when changing their feature. `test:full` runs the serial browser
+// suite (minus the quarantined flaky specs) with i18next status.
 const slowBrowserSpecs = readdirSync(testsDirectory)
 	.filter((file) => file.endsWith(".spec.mjs"))
 	.filter((file) => !browserSpecsToKeep.has(file))
