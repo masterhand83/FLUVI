@@ -927,8 +927,8 @@ body.dark-mode .street-inspector {
   left: 0;
   width: 100%;
   height: 100%;
-  /* Animación de gradiente para modo claro */
-  background: linear-gradient(-45deg, #667eea, #4f4ba2, #575afb, #4facfe);
+  /* Animación de gradiente en tonos guinda (Pantone 209 C) para modo claro */
+  background: linear-gradient(-45deg, #861f41, #6b1834, #9d2549, #701b38);
   background-size: 400% 400%;
   animation: gradient 15s ease infinite;
   display: flex;
@@ -2286,8 +2286,8 @@ body.dark-mode .btn-close {
 
 /* Pantalla de carga en modo oscuro */
 body.dark-mode #loadingScreen {
-    /* Animación de gradiente para modo oscuro con colores más oscuros */
-    background: linear-gradient(-45deg, #1e3a5f, #15283d, #2563eb, #1e40af);
+    /* Animación de gradiente en tonos guinda oscuros */
+    background: linear-gradient(-45deg, #4a1024, #3a0c1c, #5c152e, #45101f);
     background-size: 400% 400%;
     animation: gradient 15s ease infinite;
 }
