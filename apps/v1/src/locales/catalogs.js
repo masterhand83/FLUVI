@@ -574,6 +574,20 @@ window.FLUVI_LOCALE_RESOURCES = {
 				},
 				"title": "Cargando simulación..."
 			},
+			"mapBackground": {
+				"colorLabel": "Color de fondo del mapa",
+				"customHelp": "Elige cualquier color; se aclarará u oscurecerá con la hora simulada.",
+				"customLabel": "Color personalizado",
+				"description": "Personaliza la apariencia del mapa.",
+				"presets": {
+					"blue": "Azul",
+					"grey": "Gris",
+					"guinda": "Guinda",
+					"sky": "Cielo",
+					"white": "Blanco"
+				},
+				"timeNote": "La vista previa muestra el color actual y cambia con la hora simulada. La preferencia se guarda en el archivo del mapa."
+			},
 			"mapConstructor": {
 				"defaultSimulationName": "Nueva Simulación",
 				"help": {
@@ -1011,6 +1025,7 @@ window.FLUVI_LOCALE_RESOURCES = {
 				"heading": {
 					"about": "ℹ️ Sobre FLUVI",
 					"constructor": "🏗️ Constructor de Mapas",
+					"customization": "🎨 Personalización",
 					"metrics": "📈 Métricas de la Simulación",
 					"scenarios": "🎬 Configuración de Escenarios",
 					"settings": "⚙️ Configuración",
@@ -2360,6 +2375,20 @@ window.FLUVI_LOCALE_RESOURCES = {
 				},
 				"title": "Loading simulation..."
 			},
+			"mapBackground": {
+				"colorLabel": "Map background color",
+				"customHelp": "Pick any color; it will lighten or darken with the simulated time.",
+				"customLabel": "Custom color",
+				"description": "Customize the appearance of the map.",
+				"presets": {
+					"blue": "Blue",
+					"grey": "Grey",
+					"guinda": "Guinda",
+					"sky": "Sky",
+					"white": "White"
+				},
+				"timeNote": "The preview shows the current color and changes with the simulated time. The preference is saved in the map file."
+			},
 			"mapConstructor": {
 				"defaultSimulationName": "New Simulation",
 				"help": {
@@ -2783,6 +2812,7 @@ window.FLUVI_LOCALE_RESOURCES = {
 				"heading": {
 					"about": "ℹ️ About FLUVI",
 					"constructor": "🏗️ Map Constructor",
+					"customization": "🎨 Customization",
 					"metrics": "📈 Simulation Metrics",
 					"scenarios": "🎬 Scenario Settings",
 					"settings": "⚙️ Settings",

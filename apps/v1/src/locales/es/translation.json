@@ -567,6 +567,20 @@
     },
     "title": "Cargando simulación..."
   },
+  "mapBackground": {
+    "colorLabel": "Color de fondo del mapa",
+    "customHelp": "Elige cualquier color; se aclarará u oscurecerá con la hora simulada.",
+    "customLabel": "Color personalizado",
+    "description": "Personaliza la apariencia del mapa.",
+    "presets": {
+      "blue": "Azul",
+      "grey": "Gris",
+      "guinda": "Guinda",
+      "sky": "Cielo",
+      "white": "Blanco"
+    },
+    "timeNote": "La vista previa muestra el color actual y cambia con la hora simulada. La preferencia se guarda en el archivo del mapa."
+  },
   "mapConstructor": {
     "defaultSimulationName": "Nueva Simulación",
     "help": {
@@ -1004,6 +1018,7 @@
     "heading": {
       "about": "ℹ️ Sobre FLUVI",
       "constructor": "🏗️ Constructor de Mapas",
+      "customization": "🎨 Personalización",
       "metrics": "📈 Métricas de la Simulación",
       "scenarios": "🎬 Configuración de Escenarios",
       "settings": "⚙️ Configuración",

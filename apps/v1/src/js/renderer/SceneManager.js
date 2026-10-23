@@ -18,8 +18,9 @@ class SceneManager {
         this.app.stage.eventMode = 'static';
         this.app.stage.interactiveChildren = true;
 
-        // Inicializar sistema de ciclo día/noche
-        this.dayNightCycle = new DayNightCycle();
+        // Usar la instancia compartida con el fallback Canvas para que el color
+        // elegido en Personalización se aplique en ambos renderizadores.
+        this.dayNightCycle = window.mapBackgroundCycle || new DayNightCycle();
 
         console.log('🎮 Stage configurado con eventos interactivos');
 

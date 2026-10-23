@@ -126,6 +126,7 @@ Para dar forma a una calle seleccionada, pulsa **+ Añadir control** en el inspe
 - Todas las conexiones
 - Vértices de curvas heredadas o extremos y secciones Bézier con controles y anclas (si existen)
 - Edificios (si existen)
+- La personalización del mapa (`personalizacion.fondoMapa`) con el preset de color de fondo (`sky`, `blue`, `guinda`, `grey`, `white` o `custom`) y su color base; los mapas antiguos y las simulaciones nuevas usan `sky`
 - Metadata (versión, fecha, nombre)
 
 ### 7. Cargar Simulación
@@ -190,11 +191,17 @@ Para dar forma a una calle seleccionada, pulsa **+ Añadir control** en el inspe
     "visible": true,
     "opacity": 0.7,
     "locked": false
+  },
+  "personalizacion": {
+    "fondoMapa": {
+      "preset": "guinda",
+      "color": "#7a1f3d"
+    }
   }
 }
 ```
 
-Para una imagen enlazada, `imagenReferencia` contiene `"url": "https://ejemplo.org/mapa.png"` en lugar de `dataUrl`, junto con los mismos ajustes de posición y visualización.
+Para una imagen enlazada, `imagenReferencia` contiene `"url": "https://ejemplo.org/mapa.png"` en lugar de `dataUrl`, junto con los mismos ajustes de posición y visualización. `personalizacion.fondoMapa.color` guarda el color base del preset; el tono mostrado se aclara u oscurece con la hora simulada y no se guarda atenuado.
 
 ## 💡 Consejos y Mejores Prácticas
 

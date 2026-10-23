@@ -854,6 +854,57 @@
         </div>
       </div>
 
+      <!-- Accordion 6: Personalización -->
+      <div class="accordion-item">
+        <h2 class="accordion-header" id="headingCustomization">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseCustomization" aria-expanded="false" aria-controls="collapseCustomization" data-i18n="sidebar.heading.customization">
+            🎨 Personalización
+          </button>
+        </h2>
+        <div id="collapseCustomization" class="accordion-collapse collapse" data-bs-parent="#controlPanelAccordion" aria-labelledby="headingCustomization">
+          <div class="accordion-body">
+            <p class="text-muted small mb-3" data-i18n="mapBackground.description">
+              Personaliza la apariencia del mapa.
+            </p>
+
+            <label class="form-label" data-i18n="mapBackground.colorLabel">Color de fondo del mapa</label>
+            <div class="map-background-swatches" role="group" aria-label="Color de fondo del mapa" data-i18n-attr="aria-label:mapBackground.colorLabel">
+              <button type="button" class="map-background-swatch" data-map-background-preset="blue" aria-pressed="false">
+                <span class="map-background-swatch-chip" style="background-color:#1E3A8A" aria-hidden="true"></span>
+                <span data-i18n="mapBackground.presets.blue">Azul</span>
+              </button>
+              <button type="button" class="map-background-swatch" data-map-background-preset="guinda" aria-pressed="false">
+                <span class="map-background-swatch-chip" style="background-color:#7A1F3D" aria-hidden="true"></span>
+                <span data-i18n="mapBackground.presets.guinda">Guinda</span>
+              </button>
+              <button type="button" class="map-background-swatch" data-map-background-preset="grey" aria-pressed="false">
+                <span class="map-background-swatch-chip" style="background-color:#C6CBCD" aria-hidden="true"></span>
+                <span data-i18n="mapBackground.presets.grey">Gris</span>
+              </button>
+              <button type="button" class="map-background-swatch" data-map-background-preset="white" aria-pressed="false">
+                <span class="map-background-swatch-chip" style="background-color:#FFFFFF" aria-hidden="true"></span>
+                <span data-i18n="mapBackground.presets.white">Blanco</span>
+              </button>
+              <button type="button" class="map-background-swatch" data-map-background-preset="sky" aria-pressed="false">
+                <span class="map-background-swatch-chip" style="background:linear-gradient(180deg,#12163A 0%,#6AA0F0 50%,#12163A 100%)" aria-hidden="true"></span>
+                <span data-i18n="mapBackground.presets.sky">Cielo</span>
+              </button>
+            </div>
+
+            <div class="mt-3">
+              <label for="mapBackgroundCustomColor" class="form-label" data-i18n="mapBackground.customLabel">Color personalizado</label>
+              <input type="color" id="mapBackgroundCustomColor" class="form-control form-control-color w-100" value="#6AA0F0" aria-describedby="mapBackgroundCustomHelp">
+              <small id="mapBackgroundCustomHelp" class="form-text text-muted" data-i18n="mapBackground.customHelp">Elige cualquier color; se aclarará u oscurecerá con la hora simulada.</small>
+            </div>
+
+            <div class="map-background-preview-row mt-3">
+              <span class="map-background-preview" id="mapBackgroundPreview" aria-hidden="true"></span>
+              <small class="text-muted" data-i18n="mapBackground.timeNote">La vista previa muestra el color actual y cambia con la hora simulada. La preferencia se guarda en el archivo del mapa.</small>
+            </div>
+          </div>
+        </div>
+      </div>
+
       </div>
       <!-- FIN ACCORDIONS -->
     </div>
@@ -2579,6 +2630,7 @@
   <script src="src/js/ui/exportarImagenesMetricas.js"></script>
   <script src="src/js/ui/editor.js"></script>
   <script src="src/js/ui/edificioUI.js"></script>
+  <script src="src/js/ui/mapBackgroundControls.js"></script>
   <script src="src/js/ui/constructor.js"></script>
   <script src="src/js/ui/drawStreet.js"></script>
   <script src="src/js/ui/drawRoundabout.js"></script>

@@ -245,14 +245,14 @@ async function checkControlsEditorMinimapTouch() {
 		)
 		await screenshot(page, "03-editor")
 
-		// — Minimapa (fallback Canvas 2D) — defecto preexistente documentado:
-		// el arrastre inicia pero aplicarLimitesOffset() reconstruye el offset desde
-		// window.offsetX (espejo obsoleto) y la vista no se mueve.
+		// — Minimapa (fallback Canvas 2D) — regresión: el arrastre publicaba el
+		// offset en window.* y aplicarLimitesOffset() lo reconstruía desde ese
+		// espejo obsoleto, así que la vista no se movía.
 		const miniCanvas = await dragMinimap(page)
 		record(
-			"Minimapa (Canvas 2D): defecto conocido — arrastre no reposiciona",
-			miniCanvas.grabbing && !miniCanvas.panned,
-			`grab=${miniCanvas.grabbing}, pan=${miniCanvas.panned} (esperado: sin pan)`,
+			"Minimapa (Canvas 2D): el arrastre reposiciona la vista",
+			miniCanvas.grabbing && miniCanvas.panned,
+			`grab=${miniCanvas.grabbing}, pan=${miniCanvas.panned}`,
 		)
 		await screenshot(page, "04-minimapa")
 

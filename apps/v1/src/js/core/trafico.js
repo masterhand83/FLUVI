@@ -6,6 +6,7 @@ const ctx = canvas.getContext("2d");
 // Motor Gráfico PixiJS - Se inicializa después
 let pixiInitialized = false;
 let pixiFirstRender = false; // Flag para renderizar la escena inicial
+let simulacionIniciada = false; // Evita tocar la cámara antes de crear las calles
 
 // Detectar si es un dispositivo móvil
 const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
@@ -61,6 +62,11 @@ function resizeCanvas() {
     // Calcular altura del canvas considerando info-bar y control bar
     canvas.width = window.innerWidth - sidebarWidth;
     canvas.height = window.innerHeight - infoBarHeight;
+
+    // Tras un cambio de tamaño la vista anterior puede quedar fuera de rango.
+    if (simulacionIniciada && !vistaGestionadaPorPixi()) {
+        aplicarLimitesOffset();
+    }
 
     console.log(`Canvas resized: ${canvas.width}x${canvas.height} (screen: ${window.innerWidth}x${window.innerHeight}, infoBar: ${infoBarHeight})`);
 }
@@ -2121,6 +2127,7 @@ function dibujarConexionesDetectadas() {
 
 // Renderizar canvas
 function renderizarCanvas() {
+    redibujadoCanvasPendiente = false;
     // Si PixiJS está inicializado Y habilitado, usar el motor gráfico
     if (window.USE_PIXI && pixiInitialized && window.pixiApp && window.pixiApp.sceneManager) {
         // Solo renderizar la escena completa la primera vez
@@ -2161,7 +2168,10 @@ function renderizarCanvas() {
     // Publish the active zoom before drawing names, including every wheel/pinch
     // event while paused (the camera's later listeners must not lag one frame).
     window.escala = escala;
-    ctx.fillStyle = "#c6cbcd";
+    // El color de fondo sigue la hora simulada y la preferencia de Personalización.
+    ctx.fillStyle = window.mapBackgroundCycle
+        ? window.mapBackgroundCycle.getBackgroundColorCss()
+        : "#c6cbcd";
 
     ctx.setTransform(1, 0, 0, 1, 0, 0);
 
@@ -2179,6 +2189,7 @@ function renderizarCanvas() {
     dibujarEtiquetasCalles();
     dibujarEtiquetasEdificios();
     dibujarMinimapa();
+    ultimoRedibujadoCanvas = performance.now();
 }
 
 // La imagen de referencia vive en coordenadas del mundo; este transform
@@ -2276,52 +2287,89 @@ function centrarVistaEnMapa() {
     console.log(`📍 Vista centrada en mapa: centro(${centroMapaX.toFixed(0)}, ${centroMapaY.toFixed(0)}), offset(${offsetX.toFixed(0)}, ${offsetY.toFixed(0)})`);
 
     // Si usamos PixiJS, actualizar el CameraController
-    if (window.USE_PIXI && window.pixiApp && window.pixiApp.cameraController) {
+    if (vistaGestionadaPorPixi()) {
         window.pixiApp.cameraController.setPosition(offsetX, offsetY);
+    } else {
+        // Publicar/limitar la vista de Canvas 2D para que minimapa, editores y
+        // hit-tests lean la misma posición que se dibuja.
+        aplicarLimitesOffset();
     }
+}
+
+// Canvas 2D guarda su cámara en las variables locales `escala`/`offsetX`/`offsetY`;
+// Pixi la guarda en CameraController y publica copias en window.*. Mezclar ambas
+// fuentes hacía que cada arrastre se sobrescribiera con un offset viejo, dejando
+// el mapa inmóvil aunque el zoom sí cambiara.
+function vistaGestionadaPorPixi() {
+    return !!(window.USE_PIXI && pixiInitialized && window.pixiApp && window.pixiApp.cameraController);
+}
+
+function dimensionesCanvasActivo() {
+    // Usar canvas de PixiJS si está disponible, sino usar Canvas 2D
+    if (window.USE_PIXI && window.pixiApp && window.pixiApp.app && window.pixiApp.app.view) {
+        return { ancho: window.pixiApp.app.view.width, alto: window.pixiApp.app.view.height };
+    }
+    return { ancho: canvas.width, alto: canvas.height };
+}
+
+function publicarVistaCanvas() {
+    window.escala = escala;
+    window.offsetX = offsetX;
+    window.offsetY = offsetY;
+}
+
+// El bucle de animación consume las peticiones de cámara después del paso de
+// simulación. Así ambos comparten un render vivo en vez de pintar dos veces o
+// congelar los vehículos en una captura. Dejar 33 ms entre renders de cámara
+// también evita saturar el hilo con los eventos de un ratón de alta frecuencia.
+let redibujadoCanvasPendiente = false;
+let ultimoRedibujadoCanvas = 0;
+const intervaloRedibujadoCamara = 1000 / 30;
+function solicitarRedibujadoCanvas() {
+    redibujadoCanvasPendiente = true;
+}
+
+// Limita una coordenada de cámara. Si el mapa completo cabe en el viewport hay
+// que centrarlo: con el rango invertido el mínimo quedaba por encima del máximo
+// y la cámara se fijaba en un borde sin poder moverse.
+function limitarCoordenada(propuesta, minMapa, maxMapa, viewport, escalaActual) {
+    const extensionMapa = (maxMapa - minMapa) * escalaActual;
+    if (extensionMapa <= viewport) {
+        return (viewport - extensionMapa) / 2 - minMapa * escalaActual;
+    }
+    const minimo = viewport - maxMapa * escalaActual;
+    const maximo = -minMapa * escalaActual;
+    return Math.max(minimo, Math.min(maximo, propuesta));
 }
 
 // Función para aplicar límites al offset
 function aplicarLimitesOffset() {
     const limites = calcularLimitesMapa();
+    const { ancho: canvasWidth, alto: canvasHeight } = dimensionesCanvasActivo();
 
-    // Usar canvas de PixiJS si está disponible, sino usar Canvas 2D
-    let canvasWidth, canvasHeight;
-    if (window.USE_PIXI && window.pixiApp && window.pixiApp.app && window.pixiApp.app.view) {
-        canvasWidth = window.pixiApp.app.view.width;
-        canvasHeight = window.pixiApp.app.view.height;
-    } else {
-        canvasWidth = canvas.width;
-        canvasHeight = canvas.height;
+    // Con Pixi activo, CameraController es la fuente de verdad; aquí solo se
+    // normalizan las copias de window.* que consume el resto de la aplicación.
+    if (vistaGestionadaPorPixi()) {
+        const escalaPixi = window.escala || escala;
+        const propuestaX = window.offsetX !== undefined ? window.offsetX : offsetX;
+        const propuestaY = window.offsetY !== undefined ? window.offsetY : offsetY;
+        window.offsetX = limitarCoordenada(propuestaX, limites.minX, limites.maxX, canvasWidth, escalaPixi);
+        window.offsetY = limitarCoordenada(propuestaY, limites.minY, limites.maxY, canvasHeight, escalaPixi);
+        return;
     }
 
-    // IMPORTANTE: Usar las variables globales actualizadas por CameraController
-    const currentEscala = window.escala || escala;
-    const currentOffsetX = window.offsetX !== undefined ? window.offsetX : offsetX;
-    const currentOffsetY = window.offsetY !== undefined ? window.offsetY : offsetY;
+    // Canvas 2D: limitar lo que se va a dibujar, no un snapshot viejo.
+    offsetX = limitarCoordenada(offsetX, limites.minX, limites.maxX, canvasWidth, escala);
+    offsetY = limitarCoordenada(offsetY, limites.minY, limites.maxY, canvasHeight, escala);
+    publicarVistaCanvas();
+}
 
-    const minOffsetX = -(limites.maxX * currentEscala - canvasWidth);
-    const maxOffsetX = -limites.minX * currentEscala;
-    const minOffsetY = -(limites.maxY * currentEscala - canvasHeight);
-    const maxOffsetY = -limites.minY * currentEscala;
-
-    // Guardar valores antes de aplicar límites (para debug)
-    const offsetXAntes = currentOffsetX;
-    const offsetYAntes = currentOffsetY;
-
-    // Actualizar tanto las variables locales como las globales
-    offsetX = Math.max(minOffsetX, Math.min(maxOffsetX, currentOffsetX));
-    offsetY = Math.max(minOffsetY, Math.min(maxOffsetY, currentOffsetY));
-
-    // Debug: verificar si los límites están bloqueando el movimiento
-    if (isMobile && (offsetX !== offsetXAntes || offsetY !== offsetYAntes)) {
-        console.log(`⚠️ Límites aplicados: offset cambió de (${offsetXAntes.toFixed(0)}, ${offsetYAntes.toFixed(0)}) a (${offsetX.toFixed(0)}, ${offsetY.toFixed(0)})`);
-        console.log(`   Límites: X[${minOffsetX.toFixed(0)} a ${maxOffsetX.toFixed(0)}], Y[${minOffsetY.toFixed(0)} a ${maxOffsetY.toFixed(0)}]`);
+// Estado de cámara del renderizador activo, sin mezclar locales y globales.
+function leerVistaActual() {
+    if (vistaGestionadaPorPixi()) {
+        return { escala: window.escala, offsetX: window.offsetX, offsetY: window.offsetY };
     }
-
-    // Sincronizar con variables globales
-    window.offsetX = offsetX;
-    window.offsetY = offsetY;
+    return { escala, offsetX, offsetY };
 }
 
 function calcularViewportVisible() {
@@ -2336,10 +2384,12 @@ function calcularViewportVisible() {
         canvasHeight = canvas.height;
     }
 
-    // IMPORTANTE: Usar las variables globales actualizadas por CameraController
-    const currentEscala = window.escala || escala;
-    const currentOffsetX = window.offsetX || offsetX;
-    const currentOffsetY = window.offsetY || offsetY;
+    // Leer el estado del renderizador activo; 0 es un offset válido y no debe
+    // confundirse con "sin valor".
+    const vista = leerVistaActual();
+    const currentEscala = vista.escala;
+    const currentOffsetX = vista.offsetX;
+    const currentOffsetY = vista.offsetY;
 
     const vistaX = -currentOffsetX / currentEscala;
     const vistaY = -currentOffsetY / currentEscala;
@@ -4558,6 +4608,11 @@ function iniciarSimulacion() {
             tiempoAnterior = tiempoActual;
         }
 
+        // paso() ya pinta los vehículos y la posición más reciente. Solo pintar
+        // otra vez si quedó un gesto pendiente y este frame no ejecutó un paso.
+        if (redibujadoCanvasPendiente && tiempoActual - ultimoRedibujadoCanvas >= intervaloRedibujadoCamara) {
+            renderizarCanvas();
+        }
         animationId = requestAnimationFrame(animate);
     }
 
@@ -4992,7 +5047,30 @@ canvas.addEventListener('click', (event) => {
     }
 });
 
+function arrastrarVistaCanvas(event) {
+    const dragDistanceX = event.clientX - dragStartMouseX;
+    const dragDistanceY = event.clientY - dragStartMouseY;
+    if (Math.hypot(dragDistanceX, dragDistanceY) >= DRAG_THRESHOLD) {
+        hasDragged = true;
+    }
+    offsetX = event.clientX - startX;
+    offsetY = event.clientY - startY;
+    aplicarLimitesOffset();
+    canvas.title = '';
+    canvas.style.cursor = 'grabbing';
+    if (window.editorCalles && window.editorCalles.modoEdicion) {
+        window.editorCalles.actualizarPosicionHandles();
+    }
+    solicitarRedibujadoCanvas();
+}
+
 canvas.addEventListener("mousemove", event => {
+    // El pan no necesita buscar calles ni edificios bajo el cursor en cada
+    // evento. La edición de objetos y vértices conserva su ruta propia.
+    if (isDragging && !isDraggingStreet && !controlandoVertice && !vistaGestionadaPorPixi()) {
+        arrastrarVistaCanvas(event);
+        return;
+    }
     const rect = canvas.getBoundingClientRect();
     const mouseX = event.clientX - rect.left;
     const mouseY = event.clientY - rect.top;
@@ -5057,30 +5135,6 @@ canvas.addEventListener("mousemove", event => {
         return;
     }
 
-    // Si estamos arrastrando el canvas (solo para Canvas 2D, no PixiJS)
-    if (isDragging && (!window.USE_PIXI || !pixiInitialized)) {
-        // Calcular distancia desde el punto inicial del drag
-        const dragDistanceX = event.clientX - dragStartMouseX;
-        const dragDistanceY = event.clientY - dragStartMouseY;
-        const dragDistance = Math.sqrt(dragDistanceX * dragDistanceX + dragDistanceY * dragDistanceY);
-
-        // Solo marcar como "dragged" si el movimiento supera el threshold
-        // Esto evita que clicks con movimientos mínimos sean considerados drags
-        if (dragDistance >= DRAG_THRESHOLD) {
-            hasDragged = true;
-        }
-
-        offsetX = (event.clientX - startX);
-        offsetY = (event.clientY - startY);
-        aplicarLimitesOffset();
-
-        // Actualizar handles del editor si está disponible y en modo edición
-        if (window.editorCalles && window.editorCalles.modoEdicion) {
-            window.editorCalles.actualizarPosicionHandles();
-        }
-
-        renderizarCanvas();
-    }
 });
 
 canvas.addEventListener("mouseup", () => {
@@ -5100,8 +5154,9 @@ canvas.addEventListener("mouseup", () => {
     hasDragged = false; // IMPORTANTE: Resetear hasDragged en mouseup
     controlandoVertice = false;
     verticeSeleccionado = null;
-    // A plain mouse-up changes no scene state; the subsequent click or simulation
-    // tick will draw the vehicle. Drags already redraw on move.
+    if (redibujadoCanvasPendiente) {
+        renderizarCanvas();
+    }
 });
 
 canvas.addEventListener("mouseleave", () => {
@@ -5316,7 +5371,7 @@ canvas.addEventListener("touchmove", event => {
     lastTouchY = event.touches[0].clientY;
 
     // Si usamos PixiJS, actualizar el CameraController
-    if (window.USE_PIXI && window.pixiApp && window.pixiApp.cameraController) {
+    if (vistaGestionadaPorPixi()) {
         window.pixiApp.cameraController.setPosition(offsetX, offsetY);
     } else {
         // Aplicar límites (que volverá a actualizar window.offsetX/Y si es necesario)
@@ -5326,7 +5381,7 @@ canvas.addEventListener("touchmove", event => {
         offsetY = window.offsetY;
     }
 
-    renderizarCanvas();
+    solicitarRedibujadoCanvas();
 }, { passive: false });
 
 canvas.addEventListener("touchend", event => {
@@ -5421,8 +5476,9 @@ minimapaCanvas.addEventListener("mousedown", (event) => {
         minimapaInicialMouseX = mouseX;
         minimapaInicialMouseY = mouseY;
         // IMPORTANTE: Usar las variables globales que son actualizadas por CameraController
-        minimapaInicialOffsetX = window.offsetX !== undefined ? window.offsetX : offsetX;
-        minimapaInicialOffsetY = window.offsetY !== undefined ? window.offsetY : offsetY;
+        const vistaInicial = leerVistaActual();
+        minimapaInicialOffsetX = vistaInicial.offsetX;
+        minimapaInicialOffsetY = vistaInicial.offsetY;
         minimapaCanvas.style.cursor = 'grabbing';
         document.body.style.cursor = 'grabbing'; // Cambiar cursor de toda la página
         event.preventDefault();
@@ -5452,20 +5508,20 @@ minimapaCanvas.addEventListener("mousemove", (event) => {
         const worldDeltaY = deltaY / minimapaEscala;
 
         // IMPORTANTE: Usar la escala global actualizada por CameraController
-        const currentEscala = window.escala || escala;
+        const currentEscala = leerVistaActual().escala;
 
         // Actualizar el offset (el movimiento en el minimapa es directo, no inverso)
         offsetX = minimapaInicialOffsetX - worldDeltaX * currentEscala;
         offsetY = minimapaInicialOffsetY - worldDeltaY * currentEscala;
 
         // Si usamos PixiJS, actualizar el CameraController (que incluye aplicarLimitesOffset)
-        if (window.USE_PIXI && window.pixiApp && window.pixiApp.cameraController) {
+        if (vistaGestionadaPorPixi()) {
             window.pixiApp.cameraController.setPosition(offsetX, offsetY);
         } else {
             aplicarLimitesOffset();
         }
 
-        renderizarCanvas();
+        solicitarRedibujadoCanvas();
 
         // Prevenir la selección de texto mientras se arrastra
         event.preventDefault();
@@ -5501,8 +5557,9 @@ minimapaCanvas.addEventListener("touchstart", (event) => {
         arrastandoMinimapa = true;
         minimapaInicialMouseX = touchX;
         minimapaInicialMouseY = touchY;
-        minimapaInicialOffsetX = window.offsetX !== undefined ? window.offsetX : offsetX;
-        minimapaInicialOffsetY = window.offsetY !== undefined ? window.offsetY : offsetY;
+        const vistaInicial = leerVistaActual();
+        minimapaInicialOffsetX = vistaInicial.offsetX;
+        minimapaInicialOffsetY = vistaInicial.offsetY;
         console.log(`   ✅ Iniciando arrastre minimapa`);
         mostrarDebugMovil(`MINIMAPA TOUCH\nIniciando arrastre\nPos: (${touchX.toFixed(0)}, ${touchY.toFixed(0)})`);
     } else {
@@ -5535,18 +5592,14 @@ minimapaCanvas.addEventListener("touchmove", (event) => {
     const worldDeltaX = deltaX / minimapaEscala;
     const worldDeltaY = deltaY / minimapaEscala;
 
-    const currentEscala = window.escala || escala;
+    const currentEscala = leerVistaActual().escala;
 
     // Actualizar el offset
     offsetX = minimapaInicialOffsetX - worldDeltaX * currentEscala;
     offsetY = minimapaInicialOffsetY - worldDeltaY * currentEscala;
 
-    // Sincronizar con window ANTES de aplicar límites
-    window.offsetX = offsetX;
-    window.offsetY = offsetY;
-
     // Si usamos PixiJS, actualizar el CameraController
-    if (window.USE_PIXI && window.pixiApp && window.pixiApp.cameraController) {
+    if (vistaGestionadaPorPixi()) {
         window.pixiApp.cameraController.setPosition(offsetX, offsetY);
     } else {
         aplicarLimitesOffset();
@@ -5557,7 +5610,7 @@ minimapaCanvas.addEventListener("touchmove", (event) => {
 
     mostrarDebugMovil(`MINIMAPA ARRASTRE\nDelta: (${deltaX.toFixed(0)}, ${deltaY.toFixed(0)})\nOffset: (${offsetX.toFixed(0)}, ${offsetY.toFixed(0)})`);
 
-    renderizarCanvas();
+    solicitarRedibujadoCanvas();
 }, { passive: false });
 
 minimapaCanvas.addEventListener("touchend", () => {
@@ -5598,20 +5651,20 @@ document.addEventListener("mousemove", (event) => {
         const worldDeltaY = deltaY / minimapaEscala;
 
         // IMPORTANTE: Usar la escala global actualizada por CameraController
-        const currentEscala = window.escala || escala;
+        const currentEscala = leerVistaActual().escala;
 
         // Actualizar el offset (el movimiento en el minimapa es directo, no inverso)
         offsetX = minimapaInicialOffsetX - worldDeltaX * currentEscala;
         offsetY = minimapaInicialOffsetY - worldDeltaY * currentEscala;
 
         // Si usamos PixiJS, actualizar el CameraController (que incluye aplicarLimitesOffset)
-        if (window.USE_PIXI && window.pixiApp && window.pixiApp.cameraController) {
+        if (vistaGestionadaPorPixi()) {
             window.pixiApp.cameraController.setPosition(offsetX, offsetY);
         } else {
             aplicarLimitesOffset();
         }
 
-        renderizarCanvas();
+        solicitarRedibujadoCanvas();
 
         event.preventDefault();
     }
@@ -5632,6 +5685,8 @@ window.addEventListener("resize", () => {
 });
 
 iniciarSimulacion();
+simulacionIniciada = true;
+publicarVistaCanvas();
 
 // ========== EXPONER VARIABLES PARA EL EDITOR ==========
 // IMPORTANTE: Actualizar referencia a conexiones después de inicializar la simulación
@@ -5676,20 +5731,8 @@ window.aplicarLimitesOffset = aplicarLimitesOffset;
 window.calcularViewportVisible = calcularViewportVisible;
 window.calcularParametrosMinimapa = calcularParametrosMinimapa;
 
-canvas.addEventListener("wheel", () => {
-    window.escala = escala;
-    window.offsetX = offsetX;
-    window.offsetY = offsetY;
-});
-
-canvas.addEventListener("mousemove", () => {
-    if (isDragging) {
-        window.offsetX = offsetX;
-        window.offsetY = offsetY;
-    }
-});
-
-
+// Las copias de window.* las publica aplicarLimitesOffset() tras cada gesto;
+// no se duplican aquí para no reintroducir escrituras fuera de orden.
 
 // Código relacionado con btnToggleCurva eliminado ya que el botón no existe
 // Las curvas ahora siempre están disponibles automáticamente

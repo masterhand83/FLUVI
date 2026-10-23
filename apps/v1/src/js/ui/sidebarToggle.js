@@ -93,6 +93,8 @@ document.addEventListener('DOMContentLoaded', () => {
         canvas.width = newWidth;
         canvas.height = newHeight;
       }
+      // Mantener la vista dentro de los nuevos límites tras redimensionar.
+      window.aplicarLimitesOffset?.();
     }
 
     // Renderizar después del redimensionamiento

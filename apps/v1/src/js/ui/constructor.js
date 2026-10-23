@@ -2415,7 +2415,11 @@ function guardarSimulacion() {
         } : null,
         // Guardar configuración de tiempo virtual si está disponible
         configuracionTiempo: window.tiempoToJSON ? window.tiempoToJSON() : null,
-        lluviaAleatoria: window.lluviaAleatoriaToJSON?.()
+        lluviaAleatoria: window.lluviaAleatoriaToJSON?.(),
+        // Preferencia visual del mapa (color de fondo elegido en Personalización)
+        personalizacion: {
+            fondoMapa: window.mapBackgroundPreferenceToJSON ? window.mapBackgroundPreferenceToJSON() : null
+        }
     };
 
     // Convertir a JSON
@@ -2588,6 +2592,9 @@ function cargarSimulacion(event) {
             }
 
             window.lluviaAleatoriaFromJSON?.(datosSimulacion.lluviaAleatoria);
+
+            // Restaurar el color de fondo del mapa (mapas antiguos usan Cielo).
+            window.mapBackgroundPreferenceFromJSON?.(datosSimulacion.personalizacion?.fondoMapa);
 
             // Cargar configuración de tiempo virtual si existe
             if (datosSimulacion.configuracionTiempo && window.tiempoFromJSON) {
@@ -2799,6 +2806,8 @@ function limpiarSimulacionActual() {
     window.cellGeometryIndex?.clear?.();
     window.resetSimulationMetrics?.();
     window.resetSimulationInfo?.();
+    // La personalización pertenece al mapa: una vista nueva vuelve a Cielo.
+    window.mapBackgroundPreference?.reset?.();
     if (typeof limpiarInfoEscenarioActual === 'function') limpiarInfoEscenarioActual();
 
     // Actualizar selectores

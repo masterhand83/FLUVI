@@ -2,9 +2,24 @@
  * DayNightCycle.js - Sistema de ciclo día/noche optimizado
  * Maneja transiciones suaves de color de fondo basado en la hora simulada
  * Sistema continuo: 12 AM (medianoche) = más oscuro, 12 PM (mediodía) = más claro
+ *
+ * También administra el color de fondo elegido por el usuario. El preset "sky"
+ * conserva la paleta animada original; los demás presets y el color
+ * personalizado usan su color base y se aclaran u oscurecen con el mismo ritmo
+ * del cielo simulado.
  */
 
 class DayNightCycle {
+    // Colores base de los presets. "sky" no aparece aquí: usa la paleta animada.
+    static PRESET_COLORS = Object.freeze({
+        blue: 0x1E3A8A,
+        guinda: 0x7A1F3D,
+        grey: 0xC6CBCD,
+        white: 0xFFFFFF
+    });
+
+    static DEFAULT_PRESET = 'sky';
+
     constructor() {
         // Paleta de colores clave para las 24 horas (puntos de control)
         // Interpolación continua entre estos puntos
@@ -39,40 +54,155 @@ this.colorKeyframes = [
         // Cache para evitar recálculos innecesarios
         this.lastHour = -1;
         this.lastMinute = -1;
+        this.preset = DayNightCycle.DEFAULT_PRESET;
+        this.customColor = null;
         this.currentColor = this.colorKeyframes[12].color; // Empezar con color del mediodía
 
         console.log('🌅 DayNightCycle inicializado (sistema continuo 24h)');
     }
 
+    static isValidPreset(value) {
+        return value === 'sky'
+            || value === 'custom'
+            || Object.prototype.hasOwnProperty.call(DayNightCycle.PRESET_COLORS, value);
+    }
+
     /**
-     * Obtiene el color de fondo basado en la hora simulada
-     * Interpolación continua entre keyframes para transiciones suaves
-     * @param {Date} simulatedDate - Fecha y hora simulada
+     * Acepta un número 0xRRGGBB o una cadena "#RRGGBB" / "RRGGBB".
+     * @returns {number|null} Color normalizado o null si es inválido.
+     */
+    static parseColor(value) {
+        if (typeof value === 'number') {
+            return Number.isInteger(value) && value >= 0 && value <= 0xFFFFFF ? value : null;
+        }
+        if (typeof value !== 'string') return null;
+        const normalized = value.trim().replace(/^#/, '');
+        return /^[0-9a-fA-F]{6}$/.test(normalized) ? Number.parseInt(normalized, 16) : null;
+    }
+
+    static colorToCss(color) {
+        return `#${color.toString(16).padStart(6, '0')}`;
+    }
+
+    /**
+     * Cambia el fondo del mapa. Un preset desconocido vuelve a "sky" y un color
+     * personalizado inválido también vuelve a "sky".
+     * @returns {{preset: string, color: string}} Preferencia normalizada.
+     */
+    setBackgroundPreset(preset, customColor) {
+        const parsedCustom = DayNightCycle.parseColor(customColor);
+        let nextPreset = DayNightCycle.isValidPreset(preset)
+            ? preset
+            : DayNightCycle.DEFAULT_PRESET;
+
+        if (nextPreset === 'custom' && parsedCustom === null) {
+            nextPreset = DayNightCycle.DEFAULT_PRESET;
+        }
+
+        this.preset = nextPreset;
+        if (parsedCustom !== null) {
+            this.customColor = parsedCustom;
+        }
+        this.invalidateCache();
+        return this.getPreference();
+    }
+
+    getBaseColor() {
+        if (this.preset === 'custom' && this.customColor !== null) {
+            return this.customColor;
+        }
+        const presetColor = DayNightCycle.PRESET_COLORS[this.preset];
+        if (presetColor !== undefined) return presetColor;
+        return this.colorKeyframes[12].color; // Cielo de mediodía
+    }
+
+    getPreference() {
+        return { preset: this.preset, color: DayNightCycle.colorToCss(this.getBaseColor()) };
+    }
+
+    toJSON() {
+        return this.getPreference();
+    }
+
+    fromJSON(data) {
+        if (!data || typeof data !== 'object') {
+            return this.setBackgroundPreset(DayNightCycle.DEFAULT_PRESET, null);
+        }
+        return this.setBackgroundPreset(data.preset, data.color);
+    }
+
+    invalidateCache() {
+        this.lastHour = -1;
+        this.lastMinute = -1;
+    }
+
+    /**
+     * Fecha simulada compartida por ambos renderizadores.
+     * @returns {Date|null} Fecha simulada o null si aún no existe.
+     */
+    getSimulatedDate() {
+        if (typeof window !== 'undefined' && window.configuracionTiempo) {
+            const simulatedDate = new Date();
+            simulatedDate.setHours(Math.floor(window.configuracionTiempo.horaActual));
+            simulatedDate.setMinutes(Math.floor(window.configuracionTiempo.minutoActual));
+            simulatedDate.setSeconds(Math.floor(window.configuracionTiempo.segundoActual));
+            return simulatedDate;
+        }
+        if (typeof window !== 'undefined' && window.simulatedCurrentDate) {
+            return window.simulatedCurrentDate;
+        }
+        return null;
+    }
+
+    /**
+     * Obtiene el color de fondo basado en la hora simulada.
+     * @param {Date} [simulatedDate] - Fecha y hora simulada.
      * @returns {number} Color en formato hexadecimal (0xRRGGBB)
      */
     getBackgroundColor(simulatedDate) {
-        if (!simulatedDate) {
-            return this.colorKeyframes[12].color; // Mediodía por defecto
-        }
+        const date = simulatedDate || this.getSimulatedDate();
+        if (!date) return this.getBaseColor();
 
-        const hour = simulatedDate.getHours();
-        const minute = simulatedDate.getMinutes();
+        const hour = date.getHours();
+        const minute = date.getMinutes();
 
         // Solo recalcular si cambió la hora o minuto (optimización)
         if (hour === this.lastHour && minute === this.lastMinute) {
             return this.currentColor;
         }
 
-        // Debug: Log cuando cambia la hora
         const hourChanged = hour !== this.lastHour;
 
         this.lastHour = hour;
         this.lastMinute = minute;
 
         if (hourChanged) {
-            console.log(`🌅 Ciclo día/noche: ${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')} - ${this.getTimeOfDayDescription(simulatedDate)}`);
+            console.log(`🌅 Ciclo día/noche: ${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')} - ${this.getTimeOfDayDescription(date)}`);
         }
 
+        const skyColor = this.getSkyColor(hour, minute);
+        this.currentColor = this.preset === 'sky'
+            ? skyColor
+            : this.shadeColor(this.getBaseColor(), skyColor);
+        return this.currentColor;
+    }
+
+    /**
+     * Color CSS del fondo actual, listo para Canvas 2D.
+     * @param {Date} [simulatedDate]
+     * @returns {string} "#RRGGBB"
+     */
+    getBackgroundColorCss(simulatedDate) {
+        return DayNightCycle.colorToCss(this.getBackgroundColor(simulatedDate));
+    }
+
+    /**
+     * Interpola la paleta animada del cielo para la hora indicada.
+     * @param {number} hour - Hora 0-23
+     * @param {number} minute - Minuto 0-59
+     * @returns {number} Color (0xRRGGBB)
+     */
+    getSkyColor(hour, minute) {
         // Calcular tiempo exacto en horas (con fracciones de minutos)
         const exactHour = hour + (minute / 60);
 
@@ -92,11 +222,36 @@ this.colorKeyframes = [
         const hourRange = keyframe2.hour - keyframe1.hour;
         const progress = hourRange > 0 ? (exactHour - keyframe1.hour) / hourRange : 0;
 
-        // Interpolar entre los dos colores
-        const color = this.interpolateColors(keyframe1.color, keyframe2.color, progress);
+        return this.interpolateColors(keyframe1.color, keyframe2.color, progress);
+    }
 
-        this.currentColor = color;
-        return color;
+    /**
+     * Ajusta un color base con el brillo relativo del cielo simulado, de modo
+     * que todos los presets compartan el mismo ritmo día/noche.
+     * @param {number} baseColor - Color base (0xRRGGBB)
+     * @param {number} skyColor - Color del cielo para la misma hora
+     * @returns {number} Color ajustado (0xRRGGBB)
+     */
+    shadeColor(baseColor, skyColor) {
+        const noonSky = this.colorKeyframes[12].color;
+        const noonLuminance = this.relativeLuminance(noonSky);
+        const ratio = noonLuminance > 0
+            ? this.relativeLuminance(skyColor) / noonLuminance
+            : 1;
+        // 0.35 en la noche profunda y 1.0 al mediodía.
+        const shade = 0.35 + (0.65 * Math.max(0, Math.min(1, ratio)));
+
+        const r = Math.round(((baseColor >> 16) & 0xFF) * shade);
+        const g = Math.round(((baseColor >> 8) & 0xFF) * shade);
+        const b = Math.round((baseColor & 0xFF) * shade);
+        return (r << 16) | (g << 8) | b;
+    }
+
+    relativeLuminance(color) {
+        const r = (color >> 16) & 0xFF;
+        const g = (color >> 8) & 0xFF;
+        const b = color & 0xFF;
+        return (0.2126 * r) + (0.7152 * g) + (0.0722 * b);
     }
 
     /**
@@ -147,15 +302,16 @@ this.colorKeyframes = [
     }
 
     /**
-     * Resetea el cache (útil al reiniciar la simulación)
+     * Resetea el cache de color (útil al reiniciar la simulación).
+     * Conserva el preset elegido.
      */
     reset() {
-        this.lastHour = -1;
-        this.lastMinute = -1;
-        this.currentColor = this.colors.day;
+        this.invalidateCache();
+        this.currentColor = this.colorKeyframes[12].color;
     }
 }
 
-// Exponer globalmente
+// Instancia compartida por Pixi y por el fallback Canvas.
 window.DayNightCycle = DayNightCycle;
+window.mapBackgroundCycle = new DayNightCycle();
 console.log('✓ DayNightCycle cargado');

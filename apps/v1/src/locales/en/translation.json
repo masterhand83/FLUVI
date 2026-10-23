@@ -567,6 +567,20 @@
     },
     "title": "Loading simulation..."
   },
+  "mapBackground": {
+    "colorLabel": "Map background color",
+    "customHelp": "Pick any color; it will lighten or darken with the simulated time.",
+    "customLabel": "Custom color",
+    "description": "Customize the appearance of the map.",
+    "presets": {
+      "blue": "Blue",
+      "grey": "Grey",
+      "guinda": "Guinda",
+      "sky": "Sky",
+      "white": "White"
+    },
+    "timeNote": "The preview shows the current color and changes with the simulated time. The preference is saved in the map file."
+  },
   "mapConstructor": {
     "defaultSimulationName": "New Simulation",
     "help": {
@@ -990,6 +1004,7 @@
     "heading": {
       "about": "ℹ️ About FLUVI",
       "constructor": "🏗️ Map Constructor",
+      "customization": "🎨 Customization",
       "metrics": "📈 Simulation Metrics",
       "scenarios": "🎬 Scenario Settings",
       "settings": "⚙️ Settings",

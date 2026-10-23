@@ -7,6 +7,8 @@ const browserSpecsToKeep = new Set([
 	"localization.spec.mjs",
 	"metrics-localization.spec.mjs",
 	"analizador-localization.spec.mjs",
+	// El arrastre del mapa es una regresión crítica y este spec tarda segundos.
+	"canvas-camera.spec.mjs",
 ])
 const pythonCompatibilitySpecs = ["tests/analizador-python-localization.spec.mjs"]
 
