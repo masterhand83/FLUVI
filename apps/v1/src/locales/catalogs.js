@@ -1421,9 +1421,9 @@ window.FLUVI_LOCALE_RESOURCES = {
 				"sectionsCount_many": "Secciones ({{count}})",
 				"sectionsCount_one": "Sección ({{count}})",
 				"sectionsCount_other": "Secciones ({{count}})",
-				"select": "Seleccionar",
 				"selectedAnchor": "Ancla fija seleccionada",
 				"selectedControl": "Control seleccionado",
+				"strength": "Intensidad de la curva ({{min}}–{{max}} %)",
 				"title": "Inspector de calle",
 				"type": "Tipo",
 				"typeOption": {
@@ -3205,9 +3205,9 @@ window.FLUVI_LOCALE_RESOURCES = {
 				"section": "Section {{number}}",
 				"sectionsCount_one": "Section ({{count}})",
 				"sectionsCount_other": "Sections ({{count}})",
-				"select": "Select",
 				"selectedAnchor": "Selected fixed anchor",
 				"selectedControl": "Selected control",
+				"strength": "Curve strength ({{min}}–{{max}}%)",
 				"title": "Street inspector",
 				"type": "Type",
 				"typeOption": {

@@ -1397,9 +1397,9 @@
     "section": "Section {{number}}",
     "sectionsCount_one": "Section ({{count}})",
     "sectionsCount_other": "Sections ({{count}})",
-    "select": "Select",
     "selectedAnchor": "Selected fixed anchor",
     "selectedControl": "Selected control",
+    "strength": "Curve strength ({{min}}–{{max}}%)",
     "title": "Street inspector",
     "type": "Type",
     "typeOption": {

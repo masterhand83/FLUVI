@@ -1414,9 +1414,9 @@
     "sectionsCount_many": "Secciones ({{count}})",
     "sectionsCount_one": "Sección ({{count}})",
     "sectionsCount_other": "Secciones ({{count}})",
-    "select": "Seleccionar",
     "selectedAnchor": "Ancla fija seleccionada",
     "selectedControl": "Control seleccionado",
+    "strength": "Intensidad de la curva ({{min}}–{{max}} %)",
     "title": "Inspector de calle",
     "type": "Tipo",
     "typeOption": {

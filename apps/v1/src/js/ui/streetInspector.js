@@ -48,9 +48,12 @@
 	let selected = null;
 	let focusedField = null;
 	let committing = false;
+	let committingStrength = false;
+	let strengthFocused = false;
 	let selectedControlIndex = null;
 	let selectedSegmentIndex = null;
 	let selectedAnchorIndex = null;
+	const MAX_CURVE_STRENGTH = 100;
 	const isBezier = (street) =>
 		!isRoundabout(street) && (window.streetBezier?.isBezier?.(street) ?? Boolean(
 			street &&
@@ -92,6 +95,99 @@
 		return candidate;
 	};
 	const editable = Object.values(fields);
+	const curveStrength = (street, parts = sections(street)) => {
+		let strength = 0;
+		parts.forEach((part, index) => {
+			const start = index
+				? parts[index - 1].end
+				: { x: street.x, y: street.y };
+			const dx = part.end.x - start.x;
+			const dy = part.end.y - start.y;
+			const length = Math.hypot(dx, dy);
+			if (length < 1e-9) return;
+			const nx = -dy / length;
+			const ny = dx / length;
+			for (const control of part.controls) {
+				const deviation = Math.abs(
+					(control.x - start.x) * nx + (control.y - start.y) * ny,
+				);
+				strength = Math.max(strength, deviation / length);
+			}
+		});
+		return Math.min(MAX_CURVE_STRENGTH / 100, strength);
+	};
+	const withCurveStrength = (street, target) => {
+		const parts = sections(street);
+		const current = curveStrength(street, parts);
+		const ratio = current > 1e-9 ? target / current : null;
+		const scaled = parts.map((part, index) => {
+			const start = index
+				? parts[index - 1].end
+				: { x: street.x, y: street.y };
+			const dx = part.end.x - start.x;
+			const dy = part.end.y - start.y;
+			const length = Math.hypot(dx, dy);
+			if (length < 1e-9)
+				return {
+					controls: part.controls.map((point) => ({ ...point })),
+					end: { ...part.end },
+				};
+			const ux = dx / length;
+			const uy = dy / length;
+			const nx = -uy;
+			const ny = ux;
+			return {
+				controls: part.controls.map((control) => {
+					const vx = control.x - start.x;
+					const vy = control.y - start.y;
+					const along = vx * ux + vy * uy;
+					const perpendicular = vx * nx + vy * ny;
+					const next = ratio == null ? target * length : perpendicular * ratio;
+					return {
+						x: start.x + ux * along + nx * next,
+						y: start.y + uy * along + ny * next,
+					};
+				}),
+				end: { ...part.end },
+			};
+		});
+		return candidateWithSections(street, scaled);
+	};
+	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Strength commits share the inspector's atomic curve validation path.
+	const commitCurveStrength = (input, street = selected) => {
+		strengthFocused = false;
+		if (
+			!input.isConnected ||
+			street !== selected ||
+			!isBezier(street) ||
+			committing ||
+			committingStrength
+		)
+			return true;
+		const value = input.value.trim();
+		const numeric = Number(value);
+		if (value === "" || !Number.isFinite(numeric)) {
+			readModel(street);
+			return true;
+		}
+		const target =
+			Math.min(MAX_CURVE_STRENGTH, Math.max(0, numeric)) / 100;
+		if (Math.abs(target - curveStrength(street)) < 1e-9) {
+			readModel(street);
+			return true;
+		}
+		committingStrength = true;
+		try {
+			if (!applyCurve(withCurveStrength(street, target))) {
+				error.textContent = tr('streetInspector.errors.invalidCurve');
+				readModel(street);
+				return false;
+			}
+			return true;
+		} finally {
+			committingStrength = false;
+		}
+	};
 	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Rebuilds inspector rows and values from one selected street snapshot.
 	const readModel = (calle) => {
 		fields.name.value = calle.nombre || "";
@@ -175,18 +271,51 @@
 			controlsHost.replaceChildren();
 			controlsHost.hidden = !isBezier(calle);
 			const parts = isBezier(calle) ? sections(calle) : [];
+			const headingRow = document.createElement("div");
+			headingRow.className = "street-inspector-bezier-heading";
 			const count = document.createElement("strong");
 			count.textContent = tr('streetInspector.sectionsCount', { count: parts.length });
-			controlsHost.append(count);
+			const strength = document.createElement("input");
+			strength.id = "streetInspectorBezierStrength";
+			strength.type = "number";
+			strength.className = "street-inspector-strength";
+			strength.min = "0";
+			strength.max = String(MAX_CURVE_STRENGTH);
+			strength.step = "1";
+			strength.inputMode = "decimal";
+			strength.value = String(Math.round(curveStrength(calle, parts) * 100));
+			strength.disabled = !parts.some((part) => part.controls.length > 0);
+			strength.setAttribute(
+				"aria-label",
+				tr('streetInspector.strength', { min: 0, max: MAX_CURVE_STRENGTH }),
+			);
+			strength.addEventListener("focus", () => {
+				strengthFocused = true;
+			});
+			strength.addEventListener("blur", () => {
+				strengthFocused = false;
+				commitCurveStrength(strength, calle);
+			});
+			strength.addEventListener("keydown", (event) => {
+				if (event.key === "Enter") {
+					event.preventDefault();
+					commitCurveStrength(strength, calle);
+				} else if (event.key === "Escape") {
+					event.preventDefault();
+					strengthFocused = false;
+					readModel(calle);
+				}
+			});
+			headingRow.append(count, strength);
+			controlsHost.append(headingRow);
 			const addRow = (labelText, kind, segmentIndex, controlIndex) => {
 				const row = document.createElement("div");
 				row.className = `street-inspector-control ${kind === "anchor" ? "anchor" : ""}`;
-				const label = document.createElement("span");
-				label.textContent = labelText;
 				const select = document.createElement("button");
 				select.type = "button";
-				select.className = "btn btn-sm btn-outline-secondary";
-				select.textContent = tr('streetInspector.select');
+				select.className =
+					"btn btn-sm btn-outline-secondary street-inspector-control-label";
+				select.textContent = labelText;
 				select.setAttribute("aria-pressed", String(kind === "anchor" ? selectedAnchorIndex === segmentIndex : selectedAnchorIndex == null && selectedSegmentIndex === segmentIndex && selectedControlIndex === controlIndex));
 				select.addEventListener("click", () => kind === "anchor" ? selectAnchor(segmentIndex) : selectControl(segmentIndex, controlIndex));
 				const remove = document.createElement("button");
@@ -199,7 +328,7 @@
 					else selectControl(segmentIndex, controlIndex);
 					deleteSelectedControl();
 				});
-				row.append(label, select, remove);
+				row.append(select, remove);
 				controlsHost.append(row);
 			};
 			parts.forEach((part, segmentIndex) => {
@@ -232,6 +361,10 @@
 	};
 	function show(calle) {
 		if (selected !== calle) {
+			const active = document.activeElement;
+			if (active?.classList?.contains("street-inspector-strength"))
+				active.blur();
+			strengthFocused = false;
 			selectedControlIndex = null;
 			selectedSegmentIndex = null;
 			selectedAnchorIndex = null;
@@ -542,11 +675,16 @@
 	fields.type.addEventListener("change", () => commit(fields.type));
 	window.streetInspector = {
 		finishFocusedEdit() {
+			if (strengthFocused) {
+				const input = document.activeElement;
+				if (input?.classList?.contains("street-inspector-strength"))
+					return commitCurveStrength(input, selected);
+			}
 			if (focusedField) return commit(focusedField);
 			return true;
 		},
 		refresh() {
-			if (selected && !focusedField) readModel(selected);
+			if (selected && !focusedField && !strengthFocused) readModel(selected);
 		},
 		getSelected() {
 			return selected;

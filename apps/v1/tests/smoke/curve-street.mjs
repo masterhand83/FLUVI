@@ -317,6 +317,54 @@ for (const usePixi of [false, true]) {
 			2,
 			"Add control adds another editable control",
 		);
+		assert.equal(
+			await page.$$eval(
+				"#streetInspectorBezierControls .street-inspector-control",
+				(rows) =>
+					rows.every(
+						(row) =>
+							row.children.length === 2 &&
+							!row.textContent.includes("Seleccionar") &&
+							!row.textContent.includes("Select"),
+					),
+			),
+			true,
+			"control rows use their label as the selector instead of a separate select button",
+		);
+
+		const strengthInput = "#streetInspectorBezierStrength";
+		assert.equal(
+			await page.$eval(strengthInput, (input) => input.disabled),
+			false,
+			"curve strength is editable once controls exist",
+		);
+		const beforeStrength = await geometrySignature(page);
+		await setNumber(page, strengthInput, 25);
+		const strengthened = await geometrySignature(page);
+		assert.equal(
+			await page.$eval(strengthInput, (input) => input.value),
+			"25",
+			"strength input reflects the committed curve strength",
+		);
+		assert.ok(
+			Math.abs(
+				strengthened.controls[0].y - beforeStrength.controls[0].y,
+			) > 1,
+			"strength bends the controls away from the chord",
+		);
+		await setNumber(page, strengthInput, 500);
+		assert.equal(
+			await page.$eval(strengthInput, (input) => input.value),
+			"100",
+			"strength clamps to its upper limit",
+		);
+		await setNumber(page, strengthInput, -50);
+		assert.equal(
+			await page.$eval(strengthInput, (input) => input.value),
+			"0",
+			"strength clamps to its lower limit",
+		);
+		assertArcAligned(await model(page), "strength-clamped curve");
 
 		let state = await model(page);
 		assertArcAligned(state, "two-control curve");
