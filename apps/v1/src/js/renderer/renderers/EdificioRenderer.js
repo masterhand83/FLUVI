@@ -8,6 +8,7 @@ class EdificioRenderer {
         this.scene = sceneManager;
         this.assets = assetLoader;
         this.etiquetasEdificios = new Map(); // Map<edificio, Container> - etiquetas de edificios
+        this.tooltipSprite = null; // Único edificio que posee el tooltip compartido
 
         // 📱 OPTIMIZACIÓN MÓVIL: Lazy loading de edificios distantes
         this.isMobile = window.pixiApp && window.pixiApp.isMobile;
@@ -460,6 +461,7 @@ class EdificioRenderer {
     removeEdificioSprite(edificio) {
         const sprite = this.scene.edificioSprites.get(edificio);
         if (sprite) {
+            this.clearTooltip(sprite);
             sprite.destroy({ children: true });
             this.scene.edificioSprites.delete(edificio);
         }
@@ -584,12 +586,40 @@ class EdificioRenderer {
         }
     }
 
+    clearTooltip(sprite = this.tooltipSprite) {
+        if (!sprite) return;
+
+        // Remover listener de movimiento del mouse
+        if (sprite._tooltipMoveHandler) {
+            document.removeEventListener('mousemove', sprite._tooltipMoveHandler);
+            sprite._tooltipMoveHandler = null;
+        }
+
+        sprite.alpha = 1.0;
+
+        // Solo el edificio que posee el tooltip puede ocultarlo; una salida
+        // tardía del edificio anterior no debe ocultar el tooltip actual.
+        if (this.tooltipSprite !== sprite) return;
+        this.tooltipSprite = null;
+
+        const tooltip = document.getElementById('canvasTooltip');
+        if (tooltip) {
+            tooltip.style.display = 'none';
+            tooltip.textContent = '';
+        }
+    }
+
     onEdificioHover(edificio, sprite) {
+        // Pointerover puede repetirse/rebotar desde los hijos. Solo un edificio
+        // puede poseer el tooltip compartido y su listener de movimiento.
+        if (this.tooltipSprite) this.clearTooltip(this.tooltipSprite);
+
         sprite.alpha = 0.9;
 
         // Mostrar tooltip con el nombre/label del edificio
         const tooltip = document.getElementById('canvasTooltip');
         if (tooltip && edificio.label) {
+            this.tooltipSprite = sprite;
             tooltip.textContent = edificio.label;
             tooltip.style.display = 'block';
 
@@ -608,19 +638,7 @@ class EdificioRenderer {
     }
 
     onEdificioOut(edificio, sprite) {
-        sprite.alpha = 1.0;
-
-        // Ocultar tooltip
-        const tooltip = document.getElementById('canvasTooltip');
-        if (tooltip) {
-            tooltip.style.display = 'none';
-        }
-
-        // Remover listener de movimiento del mouse
-        if (sprite._tooltipMoveHandler) {
-            document.removeEventListener('mousemove', sprite._tooltipMoveHandler);
-            sprite._tooltipMoveHandler = null;
-        }
+        this.clearTooltip(sprite);
     }
 
     // 📱 OPTIMIZACIÓN MÓVIL: Viewport culling helpers

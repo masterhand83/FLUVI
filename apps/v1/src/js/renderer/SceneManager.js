@@ -397,6 +397,7 @@ class SceneManager {
         if (this.calleRenderer?.tooltipContainer) {
             this.calleRenderer.onCalleOut(null, this.calleRenderer.tooltipContainer);
         }
+        this.edificioRenderer?.clearTooltip();
 
         // Background areas use textures generated exclusively from their own
         // canvases (not AssetLoader assets), so dispose those to release memory.
