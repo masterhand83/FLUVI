@@ -3468,6 +3468,15 @@ window.actualizarListaConexiones = actualizarListaConexiones;
 window.editarConexion = editarConexion;
 window.eliminarConexion = eliminarConexion;
 
+// Atajo Ctrl+S / Cmd+S: ejecuta la misma acción que "Guardar Simulación".
+// preventDefault evita que el navegador abra su propio diálogo de guardar página.
+document.addEventListener('keydown', event => {
+    if (event.repeat || !(event.ctrlKey || event.metaKey) || event.altKey || event.shiftKey) return;
+    if (String(event.key).toLowerCase() !== 's') return;
+    event.preventDefault();
+    guardarSimulacion();
+});
+
 // Inicializar cuando el DOM esté listo
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', inicializarConstructor);

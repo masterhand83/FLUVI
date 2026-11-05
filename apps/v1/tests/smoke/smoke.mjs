@@ -268,6 +268,17 @@ async function checkControlsEditorMinimapTouch() {
 		}))
 		record("Constructor: panel disponible", constructorVisible && constructorControls.tipo && constructorControls.guardar, `abierto=${constructorVisible}`)
 
+		// — Atajo Ctrl+S: misma acción que "Guardar Simulación" (sin descargar) —
+		await page.evaluate(() => {
+			window.__savePromptCalls = 0
+			window.prompt = () => { window.__savePromptCalls++; return null }
+		})
+		await page.keyboard.down("Control")
+		await page.keyboard.press("s")
+		await page.keyboard.up("Control")
+		const savePromptCalls = await page.evaluate(() => window.__savePromptCalls)
+		record("Ctrl+S activa Guardar Simulación", savePromptCalls === 1, `prompts=${savePromptCalls}`)
+
 		// — Zoom con rueda —
 		const escalaBefore = await page.evaluate(() => window.escala)
 		await page.mouse.move(700, 450)
