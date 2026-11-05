@@ -2059,9 +2059,12 @@ window.actualizarSelectorEdificios = actualizarSelectorEdificios;
 
 // ==================== ELIMINAR OBJETO SELECCIONADO ====================
 
-function eliminarObjetoSeleccionado() {
+function eliminarObjetoSeleccionado(options = {}) {
     const calle = window.calleSeleccionada;
     const edificio = window.edificioSeleccionado;
+    // The Supr/Delete shortcut can remove a street in one keystroke; every
+    // other entry point keeps the confirmation prompt.
+    const confirmarCalle = options?.confirmar !== false;
 
     if (!calle && !edificio) {
         fluviNotify.warning('notifications.streetEditor.noSelection');
@@ -2069,8 +2072,7 @@ function eliminarObjetoSeleccionado() {
     }
 
     if (calle) {
-        const confirmacion = confirm(tr('streetEditor.confirmDelete', { name: calle.nombre }));
-        if (!confirmacion) return;
+        if (confirmarCalle && !confirm(tr('streetEditor.confirmDelete', { name: calle.nombre }))) return;
 
         const index = window.calles.indexOf(calle);
         if (index !== -1) {

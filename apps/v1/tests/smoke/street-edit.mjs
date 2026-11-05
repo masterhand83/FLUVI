@@ -121,9 +121,14 @@ for (const usePixi of [false, true]) {
 		await page.$eval("#streetInspectorDeleteStreet", button => button.click())
 		assert.equal(await page.evaluate(() => window.calles.includes(window.calleSeleccionada)), true, "cancel keeps the selected street")
 		assert.equal(await page.$eval("#streetInspector", inspector => inspector.hidden), false, "cancel keeps the inspector open")
-		await page.evaluate(() => { window.confirm = () => true })
-		await page.$eval("#streetInspectorDeleteStreet", button => button.click())
-		assert.equal(await page.evaluate(() => window.calles.some(street => street.nombre === "Unique editable street")), false, "inspector removes the selected street")
+		await page.evaluate(() => {
+			window.__deleteConfirmationCalls = 0
+			window.confirm = () => { window.__deleteConfirmationCalls++; return false }
+			document.activeElement?.blur()
+		})
+		await page.keyboard.press("Delete")
+		assert.equal(await page.evaluate(() => window.__deleteConfirmationCalls), 0, "Supr deletes the selected street without a confirmation dialog")
+		assert.equal(await page.evaluate(() => window.calles.some(street => street.nombre === "Unique editable street")), false, "Supr removes the selected street")
 		assert.equal(await page.evaluate(() => window.calleSeleccionada), null, "deletion clears the map selection")
 		assert.equal(await page.$eval("#streetInspector", inspector => inspector.hidden), true, "deletion closes the inspector")
 		assert.deepEqual(await page.evaluate(() => [document.getElementById("selectCalle").value, document.getElementById("selectCalleEditor").value]), ["", ""], "selectors no longer point to a shifted index")

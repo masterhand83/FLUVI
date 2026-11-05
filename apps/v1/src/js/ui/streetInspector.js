@@ -733,16 +733,22 @@
 	document.addEventListener(
 		"keydown",
 		(event) => {
-			if (
-				event.key !== "Delete" ||
-				(selectedControlIndex == null && selectedAnchorIndex == null) ||
-				!isBezier(selected)
-			)
-				return;
+			if (event.key !== "Delete") return;
 			if (event.target.matches?.("input,textarea,select")) return;
+			// A selected Bezier anchor/control keeps priority so Supr still
+			// removes individual curve points instead of the whole street.
+			if (isBezier(selected) && (selectedControlIndex != null || selectedAnchorIndex != null)) {
+				event.preventDefault();
+				event.stopImmediatePropagation();
+				deleteSelectedControl();
+				return;
+			}
+			if (!selected || !window.calles?.includes(selected)) return;
 			event.preventDefault();
 			event.stopImmediatePropagation();
-			deleteSelectedControl();
+			window.calleSeleccionada = selected;
+			// Supr/Delete is the one-keystroke street deletion path: no dialog.
+			window.eliminarObjetoSeleccionado?.({ confirmar: false });
 		},
 		true,
 	);
