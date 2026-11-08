@@ -1,12 +1,4 @@
-import { Application, extend } from "@pixi/react";
-import { Assets, Container, Graphics, Sprite, Texture } from "pixi.js";
-import { useEffect, useRef, useState } from "react";
-
-extend({
-	Container,
-	Graphics,
-	Sprite,
-});
+import { Application } from "@pixi/react";
 
 function App() {
 	return (
@@ -14,7 +6,7 @@ function App() {
 			className="block h-screen w-screen"
 			preference="webgl"
 			resizeTo={window}
-		></Application>
+		/>
 	);
 }
 
