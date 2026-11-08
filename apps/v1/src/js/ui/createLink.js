@@ -899,6 +899,7 @@
 		close();
 	}
 	window.createLinkTool = {
+		cancel: close,
 		edit(link) {
 			if (!link || !(window.conexiones || []).includes(link)) return false;
 			show(link.origen, link.destino, link);

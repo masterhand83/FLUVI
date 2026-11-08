@@ -6,6 +6,14 @@ window.FLUVI_FALLBACK_LANGUAGE = "es";
 window.FLUVI_LOCALE_RESOURCES = {
 	"es": {
 		"translation": {
+			"bulkStreetEditor": {
+				"title": "Editor de calles en grupo",
+				"count_one": "{{count}} calle seleccionada",
+				"count_other": "{{count}} calles seleccionadas",
+				"count_many": "{{count}} calles seleccionadas",
+				"mixed": "Mixto / sin cambios",
+				"lane": "Carril {{lane}}"
+			},
 			"about": {
 				"aboutButton": "📖 Ver Información Completa",
 				"aboutTooltip": "Ver información completa sobre el proyecto FLUVI",
@@ -1807,6 +1815,13 @@ window.FLUVI_LOCALE_RESOURCES = {
 	},
 	"en": {
 		"translation": {
+			"bulkStreetEditor": {
+				"title": "Bulk street editor",
+				"count_one": "{{count}} selected street",
+				"count_other": "{{count}} selected streets",
+				"mixed": "Mixed / unchanged",
+				"lane": "Lane {{lane}}"
+			},
 			"about": {
 				"aboutButton": "📖 View Full Information",
 				"aboutTooltip": "View complete information about the FLUVI project",

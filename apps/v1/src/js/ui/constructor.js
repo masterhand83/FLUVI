@@ -2763,6 +2763,7 @@ function nuevaSimulacion() {
 // ==================== LIMPIAR SIMULACIÓN ====================
 
 function limpiarSimulacionActual() {
+    window.bulkStreetEditor?.clear();
     simulationVersion++;
     window.drawBuildingTool?.deactivate();
     window.streetEditPause?.();

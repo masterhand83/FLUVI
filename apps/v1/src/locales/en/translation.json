@@ -1,4 +1,11 @@
 {
+  "bulkStreetEditor": {
+    "title": "Bulk street editor",
+    "count_one": "{{count}} selected street",
+    "count_other": "{{count}} selected streets",
+    "mixed": "Mixed / unchanged",
+    "lane": "Lane {{lane}}"
+  },
   "about": {
     "aboutButton": "📖 View Full Information",
     "aboutTooltip": "View complete information about the FLUVI project",

@@ -1,4 +1,12 @@
 {
+  "bulkStreetEditor": {
+    "title": "Editor de calles en grupo",
+    "count_one": "{{count}} calle seleccionada",
+    "count_other": "{{count}} calles seleccionadas",
+    "count_many": "{{count}} calles seleccionadas",
+    "mixed": "Mixto / sin cambios",
+    "lane": "Carril {{lane}}"
+  },
   "about": {
     "aboutButton": "📖 Ver Información Completa",
     "aboutTooltip": "Ver información completa sobre el proyecto FLUVI",
