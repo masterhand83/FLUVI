@@ -101,11 +101,11 @@ describe('roundabout Pixi integration', () => {
         const context = { window, ctx, celda_tamano: 5,
             getLaneDirection: (street, lane) => street.laneDirections[lane] };
         runInNewContext(source.slice(source.indexOf('function dibujarGlorieta('), source.indexOf('function dibujarDireccionesCarriles(')), context);
-        runInNewContext('dibujarGlorieta(window.road)', { ...context, window: { ...window, road } });
+        runInNewContext('dibujarOverlaysGlorieta(window.road)', { ...context, window: { ...window, road } });
         expect(rotations.filter(angle => angle === Math.PI)).toHaveLength(0);
         rotations.length = 0;
         road.laneDirections[0] = -1;
-        runInNewContext('dibujarGlorieta(window.road)', { ...context, window: { ...window, road } });
+        runInNewContext('dibujarOverlaysGlorieta(window.road)', { ...context, window: { ...window, road } });
         expect(rotations.filter(angle => angle === Math.PI)).toHaveLength(4);
     });
 

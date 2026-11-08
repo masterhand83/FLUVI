@@ -1,0 +1,131 @@
+function dibujarCalles() {
+    calles.forEach(calle => {
+        ctx.save();
+
+        // Si la calle tiene curva activa, dibujar con curvas
+        if (calle.geometryType === 'roundabout') {
+            dibujarGlorieta(calle);
+        } else if (calle.esCurva && (calle.bezierControls || (calle.vertices && calle.vertices.length >= 2))) {
+            dibujarCalleConCurva(calle);
+        } else {
+            // Dibujo tradicional (rectilíneo)
+            ctx.translate(calle.x, calle.y);
+            ctx.rotate(-calle.angulo * Math.PI / 180);
+
+            for (let c = 0; c < calle.carriles; c++) {
+                for (let i = 0; i < calle.tamano; i++) {
+                    ctx.drawImage(carreteraImg, i * celda_tamano, c * celda_tamano, celda_tamano, celda_tamano);
+                }
+            }
+
+            // Dibujar borde si la calle está seleccionada
+            if (window.calleSeleccionada && calle.nombre === window.calleSeleccionada.nombre) {
+                // Naranja para Constructor, amarillo para Configuración
+                ctx.strokeStyle = window.modoSeleccion === "constructor" ? "#FFA500" : "yellow";
+                ctx.lineWidth = 1;
+                ctx.strokeRect(0, 0, calle.tamano * celda_tamano, calle.carriles * celda_tamano);
+            }
+        }
+
+        ctx.restore();
+        // Draw in world coordinates, after restoring the straight road's
+        // local translation/rotation (curved roads are already world-space).
+        if (calle.geometryType !== 'roundabout' && calle.laneDirections?.some((_, lane) => getLaneDirection(calle, lane) === -1)) {
+            dibujarDireccionesCarriles(calle);
+        }
+    });
+}
+
+function dibujarGlorieta(calle) {
+    const inner = calle.innerRadius;
+    const outer = inner + calle.carriles * celda_tamano;
+    ctx.beginPath();
+    ctx.arc(calle.x, calle.y, outer, 0, 2 * Math.PI);
+    ctx.arc(calle.x, calle.y, inner, 0, 2 * Math.PI, true);
+    ctx.fillStyle = '#555b60';
+    ctx.fill();
+    ctx.strokeStyle = '#d9d9d9';
+    ctx.lineWidth = 0.5;
+    for (let lane = 1; lane < calle.carriles; lane++) {
+        ctx.beginPath();
+        ctx.arc(calle.x, calle.y, inner + lane * celda_tamano, 0, 2 * Math.PI);
+        ctx.stroke();
+    }
+    if (window.calleSeleccionada === calle) {
+        ctx.strokeStyle = window.modoSeleccion === 'constructor' ? '#FFA500' : 'yellow';
+        ctx.lineWidth = 1;
+        for (const radius of [inner, outer]) {
+            ctx.beginPath();
+            ctx.arc(calle.x, calle.y, radius, 0, 2 * Math.PI);
+            ctx.stroke();
+        }
+    }
+    for (let lane = 0; lane < calle.carriles; lane++) {
+        for (const fraction of [0.125, 0.375, 0.625, 0.875]) {
+            const index = Math.floor(fraction * calle.tamano);
+            const point = window.roundaboutStreet.coordinates(calle, lane, index);
+            ctx.save();
+            ctx.translate(point.x, point.y);
+            ctx.rotate(-point.angulo * Math.PI / 180);
+            if (getLaneDirection(calle, lane) === -1) ctx.rotate(Math.PI);
+            ctx.strokeStyle = '#f5fcff';
+            ctx.lineWidth = 0.4;
+            ctx.beginPath();
+            ctx.moveTo(-1.2, 0);
+            ctx.lineTo(1.2, 0);
+            ctx.lineTo(0.3, -0.8);
+            ctx.moveTo(1.2, 0);
+            ctx.lineTo(0.3, 0.8);
+            ctx.stroke();
+            ctx.restore();
+        }
+    }
+}
+
+function dibujarDireccionesCarriles(calle) {
+    const indices = [...new Set([0.25, 0.5, 0.75].map(fraction =>
+        Math.min(calle.tamano - 1, Math.floor(calle.tamano * fraction))))];
+    for (let lane = 0; lane < calle.carriles; lane++) {
+        for (const index of indices) {
+            const coords = calle.esCurva && window.obtenerCoordenadasGlobalesCeldaConCurva
+                ? window.obtenerCoordenadasGlobalesCeldaConCurva(calle, lane, index)
+                : obtenerCoordenadasGlobalesCelda(calle, lane, index);
+            ctx.save();
+            ctx.translate(coords.x, coords.y);
+            ctx.rotate(-(coords.angulo ?? calle.angulo) * Math.PI / 180);
+            if (getLaneDirection(calle, lane) === -1) ctx.rotate(Math.PI);
+            ctx.strokeStyle = '#f5fcff';
+            ctx.lineWidth = Math.max(0.4, celda_tamano / 10);
+            ctx.beginPath();
+            ctx.moveTo(-celda_tamano * 0.32, 0);
+            ctx.lineTo(celda_tamano * 0.32, 0);
+            ctx.lineTo(celda_tamano * 0.1, -celda_tamano * 0.18);
+            ctx.moveTo(celda_tamano * 0.32, 0);
+            ctx.lineTo(celda_tamano * 0.1, celda_tamano * 0.18);
+            ctx.stroke();
+            ctx.restore();
+        }
+    }
+}
+
+// Función para dibujar calle con curvas
+function dibujarCalleConCurva(calle) {
+    // Dibujar cada celda en su posición curvada
+    for (let c = 0; c < calle.carriles; c++) {
+        for (let i = 0; i < calle.tamano; i++) {
+            const coords = obtenerCoordenadasGlobalesCeldaConCurva(calle, c, i);
+
+            ctx.save();
+            ctx.translate(coords.x, coords.y);
+            ctx.rotate(-coords.angulo * Math.PI / 180);
+            ctx.drawImage(carreteraImg, -celda_tamano / 2, -celda_tamano / 2, celda_tamano, celda_tamano);
+            ctx.restore();
+        }
+    }
+
+    // Dibujar contorno completo si está seleccionada
+    if (window.calleSeleccionada && calle.nombre === window.calleSeleccionada.nombre) {
+        dibujarContornoCalleCurva(calle);
+    }
+}
+
