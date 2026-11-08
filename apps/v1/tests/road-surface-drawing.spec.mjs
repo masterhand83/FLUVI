@@ -22,7 +22,13 @@ describe("Canvas road surfaces", () => {
 				context.clearRect(0, 0, visible.width, visible.height)
 				context.setTransform(window.escala, 0, 0, window.escala, window.offsetX, window.offsetY)
 			}
-			dibujarCalles()
+			// Keep the exact pre-refactor oracle on the shared direct rasterizer.
+			// Cached resampling is compared separately in road-surface-cache-browser.
+			const draw = window.canvasRoadSurface.cache.draw
+			try {
+				window.canvasRoadSurface.cache.draw = window.canvasRoadSurface.drawSurface
+				dibujarCalles()
+			} finally { window.canvasRoadSurface.cache.draw = draw }
 			new Function("ctx", "calles", `${original}\nreturn dibujarCalles;`)(contexts[1], window.calles)()
 			const a = contexts[0].getImageData(0, 0, visible.width, visible.height).data
 			const b = contexts[1].getImageData(0, 0, visible.width, visible.height).data

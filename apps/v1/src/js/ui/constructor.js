@@ -2144,6 +2144,7 @@ function eliminarObjetoSeleccionado(options = {}) {
             }
 
             // Eliminar calle
+            window.canvasRoadSurface?.cache.invalidate(calle);
             window.calles.splice(index, 1);
 
             // Eliminar de simulación actual
@@ -2807,6 +2808,7 @@ function limpiarSimulacionActual() {
     }
 
     window.cellGeometryIndex?.clear?.();
+    window.canvasRoadSurface?.cache.clear();
     window.resetSimulationMetrics?.();
     window.resetSimulationInfo?.();
     // La personalización pertenece al mapa: una vista nueva vuelve a Cielo.

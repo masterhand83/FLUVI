@@ -1678,7 +1678,7 @@ function dibujarEdificios() {
 
 function dibujarCalles() {
     calles.forEach(calle => {
-        dibujarSuperficieCalle(ctx, calle);
+        window.canvasRoadSurface.cache.draw(ctx, calle);
         dibujarOverlaysCalle(calle);
     });
 }
@@ -1724,7 +1724,12 @@ function dibujarOverlaysCalle(calle) {
 
 window.canvasRoadSurface = {
     drawSurface: dibujarSuperficieCalle,
-    drawStreets(context, streets) { streets.forEach(calle => dibujarSuperficieCalle(context, calle)); }
+    drawStreets(context, streets) { streets.forEach(calle => dibujarSuperficieCalle(context, calle)); },
+    cache: window.createCanvasRoadSurfaceCache({
+        drawSurface: dibujarSuperficieCalle,
+        cellSize: () => celda_tamano,
+        artworkReady: () => carreteraImg.complete && carreteraImg.naturalWidth > 0
+    })
 };
 
 function dibujarGlorieta(calle, ctx) {
