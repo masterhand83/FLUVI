@@ -4,7 +4,6 @@ import baseConfig from "./vitest.config.js"
 
 const testsDirectory = new URL("./tests/", import.meta.url)
 const browserSpecsToKeep = new Set([
-	"localization.spec.mjs",
 	"metrics-localization.spec.mjs",
 	"analizador-localization.spec.mjs",
 	// El arrastre del mapa es una regresión crítica y este spec tarda segundos.
@@ -13,7 +12,7 @@ const browserSpecsToKeep = new Set([
 const pythonCompatibilitySpecs = ["tests/analizador-python-localization.spec.mjs"]
 
 // `pnpm test` uses this config by default. Fast mode keeps every unit check
-// plus the core startup, current metrics, and analyzer localization browser
+// plus the current metrics, analyzer localization, and camera browser
 // specs, and skips every other spec that imports the Puppeteer harness. The
 // Python analyzer compatibility spec is also skipped because it needs the
 // pandas/matplotlib toolchain; run it through `test:quarantine`. Run other
@@ -34,6 +33,10 @@ export default mergeConfig(
 	baseConfig,
 	defineConfig({
 		test: {
+			// Keep the full browser suite serial, but overlap the independent fast
+			// specs to avoid waiting for each browser-heavy file in sequence.
+			fileParallelism: true,
+			maxWorkers: 4,
 			exclude: [
 				"**/node_modules/**",
 				"**/dist/**",

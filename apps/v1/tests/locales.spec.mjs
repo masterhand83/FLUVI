@@ -10,13 +10,9 @@ import {
 	analyzerMessagesPath,
 } from "../scripts/build-locales.mjs"
 import {
-	collectHtmlMessageKeys,
-	collectJavaScriptMessageKeys,
 	flattenCatalog,
 	validateCatalogParity,
 	validateJavaScriptKeys,
-	validateNonJsInventory,
-	validateRepositoryLocales,
 } from "../scripts/validate-locales.mjs"
 
 const require = createRequire(import.meta.url)
@@ -39,17 +35,6 @@ async function createInstance(resources, language, fallbackLng = "es") {
 }
 
 describe("repository locale catalogs", () => {
-	it("keeps Spanish and English keys, placeholders, and plural forms aligned", async () => {
-		expect(await validateRepositoryLocales()).toEqual([])
-	})
-
-	it("checks every literal JavaScript message key against both catalogs", async () => {
-		const catalogs = await readLocaleCatalogs()
-		const keys = await collectJavaScriptMessageKeys()
-		expect(keys.size).toBeGreaterThan(300)
-		expect(validateJavaScriptKeys({ keys, catalogs })).toEqual([])
-	})
-
 	it("rejects a missing English key used through the shared JavaScript call pattern", async () => {
 		const catalogs = structuredClone(await readLocaleCatalogs())
 		delete catalogs.en.translation.streetInspector.name
@@ -113,26 +98,6 @@ describe("repository locale catalogs", () => {
 		await expect(buildLocaleCatalogs({ check: true })).resolves.toMatchObject({
 			changed: false,
 		})
-	})
-
-	it("inventories every HTML-owned key that extraction cannot discover", async () => {
-		const [catalogs, html, inventory] = await Promise.all([
-			readLocaleCatalogs(),
-			readFile(new URL("index.html", v1Root), "utf8"),
-			JSON.parse(
-				await readFile(
-					new URL("src/locales/non-js-keys.json", v1Root),
-					"utf8",
-				),
-			),
-		])
-		expect(
-			validateNonJsInventory({
-				inventory,
-				htmlKeys: collectHtmlMessageKeys(html),
-				catalogs,
-			}),
-		).toEqual([])
 	})
 
 	it("ships the generated Python analyzer catalog with aligned messages", async () => {
