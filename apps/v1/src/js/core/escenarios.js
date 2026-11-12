@@ -11,6 +11,7 @@ const estadoEscenarios = {
     tipoEscenarioActivo: null, // 'bloqueo', 'inundacion', 'obstaculo'
     emojiObstaculoSeleccionado: 'bache', // Textura por defecto para obstáculos
     lluviaAleatoria: { activa: false, probabilidad: 10 }, // Porcentaje por paso
+    inundacionInstantanea: { porcentaje: 10 }, // Porcentaje de celdas del mapa
     isPainting: false,
     celdasBloqueadas: new Map() // key: "calleId:carril:indice", value: { tipo: string, texture?: string }
 };
@@ -173,6 +174,7 @@ function inicializarEscenarios() {
     if (escenariosInicializados) return;
     console.log('🎬 Inicializando módulo de escenarios...');
     inicializarLluviaAleatoria();
+    inicializarInundacionInstantanea();
 
     // Obtener referencias a elementos del DOM
     toggleBloqueoCarril = document.getElementById('toggleBloqueoCarril');
@@ -443,6 +445,8 @@ function restablecerSesionEscenarios() {
     estadoEscenarios.celdasBloqueadas.clear();
     desactivarEscenario();
     lluviaAleatoriaFromJSON();
+    estadoEscenarios.inundacionInstantanea.porcentaje = 10;
+    actualizarControlesInundacionInstantanea();
 
     // También funciona si se invoca antes de inicializar los listeners del UI.
     [toggleBloqueoCarril, toggleInundacion, toggleObstaculo].forEach(toggle => {
@@ -1115,9 +1119,85 @@ function cargarEscenarioBase(tipoEscenario) {
     }
 }
 
+function inicializarInundacionInstantanea() {
+    const input = document.getElementById('porcentajeInundacionInstantanea');
+    const output = document.getElementById('porcentajeInundacionInstantaneaValor');
+    const button = document.getElementById('btnInundacionInstantanea');
+
+    input?.addEventListener('input', () => {
+        const value = Number(input.value);
+        if (Number.isFinite(value) && value >= 1 && value <= 100) {
+            estadoEscenarios.inundacionInstantanea.porcentaje = value;
+            if (output) output.textContent = `${value}%`;
+        }
+    });
+
+    button?.addEventListener('click', () => {
+        const aplicadas = aplicarInundacionInstantanea();
+        if (aplicadas > 0) {
+            window.fluviNotify.success('scenarios.notifications.instantFloodApplied', { count: aplicadas });
+        } else {
+            window.fluviNotify.warning('scenarios.notifications.instantFloodNoCells');
+        }
+    });
+
+    actualizarControlesInundacionInstantanea();
+}
+
+function actualizarControlesInundacionInstantanea() {
+    const { porcentaje } = estadoEscenarios.inundacionInstantanea;
+    const input = document.getElementById('porcentajeInundacionInstantanea');
+    const output = document.getElementById('porcentajeInundacionInstantaneaValor');
+    if (input) input.value = porcentaje;
+    if (output) output.textContent = `${porcentaje}%`;
+}
+
+/**
+ * Inunda al instante un porcentaje aleatorio de las celdas del mapa. Solo usa
+ * celdas vacías, igual que la lluvia, para no borrar vehículos ni bloqueos.
+ * @returns {number} Cantidad de celdas inundadas.
+ */
+function aplicarInundacionInstantanea() {
+    const porcentaje = estadoEscenarios.inundacionInstantanea.porcentaje;
+    if (porcentaje <= 0) return 0;
+
+    let totalCeldas = 0;
+    const vacias = [];
+    for (const calle of window.calles || []) {
+        const arreglo = calle.arreglo || [];
+        arreglo.forEach((carril, carrilIndice) => {
+            carril.forEach((valor, indice) => {
+                totalCeldas++;
+                if (valor === 0) vacias.push({ calle, carril: carrilIndice, indice });
+            });
+        });
+    }
+    if (vacias.length === 0) return 0;
+
+    const objetivo = Math.min(vacias.length, Math.max(1, Math.round(totalCeldas * porcentaje / 100)));
+
+    // Barajado parcial de Fisher-Yates: elige celdas vacías sin reemplazo.
+    for (let i = 0; i < objetivo; i++) {
+        const j = i + Math.floor(Math.random() * (vacias.length - i));
+        [vacias[i], vacias[j]] = [vacias[j], vacias[i]];
+        const { calle, carril, indice } = vacias[i];
+        calle.arreglo[carril][indice] = 7;
+        const key = `${calle.id || calle.nombre}:${carril}:${indice}`;
+        estadoEscenarios.celdasBloqueadas.set(key, { tipo: 'inundacion', texture: 'inundacion' });
+    }
+
+    const renderer = window.pixiApp?.sceneManager?.carroRenderer;
+    renderer?.updateAll(window.calles);
+    window.renderizarCanvas?.();
+    if (window.isPaused) window.pixiApp?.app?.render();
+
+    return objetivo;
+}
+
 // Exponer funciones globalmente
 window.inicializarEscenarios = inicializarEscenarios;
 window.aplicarLluviaAleatoria = aplicarLluviaAleatoria;
+window.aplicarInundacionInstantanea = aplicarInundacionInstantanea;
 window.lluviaAleatoriaToJSON = lluviaAleatoriaToJSON;
 window.lluviaAleatoriaFromJSON = lluviaAleatoriaFromJSON;
 window.exportarBloqueos = exportarBloqueos;

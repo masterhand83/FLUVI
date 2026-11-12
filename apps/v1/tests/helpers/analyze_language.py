@@ -125,6 +125,21 @@ def run_analysis(module, path, kind, idioma=None):
     }
 
 
+def capacity_ranges(module, path):
+    fixture = json.loads(Path(path).read_text(encoding="utf-8"))
+    cases = []
+    for densities in ([0, 0], [0, 0.5], [0.5, 1], [1.5, 2], [2, 2.9], [3, 3.1], [50, 100]):
+        fixture["metrics"]["density"] = densities
+        analyzer = module.AnalizadorTraficoFLUVI(json.dumps(fixture), tipo="json")
+        capacity = analyzer.analisis_capacidad()
+        cases.append({
+            "densities": densities,
+            "ranges": analyzer.df["Rango_Densidad"].astype(str).tolist(),
+            "criticalDensity": float(capacity["densidad_critica"]),
+        })
+    return cases
+
+
 def capture_error(module, content, kind, idioma=None):
     archivo = io.StringIO(content) if kind == "csv" else content
     try:
@@ -147,6 +162,7 @@ def main():
     with contextlib.redirect_stdout(io.StringIO()):
         module = load_analizador(args.analizador)
         result = {
+            "capacityRanges": capacity_ranges(module, args.legacy_json),
             "csv": {
                 "es": run_analysis(module, args.legacy_csv, "csv", "es"),
                 "en": run_analysis(module, args.legacy_csv, "csv", "en"),

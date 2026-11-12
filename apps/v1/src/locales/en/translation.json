@@ -622,6 +622,10 @@
       "streets": "Streets"
     }
   },
+  "mapScreenshot": {
+    "button": "📸 Screenshot",
+    "tooltip": "Export a PNG image of the map cropped to the streets, buildings, and reference image"
+  },
   "notifications": {
     "buildingEditor": {
       "invalidNumbers": "Invalid values. Check every numeric field.",
@@ -638,7 +642,10 @@
       "loadFailed": "The simulation could not be loaded: {{reason}}",
       "loaded": "Simulation \"{{name}}\" loaded successfully.\n\n📊 Summary:\n  • Streets: {{streets}}\n  • Buildings: {{buildings}}\n  • Street connections: {{connections}}",
       "loadedOmissions": "Some saved content was not restored (invalid streets or buildings whose images or dimensions could not be loaded).\n  • Streets not restored: {{streets}}\n  • Buildings not restored: {{buildings}}",
-      "saved": "Simulation \"{{name}}\" saved successfully as JSON."
+      "saved": "Simulation \"{{name}}\" saved successfully as JSON.",
+      "screenshotEmpty": "Add streets, buildings, or a reference image before capturing the map.",
+      "screenshotFailed": "The screenshot could not be generated. Try again.",
+      "screenshotSaved": "Screenshot saved as {{file}}."
     },
     "simulation": {
       "changesAppliedGenerator": "Probabilities for «{{name}}» were updated:\n• Generation: {{generation}}%\n• Lane change: {{laneChange}}%",
@@ -683,6 +690,9 @@
       "zipUnavailable": "JSZip is unavailable. The images will be downloaded individually."
     },
     "metrics": {
+      "allExportFailed": "The complete export could not be created. Try again.",
+      "allExportPythonFailed": "{{file}} was created, but the Python analysis could not be included.",
+      "allExported": "Complete export created: {{file}}.",
       "cleared": "All metrics were cleared successfully.",
       "csvExported_one": "Exported {{count}} measurement to {{file}}.",
       "csvExported_other": "Exported {{count}} measurements to {{file}}.",
@@ -839,6 +849,13 @@
         "toggle": "Enable flood mode",
         "toggleTooltip": "Enable flood mode"
       },
+      "instantFlood": {
+        "button": "🌊 Flood now",
+        "description": "Floods empty cells at random immediately so you can test scenarios without waiting",
+        "help": "Instantly floods a random percentage of the map's empty cells. Existing vehicles and blocks are left untouched.",
+        "percentageLabel": "Percentage of cells to flood:",
+        "title": "Instant flood"
+      },
       "obstacle": {
         "badge": "⚠️ Obstacle Mode Active",
         "description": "Place specific obstacles on streets",
@@ -918,6 +935,8 @@
       "baseLoaded": "✅ Scenario \"{{name}}\" loaded successfully.\n\n📊 Statistics:\n{{stats}}",
       "baseUnavailable": "The base scenario system is unavailable.",
       "cleared": "All obstacles, floods, and blocks were removed successfully.",
+      "instantFloodApplied": "✅ Instant flood applied: {{count}} cells flooded.",
+      "instantFloodNoCells": "There are no empty cells to flood.",
       "invalidFileType": "Select a valid JSON file.",
       "loadError": "The scenario could not be loaded:\n{{reason}}",
       "loaded_one": "Scenario loaded successfully\n{{count}} cell applied",
@@ -1583,6 +1602,12 @@
       "title": "🗑️ Clear Metrics"
     },
     "export": {
+      "allButton": "Export Everything (ZIP)",
+      "allExporting": "Building complete export…",
+      "allHelp": "Includes full CSV/JSON, Python analysis, charts, current map, and summary in one ZIP.",
+      "allPackaging": "Packaging files…",
+      "allPython": "Calculating metrics with Python…",
+      "allTooltip": "Download a ZIP with all metrics, the Python analysis, charts, a snapshot of the current map, and the summary",
       "analyzeButton": "Analyze Metrics",
       "analyzeTooltip": "Analyze metrics from a CSV or JSON file with Python",
       "clearButton": "Clear Metrics",

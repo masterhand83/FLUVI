@@ -180,6 +180,7 @@
               <input id="buildingImageInput" type="file" accept="image/png,image/jpeg,image/webp" hidden>
               <small id="buildingImageStatus" role="status" aria-live="polite" data-i18n="buildingDrawing.imageHelp">PNG, JPEG o WebP, hasta 5 MB. Después, haz clic en el centro del edificio.</small>
               <button type="button" id="buildingImageCancel" class="btn btn-outline-secondary btn-sm" hidden data-i18n="buildingDrawing.cancelImage">Cancelar imagen</button>
+              <button type="button" id="btnCapturaPantalla" class="btn btn-outline-secondary btn-sm" data-bs-toggle="tooltip" data-bs-title="Exporta una imagen PNG del mapa recortada a las calles, los edificios y la imagen de referencia" data-i18n="mapScreenshot.button" data-i18n-attr="data-bs-title:mapScreenshot.tooltip">📸 Captura de pantalla</button>
               <label for="labelVisibility" data-i18n="mapLabels.title">Etiquetas del mapa</label>
               <select id="labelVisibility" class="form-select form-select-sm" aria-label="Etiquetas del mapa" data-i18n-attr="aria-label:mapLabels.title">
                 <option value="off" data-i18n="mapLabels.visibility.off">Sin etiquetas</option>
@@ -583,6 +584,25 @@
               </div>
             </div>
 
+            <!-- Inundación instantánea, sin esperar a la lluvia -->
+            <div class="scenario-card scenario-active mb-3">
+              <div class="scenario-header">
+                <div class="scenario-icon">⚡</div>
+                <div class="scenario-info">
+                  <h6 class="scenario-title mb-1" data-i18n="scenarios.cards.instantFlood.title">Inundación instantánea</h6>
+                  <p class="scenario-desc mb-2" data-i18n="scenarios.cards.instantFlood.description">Inunda celdas vacías al azar de inmediato para probar escenarios sin esperar</p>
+                </div>
+              </div>
+              <div class="scenario-controls">
+                <label class="form-label small" for="porcentajeInundacionInstantanea"><span data-i18n="scenarios.cards.instantFlood.percentageLabel">Porcentaje de celdas a inundar:</span> <output id="porcentajeInundacionInstantaneaValor" for="porcentajeInundacionInstantanea">10%</output></label>
+                <input class="form-range" type="range" id="porcentajeInundacionInstantanea" min="1" max="100" step="1" value="10">
+                <button type="button" class="btn btn-outline-primary btn-sm w-100" id="btnInundacionInstantanea">
+                  <i class="bi bi-droplet-fill"></i> <span data-i18n="scenarios.cards.instantFlood.button">🌊 Inundar ahora</span>
+                </button>
+                <p class="small text-muted mb-0 mt-2" data-i18n="scenarios.cards.instantFlood.help">Inunda al instante un porcentaje aleatorio de las celdas vacías del mapa. Los vehículos y bloqueos existentes no se modifican.</p>
+              </div>
+            </div>
+
             <!-- Obstáculo (ACTIVO) -->
             <div class="scenario-card scenario-active mb-3">
               <div class="scenario-header">
@@ -840,6 +860,10 @@
                 <span data-i18n="metrics.export.imagesButton">Exportar imágenes</span>
               </button>
               <small class="text-muted" data-i18n="metrics.export.imagesHelp">ZIP con las cinco gráficas, el resumen y el mapa de calor en PNG.</small>
+              <button type="button" id="btnExportarTodo" class="btn btn-outline-primary btn-sm" data-bs-toggle="tooltip" data-bs-title="Descarga un ZIP con todas las métricas, el análisis de Python, las gráficas, una imagen del mapa actual y el resumen" data-i18n-attr="data-bs-title:metrics.export.allTooltip">
+                <span data-i18n="metrics.export.allButton">Exportar todo (ZIP)</span>
+              </button>
+              <small class="text-muted" data-i18n="metrics.export.allHelp">Incluye CSV/JSON completos, análisis de Python, gráficas, mapa actual y resumen en un solo ZIP.</small>
               <button type="button" id="btnLimpiarMetricas" class="btn btn-danger btn-sm" data-bs-toggle="tooltip" data-bs-title="Borrar todos los datos de métricas recolectados y reiniciar gráficas" data-i18n-attr="data-bs-title:metrics.export.clearTooltip">
                 <span data-i18n="metrics.export.clearButton">Limpiar Métricas</span>
               </button>
@@ -2629,6 +2653,7 @@
   <script src="src/js/core/trafico.js"></script>
   <script src="src/js/core/graficas.js"></script>
   <script src="src/js/ui/exportarImagenesMetricas.js"></script>
+  <script src="src/js/ui/mapScreenshot.js"></script>
   <script src="src/js/ui/editor.js"></script>
   <script src="src/js/ui/edificioUI.js"></script>
   <script src="src/js/ui/mapBackgroundControls.js"></script>

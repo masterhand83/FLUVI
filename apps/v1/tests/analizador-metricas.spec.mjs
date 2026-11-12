@@ -384,6 +384,50 @@ test('closing during initialization keeps the runtime but never starts the old a
     expect(await page.evaluate(() => window.testLoads)).toBe(1)
 })
 
+test('runs the export analysis without changing the modal session', async () => {
+    const result = await page.evaluate(async () => {
+        window.exportedGlobals = {}
+        window.exportedCode = null
+        pyodideInstance = {
+            globals: { set: (key, value) => { window.exportedGlobals[key] = value } },
+            runPythonAsync: async code => {
+                window.exportedCode = code
+                return JSON.stringify({
+                    estadisticas: { columns: ['index', 'Densidad'], rows: [['mean', 1]] },
+                    imagenes: { temporal: 'data:image/png;base64,AA==' },
+                })
+            },
+        }
+        pyodideInitialized = true
+        const before = {
+            file: currentFileContent,
+            type: currentFileType,
+            results: document.getElementById('resultadosAnalisis').style.display,
+        }
+        const data = await analizarMetricasParaExportacion('Densidad\n1', 'csv')
+        return {
+            data,
+            before,
+            after: {
+                file: currentFileContent,
+                type: currentFileType,
+                results: document.getElementById('resultadosAnalisis').style.display,
+            },
+            globals: window.exportedGlobals,
+            code: window.exportedCode,
+        }
+    })
+    expect(result.data.estadisticas.columns).toEqual(['index', 'Densidad'])
+    expect(result.data.imagenes.temporal).toBe('data:image/png;base64,AA==')
+    expect(result.globals).toEqual({
+        FLUVI_EXPORT_CONTENT: 'Densidad\n1',
+        FLUVI_EXPORT_TYPE: 'csv',
+        FLUVI_EXPORT_LANGUAGE: 'es',
+    })
+    expect(result.code).toContain('exportar_analisis_web')
+    expect(result.before).toEqual(result.after)
+})
+
 test('empty replacement clears previous results and permits selecting the same file again', async () => {
     await upload('a.csv', 'A')
     await ready()

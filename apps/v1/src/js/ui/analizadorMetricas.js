@@ -374,6 +374,43 @@ async function ejecutarAnalisisCSV() {
 }
 
 /**
+ * Ejecuta el analizador Python sobre un contenido CSV/JSON sin abrir ni
+ * modificar el modal. Devuelve las tablas, estadísticas e imágenes para la
+ * exportación completa.
+ */
+async function analizarMetricasParaExportacion(contenido, tipo = 'csv') {
+  if (!contenido) {
+    throw new Error(analyzerText('analyzer.modal.errors.emptyFile'));
+  }
+  if (!pyodideInitialized) {
+    await inicializarPyodide();
+  }
+  const idiomaActivo = window.fluviI18n?.activeLanguage === 'en' ? 'en' : 'es';
+  const pending = analysisQueue.then(async () => {
+    if (pyodideInstance.globals && typeof pyodideInstance.globals.set === 'function') {
+      pyodideInstance.globals.set('FLUVI_EXPORT_CONTENT', contenido);
+      pyodideInstance.globals.set('FLUVI_EXPORT_TYPE', tipo);
+      pyodideInstance.globals.set('FLUVI_EXPORT_LANGUAGE', idiomaActivo);
+      return pyodideInstance.runPythonAsync(
+        'exportar_analisis_web(FLUVI_EXPORT_CONTENT, tipo=FLUVI_EXPORT_TYPE, idioma=FLUVI_EXPORT_LANGUAGE)',
+      );
+    }
+    const escapado = contenido.replace(/\\/g, '\\\\').replace(/"""/g, '\\"\\"\\"');
+    return pyodideInstance.runPythonAsync(
+      `exportar_analisis_web("""${escapado}""", tipo=${JSON.stringify(tipo)}, idioma=${JSON.stringify(idiomaActivo)})`,
+    );
+  });
+  analysisQueue = pending.catch(() => {});
+  const raw = await pending;
+  if (typeof raw !== 'string') {
+    try { raw?.destroy?.(); } catch { /* resultado ya liberado */ }
+  }
+  return JSON.parse(typeof raw === 'string' ? raw : String(raw));
+}
+
+window.analizarMetricasParaExportacion = analizarMetricasParaExportacion;
+
+/**
  * Muestra las imágenes generadas en el modal
  */
 function mostrarImagenes(imagenes) {

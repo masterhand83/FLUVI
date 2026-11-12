@@ -9,6 +9,7 @@ warnings.filterwarnings('ignore')
 import io
 import base64
 import json
+import math
 import re
 
 IDIOMAS_ANALIZADOR = ('es', 'en')
@@ -409,10 +410,13 @@ class AnalizadorTraficoFLUVI:
         dia_numero_critico = self.df.loc[idx_max, 'Dia_Numero']
         fecha_critica = self.df.loc[idx_max, 'Fecha_Hora']
 
-        max_densidad = self.df['Densidad'].max()
-        bins = [0, 0.5, 1.0, 1.5, 2.0, 3.0, max_densidad + 0.1]
+        # El último rango es abierto: un máximo observado bajo no debe
+        # invertir ni duplicar los límites fijos de densidad.
+        bins = [0, 0.5, 1.0, 1.5, 2.0, 3.0, float('inf')]
         labels = ['Muy Baja', 'Baja', 'Media', 'Alta', 'Muy Alta', 'Crítica']
-        self.df['Rango_Densidad'] = pd.cut(self.df['Densidad'], bins=bins, labels=labels)
+        self.df['Rango_Densidad'] = pd.cut(
+            self.df['Densidad'], bins=bins, labels=labels, include_lowest=True,
+        )
 
         flujo_por_rango = self.df.groupby('Rango_Densidad', observed=True)['Flujo'].agg(['mean', 'count'])
 
@@ -727,6 +731,89 @@ class AnalizadorTraficoFLUVI:
 
 
 # Funciones para usar desde JavaScript con Pyodide
+def _serializar_resultado_analisis(valor):
+    """Convierte los resultados del analizador en datos JSON seguros."""
+    if isinstance(valor, pd.DataFrame):
+        marco = valor.copy()
+        if isinstance(marco.columns, pd.MultiIndex):
+            marco.columns = [
+                ' | '.join(str(parte) for parte in columna if str(parte) != '')
+                for columna in marco.columns
+            ]
+        else:
+            marco.columns = [str(columna) for columna in marco.columns]
+        marco = marco.reset_index()
+        marco.columns = [str(columna) for columna in marco.columns]
+        return {
+            'columns': list(marco.columns),
+            'rows': [
+                [_serializar_resultado_analisis(item) for item in fila]
+                for fila in marco.itertuples(index=False, name=None)
+            ],
+        }
+
+    if isinstance(valor, pd.Series):
+        return [
+            {
+                'label': str(indice),
+                'value': _serializar_resultado_analisis(entrada),
+            }
+            for indice, entrada in valor.items()
+        ]
+
+    if isinstance(valor, pd.Timestamp):
+        return valor.isoformat()
+
+    if isinstance(valor, np.generic):
+        return _serializar_resultado_analisis(valor.item())
+
+    if isinstance(valor, dict):
+        return {
+            str(clave): _serializar_resultado_analisis(entrada)
+            for clave, entrada in valor.items()
+        }
+
+    if isinstance(valor, (list, tuple)):
+        return [_serializar_resultado_analisis(entrada) for entrada in valor]
+
+    if valor is None or isinstance(valor, (str, bool, int)):
+        return valor
+
+    if isinstance(valor, float):
+        return None if math.isnan(valor) or math.isinf(valor) else valor
+
+    try:
+        if pd.isna(valor):
+            return None
+    except (TypeError, ValueError):
+        pass
+
+    return str(valor)
+
+
+def exportar_analisis_web(contenido, tipo='csv', idioma='es'):
+    """Ejecuta el análisis completo y lo devuelve como JSON serializable.
+
+    A diferencia de las funciones ``analizar_*_web``, conserva también las
+    tablas y estadísticas calculadas por Python además de las imágenes, para
+    que la exportación completa pueda incluirlas en un único archivo.
+    """
+    if tipo == 'json':
+        analizador = AnalizadorTraficoFLUVI(contenido, tipo='json', idioma=idioma)
+    else:
+        analizador = AnalizadorTraficoFLUVI(io.StringIO(contenido), tipo='csv', idioma=idioma)
+
+    resultados = analizador.ejecutar_analisis_completo()
+    return json.dumps(
+        {
+            str(clave): _serializar_resultado_analisis(valor)
+            for clave, valor in resultados.items()
+        },
+        ensure_ascii=False,
+        allow_nan=False,
+    )
+
+
 def analizar_csv_web(contenido_csv, idioma='es'):
     """Función wrapper para llamar desde JavaScript con CSV"""
     import io

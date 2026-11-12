@@ -1,7 +1,9 @@
 console.log('🚀 trafico.js cargando...');
 
 const canvas = document.getElementById("simuladorCanvas");
-const ctx = canvas.getContext("2d");
+// `ctx` se reemplaza temporalmente durante capturas fuera de pantalla; nunca
+// debe quedar apuntando a un lienzo ajeno después de dibujar.
+let ctx = canvas.getContext("2d");
 
 // Motor Gráfico PixiJS - Se inicializa después
 let pixiInitialized = false;
@@ -2224,6 +2226,53 @@ function dibujarImagenReferencia() {
     ctx.restore();
 }
 
+
+// Dibuja el contenido del mapa (sin minimapa ni controles DOM) en un lienzo
+// externo. La captura reutiliza exactamente las funciones del renderizador
+// Canvas 2D y restaura el contexto y la cámara aunque el dibujo falle.
+function dibujarMapaEnCanvas(destino, vista) {
+    if (!destino || typeof destino.getContext !== "function") {
+        throw new Error("Se requiere un lienzo de destino para la captura");
+    }
+    const contextoAnterior = ctx;
+    const escalaAnterior = escala;
+    const offsetXAnterior = offsetX;
+    const offsetYAnterior = offsetY;
+    ctx = destino.getContext("2d");
+    escala = vista.escala;
+    offsetX = vista.offsetX;
+    offsetY = vista.offsetY;
+    window.escala = escala;
+    window.offsetX = offsetX;
+    window.offsetY = offsetY;
+    try {
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, destino.width, destino.height);
+        ctx.fillStyle = window.mapBackgroundCycle
+            ? window.mapBackgroundCycle.getBackgroundColorCss()
+            : colorFondoCanvas;
+        ctx.fillRect(0, 0, destino.width, destino.height);
+        ctx.setTransform(escala, 0, 0, escala, offsetX, offsetY);
+
+        dibujarImagenReferencia();
+        dibujarEdificios();
+        dibujarCalles();
+        dibujarCarros();
+        dibujarConexionesDetectadas();
+        dibujarVertices();
+        dibujarEtiquetasCalles();
+        dibujarEtiquetasEdificios();
+        return destino;
+    } finally {
+        ctx = contextoAnterior;
+        escala = escalaAnterior;
+        offsetX = offsetXAnterior;
+        offsetY = offsetYAnterior;
+        window.escala = escalaAnterior;
+        window.offsetX = offsetXAnterior;
+        window.offsetY = offsetYAnterior;
+    }
+}
 
 // Función para calcular los límites del mapa
 function calcularLimitesMapa() {
@@ -5743,6 +5792,7 @@ selectCalle.addEventListener("change", () => {
 });
 
 window.renderizarCanvas = renderizarCanvas;
+window.dibujarMapaEnCanvas = dibujarMapaEnCanvas;
 window.encontrarCeldaMasCercana = encontrarCeldaMasCercana;
 window.dibujarMinimapa = dibujarMinimapa;
 window.calcularLimitesMapa = calcularLimitesMapa;

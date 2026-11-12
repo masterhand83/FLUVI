@@ -1078,14 +1078,10 @@ function actualizarColoresGraficas(modoOscuro) {
 // ==================== FUNCIONES DE EXPORTACIÓN DE MÉTRICAS ====================
 
 /**
- * Exporta las métricas a formato CSV (TODAS las medidas desde el inicio)
+ * Construye el contenido CSV con TODAS las medidas desde el inicio.
+ * No descarga nada: se reutiliza en las exportaciones individuales y completas.
  */
-function descargarMetricasCSV() {
-    if (completeMetricsHistory.timestamps.length === 0) {
-        window.fluviNotify?.warning('notifications.metrics.nothingToExport');
-        return;
-    }
-
+function construirMetricasCSV(history = completeMetricsHistory) {
     // Función auxiliar para calcular estadísticas
     const calcularEstadisticas = (arr) => {
         if (arr.length === 0) return { avg: 0, min: 0, max: 0 };
@@ -1095,12 +1091,12 @@ function descargarMetricasCSV() {
         return { avg: avg.toFixed(2), min: min.toFixed(2), max: max.toFixed(2) };
     };
 
-    // Calcular estadísticas del historial COMPLETO
-    const densityStats = calcularEstadisticas(completeMetricsHistory.density);
-    const throughputStats = calcularEstadisticas(completeMetricsHistory.throughput);
-    const netGenStats = calcularEstadisticas(completeMetricsHistory.netGeneration);
-    const speedStats = calcularEstadisticas(completeMetricsHistory.speed);
-    const entropyStats = calcularEstadisticas(completeMetricsHistory.entropy);
+    // Calcular estadísticas del historial solicitado
+    const densityStats = calcularEstadisticas(history.density);
+    const throughputStats = calcularEstadisticas(history.throughput);
+    const netGenStats = calcularEstadisticas(history.netGeneration);
+    const speedStats = calcularEstadisticas(history.speed);
+    const entropyStats = calcularEstadisticas(history.entropy);
 
     // Metadata del tiempo virtual (formato de exportación estable en español).
     // Si un contexto antiguo no expone el formateador de exportación, se usa el
@@ -1112,7 +1108,7 @@ function descargarMetricasCSV() {
         csvContent += `Tiempo Virtual: ${timestampExportacion()}\n`;
         csvContent += `Perfiles Dinamicos Activos: ${window.configuracionTiempo.usarPerfiles ? 'Si' : 'No'}\n`;
         csvContent += `Tiempo por Paso: ${window.SEGUNDOS_POR_PASO || 1.0} segundo(s) simulados\n`;
-        csvContent += `Total de Mediciones: ${completeMetricsHistory.timestamps.length}\n`;
+        csvContent += `Total de Mediciones: ${history.timestamps.length}\n`;
         csvContent += '\n';
     }
 
@@ -1120,8 +1116,8 @@ function descargarMetricasCSV() {
     csvContent += 'Marca de Tiempo,Densidad (%),Flujo (veh/s),Generacion Neta (veh/s),Velocidad (% movimiento),Entropia (bits)\n';
 
     // Datos de series temporales (TODAS las medidas desde el inicio)
-    for (let i = 0; i < completeMetricsHistory.timestamps.length; i++) {
-        csvContent += `${completeMetricsHistory.exportTimestamps[i]},${completeMetricsHistory.density[i]},${completeMetricsHistory.throughput[i]},${completeMetricsHistory.netGeneration[i]},${completeMetricsHistory.speed[i]},${completeMetricsHistory.entropy[i]}\n`;
+    for (let i = 0; i < history.timestamps.length; i++) {
+        csvContent += `${history.exportTimestamps[i]},${history.density[i]},${history.throughput[i]},${history.netGeneration[i]},${history.speed[i]},${history.entropy[i]}\n`;
     }
 
     // Agregar línea en blanco y sección de estadísticas (en español)
@@ -1133,10 +1129,6 @@ function descargarMetricasCSV() {
     csvContent += `Generacion Neta (veh/s),${netGenStats.avg},${netGenStats.min},${netGenStats.max}\n`;
     csvContent += `Velocidad (% movimiento),${speedStats.avg},${speedStats.min},${speedStats.max}\n`;
     csvContent += `Entropia (bits),${entropyStats.avg},${entropyStats.min},${entropyStats.max}\n`;
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
 
     // Generar nombre de archivo con tiempo virtual si está disponible
     let fileName;
@@ -1151,6 +1143,23 @@ function descargarMetricasCSV() {
         fileName = `metricas_trafico_${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}.csv`;
     }
 
+    return { content: csvContent, fileName, count: history.timestamps.length };
+}
+
+/**
+ * Exporta las métricas a formato CSV (TODAS las medidas desde el inicio)
+ */
+function descargarMetricasCSV() {
+    if (completeMetricsHistory.timestamps.length === 0) {
+        window.fluviNotify?.warning('notifications.metrics.nothingToExport');
+        return;
+    }
+
+    const { content: csvContent, fileName, count } = construirMetricasCSV();
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+
     link.setAttribute('href', url);
     link.setAttribute('download', fileName);
     link.style.visibility = 'hidden';
@@ -1159,21 +1168,17 @@ function descargarMetricasCSV() {
     document.body.removeChild(link);
 
     window.fluviNotify?.success('notifications.metrics.csvExported', {
-        count: completeMetricsHistory.timestamps.length,
+        count,
         file: fileName
     });
-    console.log(`✅ Métricas exportadas a CSV: ${fileName} (${completeMetricsHistory.timestamps.length} mediciones)`);
+    console.log(`✅ Métricas exportadas a CSV: ${fileName} (${count} mediciones)`);
 }
 
 /**
- * Exporta las métricas a formato JSON
+ * Construye el contenido JSON a partir de un historial de métricas.
+ * No descarga nada: se reutiliza en las exportaciones individuales y completas.
  */
-function descargarMetricasJSON() {
-    if (metricsHistory.timestamps.length === 0) {
-        window.fluviNotify?.warning('notifications.metrics.nothingToExport');
-        return;
-    }
-
+function construirMetricasJSON(history = metricsHistory) {
     const calcularEstadisticas = (arr) => {
         if (arr.length === 0) return { avg: 0, min: 0, max: 0 };
         const avg = arr.reduce((a, b) => a + b, 0) / arr.length;
@@ -1187,7 +1192,7 @@ function descargarMetricasJSON() {
         version: '2.2',
         exportDate: new Date().toISOString(),
         simulationName: 'FLUVI Traffic Simulation',
-        totalDataPoints: metricsHistory.timestamps.length,
+        totalDataPoints: history.timestamps.length,
         metricsDescription: {
             density: 'Porcentaje de celdas ocupadas',
             throughput: 'Flujo vehicular real (Q = Densidad × Velocidad) en veh/s',
@@ -1217,26 +1222,23 @@ function descargarMetricasJSON() {
     const data = {
         metadata: metadata,
         metrics: {
-            timestamps: metricsHistory.exportTimestamps,
-            density: metricsHistory.density,
-            throughput: metricsHistory.throughput,
-            netGeneration: metricsHistory.netGeneration,
-            speed: metricsHistory.speed,
-            entropy: metricsHistory.entropy
+            timestamps: history.exportTimestamps,
+            density: history.density,
+            throughput: history.throughput,
+            netGeneration: history.netGeneration,
+            speed: history.speed,
+            entropy: history.entropy
         },
         statistics: {
-            density: calcularEstadisticas(metricsHistory.density),
-            throughput: calcularEstadisticas(metricsHistory.throughput),
-            netGeneration: calcularEstadisticas(metricsHistory.netGeneration),
-            speed: calcularEstadisticas(metricsHistory.speed),
-            entropy: calcularEstadisticas(metricsHistory.entropy)
+            density: calcularEstadisticas(history.density),
+            throughput: calcularEstadisticas(history.throughput),
+            netGeneration: calcularEstadisticas(history.netGeneration),
+            speed: calcularEstadisticas(history.speed),
+            entropy: calcularEstadisticas(history.entropy)
         }
     };
 
     const jsonContent = JSON.stringify(data, null, 2);
-    const blob = new Blob([jsonContent], { type: 'application/json;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
 
     // Generar nombre de archivo con tiempo virtual si está disponible
     let fileName;
@@ -1251,6 +1253,23 @@ function descargarMetricasJSON() {
         fileName = `metricas_trafico_${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}.json`;
     }
 
+    return { content: jsonContent, fileName, count: history.timestamps.length };
+}
+
+/**
+ * Exporta las métricas a formato JSON
+ */
+function descargarMetricasJSON() {
+    if (metricsHistory.timestamps.length === 0) {
+        window.fluviNotify?.warning('notifications.metrics.nothingToExport');
+        return;
+    }
+
+    const { content: jsonContent, fileName, count } = construirMetricasJSON();
+    const blob = new Blob([jsonContent], { type: 'application/json;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+
     link.setAttribute('href', url);
     link.setAttribute('download', fileName);
     link.style.visibility = 'hidden';
@@ -1259,7 +1278,7 @@ function descargarMetricasJSON() {
     document.body.removeChild(link);
 
     window.fluviNotify?.success('notifications.metrics.jsonExported', {
-        count: metricsHistory.timestamps.length,
+        count,
         file: fileName
     });
     console.log(`Métricas exportadas a JSON: ${fileName}`);
@@ -1711,6 +1730,8 @@ window.actualizarPanelInterpretacion = actualizarPanelInterpretacion;
 window.actualizarColoresGraficas = actualizarColoresGraficas;
 window.initializeCharts = initializeCharts;
 window.updateCharts = updateCharts;
+window.construirMetricasCSV = construirMetricasCSV;
+window.construirMetricasJSON = construirMetricasJSON;
 window.descargarMetricasCSV = descargarMetricasCSV;
 window.descargarMetricasJSON = descargarMetricasJSON;
 window.limpiarMetricas = limpiarMetricas;

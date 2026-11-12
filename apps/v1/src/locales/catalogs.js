@@ -630,6 +630,10 @@ window.FLUVI_LOCALE_RESOURCES = {
 					"streets": "Calles"
 				}
 			},
+			"mapScreenshot": {
+				"button": "📸 Captura de pantalla",
+				"tooltip": "Exporta una imagen PNG del mapa recortada a las calles, los edificios y la imagen de referencia"
+			},
 			"notifications": {
 				"buildingEditor": {
 					"invalidNumbers": "Valores inválidos. Verifica todos los campos numéricos.",
@@ -646,7 +650,10 @@ window.FLUVI_LOCALE_RESOURCES = {
 					"loadFailed": "No se pudo cargar la simulación: {{reason}}",
 					"loaded": "Simulación «{{name}}» cargada correctamente.\n\n📊 Resumen:\n  • Calles: {{streets}}\n  • Edificios: {{buildings}}\n  • Conexiones entre calles: {{connections}}",
 					"loadedOmissions": "Parte del contenido guardado no se restauró (calles inválidas o edificios cuya imagen o dimensiones no se pudieron cargar).\n  • Calles no restauradas: {{streets}}\n  • Edificios no restaurados: {{buildings}}",
-					"saved": "Simulación «{{name}}» guardada correctamente como JSON."
+					"saved": "Simulación «{{name}}» guardada correctamente como JSON.",
+					"screenshotEmpty": "Agrega calles, edificios o una imagen de referencia antes de capturar el mapa.",
+					"screenshotFailed": "No se pudo generar la captura de pantalla. Intenta nuevamente.",
+					"screenshotSaved": "Captura de pantalla guardada como {{file}}."
 				},
 				"simulation": {
 					"changesAppliedGenerator": "Se actualizaron las probabilidades de «{{name}}»:\n• Generación: {{generation}}%\n• Cambio de carril: {{laneChange}}%",
@@ -691,6 +698,9 @@ window.FLUVI_LOCALE_RESOURCES = {
 					"zipUnavailable": "JSZip no está disponible. Se descargarán las imágenes individualmente."
 				},
 				"metrics": {
+					"allExportFailed": "No se pudo crear la exportación completa. Intenta nuevamente.",
+					"allExportPythonFailed": "Se creó {{file}}, pero no se pudo incluir el análisis de Python.",
+					"allExported": "Exportación completa creada: {{file}}.",
 					"cleared": "Todas las métricas han sido eliminadas exitosamente.",
 					"csvExported_one": "Se exportó {{count}} medición a {{file}}.",
 					"csvExported_other": "Se exportaron {{count}} mediciones a {{file}}.",
@@ -852,6 +862,13 @@ window.FLUVI_LOCALE_RESOURCES = {
 						"toggle": "Activar modo inundación",
 						"toggleTooltip": "Activar modo de inundación"
 					},
+					"instantFlood": {
+						"button": "🌊 Inundar ahora",
+						"description": "Inunda celdas vacías al azar de inmediato para probar escenarios sin esperar",
+						"help": "Inunda al instante un porcentaje aleatorio de las celdas vacías del mapa. Los vehículos y bloqueos existentes no se modifican.",
+						"percentageLabel": "Porcentaje de celdas a inundar:",
+						"title": "Inundación instantánea"
+					},
 					"obstacle": {
 						"badge": "⚠️ Modo Obstáculo Activo",
 						"description": "Coloca obstáculos específicos en las calles",
@@ -935,6 +952,8 @@ window.FLUVI_LOCALE_RESOURCES = {
 					"baseLoaded": "✅ Escenario «{{name}}» cargado correctamente.\n\n📊 Estadísticas:\n{{stats}}",
 					"baseUnavailable": "El sistema de escenarios base no está disponible.",
 					"cleared": "Todos los obstáculos, inundaciones y bloqueos se eliminaron correctamente.",
+					"instantFloodApplied": "✅ Inundación instantánea aplicada: {{count}} celdas inundadas.",
+					"instantFloodNoCells": "No hay celdas vacías para inundar.",
 					"invalidFileType": "Selecciona un archivo JSON válido.",
 					"loadError": "No se pudo cargar el escenario:\n{{reason}}",
 					"loaded_many": "Escenario cargado correctamente\n{{count}} celdas aplicadas",
@@ -1608,6 +1627,12 @@ window.FLUVI_LOCALE_RESOURCES = {
 					"title": "🗑️ Limpiar Métricas"
 				},
 				"export": {
+					"allButton": "Exportar todo (ZIP)",
+					"allExporting": "Generando exportación completa…",
+					"allHelp": "Incluye CSV/JSON completos, análisis de Python, gráficas, mapa actual y resumen en un solo ZIP.",
+					"allPackaging": "Empaquetando archivos…",
+					"allPython": "Calculando métricas con Python…",
+					"allTooltip": "Descarga un ZIP con todas las métricas, el análisis de Python, las gráficas, una imagen del mapa actual y el resumen",
 					"analyzeButton": "Analizar Métricas",
 					"analyzeTooltip": "Analizar métricas desde un archivo CSV o JSON con Python",
 					"clearButton": "Limpiar Métricas",
@@ -2438,6 +2463,10 @@ window.FLUVI_LOCALE_RESOURCES = {
 					"streets": "Streets"
 				}
 			},
+			"mapScreenshot": {
+				"button": "📸 Screenshot",
+				"tooltip": "Export a PNG image of the map cropped to the streets, buildings, and reference image"
+			},
 			"notifications": {
 				"buildingEditor": {
 					"invalidNumbers": "Invalid values. Check every numeric field.",
@@ -2454,7 +2483,10 @@ window.FLUVI_LOCALE_RESOURCES = {
 					"loadFailed": "The simulation could not be loaded: {{reason}}",
 					"loaded": "Simulation \"{{name}}\" loaded successfully.\n\n📊 Summary:\n  • Streets: {{streets}}\n  • Buildings: {{buildings}}\n  • Street connections: {{connections}}",
 					"loadedOmissions": "Some saved content was not restored (invalid streets or buildings whose images or dimensions could not be loaded).\n  • Streets not restored: {{streets}}\n  • Buildings not restored: {{buildings}}",
-					"saved": "Simulation \"{{name}}\" saved successfully as JSON."
+					"saved": "Simulation \"{{name}}\" saved successfully as JSON.",
+					"screenshotEmpty": "Add streets, buildings, or a reference image before capturing the map.",
+					"screenshotFailed": "The screenshot could not be generated. Try again.",
+					"screenshotSaved": "Screenshot saved as {{file}}."
 				},
 				"simulation": {
 					"changesAppliedGenerator": "Probabilities for «{{name}}» were updated:\n• Generation: {{generation}}%\n• Lane change: {{laneChange}}%",
@@ -2499,6 +2531,9 @@ window.FLUVI_LOCALE_RESOURCES = {
 					"zipUnavailable": "JSZip is unavailable. The images will be downloaded individually."
 				},
 				"metrics": {
+					"allExportFailed": "The complete export could not be created. Try again.",
+					"allExportPythonFailed": "{{file}} was created, but the Python analysis could not be included.",
+					"allExported": "Complete export created: {{file}}.",
 					"cleared": "All metrics were cleared successfully.",
 					"csvExported_one": "Exported {{count}} measurement to {{file}}.",
 					"csvExported_other": "Exported {{count}} measurements to {{file}}.",
@@ -2655,6 +2690,13 @@ window.FLUVI_LOCALE_RESOURCES = {
 						"toggle": "Enable flood mode",
 						"toggleTooltip": "Enable flood mode"
 					},
+					"instantFlood": {
+						"button": "🌊 Flood now",
+						"description": "Floods empty cells at random immediately so you can test scenarios without waiting",
+						"help": "Instantly floods a random percentage of the map's empty cells. Existing vehicles and blocks are left untouched.",
+						"percentageLabel": "Percentage of cells to flood:",
+						"title": "Instant flood"
+					},
 					"obstacle": {
 						"badge": "⚠️ Obstacle Mode Active",
 						"description": "Place specific obstacles on streets",
@@ -2734,6 +2776,8 @@ window.FLUVI_LOCALE_RESOURCES = {
 					"baseLoaded": "✅ Scenario \"{{name}}\" loaded successfully.\n\n📊 Statistics:\n{{stats}}",
 					"baseUnavailable": "The base scenario system is unavailable.",
 					"cleared": "All obstacles, floods, and blocks were removed successfully.",
+					"instantFloodApplied": "✅ Instant flood applied: {{count}} cells flooded.",
+					"instantFloodNoCells": "There are no empty cells to flood.",
 					"invalidFileType": "Select a valid JSON file.",
 					"loadError": "The scenario could not be loaded:\n{{reason}}",
 					"loaded_one": "Scenario loaded successfully\n{{count}} cell applied",
@@ -3399,6 +3443,12 @@ window.FLUVI_LOCALE_RESOURCES = {
 					"title": "🗑️ Clear Metrics"
 				},
 				"export": {
+					"allButton": "Export Everything (ZIP)",
+					"allExporting": "Building complete export…",
+					"allHelp": "Includes full CSV/JSON, Python analysis, charts, current map, and summary in one ZIP.",
+					"allPackaging": "Packaging files…",
+					"allPython": "Calculating metrics with Python…",
+					"allTooltip": "Download a ZIP with all metrics, the Python analysis, charts, a snapshot of the current map, and the summary",
 					"analyzeButton": "Analyze Metrics",
 					"analyzeTooltip": "Analyze metrics from a CSV or JSON file with Python",
 					"clearButton": "Clear Metrics",

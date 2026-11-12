@@ -122,7 +122,7 @@
         ctx.fillText(text(panel.querySelector('.status-title')), 80, 100);
         ctx.fillStyle = '#334155';
         ctx.font = '26px sans-serif';
-        description.forEach((line, index) => ctx.fillText(line, 80, 148 + index * 38));
+        description.forEach((line, index) => { ctx.fillText(line, 80, 148 + index * 38); });
 
         // Tabla con columnas alineadas y sombreado discreto, apta para impresión.
         ctx.fillStyle = '#244663';
@@ -133,7 +133,7 @@
             imageText('metrics.imageExport.summary.table.indicator'),
             imageText('metrics.imageExport.summary.table.value'),
             imageText('metrics.imageExport.summary.table.interpretation')
-        ].forEach((label, index) => ctx.fillText(label, [80, 510, 800][index], tableTop + 42));
+        ].forEach((label, index) => { ctx.fillText(label, [80, 510, 800][index], tableTop + 42); });
         rows.forEach((row, index) => {
             const y = tableTop + 64 + index * 76;
             ctx.fillStyle = index % 2 === 0 ? '#f5f7fa' : '#ffffff';
@@ -170,7 +170,7 @@
         ctx.font = 'bold 24px sans-serif';
         ctx.fillText(imageText('metrics.imageExport.notes.title'), 80, notesTop + 42);
         ctx.font = '24px sans-serif';
-        notes.forEach((line, index) => ctx.fillText(line, 80, notesTop + 82 + index * 38));
+        notes.forEach((line, index) => { ctx.fillText(line, 80, notesTop + 82 + index * 38); });
         return image;
     }
 
@@ -179,6 +179,183 @@
             blob => blob ? resolve(blob) : reject(new Error('No se pudo generar una imagen PNG')),
             'image/png'
         ));
+    }
+
+    // Captura exactamente la vista actual del mapa, sin el minimapa ni los
+    // controles DOM. En Pixi se lee el framebuffer recién renderizado porque
+    // el contexto no conserva el búfer de dibujo entre tareas.
+    function mapImage() {
+        const canvas = document.getElementById('simuladorCanvas');
+        const pixi = window.pixiApp;
+        if (window.USE_PIXI && pixi?.app?.renderer?.extract && window.PIXI?.Rectangle) {
+            try {
+                const renderer = pixi.app.renderer;
+                renderer.render(pixi.app.stage);
+                const width = Math.max(1, Math.round(renderer.width / renderer.resolution));
+                const height = Math.max(1, Math.round(renderer.height / renderer.resolution));
+                return renderer.extract.canvas(undefined, new window.PIXI.Rectangle(0, 0, width, height));
+            } catch (error) {
+                console.warn('No se pudo extraer la vista Pixi; se usará el lienzo visible:', error);
+            }
+        }
+        if (!canvas) throw new Error('No se encontró el lienzo del mapa');
+        if (window.USE_PIXI && pixi?.app?.renderer && pixi.app.stage) {
+            try { pixi.app.renderer.render(pixi.app.stage); } catch { /* usar el lienzo tal cual */ }
+        }
+        const image = document.createElement('canvas');
+        image.width = canvas.width;
+        image.height = canvas.height;
+        image.getContext('2d').drawImage(canvas, 0, 0);
+        return image;
+    }
+
+    function dataUrlBlob(dataUrl) {
+        if (typeof dataUrl !== 'string') throw new Error('Imagen de Python inválida');
+        const separator = dataUrl.indexOf(',');
+        if (separator === -1) throw new Error('Imagen de Python inválida');
+        const header = dataUrl.slice(0, separator);
+        const mime = header.match(/^data:([^;]+)/)?.[1] || 'image/png';
+        const binary = atob(dataUrl.slice(separator + 1));
+        const bytes = new Uint8Array(binary.length);
+        for (let index = 0; index < binary.length; index++) bytes[index] = binary.charCodeAt(index);
+        return new Blob([bytes], { type: mime });
+    }
+
+    const pythonImageNames = {
+        temporal: 'analisis_temporal.png',
+        fundamentales: 'diagrama_fundamental.png',
+        distribuciones: 'distribuciones_correlaciones.png'
+    };
+
+    function heatmapImage() {
+        if (!window.heatmapModal) return null;
+        try {
+            const rendered = window.heatmapModal.render({
+                canvas: document.createElement('canvas'), maxWidth: WIDTH - 96, maxHeight: 1100
+            });
+            const heatmap = reportCanvas(rendered.height + 170);
+            const ctx = heatmap.getContext('2d');
+            ctx.drawImage(rendered, (WIDTH - rendered.width) / 2, 48);
+            const gradient = ctx.createLinearGradient(48, 0, WIDTH - 48, 0);
+            for (const stop of [0, 0.33, 0.66, 1]) {
+                gradient.addColorStop(stop, window.heatmapModal.getColorForDensity(stop));
+            }
+            ctx.fillStyle = gradient;
+            ctx.fillRect(48, rendered.height + 78, WIDTH - 96, 20);
+            ctx.fillStyle = '#172033';
+            ctx.font = '26px sans-serif';
+            ctx.fillText(imageText('metrics.imageExport.heatmapLegend.low'), 48, rendered.height + 135);
+            ctx.textAlign = 'right';
+            ctx.fillText(imageText('metrics.imageExport.heatmapLegend.high'), WIDTH - 48, rendered.height + 135);
+            return heatmap;
+        } catch (error) {
+            console.warn('No se pudo incluir el mapa de calor en la exportación completa:', error);
+            return null;
+        }
+    }
+
+    async function runPythonExport(csvContent) {
+        if (typeof window.analizarMetricasParaExportacion !== 'function') {
+            return { result: null, error: new Error('El analizador de Python no está cargado') };
+        }
+        try {
+            return { result: await window.analizarMetricasParaExportacion(csvContent, 'csv'), error: null };
+        } catch (error) {
+            console.error('Error al calcular el análisis de Python para la exportación completa:', error);
+            return { result: null, error };
+        }
+    }
+
+    function addPythonImages(zip, imagenes) {
+        for (const [key, dataUrl] of Object.entries(imagenes)) {
+            zip.file(pythonImageNames[key] || `analisis_${key}.png`, dataUrlBlob(dataUrl));
+        }
+    }
+
+    function addPythonFiles(zip, pythonResult, pythonError) {
+        if (pythonError) {
+            zip.file('analisis_python_error.txt', String(pythonError?.message || pythonError));
+            return;
+        }
+        if (!pythonResult) return;
+        const imagenes = pythonResult.imagenes && typeof pythonResult.imagenes === 'object'
+            ? pythonResult.imagenes : {};
+        const analisis = Object.fromEntries(
+            Object.entries(pythonResult).filter(([key]) => key !== 'imagenes')
+        );
+        zip.file('analisis_metricas.json', JSON.stringify({
+            generatedAt: new Date().toISOString(),
+            language: window.fluviI18n?.activeLanguage === 'en' ? 'en' : 'es',
+            analysis: analisis
+        }, null, 2));
+        addPythonImages(zip, imagenes);
+    }
+
+    async function exportAll(button) {
+        if (button.disabled) return;
+        if (!completeMetricsHistory.timestamps.length) {
+            window.fluviNotify?.warning('notifications.metrics.nothingToExport');
+            return;
+        }
+        if (!window.JSZip || typeof window.construirMetricasCSV !== 'function' || typeof window.construirMetricasJSON !== 'function') {
+            window.fluviNotify?.error('notifications.metrics.allExportFailed');
+            return;
+        }
+        const labelElement = button.querySelector('[data-i18n="metrics.export.allButton"]') || button;
+        const label = labelElement.textContent;
+        button.disabled = true;
+        labelElement.textContent = imageText('metrics.export.allExporting');
+        try {
+            // Capturar todo lo síncrono antes de ceder el hilo a Pyodide: la
+            // simulación puede seguir avanzando mientras Python se inicializa.
+            const csv = window.construirMetricasCSV();
+            const json = window.construirMetricasJSON(completeMetricsHistory);
+            const chartImages = chartDefinitions.map(
+                ([name, unit, source, metric]) => [name, chartImage(source(), name, unit, metric)]
+            );
+            const summary = summaryImage();
+            const map = mapImage();
+            const heatmap = heatmapImage();
+
+            labelElement.textContent = imageText('metrics.export.allPython');
+            const { result: pythonResult, error: pythonError } = await runPythonExport(csv.content);
+
+            labelElement.textContent = imageText('metrics.export.allPackaging');
+            const zip = new JSZip();
+            const addImage = async (name, image) => zip.file(name, await png(image));
+            await Promise.all([
+                ...chartImages.map(([name, image]) => addImage(`graficas/${name}.png`, image)),
+                addImage('resumen.png', summary),
+                addImage('mapa_actual.png', map),
+                ...(heatmap ? [addImage('mapa_de_calor.png', heatmap)] : [])
+            ]);
+            zip.file('metricas.csv', csv.content);
+            zip.file('metricas.json', json.content);
+            addPythonFiles(zip, pythonResult, pythonError);
+
+            const blob = await zip.generateAsync({ type: 'blob' });
+            const fileName = `exportacion_completa_${new Date().toISOString().replace(/[:.]/g, '-')}.zip`;
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = fileName;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+            if (pythonError) {
+                window.fluviNotify?.warning('notifications.metrics.allExportPythonFailed', { file: fileName });
+            } else {
+                window.fluviNotify?.success('notifications.metrics.allExported', { file: fileName });
+            }
+        } catch (error) {
+            console.error('Error al crear la exportación completa:', error);
+            window.fluviNotify?.error('notifications.metrics.allExportFailed');
+        } finally {
+            button.disabled = false;
+            labelElement.textContent = label;
+        }
     }
 
     async function exportImages(button) {
@@ -201,7 +378,9 @@
             const ctx = heatmap.getContext('2d');
             ctx.drawImage(map, (WIDTH - map.width) / 2, 48);
             const gradient = ctx.createLinearGradient(48, 0, WIDTH - 48, 0);
-            [0, 0.33, 0.66, 1].forEach(stop => gradient.addColorStop(stop, window.heatmapModal.getColorForDensity(stop)));
+            for (const stop of [0, 0.33, 0.66, 1]) {
+                gradient.addColorStop(stop, window.heatmapModal.getColorForDensity(stop));
+            }
             ctx.fillStyle = gradient;
             ctx.fillRect(48, map.height + 78, WIDTH - 96, 20);
             ctx.fillStyle = '#172033';
@@ -235,5 +414,7 @@
     document.addEventListener('DOMContentLoaded', () => {
         const button = document.getElementById('btnExportarImagenes');
         if (button) button.addEventListener('click', () => exportImages(button));
+        const allButton = document.getElementById('btnExportarTodo');
+        if (allButton) allButton.addEventListener('click', () => exportAll(allButton));
     });
 })();

@@ -86,6 +86,21 @@ const parsed = analyzeBothLanguages()
 const joined = (summary) => summary.presentation.join("\n")
 
 describe("Python analyzer language support", () => {
+	it("classifies density boundaries without decreasing or duplicate bins", () => {
+		expect(parsed.capacityRanges.map((entry) => entry.ranges)).toEqual([
+			["Muy Baja", "Muy Baja"],
+			["Muy Baja", "Muy Baja"],
+			["Muy Baja", "Baja"],
+			["Media", "Alta"],
+			["Alta", "Muy Alta"],
+			["Muy Alta", "Crítica"],
+			["Crítica", "Crítica"],
+		])
+		for (const entry of parsed.capacityRanges) {
+			expect(entry.criticalDensity).toBe(entry.densities[1])
+		}
+	})
+
 	it("keeps numerical results and internal contracts identical across languages", () => {
 		for (const kind of ["csv", "json"]) {
 			const spanish = parsed[kind].es

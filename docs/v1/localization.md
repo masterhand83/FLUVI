@@ -172,10 +172,8 @@ text into spans and translate the nested element separately; do not annotate a
 container that already has emphasised child text, or the translated sentence
 would duplicate the child.
 
-Focused coverage lives in `tests/localization.spec.mjs`: both languages, desktop
-and mobile viewports, light and dark themes, settings control reachability,
-translated labels/tooltips, preserved shortcut/credit content, and modal bounds
-without horizontal overflow.
+Catalog validation and remaining browser workflows are listed in the coverage
+table below.
 
 ## Virtual time and traffic profiles
 
@@ -225,11 +223,8 @@ public globals keep their current spelling. The UI distinguishes a street of
 type CONEXION from a Conexión entre calles (street connection) in both
 languages.
 
-Browser coverage lives in `tests/street-localization.spec.mjs` (Spanish and
-English, Canvas and Pixi, desktop and mobile, both themes, geometry edits,
-lane/generation controls, validation, safe names, and notifications).
-`tests/cell-tooltip.spec.mjs` covers the localized tooltip format and physical
-cell indexes.
+Street geometry and generation behavior are covered by the focused geometry and
+lane-generation tests.
 
 ## Street connection drafting and editing
 
@@ -262,11 +257,8 @@ and toasts. The UI calls these mappings **Conexión entre calles** /
 **street connection**; the terminology section below keeps that distinct from a
 Calle whose `tipo` is `conexion`.
 
-Browser coverage lives in `tests/connection-localization.spec.mjs` (Spanish and
-English, Canvas and Pixi, correction, cancellation, saved-link reopening,
-incorporation lane selection, probabilistic transfer mapping, duplicate,
-direction, and incomplete-draft validation, legacy creation/edit/delete,
-notification severities, safe names, desktop/mobile, and both themes).
+Connection drafting workflows are covered by `tests/smoke/create-link.mjs` and
+`tests/smoke/connection-types.mjs`.
 
 ## Building appearance workflows
 
@@ -297,10 +289,7 @@ not renamed when a later session starts in the other language. The Canvas
 stored label unchanged. Functional-parking controls and validation remain owned by
 ticket 08; appearance labels never decide whether a building is parking.
 
-Browser coverage lives in `tests/building-localization.spec.mjs` (Spanish and
-English, Canvas and Pixi, rectangular/polygonal/image creation, image replacement,
-invalid uploads and polygon geometry, safe names, renderer tooltips, deletion
-confirmation, notification severities, desktop/mobile, and both themes).
+Building geometry and persistence are covered by the focused building tests.
 
 ## Functional parking
 
@@ -339,11 +328,7 @@ outline without prose, and the Pixi occupancy counter keeps the
 The translated text does not influence spawning, connection ownership,
 occupancy, cleanup, or conservation.
 
-Browser coverage lives in `tests/parking-localization.spec.mjs` (Spanish and
-English, Canvas and Pixi, valid configuration, rejected edits that preserve live
-mappings, legacy controls, notification severities, safe names, desktop/mobile,
-and both themes). Existing behavior regressions remain in
-`tests/parking-configuration.spec.mjs`, `tests/parking-building-inspector.spec.mjs`,
+Parking behavior regressions remain in `tests/parking-configuration.spec.mjs`
 and `tests/parking-conservation.spec.mjs`.
 
 ## Scenario configuration and exchange
@@ -380,11 +365,8 @@ field, and importing or re-saving in the other language preserves every stored
 value. Loading always turns random rain off while restoring the saved
 probability; older files without one use 10%.
 
-Browser coverage lives in `tests/scenario-localization.spec.mjs`: Spanish and
-English controls and accessible descriptions, base-scenario generation, Canvas
-and Pixi disruption rendering, cross-language save/load/import round trips,
-rain load-off behavior, safe names, notification severities, desktop/mobile
-reachability, and both themes.
+Random-rain persistence and disruption behavior are covered by
+`tests/random-rain.spec.mjs`.
 
 ## Traffic metrics and compatible exports
 
@@ -555,12 +537,8 @@ replacement and asynchronous-load guards: a cancelled confirmation returns
 before `limpiarSimulacionActual`, and newer requests invalidate older image or
 map loads.
 
-Browser coverage lives in `tests/map-constructor-localization.spec.mjs`
-(Spanish/English, Canvas/Pixi, reference image upload/link/removal/alignment,
-lock/visibility/opacity, broken-link recovery, save/load/new cancellation and
-confirmation, malformed imports, notification severities, safe names, map-label
-names, cross-language map round trips in both directions, desktop/mobile, and
-both themes).
+Map lifecycle and reference image behavior are covered by the focused simulation
+and reference-image tests.
 
 ## Approved untranslated exceptions
 
@@ -609,10 +587,9 @@ them.
 | Static text and designated attributes | `tests/bilingual-completeness.spec.mjs` loads the markup without scripts, checks static text, form options, and each designated attribute against the approved exceptions (runtime-generated time/metric values are excluded), and asserts that the former Spanish gaps are absent. |
 | Runtime generated controls and renderer-owned text | `tests/bilingual-completeness.spec.mjs` exercises the English street/building surfaces and the vertex-edit badge; per-workflow specs cover Canvas/Pixi panels, charts, tooltips, images, and analyzer states. |
 | Deterministic simulation independence | `tests/language-invariance.spec.mjs` runs the seeded baseline workflow in Spanish and English and compares scenario invariants, occupancy hashes, clock state, and errors with `tests/baseline/baseline.json`. |
-| Cross-language map and scenario contracts | `tests/map-constructor-localization.spec.mjs`, `tests/scenario-localization.spec.mjs`; payloads gain no language field and preserve names, enums, geometry, link mappings, parking, and image identities. |
 | CSV/JSON machine contracts and Python analysis | `tests/export-timestamps.spec.mjs` (legacy and newly generated downloads parsed by the real Python reader) and `tests/analizador-python-localization.spec.mjs` (numerical equivalence and selected-language plot text). |
 | Static deployment | `tests/static-build.spec.mjs`; the build freshness check and copied `src/libs/i18next`, catalogs, and Python messages are required. |
-| Representative complete workflows | Startup/preferences and notification severities: `tests/localization.spec.mjs`; streets: `tests/street-localization.spec.mjs`; connections: `tests/connection-localization.spec.mjs`; buildings/parking: `tests/{building,parking}-localization.spec.mjs`; scenarios: `tests/scenario-localization.spec.mjs`; metrics/heatmaps: `tests/{metrics,heatmap-metric-images}-localization.spec.mjs`; analyzer: `tests/analizador-localization.spec.mjs`. |
+| Representative complete workflows | Metrics/heatmaps: `tests/{metrics,heatmap-metric-images}-localization.spec.mjs`; analyzer: `tests/analizador-localization.spec.mjs`. |
 
 `pnpm --filter v1 test` is the fast default and intentionally skips most
 Puppeteer specs. Run the affected workflow spec directly, and run

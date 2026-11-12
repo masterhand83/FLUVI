@@ -623,6 +623,10 @@
       "streets": "Calles"
     }
   },
+  "mapScreenshot": {
+    "button": "📸 Captura de pantalla",
+    "tooltip": "Exporta una imagen PNG del mapa recortada a las calles, los edificios y la imagen de referencia"
+  },
   "notifications": {
     "buildingEditor": {
       "invalidNumbers": "Valores inválidos. Verifica todos los campos numéricos.",
@@ -639,7 +643,10 @@
       "loadFailed": "No se pudo cargar la simulación: {{reason}}",
       "loaded": "Simulación «{{name}}» cargada correctamente.\n\n📊 Resumen:\n  • Calles: {{streets}}\n  • Edificios: {{buildings}}\n  • Conexiones entre calles: {{connections}}",
       "loadedOmissions": "Parte del contenido guardado no se restauró (calles inválidas o edificios cuya imagen o dimensiones no se pudieron cargar).\n  • Calles no restauradas: {{streets}}\n  • Edificios no restaurados: {{buildings}}",
-      "saved": "Simulación «{{name}}» guardada correctamente como JSON."
+      "saved": "Simulación «{{name}}» guardada correctamente como JSON.",
+      "screenshotEmpty": "Agrega calles, edificios o una imagen de referencia antes de capturar el mapa.",
+      "screenshotFailed": "No se pudo generar la captura de pantalla. Intenta nuevamente.",
+      "screenshotSaved": "Captura de pantalla guardada como {{file}}."
     },
     "simulation": {
       "changesAppliedGenerator": "Se actualizaron las probabilidades de «{{name}}»:\n• Generación: {{generation}}%\n• Cambio de carril: {{laneChange}}%",
@@ -684,6 +691,9 @@
       "zipUnavailable": "JSZip no está disponible. Se descargarán las imágenes individualmente."
     },
     "metrics": {
+      "allExportFailed": "No se pudo crear la exportación completa. Intenta nuevamente.",
+      "allExportPythonFailed": "Se creó {{file}}, pero no se pudo incluir el análisis de Python.",
+      "allExported": "Exportación completa creada: {{file}}.",
       "cleared": "Todas las métricas han sido eliminadas exitosamente.",
       "csvExported_one": "Se exportó {{count}} medición a {{file}}.",
       "csvExported_other": "Se exportaron {{count}} mediciones a {{file}}.",
@@ -845,6 +855,13 @@
         "toggle": "Activar modo inundación",
         "toggleTooltip": "Activar modo de inundación"
       },
+      "instantFlood": {
+        "button": "🌊 Inundar ahora",
+        "description": "Inunda celdas vacías al azar de inmediato para probar escenarios sin esperar",
+        "help": "Inunda al instante un porcentaje aleatorio de las celdas vacías del mapa. Los vehículos y bloqueos existentes no se modifican.",
+        "percentageLabel": "Porcentaje de celdas a inundar:",
+        "title": "Inundación instantánea"
+      },
       "obstacle": {
         "badge": "⚠️ Modo Obstáculo Activo",
         "description": "Coloca obstáculos específicos en las calles",
@@ -928,6 +945,8 @@
       "baseLoaded": "✅ Escenario «{{name}}» cargado correctamente.\n\n📊 Estadísticas:\n{{stats}}",
       "baseUnavailable": "El sistema de escenarios base no está disponible.",
       "cleared": "Todos los obstáculos, inundaciones y bloqueos se eliminaron correctamente.",
+      "instantFloodApplied": "✅ Inundación instantánea aplicada: {{count}} celdas inundadas.",
+      "instantFloodNoCells": "No hay celdas vacías para inundar.",
       "invalidFileType": "Selecciona un archivo JSON válido.",
       "loadError": "No se pudo cargar el escenario:\n{{reason}}",
       "loaded_many": "Escenario cargado correctamente\n{{count}} celdas aplicadas",
@@ -1601,6 +1620,12 @@
       "title": "🗑️ Limpiar Métricas"
     },
     "export": {
+      "allButton": "Exportar todo (ZIP)",
+      "allExporting": "Generando exportación completa…",
+      "allHelp": "Incluye CSV/JSON completos, análisis de Python, gráficas, mapa actual y resumen en un solo ZIP.",
+      "allPackaging": "Empaquetando archivos…",
+      "allPython": "Calculando métricas con Python…",
+      "allTooltip": "Descarga un ZIP con todas las métricas, el análisis de Python, las gráficas, una imagen del mapa actual y el resumen",
       "analyzeButton": "Analizar Métricas",
       "analyzeTooltip": "Analizar métricas desde un archivo CSV o JSON con Python",
       "clearButton": "Limpiar Métricas",
