@@ -31,9 +31,12 @@ export async function verifyPayload(expected, actual) {
 }
 
 // Copy outside ASAR without electron-builder's default file exclusions (.gitkeep,
-// for example). This hook runs before electron-builder makes the portable EXE.
+// for example). This hook runs before electron-builder makes platform artifacts.
 export default async function afterPack(context) {
-	const destination = join(context.appOutDir, "resources", "payload")
+	const resources = context.electronPlatformName === "darwin"
+		? join(context.appOutDir, `${context.packager.appInfo.productFilename}.app`, "Contents", "Resources")
+		: join(context.appOutDir, "resources")
+	const destination = join(resources, "payload")
 	await cp(payloadDirectory, destination, { recursive: true })
 	await verifyPayload(payloadDirectory, destination)
 	console.log("Packaged FLUVI payload verified byte-for-byte")

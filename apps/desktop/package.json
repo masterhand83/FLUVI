@@ -3,6 +3,8 @@
   "version": "1.0.0",
   "private": true,
   "description": "Portable desktop host for the unchanged FLUVI v1 static application",
+  "homepage": "https://github.com/masterhand83/FLUVI",
+  "desktopName": "org.fluvi.desktop",
   "author": "FLUVI contributors",
   "license": "ISC",
   "type": "module",
@@ -13,7 +15,9 @@
     "test": "node --test tests/*.test.mjs",
     "test:smoke": "pnpm run payload && node tests/desktop-smoke.mjs",
     "lint": "biome lint . --reporter=summary --diagnostic-level=error",
-    "package:win": "node scripts/package-windows.mjs"
+    "package:win": "node scripts/package-windows.mjs",
+    "package:linux": "node scripts/package.mjs linux",
+    "package:mac": "node scripts/package.mjs mac"
   },
   "devDependencies": {
     "electron": "45.4.1",

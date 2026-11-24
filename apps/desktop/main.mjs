@@ -76,7 +76,7 @@ if (!hasLock) {
 				`FLUVI could not open its bundled application.\n\n${error.message}\n\n` +
 				`If port ${DESKTOP_PORT} is in use, close the other FLUVI instance or the program using it and retry. ` +
 				"The port is kept fixed to preserve your saved preferences. " +
-				"Do not disable Windows security protections. If files are missing, obtain a fresh executable from your maintainer.")
+				"Do not disable operating system security protections. If files are missing, obtain a fresh application package from your maintainer.")
 			// Startup failed before the page became usable. Release any bound port.
 			try {
 				if (server) await server.close()

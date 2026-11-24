@@ -18,7 +18,7 @@ The system was designed to analyze and optimize traffic flow near academic zones
 
 ## Main Features
 
-Maintainers can build a separate [portable Windows x64 desktop package](docs/v1/desktop.md) around the unchanged v1 application. That guide covers build commands, internet requirements, profile/download locations, and the required Windows executable acceptance checks.
+Maintainers can build separate [Windows, Ubuntu Linux, and macOS desktop packages](docs/v1/desktop.md) around the unchanged v1 application. That guide covers build commands, internet requirements, profile/download locations, and platform acceptance checks.
 
 ### Traffic Simulation
 - **Cellular Automata**: Modified Rule 184 implementation

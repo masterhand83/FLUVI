@@ -4,7 +4,7 @@ Read this before exploring `apps/v1/`. Paths and **physical, 1-based line number
 
 ## Runtime and dependency graph
 
-Maintainers can package this unchanged static application with the separate `apps/desktop/` Electron workspace. Its loopback server, persistent profile, portable Windows x64 build, and release acceptance checklist are documented in [desktop.md](desktop.md). Desktop packaging is explicit and is not a dependency of web builds or deployment.
+Maintainers can package this unchanged static application with the separate `apps/desktop/` Electron workspace. Its loopback server, persistent profile, Windows/Ubuntu/macOS builds, and platform release acceptance checklists are documented in [desktop.md](desktop.md). Desktop packaging is explicit and is not a dependency of web builds or deployment.
 
 Deployment uses `Cloudflare.Website.StaticSite` in `infra/alchemy.run.ts`, running `pnpm run build` in `apps/v1`. `scripts/build-static.mjs` checks the generated locale bundle is fresh, then copies `index.html`, `src/`, and `assets/` into `dist/` unchanged, preserving classic-script globals, evaluation order, sprite URLs and the Python analyzer. Vite remains the development server, not the production bundler; do not add `type="module"` to the legacy script tags merely to silence Vite build warnings. `tests/static-build.spec.mjs` checks deployment resource completeness and unchanged HTML.
 

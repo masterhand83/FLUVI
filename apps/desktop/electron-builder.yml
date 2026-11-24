@@ -17,3 +17,17 @@ win:
   artifactName: FLUVI-${version}-windows-x64-portable.${ext}
 portable:
   requestExecutionLevel: user
+linux:
+  target:
+    - AppImage
+    - deb
+  category: Education
+  syncDesktopName: true
+  maintainer: FLUVI contributors
+  artifactName: FLUVI-${version}-linux-x64.${ext}
+mac:
+  target:
+    - dmg
+    - zip
+  category: public.app-category.education
+  artifactName: FLUVI-${version}-macos-${arch}.${ext}
