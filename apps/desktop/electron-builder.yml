@@ -1,0 +1,19 @@
+appId: org.fluvi.desktop
+productName: FLUVI
+executableName: FLUVI
+asar: true
+afterPack: scripts/verify-payload.mjs
+directories:
+  output: dist/release
+files:
+  - main.mjs
+  - server.mjs
+  - package.json
+win:
+  target:
+    - target: portable
+      arch:
+        - x64
+  artifactName: FLUVI-${version}-windows-x64-portable.${ext}
+portable:
+  requestExecutionLevel: user

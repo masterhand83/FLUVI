@@ -1,0 +1,23 @@
+{
+  "name": "@fluvi/desktop",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Portable desktop host for the unchanged FLUVI v1 static application",
+  "author": "FLUVI contributors",
+  "license": "ISC",
+  "type": "module",
+  "main": "main.mjs",
+  "scripts": {
+    "payload": "node scripts/stage-payload.mjs",
+    "dev": "pnpm run payload && electron .",
+    "test": "node --test tests/*.test.mjs",
+    "test:smoke": "pnpm run payload && node tests/desktop-smoke.mjs",
+    "lint": "biome lint . --reporter=summary --diagnostic-level=error",
+    "package:win": "node scripts/package-windows.mjs"
+  },
+  "devDependencies": {
+    "electron": "45.4.1",
+    "electron-builder": "26.18.0",
+    "playwright-core": "1.65.1"
+  }
+}
