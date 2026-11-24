@@ -4,9 +4,20 @@ For work involving `apps/v1/`, read `docs/v1/application-map.md` **before search
 
 ## Testing
 
+Never write tautological tests. Check required behavior with expected results that are independent of the implementation.
+
 Run focused tests with `pnpm test`, filtering to the affected modules, files, or use cases rather than running the entire test suite by default.
 
-`pnpm --filter v1 test` is the fast default: it runs every unit check plus the core startup/localization, current metrics, and analyzer-localization browser specs, while skipping every other spec that imports the Puppeteer harness. `pnpm --filter v1 test:fast` is an explicit alias for the same run. Run the affected feature spec directly when changing that feature. Use `pnpm --filter v1 test:full` before shipping browser-sensitive changes; it runs the serial browser suite plus i18next status while excluding the known-flaky `map-labels`, `building-localization`, and `export-timestamps` specs plus the Python analyzer compatibility check. Run those explicitly with `pnpm --filter v1 test:quarantine` (or by path) when changing their features; the Python check needs pandas/matplotlib or `uv`.
+`pnpm --filter v1 test` is the fast default: it runs unit checks plus the metrics, analyzer-localization, and camera browser specs. `pnpm --filter v1 test:fast` is an alias. Run the affected feature spec directly when changing that feature. Use `pnpm --filter v1 test:full` before shipping browser-sensitive changes; it runs the serial browser suite plus i18next status while excluding the flaky `export-timestamps` spec and Python analyzer compatibility check. Run those with `pnpm --filter v1 test:quarantine` when changing their features; the Python check needs pandas/matplotlib or `uv`.
+
+## Implementation
+
+- Deepen modules and simplify their interfaces. Keep complex logic inside modules, behind small, clear interfaces.
+- Write clean, simple implementations. Use only the complexity needed to meet the requirements. Avoid overengineering.
+
+## Communication
+
+Use ASD-STE100 Simplified Technical English in all responses.
 
 ## Agent skills
 
