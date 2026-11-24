@@ -18,17 +18,3 @@ Run focused tests with `pnpm test`, filtering to the affected modules, files, or
 ## Communication
 
 Use ASD-STE100 Simplified Technical English in all responses.
-
-## Agent skills
-
-### Issue tracker
-
-Issues are local Markdown files under `.scratch/`. See `docs/agents/issue-tracker.md`.
-
-### Triage labels
-
-Uses the default five canonical triage roles. See `docs/agents/triage-labels.md`.
-
-### Domain docs
-
-Uses a multi-context layout. See `docs/agents/domain.md`.
