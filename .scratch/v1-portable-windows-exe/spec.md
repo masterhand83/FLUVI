@@ -1,6 +1,6 @@
 # Package FLUVI v1 as a portable Windows executable
 
-Status: ready-for-agent
+Status: resolved
 
 ## Problem Statement
 
@@ -118,3 +118,6 @@ Maintainers should record the Windows version used for acceptance and avoid clai
 ## Comments
 
 - Spec published from the packaging discussion; implementation has not started.
+- Implementation merged into `integration/v1-portable-windows-exe` at `f337632`. The implementation ticket records test evidence and limitations.
+- Standards and spec reviews both completed with zero actionable findings. Reviewers independently reran the five focused desktop tests successfully.
+- Windows portable artifact build and runtime acceptance remain an outstanding release gate; resolution records completed implementation, not Windows release approval.
