@@ -40,6 +40,7 @@ pub struct App {
     shell: Shell,
     startup: Option<Startup>,
     transport: TransportControls,
+    connections: Option<ca_app::connections::ConnectionOverlays>,
 }
 
 impl App {
@@ -73,6 +74,7 @@ impl App {
             smoke_frames,
             shell: Shell::load(config_path()),
             transport: TransportControls::default(),
+            connections: None,
             startup: Some(Startup {
                 render: render.clone(),
                 events: tx,
@@ -94,6 +96,9 @@ impl App {
         if let Some(ready) = &startup.ready {
             match ready.try_recv() {
                 Ok((scene, display)) => {
+                    self.connections = Some(ca_app::connections::ConnectionOverlays::new(
+                        scene.connection_arrows(),
+                    ));
                     let [width, height] = scene.extent();
                     self.map = Some(MapInteraction::new(
                         [width as f32, height as f32],
@@ -176,6 +181,9 @@ impl App {
                     );
                 });
                 let mut action = None;
+                if let Some(connections) = &mut self.connections {
+                    connections.show_toggle(ui, &self.shell);
+                }
                 ui.add_enabled_ui(self.smoke_frames.is_none(), |ui| {
                     action = self.transport.show(ui, &self.shell);
                 });
@@ -253,6 +261,9 @@ impl eframe::App for App {
             let mut callback = self.callback.clone();
             callback.rect = map.rect;
             ui.painter().add(callback);
+            if let Some(connections) = &self.connections {
+                connections.paint(ui.painter(), map.view, map.rect);
+            }
             map.paint_preview(ui.painter());
         });
         self.shell.overlays(ctx);

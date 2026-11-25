@@ -67,6 +67,31 @@ Focused checks: `cargo test -p ca-core --test transport`,
 `cargo test -p ca-app --test transport_controls --bin ca-app`, and
 `cargo test -p ca-gpu --test traffic`.
 
+### Street connections
+
+`ca-core::connections` owns physical-cell mappings, enabled merge rows, weighted
+splits, and stable validation message keys. `TrafficModel::add_connection` checks
+all rows before registration, including disabled rows and equivalent `-1`/last
+physical-cell duplicates. Reverse lanes reject sources at the last physical cell
+and destinations at cell 0, except on single-cell streets, as in v1.
+
+Transfers run after generation and before lane changes, in registration order.
+Only values 1–6 transfer. Occupied destinations mark the source as waiting for
+the street update; existing waiting sources do not transfer. A split makes one
+seeded weighted choice and does not reroute if that destination is occupied.
+Splits require at least two distinct destinations. Weights are finite fractions
+summing to one (tolerance 1e-9).
+
+The demo connects both lane directions across its three streets.
+`TrafficScene::connection_arrows` exports world-space cell-center endpoints on
+topology changes. `ca-app::connections::ConnectionOverlays` transforms them with
+the same view as the GPU map, clips them to the map panel, and draws after the
+map callback. The toolbar checkbox hides all arrows without changing transfers.
+Visibility is session-only and starts on.
+
+Focused checks: `cargo test -p ca-core --test connections` and
+`cargo test -p ca-app --test connection_overlays`.
+
 Use `cargo dev edit` or `bacon check` for compiler feedback. Run focused tests,
 for example `cargo nextest run -p ca-core`, when behavior changes. `bacon` still
 defaults to Clippy; its check/test/run jobs remain available.

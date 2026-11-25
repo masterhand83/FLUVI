@@ -155,6 +155,26 @@ impl TrafficScene {
             .to_vec()
     }
 
+    /// World-space arrow endpoints, built on topology edits, never per tick.
+    pub fn connection_arrows(&self) -> Vec<[[f32; 2]; 2]> {
+        let geometry = self.geometry();
+        self.model
+            .connections()
+            .iter()
+            .flat_map(|link| link.mappings())
+            .map(|row| {
+                let source = row
+                    .effective_source_cell(&self.model.streets()[row.source_street])
+                    .expect("registered source");
+                [
+                    geometry[row.source_street].centers[row.source_lane][source],
+                    geometry[row.destination_street].centers[row.destination_lane]
+                        [row.destination_cell],
+                ]
+            })
+            .collect()
+    }
+
     pub fn lanes(&self) -> &[TrafficLane] {
         &self.lanes
     }

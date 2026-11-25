@@ -1,5 +1,8 @@
 //! Traffic CA for ordinary streets, with physical (not travel-relative) indices.
 
+#[path = "connections.rs"]
+pub mod connections;
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum CalleType {
     Generador,
@@ -329,6 +332,7 @@ pub enum TickPhase {
 #[derive(Clone, Debug)]
 pub struct TrafficModel {
     streets: Vec<Calle>,
+    connections: Vec<connections::Connection>,
     random_state: u64,
     generation_override: Option<f64>,
     hourly_multiplier: f64,
@@ -359,12 +363,28 @@ impl TrafficModel {
             Calle::new(config, cells).expect("fixed demo is valid")
         })
         .collect();
-        Self::new(streets, 42)
+        let mut model = Self::new(streets, 42);
+        for source_street in 0..2 {
+            for lane in 0..2 {
+                model
+                    .add_connection(connections::Connection::Lineal(connections::Mapping {
+                        source_street,
+                        source_lane: lane,
+                        source_cell: if lane == 0 { -1 } else { 0 },
+                        destination_street: source_street + 1,
+                        destination_lane: lane,
+                        destination_cell: if lane == 0 { 0 } else { 31 },
+                    }))
+                    .expect("fixed demo link is valid");
+            }
+        }
+        model
     }
 
     pub fn new(streets: Vec<Calle>, seed: u64) -> Self {
         Self {
             streets,
+            connections: Vec::new(),
             random_state: seed,
             generation_override: None,
             hourly_multiplier: 1.0,
@@ -443,7 +463,7 @@ impl TrafficModel {
     }
 
     /// Observe phase completion without changing the snapshot or RNG sequence.
-    /// Connection transfers, rain, clock and metrics are not yet ported.
+    /// Rain, clock and metrics are not yet ported.
     pub fn tick_with_hook(&mut self, mut hook: impl FnMut(TickPhase, &[Calle])) {
         for phase in [
             TickPhase::Generation,
@@ -465,6 +485,7 @@ impl TrafficModel {
                     }
                 }
                 TickPhase::StreetUpdate => self.streets.iter_mut().for_each(Calle::update),
+                TickPhase::ConnectionTransfers => self.transfer_connections(),
                 TickPhase::LaneChanges => {
                     for street in &mut self.streets {
                         street.change_lanes(&mut self.random_state);

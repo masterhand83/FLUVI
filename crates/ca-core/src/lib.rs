@@ -4,4 +4,5 @@ pub mod camera;
 pub mod cell_index;
 mod random;
 pub mod traffic;
+pub use traffic::connections;
 mod traffic_rules;

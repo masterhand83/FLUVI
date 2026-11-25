@@ -1,4 +1,11 @@
 {
+  "connections.showArrows": "Flechas de conexiones",
+  "connections.invalidMapping": "Seleccione calles, carriles y celdas físicas válidos.",
+  "connections.direction": "La conexión va contra el sentido del carril.",
+  "connections.duplicate": "Esta asignación ya existe o conecta una celda consigo misma.",
+  "connections.noActiveRows": "Active al menos una fila de incorporación.",
+  "connections.weights": "Use al menos dos destinos con pesos finitos de 0 a 1 cuya suma sea 1.",
+  "connections.splitSource": "Todos los destinos deben compartir una celda de origen.",
   "common.cancel": "Cancelar",
   "common.close": "Cerrar",
   "common.confirm": "Confirmar",
