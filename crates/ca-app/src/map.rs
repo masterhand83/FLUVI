@@ -7,6 +7,7 @@ use ca_core::{
 use eframe::egui;
 
 pub struct MapFrame {
+    pub connection_pick: Option<usize>,
     pub bulk_started: bool,
     pub bulk_rect: Option<egui::Rect>,
     pub rect: egui::Rect,
@@ -104,6 +105,7 @@ impl MapFrame {
 }
 
 pub struct MapInteraction {
+    connection_picking: bool,
     editing_street: Option<usize>,
     bulk_start: Option<[f32; 2]>,
     bulk_selected: Vec<usize>,
@@ -132,6 +134,7 @@ impl MapInteraction {
         index.sync(streets);
         let sorted = (0..names.len()).collect();
         Self {
+            connection_picking: false,
             editing_street: None,
             bulk_start: None,
             bulk_selected: Vec::new(),
@@ -160,6 +163,15 @@ impl MapInteraction {
 
     pub fn camera(&self) -> Option<&Camera> {
         self.camera.as_ref()
+    }
+
+    pub fn set_connection_picking(&mut self, active: bool) {
+        if active && !self.connection_picking {
+            self.finish_edits();
+            self.clear_bulk();
+            self.select(None);
+        }
+        self.connection_picking = active;
     }
 
     pub fn set_drawing(&mut self, drawing: bool) {
@@ -355,6 +367,54 @@ impl MapInteraction {
         }
     }
 
+    pub fn paint_connection_draft(
+        &self,
+        painter: &egui::Painter,
+        rect: egui::Rect,
+        draft: &crate::connection_draft::ConnectionDraft,
+    ) {
+        let Some(camera) = &self.camera else { return };
+        let painter = painter.with_clip_rect(rect);
+        for row in draft.preview_mappings() {
+            let source = if row.source_cell == -1 {
+                self.street_sizes
+                    .get(row.source_street)
+                    .and_then(|s| s.get(row.source_lane))
+                    .map(|length| length - 1)
+            } else {
+                usize::try_from(row.source_cell).ok()
+            };
+            let Some(source) = source.and_then(|index| {
+                self.index.cell_center(CellRef {
+                    street: row.source_street,
+                    lane: row.source_lane,
+                    index,
+                })
+            }) else {
+                continue;
+            };
+            let Some(destination) = self.index.cell_center(CellRef {
+                street: row.destination_street,
+                lane: row.destination_lane,
+                index: row.destination_cell,
+            }) else {
+                continue;
+            };
+            let screen = |point| {
+                let point = camera.world_to_screen(point);
+                rect.min + egui::vec2(point[0], point[1])
+            };
+            let start = screen(source);
+            let end = screen(destination);
+            painter.arrow(
+                start,
+                end - start,
+                egui::Stroke::new(2.5_f32, egui::Color32::YELLOW),
+            );
+            painter.circle_filled(start, 3.0, egui::Color32::YELLOW);
+        }
+    }
+
     /// Geometry owners use this only on edits, not on simulation ticks.
     pub fn sync_geometry(&mut self, streets: &[StreetGeometry], names: Vec<String>) {
         self.index.sync(streets);
@@ -432,6 +492,7 @@ impl MapInteraction {
                 rect.min + egui::vec2(p[0], p[1])
             };
             return MapFrame {
+                connection_pick: None,
                 bulk_started,
                 bulk_rect: Some(egui::Rect::from_two_pos(screen(start), screen(end))),
                 rect,
@@ -457,6 +518,26 @@ impl MapInteraction {
                     .hit_test(camera.screen_to_world((p - rect.min).into()))
             })
             .map(|c| c.street);
+        if self.connection_picking {
+            return MapFrame {
+                connection_pick: response.clicked().then_some(street_hit).flatten(),
+                bulk_started: false,
+                bulk_rect: None,
+                rect,
+                view: camera.view(),
+                clicked: None,
+                tooltip: None,
+                preview: None,
+                vertex_edit: None,
+                vertex_mode: false,
+                structural_edit: false,
+                street_preview: None,
+                street_edit: None,
+                roundabout_preview: None,
+                geometry_error: None,
+                geometry_preview: None,
+            };
+        }
         let vertex_edit = if self.editing_street.is_none() {
             self.vertices
                 .input(ui, rect, camera, self.selected, response.contains_pointer())
@@ -690,6 +771,7 @@ impl MapInteraction {
             self.rejected_geometry = geometry_error;
         }
         MapFrame {
+            connection_pick: None,
             bulk_started: false,
             bulk_rect: None,
             rect,

@@ -252,8 +252,32 @@ impl TrafficModel {
         connection: Connection,
         policy: Registration,
     ) -> Result<(), ConnectionError> {
+        self.validate_registration(&connection, policy)?;
+        for row in connection.holding_exits() {
+            let source = &mut self.streets[row.source_street];
+            let index = row.source_index(source);
+            if row.source_street != row.destination_street
+                || index != row.destination_lane * source.config.tamano + row.destination_cell
+            {
+                source.outgoing[index] = true;
+            }
+        }
+        self.connections.push(connection);
+        Ok(())
+    }
+
+    /// Check a new link without changing traffic, outgoing cells, or topology.
+    pub fn validate_connection(&self, connection: &Connection) -> Result<(), ConnectionError> {
+        self.validate_registration(connection, Registration::New)
+    }
+
+    fn validate_registration(
+        &self,
+        connection: &Connection,
+        policy: Registration,
+    ) -> Result<(), ConnectionError> {
         let strict = policy == Registration::New;
-        match &connection {
+        match connection {
             Connection::ProbabilityTrial(row)
                 if !row.weight.is_finite() || !(0.0..=1.0).contains(&row.weight) =>
             {
@@ -263,7 +287,8 @@ impl TrafficModel {
                 return Err(ConnectionError::NoActiveRows);
             }
             Connection::Probabilistica(rows) => {
-                if rows.len() < 2
+                if rows.is_empty()
+                    || (strict && rows.len() < 2)
                     || rows
                         .iter()
                         .any(|r| !r.weight.is_finite() || !(0.0..=1.0).contains(&r.weight))
@@ -308,16 +333,6 @@ impl TrafficModel {
                 return Err(ConnectionError::Duplicate);
             }
         }
-        for row in connection.holding_exits() {
-            let source = &mut self.streets[row.source_street];
-            let index = row.source_index(source);
-            if row.source_street != row.destination_street
-                || index != row.destination_lane * source.config.tamano + row.destination_cell
-            {
-                source.outgoing[index] = true;
-            }
-        }
-        self.connections.push(connection);
         Ok(())
     }
 

@@ -93,6 +93,32 @@ Tools section.
 Focused checks: `cargo test -p ca-core --test connections` and
 `cargo test -p ca-app --test connection_overlays`.
 
+### Map-first connection drafts
+
+Use Tools → Create Connection, then click the source and destination streets.
+The fixed panel at the map's top-left edits a separate draft. Linear links have
+one mapping, merges have one switch per source lane, and weighted splits share
+one source with editable destinations and fractional weights. Lane numbers start
+at 1; physical cell numbers start at 0. Source −1 means the last physical cell.
+Defaults follow each lane's directional exit and entry, including roundabouts.
+
+`ca-app::connection_draft::ConnectionDraft` owns draft rows and validation.
+Disabled merge rows are absent from preview, validation, and the committed link.
+Invalid weights and duplicate mappings disable Save with a translated reason.
+Cancel, Escape, bulk selection, another drawing tool, and map replacement discard
+the draft without changing live connections. Draft picking takes priority over
+cell edits, geometry handles, and camera pan.
+
+Save validates through `TrafficModel::validate_connection`, then uses the ordered
+render edit queue and `MapDocument::add_connection`. A full queue leaves the draft
+open. Registration preserves live vehicles and tick state; the next tick uses
+the new link. The map codec writes v1-compatible link fields plus an optional
+`weightedSplit: true` marker for v2 weighted choices. Unmarked v1 probabilistic
+rows still load as independent trials.
+
+Focused checks: `cargo test -p ca-app --test connection_draft` and
+`cargo test -p ca-app --bin ca-app saved_connection_uses_ordered_edits`.
+
 ### Map-first street drawing and deletion
 
 Use Draw Street, then drag on empty map space. The preview shows the quantized

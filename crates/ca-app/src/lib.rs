@@ -2,6 +2,7 @@
 pub mod background;
 mod bezier;
 pub mod bulk_editor;
+pub mod connection_draft;
 pub mod connections;
 pub mod control_panel;
 mod handles;

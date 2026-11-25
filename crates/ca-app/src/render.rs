@@ -35,6 +35,7 @@ pub struct Paint {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Edit {
+    Connection(ca_core::connections::Connection),
     Toggle(CellRef),
     Vehicles(VehicleAction),
     Vertex(ca_app::vertices::VertexEdit),
@@ -187,6 +188,12 @@ impl Resources {
         let mut edited = false;
         while let Ok(edit) = self.requests.edits.try_recv() {
             edited |= match edit {
+                Edit::Connection(connection) => {
+                    self.scene
+                        .add_connection(connection)
+                        .expect("validated ordered connection edit");
+                    false
+                }
                 Edit::Toggle(cell) => self.scene.toggle_vehicle(cell, !request.playing),
                 Edit::Vehicles(action) => {
                     self.scene
@@ -392,6 +399,68 @@ mod tests {
             );
         }
         assert!(requests.edits.try_recv().is_err());
+    }
+
+    #[test]
+    fn saved_connection_uses_ordered_edits_and_transfers_on_the_next_tick() {
+        use ca_app::connection_draft::ConnectionDraft;
+        use ca_core::map_json::MapDocument;
+        let document = MapDocument::parse(
+            r#"{"calles":[
+            {"nombre":"A","tipo":"conexion","tamano":4,"x":25,"y":25},
+            {"nombre":"B","tipo":"conexion","tamano":4,"x":75,"y":75}
+        ]}"#,
+        )
+        .unwrap();
+        let mut draft = ConnectionDraft::default();
+        draft.start();
+        draft.pick(0, &document);
+        draft.pick(1, &document);
+        let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor::from_env_or_default());
+        let adapter = pollster::block_on(instance.request_adapter(&Default::default())).unwrap();
+        let (device, queue) =
+            pollster::block_on(adapter.request_device(&Default::default())).unwrap();
+        let scene = TrafficScene::from_document(&document);
+        let format = wgpu::TextureFormat::Rgba8Unorm;
+        let display = TrafficDisplay::new(&device, &scene, format);
+        let (commands, requests) = command_channel();
+        let (events, results) = bounded(2);
+        let mut resources = Resources::new(scene, display, events, requests, format);
+        let state = Paint {
+            playing: false,
+            rate: 10.0,
+            step_ticket: 0,
+            generation_override: None,
+            excluded_street: None,
+            view: WorldView {
+                origin: [0.0; 2],
+                span: [25.0; 2],
+            },
+        };
+        assert!(commands.send(state, None));
+        assert!(commands.edit(Edit::Toggle(CellRef {
+            street: 0,
+            lane: 0,
+            index: 3
+        })));
+        assert!(commands.edit(Edit::Connection(draft.candidate(&document).unwrap())));
+        resources.prepare(&device, &queue);
+        let Event::Progress(paused) = results.try_recv().unwrap();
+        assert_eq!(paused.generation, 0);
+        assert_eq!(resources.scene.cells(), &[0, 0, 0, 1, 0, 0, 0, 0]);
+        assert_eq!(resources.scene.connection_arrows().len(), 1);
+        assert!(commands.send(
+            Paint {
+                step_ticket: 1,
+                ..state
+            },
+            None
+        ));
+        resources.prepare(&device, &queue);
+        let Event::Progress(ticked) = results.try_recv().unwrap();
+        assert_eq!(ticked.generation, 1);
+        assert_eq!(ticked.population, 1);
+        assert_eq!(resources.scene.cells(), &[0, 0, 0, 0, 0, 1, 0, 0]);
     }
 
     #[test]

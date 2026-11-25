@@ -7,6 +7,7 @@ use ca_core::map_json::MapDocument;
 use eframe::egui;
 
 pub enum PanelAction {
+    Connection,
     NewStreet,
     Open,
     Save,
@@ -28,6 +29,9 @@ impl ControlPanel<'_> {
         shell.sidebar_with(ctx, |section, ui, shell| {
             ui.add_enabled_ui(self.enabled, |ui| match section {
                 "tools" => {
+                    if ui.button(shell.tr("connectionDraft.button", &[])).clicked() {
+                        action = Some(PanelAction::Connection);
+                    }
                     if let Some(map) = &mut self.map {
                         map.show_tools(ui, shell);
                     }

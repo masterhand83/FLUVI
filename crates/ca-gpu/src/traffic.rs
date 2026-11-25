@@ -339,6 +339,14 @@ impl TrafficScene {
         self.document.model().connection_arrows(&self.geometry)
     }
 
+    /// Topology-only edit: retain live traffic, tick state, and display buffers.
+    pub fn add_connection(
+        &mut self,
+        connection: ca_core::connections::Connection,
+    ) -> Result<(), ca_core::connections::ConnectionError> {
+        self.document.add_connection(connection)
+    }
+
     pub fn lanes(&self) -> &[TrafficLane] {
         &self.lanes
     }

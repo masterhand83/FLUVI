@@ -531,12 +531,25 @@ impl MapDocument {
             .retain_mut(|link| {
                 let source = integer(&link["origenIdx"]).expect("validated source");
                 let destination = integer(&link["destinoIdx"]).expect("validated destination");
+                let weighted_split = link["weightedSplit"] == true;
                 let rows = link["detalles"].as_array_mut().expect("validated rows");
                 rows.retain(|r| {
                     parse_mapping(source, destination, r)
                         .expect("validated mapping")
                         .fits_resized_street(street, lanes, length)
                 });
+                if weighted_split && !rows.is_empty() {
+                    let sum: f64 = rows
+                        .iter()
+                        .map(|r| r["probabilidad"].as_f64().expect("validated weight"))
+                        .sum();
+                    let count = rows.len() as f64;
+                    for row in rows.iter_mut() {
+                        let weight = row["probabilidad"].as_f64().expect("validated weight");
+                        row["probabilidad"] =
+                            json!(if sum > 0.0 { weight / sum } else { 1.0 / count });
+                    }
+                }
                 !rows.is_empty()
             });
     }
@@ -877,11 +890,20 @@ impl MapDocument {
             let source = integer(&link["origenIdx"])?;
             let destination = integer(&link["destinoIdx"])?;
             let kind = link["tipo"].as_str().ok_or(MapError)?.to_owned();
+            let weighted_split = link
+                .get("weightedSplit")
+                .map(|v| v.as_bool().ok_or(MapError))
+                .transpose()?
+                .unwrap_or(false);
+            if weighted_split && kind != "PROBABILISTICA" {
+                return Err(MapError);
+            }
             let details = link["detalles"].as_array_mut().ok_or(MapError)?;
             if details.is_empty() {
                 return Err(MapError);
             }
             let mut merge = Vec::new();
+            let mut split = Vec::new();
             for detail in details {
                 let object = detail.as_object_mut().ok_or(MapError)?;
                 object.entry("posOrigen").or_insert(json!(-1));
@@ -899,16 +921,21 @@ impl MapDocument {
                         enabled: detail["enabled"] != false,
                     }),
                     "PROBABILISTICA" => {
-                        connections.push(Connection::ProbabilityTrial(WeightedRow {
-                            mapping,
-                            weight,
-                        }))
+                        let row = WeightedRow { mapping, weight };
+                        if weighted_split {
+                            split.push(row);
+                        } else {
+                            connections.push(Connection::ProbabilityTrial(row));
+                        }
                     }
                     _ => return Err(MapError),
                 }
             }
             if !merge.is_empty() {
                 connections.push(Connection::Incorporacion(merge));
+            }
+            if weighted_split {
+                connections.push(Connection::Probabilistica(split));
             }
         }
         for connection in connections {
@@ -928,6 +955,60 @@ impl MapDocument {
 
     pub fn model(&self) -> &TrafficModel {
         &self.model
+    }
+
+    /// Register one street-pair link atomically in both traffic and map data.
+    pub fn add_connection(
+        &mut self,
+        connection: Connection,
+    ) -> Result<(), crate::connections::ConnectionError> {
+        use crate::connections::ConnectionError;
+        self.model.validate_connection(&connection)?;
+        let first = *connection
+            .mappings()
+            .next()
+            .ok_or(ConnectionError::InvalidMapping)?;
+        if connection.mappings().any(|m| {
+            m.source_street != first.source_street
+                || m.destination_street != first.destination_street
+        }) {
+            return Err(ConnectionError::InvalidMapping);
+        }
+        let kind = match &connection {
+            Connection::Lineal(_) => "LINEAL",
+            Connection::Incorporacion(_) => "INCORPORACION",
+            Connection::ProbabilityTrial(_) | Connection::Probabilistica(_) => "PROBABILISTICA",
+        };
+        let details: Vec<_> = connection.mappings().enumerate().map(|(index, mapping)| {
+            let weight = match &connection {
+                Connection::ProbabilityTrial(row) => row.weight,
+                Connection::Probabilistica(rows) => rows[index].weight,
+                _ => 1.0,
+            };
+            let enabled = match &connection {
+                Connection::Incorporacion(rows) => rows[index].enabled,
+                _ => true,
+            };
+            json!({
+                "carrilOrigen": mapping.source_lane, "posOrigen": mapping.source_cell,
+                "carrilDestino": mapping.destination_lane, "posDestino": mapping.destination_cell,
+                "probabilidad": weight, "enabled": enabled
+            })
+        }).collect();
+        let mut link = json!({
+            "origenIdx": first.source_street, "destinoIdx": first.destination_street,
+            "tipo": kind, "detalles": details
+        });
+        // Optional v2 grouping marker. Unmarked v1 links remain independent trials.
+        if matches!(connection, Connection::Probabilistica(_)) {
+            link["weightedSplit"] = json!(true);
+        }
+        self.model.add_connection(connection)?;
+        self.data["conexiones"]
+            .as_array_mut()
+            .expect("validated links")
+            .push(link);
+        Ok(())
     }
     /// Live traffic access. Structural edits must use the document edit boundary.
     pub fn model_mut(&mut self) -> &mut TrafficModel {

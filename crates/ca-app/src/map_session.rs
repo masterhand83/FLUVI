@@ -36,6 +36,13 @@ impl<S> MapSession<S> {
         &self.document
     }
 
+    pub fn add_connection(
+        &mut self,
+        connection: ca_core::connections::Connection,
+    ) -> Result<(), ca_core::connections::ConnectionError> {
+        self.document.add_connection(connection)
+    }
+
     pub fn on_street_event(&mut self, listener: StreetListener) {
         self.street_listeners.push(listener);
     }

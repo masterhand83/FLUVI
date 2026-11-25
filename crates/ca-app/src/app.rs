@@ -54,6 +54,7 @@ pub struct App {
     edit_pause: ca_app::inspector::EditPause,
     bulk_editor: ca_app::bulk_editor::BulkEditor,
     street_dialog: ca_app::street_dialog::StreetDialog,
+    connection_draft: ca_app::connection_draft::ConnectionDraft,
 }
 
 impl App {
@@ -79,6 +80,7 @@ impl App {
             app.edit_pause = Default::default();
             app.bulk_editor = Default::default();
             app.street_dialog = Default::default();
+            app.connection_draft.cancel();
             if let Some(connections) = &mut app.connections {
                 connections.set_arrows(Vec::new());
             }
@@ -121,6 +123,7 @@ impl App {
             edit_pause: Default::default(),
             bulk_editor: Default::default(),
             street_dialog: Default::default(),
+            connection_draft: Default::default(),
             startup: Some(Startup {
                 render: render.clone(),
                 events: tx,
@@ -313,7 +316,20 @@ impl App {
         }
         .show(ctx, &mut self.shell);
         match action {
+            Some(PanelAction::Connection) => {
+                if self.connection_draft.active() {
+                    self.connection_draft.cancel();
+                } else {
+                    self.connection_draft.start();
+                    self.inspector = Default::default();
+                    self.street_dialog.close();
+                    if let Some(map) = &mut self.map {
+                        map.set_connection_picking(true);
+                    }
+                }
+            }
             Some(PanelAction::NewStreet) => {
+                self.connection_draft.cancel();
                 if let Some(map) = &mut self.map {
                     map.finish_edits();
                     map.clear_bulk();
@@ -331,6 +347,9 @@ impl App {
                 ));
             }
             None => {}
+        }
+        if self.map.as_ref().is_some_and(|map| map.drawing()) {
+            self.connection_draft.cancel();
         }
     }
 
@@ -388,6 +407,7 @@ impl App {
     }
 
     fn edit_streets(&mut self, mut edit: ca_core::streets::StreetEdit) -> bool {
+        self.connection_draft.cancel();
         use ca_core::streets::StreetEdit;
         if matches!(edit, StreetEdit::BeginSession(_))
             && let Some(map) = &mut self.map
@@ -463,6 +483,35 @@ impl App {
                 .notify(ca_app::shell::Severity::Success, self.shell.tr(key, &[]));
         }
         true
+    }
+
+    fn connection_form(&mut self, ctx: &egui::Context, rect: egui::Rect) {
+        let session = self.session.as_mut().expect("session");
+        let Some(connection) =
+            self.connection_draft
+                .show(ctx, rect, session.document(), &self.shell)
+        else {
+            return;
+        };
+        if !self.commands.edit(Edit::Connection(connection.clone())) {
+            self.shell.notify(
+                ca_app::shell::Severity::Warning,
+                self.shell.tr("shell.cellEditBusy", &[]),
+            );
+            return;
+        }
+        session.add_connection(connection).expect("validated draft");
+        if let Some(connections) = &mut self.connections {
+            let mut geometry = session.document().geometry();
+            for street in &mut geometry {
+                for point in street.centers.iter_mut().flatten() {
+                    point[0] += self.map_shift[0];
+                    point[1] += self.map_shift[1];
+                }
+            }
+            connections.set_arrows(session.document().model().connection_arrows(&geometry));
+        }
+        self.connection_draft.cancel();
     }
 
     fn map_files(&mut self, ctx: &egui::Context) {
@@ -603,6 +652,13 @@ impl eframe::App for App {
             ));
         });
         egui::CentralPanel::default().show(ctx, |ui| {
+            if ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
+                self.connection_draft.cancel();
+            }
+            self.map
+                .as_mut()
+                .expect("map")
+                .set_connection_picking(self.connection_draft.active());
             let map = self
                 .map
                 .as_mut()
@@ -612,6 +668,7 @@ impl eframe::App for App {
                 self.edit_pause.begin(&mut self.playing);
             }
             if map.bulk_started {
+                self.connection_draft.cancel();
                 self.inspector = Default::default();
                 self.bulk_editor = Default::default();
                 self.street_dialog.close();
@@ -626,6 +683,10 @@ impl eframe::App for App {
                     self.edit_streets(ca_core::streets::StreetEdit::CancelSession);
                     self.map.as_mut().expect("map").select(None);
                 }
+            }
+            if let Some(street) = map.connection_pick {
+                self.connection_draft
+                    .pick(street, self.session.as_ref().expect("session").document());
             }
             if let Some(edit) = map.street_edit.clone() {
                 self.edit_streets(edit);
@@ -652,6 +713,7 @@ impl eframe::App for App {
                 }
             }
             self.street_forms(ctx);
+            self.connection_form(ctx, map.rect);
             let request = Paint {
                 playing: self.playing,
                 rate: self.rate,
@@ -679,6 +741,11 @@ impl eframe::App for App {
                 connections.paint(ui.painter(), map.view, map.rect);
             }
             map.paint_preview(ui.painter());
+            self.map.as_ref().expect("map").paint_connection_draft(
+                ui.painter(),
+                map.rect,
+                &self.connection_draft,
+            );
             self.map
                 .as_ref()
                 .expect("map")
