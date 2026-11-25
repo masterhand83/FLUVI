@@ -17,7 +17,7 @@ pub struct StreetInspector {
 
 #[derive(Default)]
 pub struct InspectorResponse {
-    pub edit: Option<StreetEdit>,
+    pub edits: Vec<StreetEdit>,
     pub closed: bool,
     pub editing: bool,
 }
@@ -159,7 +159,10 @@ impl StreetInspector {
         let model_street = &document.model().streets()[street];
         let c = model_street.config();
         let mut open = true;
-        let mut change = None;
+        let mut changes = Vec::new();
+        // Keep the previous field's buffer until every widget has processed blur.
+        let pending_dimension = self.dimension_field;
+        let mut focused_dimension = None;
         egui::Window::new(shell.tr("streetInspector.title", &[]))
             .id(egui::Id::new("street-inspector"))
             .default_pos([760.0, 80.0])
@@ -177,7 +180,7 @@ impl StreetInspector {
                                     let id = egui::Id::new(("street-field", field));
                                     let index = field as usize;
                                     if !ctx.memory(|m| m.has_focus(id))
-                                        && self.dimension_field != Some(field)
+                                        && pending_dimension != Some(field)
                                     {
                                         self.values[index] = field.current(document, street);
                                     }
@@ -188,11 +191,12 @@ impl StreetInspector {
                                             .desired_width(125.0),
                                     );
                                     if field.dimension() && response.has_focus() {
-                                        self.dimension_field = Some(field);
+                                        focused_dimension = Some(field);
                                         result.editing = true;
                                     }
                                     if response.changed()
-                                        || (field.dimension() && response.lost_focus())
+                                        || (pending_dimension == Some(field)
+                                            && response.lost_focus())
                                     {
                                         let value = &self.values[index];
                                         let parsed = parse_field(
@@ -206,16 +210,13 @@ impl StreetInspector {
                                                     self.error = None;
                                                     // Enter or blur commits one complete dimension, not a destructive text prefix.
                                                     if !field.dimension() || response.lost_focus() {
-                                                        change = Some(candidate);
+                                                        changes.push(candidate);
                                                     }
                                                 }
                                                 Err(error) => self.error = Some(error),
                                             },
                                             Err(error) => self.error = Some(error),
                                         }
-                                    }
-                                    if field.dimension() && response.lost_focus() {
-                                        self.dimension_field = None;
                                     }
                                     ui.end_row();
                                 }
@@ -233,7 +234,7 @@ impl StreetInspector {
                                         }
                                     });
                                 if tipo != c.tipo {
-                                    change = Some(StreetChange::Type(tipo));
+                                    changes.push(StreetChange::Type(tipo));
                                 }
                                 ui.end_row();
                             });
@@ -269,7 +270,7 @@ impl StreetInspector {
                                         );
                                     });
                                 if direction != old {
-                                    change = Some(StreetChange::Direction { lane, direction });
+                                    changes.push(StreetChange::Direction { lane, direction });
                                 }
                                 let old = c.lane_generation_enabled.get(lane) != Some(&Some(false));
                                 let mut enabled = old;
@@ -280,7 +281,7 @@ impl StreetInspector {
                                     )
                                     .changed()
                                 {
-                                    change = Some(StreetChange::LaneGeneration { lane, enabled });
+                                    changes.push(StreetChange::LaneGeneration { lane, enabled });
                                 }
                             });
                         }
@@ -292,12 +293,13 @@ impl StreetInspector {
                         }
                     });
             });
-        if let Some(change) = change {
+        self.dimension_field = focused_dimension;
+        for change in changes {
             let edit = StreetEdit::Update(street, change);
             match document.validate_street_edit(&edit) {
                 Ok(()) => {
                     self.error = None;
-                    result.edit = Some(edit);
+                    result.edits.push(edit);
                 }
                 Err(error) => self.error = Some(error),
             }

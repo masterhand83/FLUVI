@@ -483,7 +483,7 @@ impl eframe::App for App {
         {
             map.select(None);
         }
-        if let Some(edit) = inspector.edit {
+        for edit in inspector.edits {
             self.edit_streets(edit);
         }
         egui::TopBottomPanel::bottom("status").show(ctx, |ui| {

@@ -11,7 +11,17 @@ fn frame(
     document: &MapDocument,
     events: Vec<Event>,
 ) -> (egui::FullOutput, Option<StreetEdit>) {
-    let mut edit = None;
+    let (output, edits) = frame_all(inspector, ctx, document, events);
+    (output, edits.into_iter().next())
+}
+
+fn frame_all(
+    inspector: &mut StreetInspector,
+    ctx: &egui::Context,
+    document: &MapDocument,
+    events: Vec<Event>,
+) -> (egui::FullOutput, Vec<StreetEdit>) {
+    let mut edits = Vec::new();
     let output = ctx.run(
         egui::RawInput {
             screen_rect: Some(egui::Rect::from_min_size(
@@ -22,12 +32,102 @@ fn frame(
             ..Default::default()
         },
         |ctx| {
-            edit = inspector
+            edits = inspector
                 .show(ctx, document, Some(0), &Shell::load(None))
-                .edit;
+                .edits;
         },
     );
-    (output, edit)
+    (output, edits)
+}
+
+fn click_text(
+    inspector: &mut StreetInspector,
+    ctx: &egui::Context,
+    document: &MapDocument,
+    text: &str,
+) -> Vec<StreetEdit> {
+    let (output, _) = frame_all(inspector, ctx, document, vec![]);
+    let pos = text_rect(&output, text).center();
+    let mut edits = Vec::new();
+    for pressed in [true, false] {
+        edits.extend(
+            frame_all(
+                inspector,
+                ctx,
+                document,
+                vec![
+                    Event::PointerMoved(pos),
+                    Event::PointerButton {
+                        pos,
+                        button: PointerButton::Primary,
+                        pressed,
+                        modifiers: Modifiers::NONE,
+                    },
+                ],
+            )
+            .1,
+        );
+    }
+    edits
+}
+
+#[test]
+fn changing_focus_commits_the_pending_dimension_without_losing_a_switch_click() {
+    for target in ["6", "Generar vehículos"] {
+        let mut document = MapDocument::parse(
+            r#"{"calles":[{
+            "nombre":"North","tipo":"generador","tamano":6,"carriles":2
+        }]}"#,
+        )
+        .unwrap();
+        let ctx = egui::Context::default();
+        let mut inspector = StreetInspector::default();
+        frame(&mut inspector, &ctx, &document, vec![]);
+        frame(&mut inspector, &ctx, &document, vec![]);
+        click_text(&mut inspector, &ctx, &document, "2");
+        frame(
+            &mut inspector,
+            &ctx,
+            &document,
+            vec![
+                Event::Key {
+                    key: egui::Key::A,
+                    physical_key: None,
+                    pressed: true,
+                    repeat: false,
+                    modifiers: Modifiers::COMMAND,
+                },
+                Event::Text("10".into()),
+            ],
+        );
+        let edits = click_text(&mut inspector, &ctx, &document, target);
+        assert!(
+            edits.contains(&StreetEdit::Update(
+                0,
+                StreetChange::Dimensions {
+                    lanes: 10,
+                    length: 6
+                }
+            )),
+            "{edits:?}"
+        );
+        if target == "Generar vehículos" {
+            assert!(
+                edits.contains(&StreetEdit::Update(
+                    0,
+                    StreetChange::LaneGeneration {
+                        lane: 0,
+                        enabled: false
+                    }
+                )),
+                "{edits:?}"
+            );
+        }
+        for edit in edits {
+            document.edit_streets(edit).unwrap();
+        }
+        assert_eq!(document.model().streets()[0].config().carriles, 10);
+    }
 }
 
 fn text_rect(output: &egui::FullOutput, text: &str) -> egui::Rect {
@@ -166,8 +266,28 @@ fn typing_ten_lanes_does_not_apply_the_destructive_one_lane_prefix() {
         .1,
         None
     );
+    let mut finished = None;
+    let _ = ctx.run(
+        egui::RawInput {
+            screen_rect: Some(egui::Rect::from_min_size(
+                egui::Pos2::ZERO,
+                egui::vec2(1100.0, 850.0),
+            )),
+            ..Default::default()
+        },
+        |ctx| {
+            // App handles Resume before drawing the inspector in this same frame.
+            finished = inspector.finish(ctx, &document).unwrap();
+            let response = inspector.show(ctx, &document, Some(0), &Shell::load(None));
+            assert!(
+                response.edits.is_empty(),
+                "Resume must not emit a second edit"
+            );
+            assert!(!response.editing, "Resume must not enter edit pause again");
+        },
+    );
     assert_eq!(
-        inspector.finish(&ctx, &document).unwrap(),
+        finished,
         Some(StreetEdit::Update(
             0,
             StreetChange::Dimensions {
@@ -175,6 +295,11 @@ fn typing_ten_lanes_does_not_apply_the_destructive_one_lane_prefix() {
                 length: 8
             }
         ))
+    );
+    assert_eq!(
+        frame(&mut inspector, &ctx, &document, vec![]).1,
+        None,
+        "the inspector frame after Resume must not emit the same edit again"
     );
 }
 
