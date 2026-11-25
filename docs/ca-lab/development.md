@@ -225,7 +225,9 @@ the shared camera and fixed screen-space pick radii. All commits use the ordered
 street-edit queue and pause boundary. `StreetChange::StraightGeometry` validates
 the complete endpoint candidate before changing any saved fields, and uses the
 dimension reconciler for vehicles and connections. Invalid drags retain the old
-geometry and use the inspector's translated error. Escape, focus loss, and Resume
+geometry and keep the inspector's translated error visible until the next gesture
+or Escape. Body translation checks point bounds without resampling curves.
+Escape, focus loss, and Resume
 end gestures. Active drawing tools block camera pan, including over existing
 streets.
 

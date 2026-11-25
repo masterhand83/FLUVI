@@ -128,6 +128,19 @@ impl StreetError {
     }
 }
 
+/// Check a map's cell budget after replacing an existing street's cells.
+pub fn validate_cell_capacity(
+    total: usize,
+    removed: usize,
+    added: usize,
+) -> Result<(), StreetError> {
+    if total.saturating_sub(removed).saturating_add(added) > 1_000_000 {
+        Err(StreetError("streetInspector.errors.capacity"))
+    } else {
+        Ok(())
+    }
+}
+
 impl StreetChange {
     pub fn validate(&self, config: &crate::traffic::CalleConfig) -> Result<(), StreetError> {
         if let Self::StraightGeometry {

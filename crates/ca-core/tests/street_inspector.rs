@@ -45,6 +45,38 @@ fn endpoint_edit_is_atomic_and_reconciles_connections() {
 }
 
 #[test]
+fn translating_a_curve_keeps_links_and_rejects_out_of_bounds_controls() {
+    use ca_core::bezier::BezierChange;
+    let mut map = MapDocument::parse(r#"{
+        "calles":[{"nombre":"A","tipo":"conexion","tamano":6},{"nombre":"B","tipo":"conexion","tamano":6}],
+        "conexiones":[{"origenIdx":0,"destinoIdx":1,"tipo":"LINEAL","detalles":[
+            {"carrilOrigen":0,"carrilDestino":0,"posOrigen":5,"posDestino":0}]}]
+    }"#).unwrap();
+    map.edit_streets(StreetEdit::Update(
+        0,
+        StreetChange::Bezier(BezierChange::Convert),
+    ))
+    .unwrap();
+    let links = map.model().connections().to_vec();
+    map.edit_streets(StreetEdit::Update(0, StreetChange::Origin([12.0, 8.0])))
+        .unwrap();
+    assert_eq!(
+        map.layout()[0].bezier.as_ref().unwrap().start(),
+        [12.0, 8.0]
+    );
+    assert_eq!(map.model().connections(), links);
+    let before = map.to_json();
+    let error = map
+        .edit_streets(StreetEdit::Update(
+            0,
+            StreetChange::Origin([199_999.0, 0.0]),
+        ))
+        .unwrap_err();
+    assert_eq!(error.translation_key(), "bezier.invalidControls");
+    assert_eq!(map.to_json(), before);
+}
+
+#[test]
 fn resize_keeps_new_endpoint_aliases_and_self_links_saveable() {
     let mut map = MapDocument::parse(r#"{
         "calles":[{"nombre":"A","tipo":"conexion","tamano":6},{"nombre":"B","tipo":"devorador","tamano":6}],

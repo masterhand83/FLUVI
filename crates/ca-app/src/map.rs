@@ -112,6 +112,7 @@ pub struct MapInteraction {
     street_sizes: Vec<Vec<usize>>,
     roundabouts: Vec<Option<ca_core::streets::RoundaboutDraft>>,
     radius_drag: Option<(usize, ca_core::streets::RoundaboutDraft)>,
+    rejected_geometry: Option<ca_core::streets::StreetError>,
 }
 
 impl MapInteraction {
@@ -141,6 +142,7 @@ impl MapInteraction {
                 .collect(),
             roundabouts: Vec::new(),
             radius_drag: None,
+            rejected_geometry: None,
         }
     }
 
@@ -200,6 +202,7 @@ impl MapInteraction {
     }
 
     pub fn finish_edits(&mut self) {
+        self.rejected_geometry = None;
         self.set_drawing(false);
         self.drawing_gesture = false;
         self.vertices.finish();
@@ -275,6 +278,7 @@ impl MapInteraction {
         shift: [f32; 2],
     ) -> ca_core::map_json::MapGeometry {
         let mut geometry = document.geometry_snapshot();
+        self.rejected_geometry = None;
         self.curves.sync(document, shift);
         self.handles.sync(document, shift);
         geometry.translate(shift);
@@ -356,6 +360,9 @@ impl MapInteraction {
             self.vertices
                 .input(ui, rect, camera, self.selected, response.contains_pointer());
         let pointer = ui.input(|i| i.pointer.clone());
+        if pointer.primary_pressed() || ui.input(|i| i.key_pressed(egui::Key::Escape)) {
+            self.rejected_geometry = None;
+        }
         let curve_input = self.curves.input(
             ui,
             rect,
@@ -616,6 +623,9 @@ impl MapInteraction {
             self.touch_gesture = false;
             self.drawing_gesture = false;
         }
+        if pointer.primary_released() {
+            self.rejected_geometry = geometry_error;
+        }
         MapFrame {
             rect,
             view: camera.view(),
@@ -632,7 +642,7 @@ impl MapInteraction {
             street_preview,
             street_edit,
             roundabout_preview,
-            geometry_error,
+            geometry_error: geometry_error.or(self.rejected_geometry),
             bezier_preview: curve_input.preview,
         }
     }

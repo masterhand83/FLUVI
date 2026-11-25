@@ -95,9 +95,7 @@ impl GeometryHandles {
             let change = StreetChange::Origin(drag.position);
             change.validate(&street.config)?;
             if let Some(curve) = &street.placement.bezier {
-                curve
-                    .transformed(drag.position, 0.0)?
-                    .validate(street.config.carriles)?;
+                curve.validate_translation(drag.position)?;
             }
             return Ok(change);
         };
@@ -115,12 +113,11 @@ impl GeometryHandles {
             length: distance.round() as usize,
         };
         change.validate(&street.config)?;
-        if self.total - street.config.carriles * street.config.tamano
-            + street.config.carriles * distance.round() as usize
-            > 1_000_000
-        {
-            return Err(StreetError("streetInspector.errors.capacity"));
-        }
+        ca_core::streets::validate_cell_capacity(
+            self.total,
+            street.config.carriles * street.config.tamano,
+            street.config.carriles * distance.round() as usize,
+        )?;
         Ok(change)
     }
 

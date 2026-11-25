@@ -285,6 +285,24 @@ impl BezierCurve {
         )
     }
 
+    /// Translation preserves length and overlap. Check only the moved point bounds,
+    /// without rebuilding sampled geometry during a body drag.
+    pub fn validate_translation(&self, origin: Point) -> Result<(), StreetError> {
+        for p in std::iter::once(&self.start).chain(
+            self.sections
+                .iter()
+                .flat_map(|s| s.controls.iter().chain([&s.end])),
+        ) {
+            for i in 0..2 {
+                let value = origin[i] + (p[i] - self.start[i]);
+                if !value.is_finite() || value.abs() > 200_000.0 {
+                    return Err(StreetError("bezier.invalidControls"));
+                }
+            }
+        }
+        Ok(())
+    }
+
     pub(crate) fn write_json(&self, road: &mut serde_json::Value) {
         use serde_json::json;
         let point = |p: Point| json!({"x":p[0]*5.0,"y":p[1]*5.0});

@@ -175,12 +175,11 @@ fn selected_bodies_and_roundabout_center_move_without_pan() {
 }
 
 #[test]
-fn invalid_endpoint_drag_keeps_document_and_gives_a_translated_reason() {
+fn invalid_endpoint_drag_is_rejected_with_a_persistent_translated_reason() {
     let document = ca_core::map_json::MapDocument::parse(
         r#"{"calles":[{"nombre":"A","tipo":"conexion","tamano":6,"x":25,"y":25}]}"#,
     )
     .unwrap();
-    let before = document.to_json();
     let ctx = egui::Context::default();
     let mut map = MapInteraction::new([30.0, 20.0], &document.geometry(), vec!["A".into()]);
     map.configure(&document, [0.0; 2]);
@@ -208,7 +207,19 @@ fn invalid_endpoint_drag_keeps_document_and_gives_a_translated_reason() {
     let shell = ca_app::shell::Shell::load(None);
     let reason = ca_app::inspector::geometry_error_message(&shell, error);
     assert!(!reason.is_empty() && reason != error.translation_key());
-    assert_eq!(document.to_json(), before);
+    let next = frame(&ctx, &mut map, vec![], false);
+    assert_eq!(
+        next.geometry_error,
+        Some(error),
+        "rejection must remain readable after release"
+    );
+    let restarted = frame(
+        &ctx,
+        &mut map,
+        vec![egui::Event::PointerMoved(start), button(start, true)],
+        false,
+    );
+    assert!(restarted.geometry_error.is_none());
 }
 
 #[test]

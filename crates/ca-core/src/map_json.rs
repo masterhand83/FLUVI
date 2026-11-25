@@ -259,9 +259,11 @@ impl MapDocument {
                     };
                     let cells = curve.validate(lanes)?;
                     let total: usize = self.model.streets().iter().map(|s| s.cells().len()).sum();
-                    if total - old.carriles * old.tamano + lanes * cells > 1_000_000 {
-                        return Err(StreetError("streetInspector.errors.capacity"));
-                    }
+                    crate::streets::validate_cell_capacity(
+                        total,
+                        old.carriles * old.tamano,
+                        lanes * cells,
+                    )?;
                     prepared_curve = Some(curve);
                 }
                 let ring = self.layout[*street].roundabout;
@@ -295,9 +297,11 @@ impl MapDocument {
                 };
                 if let Some((lanes, length)) = size {
                     let total: usize = self.model.streets().iter().map(|s| s.cells().len()).sum();
-                    if total - old.carriles * old.tamano + lanes * length > 1_000_000 {
-                        return Err(StreetError("streetInspector.errors.capacity"));
-                    }
+                    crate::streets::validate_cell_capacity(
+                        total,
+                        old.carriles * old.tamano,
+                        lanes * length,
+                    )?;
                 }
             }
         }
