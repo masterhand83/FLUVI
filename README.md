@@ -1,11 +1,12 @@
 # FLUVI - Vehicular Traffic Flow Simulator
 
-## CA Lab — offline native Rust scaffold
+## FLUVI v2 — offline native Rust application
 
-The root Cargo workspace contains a separate native traffic demo. It does
-not change the web application below. It uses stable Rust (edition 2024), egui
-with wgpu, and a CPU traffic model. Conway GPU kernels and the Polars analysis
-worker remain available as library components. All direct external
+The root Cargo workspace contains the FLUVI v2 native traffic application.
+It does not change the v1 web application described below. It uses stable Rust
+(edition 2024), egui with wgpu, and a CPU traffic model. The current app uses a
+fixed demo network; the full v1 feature set is not yet available in v2.
+All direct external
 dependency versions are pinned in `Cargo.toml`; `Cargo.lock` fixes the resolution.
 
 ```sh
@@ -54,7 +55,12 @@ simulation FPS. FPS counts completed CPU ticks, not UI frames. Pause clears the
 FPS sample window. The CPU model uploads cell values into a GPU storage buffer
 after each tick batch; the shader reads that buffer directly.
 The smoke summary reports completed ticks and the current CPU population.
-It does not need Conway population readbacks or analysis results.
+It checks traffic progress without GPU readbacks or analysis results.
+
+`ca-core` owns the traffic model and rules. `ca-gpu` packs and displays traffic
+state. `ca-app` owns the UI, timing, profiler toggle, and logging.
+`ca-analysis` is reserved for future traffic metrics and file analysis. Its initial
+population-statistics worker was removed; no analysis worker runs in this version.
 
 Logging supports `RUST_LOG`, for example:
 `RUST_LOG=ca_app=debug,wgpu=warn,naga=warn cargo run -p ca-app`.
@@ -64,6 +70,10 @@ and debug labels by default. See
 [`docs/ca-lab/development.md`](docs/ca-lab/development.md) for RenderDoc instructions.
 
 ---
+
+## FLUVI v1 — web application
+
+The following sections describe v1, not the current native v2 feature set.
 
 ![FLUVI](main/src/assets/logos/logo_horizontal.png)
 

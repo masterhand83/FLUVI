@@ -1,10 +1,12 @@
-# CA Lab crate rules
+# FLUVI v2 crate rules
 
-Dependency direction: `ca-app → {ca-gpu, ca-analysis} → ca-core`.
-The GPU API re-exports core grid/sample types to preserve this graph.
-Core owns grids, rules and the CPU reference; GPU owns kernels, rendering and
-readback; analysis owns the bounded Polars worker; app owns UI and message routing.
-Core must remain independent of GPU, UI and Polars.
+Current dependency direction: `ca-app → ca-gpu → ca-core`.
+Core owns the traffic model, rules, and CPU reference. GPU owns traffic packing
+and rendering. App owns UI, timing, and message routing.
+`ca-analysis` is reserved and has no dependencies or active worker. Future metrics
+and file analysis may add `ca-app → ca-analysis → ca-core`; use bounded channels
+and non-blocking result delivery. See the worker requirements in the development
+guide below. Core must remain independent of GPU, UI, and analysis libraries.
 
 Verify APIs against the pinned registry source, not memory. Use `eframe::wgpu`
 in the app and the exact matching wgpu version in the standalone GPU crate.

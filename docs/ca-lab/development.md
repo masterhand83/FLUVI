@@ -1,4 +1,18 @@
-# CA Lab development and verification
+# FLUVI v2 development and verification
+
+## Current architecture
+
+The native app runs the CPU traffic model in `ca-core` and displays its lane
+and vehicle buffers through `ca-gpu`. `ca-app` owns the UI, tick timing, logging,
+and F12 profiler toggle. The smoke run checks completed frames, completed traffic
+ticks, a non-zero vehicle count, and app errors with a real native window.
+
+`ca-analysis` remains a workspace crate reserved for traffic metrics (ticket 25)
+and file analysis (ticket 29). The initial population-statistics worker and its
+Polars dependency have been removed. No analysis worker runs in this version.
+When these features add a worker, use bounded input/output channels, non-blocking
+result delivery, and shutdown when input closes. A slow or closed result consumer
+must not block shutdown. Analysis must remain off the UI/render thread.
 
 ## Fast edit loop
 
@@ -28,11 +42,11 @@ Single stages are `check`, `fmt`, `tooling`, `lint`, `test`, `smoke`, and `relea
 For example, `cargo dev lint` records only the Clippy stage.
 The command definitions and stage ordering live in `scripts/verify.py`.
 The driver under `tools/ca-dev` has no dependencies on the app or its libraries.
-It can run the formatter without first compiling Polars or wgpu.
+It can run the formatter without first compiling wgpu.
 
 Automation can call `sh scripts/cargo-ci.sh` directly, without even building the
 small Cargo driver. Python 3 is required for verification tooling, not for the
-native simulator. Install missing Rust tools with:
+native traffic app. Install missing Rust tools with:
 
 ```sh
 cargo install --locked cargo-nextest
@@ -84,7 +98,7 @@ normal operation; Puffin uses its own internal synchronization while enabled.
 To capture a frame, build with `cargo build -p ca-app`. In RenderDoc, launch
 `target/debug/ca-app` with the repository as working directory. Set a capture key
 other than F12 if using the profiler, then capture one frame. Shader/buffer labels
-identify the CA pipelines and readback ring.
+identify the traffic display pipeline, lane layout, and cell storage.
 
 ## Tooling changes
 

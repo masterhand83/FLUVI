@@ -7,11 +7,9 @@ license.workspace = true
 
 [dependencies]
 ca-gpu.workspace = true
-ca-analysis.workspace = true
 eframe.workspace = true
 egui.workspace = true
 egui-wgpu.workspace = true
-egui_plot.workspace = true
 puffin.workspace = true
 puffin_egui.workspace = true
 crossbeam-channel.workspace = true

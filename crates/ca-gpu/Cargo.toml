@@ -8,9 +8,6 @@ license.workspace = true
 ca-core.workspace = true
 wgpu.workspace = true
 bytemuck.workspace = true
-crossbeam-channel.workspace = true
-puffin.workspace = true
-thiserror.workspace = true
 
 [dev-dependencies]
 pollster.workspace = true
