@@ -9,10 +9,12 @@ pub enum ResetPhase {
 }
 
 type ResetStep<S> = (ResetPhase, fn(&mut S));
+type StreetListener = fn(crate::streets::StreetEvent, &MapDocument);
 
 pub struct MapSession<S> {
     document: MapDocument,
     resets: Vec<ResetStep<S>>,
+    street_listeners: Vec<StreetListener>,
 }
 
 impl<S> MapSession<S> {
@@ -20,6 +22,7 @@ impl<S> MapSession<S> {
         Self {
             document,
             resets: Vec::new(),
+            street_listeners: Vec::new(),
         }
     }
 
@@ -31,6 +34,21 @@ impl<S> MapSession<S> {
 
     pub fn document(&self) -> &MapDocument {
         &self.document
+    }
+
+    pub fn on_street_event(&mut self, listener: StreetListener) {
+        self.street_listeners.push(listener);
+    }
+
+    pub fn edit_streets(
+        &mut self,
+        edit: ca_core::streets::StreetEdit,
+    ) -> Result<crate::streets::StreetEvent, MapError> {
+        let event = self.document.edit_streets(edit)?;
+        for listener in &self.street_listeners {
+            listener(event, &self.document);
+        }
+        Ok(event)
     }
 
     pub fn set_vertex_offset(&mut self, street: usize, vertex: usize, offset: f64) -> bool {

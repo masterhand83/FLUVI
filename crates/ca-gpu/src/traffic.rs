@@ -2,7 +2,7 @@
 use bytemuck::{Pod, Zeroable};
 use ca_core::camera::WorldView;
 use ca_core::cell_index::{CellRef, StreetGeometry};
-use ca_core::traffic::{CalleType, LaneDirection, TrafficError, TrafficModel, VehicleAction};
+use ca_core::traffic::{CalleType, LaneDirection, TrafficError, VehicleAction};
 use wgpu::util::DeviceExt;
 
 use crate::{ViewUniform, entry};
@@ -33,7 +33,6 @@ struct TrafficTile {
 const _: () = assert!(size_of::<TrafficTile>() == 32);
 
 pub struct TrafficScene {
-    model: TrafficModel,
     lanes: Vec<TrafficLane>,
     cells: Vec<u32>,
     edited: bool,
@@ -47,6 +46,7 @@ pub struct TrafficScene {
     street_tiles: Vec<std::ops::Range<usize>>,
     street_lanes: Vec<std::ops::Range<usize>>,
     zones: Vec<ca_core::map_json::BackgroundZone>,
+    document: ca_core::map_json::MapDocument,
 }
 
 impl TrafficScene {
@@ -57,7 +57,7 @@ impl TrafficScene {
     /// Shift only the display to positive coordinates. The document retains
     /// the map's original world positions.
     pub fn from_document(document: &ca_core::map_json::MapDocument) -> Self {
-        let model = document.model().clone();
+        let model = document.model();
         let snapshot = document.geometry_snapshot();
         let mut geometry = snapshot.streets;
         let axes = snapshot.axes;
@@ -154,7 +154,6 @@ impl TrafficScene {
             lane_start += street.centers.len();
         }
         let mut scene = Self {
-            model,
             lanes,
             names,
             extent: std::array::from_fn(|i| (maximum[i] - minimum[i] + 4.0).ceil() as u32),
@@ -168,6 +167,7 @@ impl TrafficScene {
             street_tiles,
             street_lanes,
             zones: document.zones().to_vec(),
+            document: document.clone(),
         };
         scene.pack();
         scene
@@ -175,7 +175,8 @@ impl TrafficScene {
 
     fn pack(&mut self) {
         for (target, value) in self.cells.iter_mut().zip(
-            self.model
+            self.document
+                .model()
                 .streets()
                 .iter()
                 .flat_map(|street| street.cells()),
@@ -186,15 +187,53 @@ impl TrafficScene {
     }
 
     pub fn tick(&mut self) {
-        self.model.tick();
+        self.document.model_mut().tick();
         self.pack();
+    }
+
+    /// Rebuild topology storage only on edits; keep live traffic and display shift.
+    pub fn edit_streets(&mut self, edit: ca_core::streets::StreetEdit) -> bool {
+        let mut document = self.document.clone();
+        if document.edit_streets(edit).is_err() {
+            return false;
+        }
+        let mut scene = Self::from_document(&document);
+        let delta: [f32; 2] = std::array::from_fn(|i| self.shift[i] - scene.shift[i]);
+        for center in scene
+            .geometry
+            .iter_mut()
+            .flat_map(|s| &mut s.centers)
+            .flatten()
+        {
+            for i in 0..2 {
+                center[i] += delta[i];
+            }
+        }
+        for lane in &mut scene.lanes {
+            for (i, value) in delta.iter().enumerate() {
+                lane.origin[i] += value;
+            }
+        }
+        for tile in &mut scene.tiles {
+            for (i, value) in delta.iter().enumerate() {
+                tile.center[i] += value;
+            }
+        }
+        scene.shift = self.shift;
+        scene.extent = std::array::from_fn(|i| {
+            self.extent[i].max((scene.extent[i] as f32 + delta[i]).max(1.0).ceil() as u32)
+        });
+        *self = scene;
+        true
     }
 
     pub fn set_generation_override(
         &mut self,
         probability: Option<f64>,
     ) -> Result<(), TrafficError> {
-        self.model.set_generation_override(probability)
+        self.document
+            .model_mut()
+            .set_generation_override(probability)
     }
 
     pub fn edit_vehicles(
@@ -203,8 +242,10 @@ impl TrafficScene {
         paused: bool,
     ) -> Result<(), TrafficError> {
         match action {
-            VehicleAction::Clear => self.model.clear_vehicles(),
-            VehicleAction::Fill(probability) => self.model.random_fill(probability)?,
+            VehicleAction::Clear => self.document.model_mut().clear_vehicles(),
+            VehicleAction::Fill(probability) => {
+                self.document.model_mut().random_fill(probability)?
+            }
         }
         self.edited = true;
         if paused {
@@ -216,7 +257,7 @@ impl TrafficScene {
     /// Paused changes are packed before this frame is painted. Running changes
     /// remain in the model until the next completed tick packs the display.
     pub fn toggle_vehicle(&mut self, cell: CellRef, paused: bool) -> bool {
-        if !self.model.toggle_vehicle(cell) {
+        if !self.document.model_mut().toggle_vehicle(cell) {
             return false;
         }
         self.edited = true;
@@ -256,6 +297,7 @@ impl TrafficScene {
         if !placement.set_vertex_offset(vertex, offset) {
             return false;
         }
+        self.document.set_vertex_offset(street, vertex, offset);
         let centers = &mut self.geometry[street].centers;
         let axes = &mut self.axes[street];
         placement.write_cells(centers, axes);
@@ -291,7 +333,7 @@ impl TrafficScene {
 
     /// World-space arrow endpoints, built on topology edits, never per tick.
     pub fn connection_arrows(&self) -> Vec<[[f32; 2]; 2]> {
-        self.model.connection_arrows(&self.geometry)
+        self.document.model().connection_arrows(&self.geometry)
     }
 
     pub fn lanes(&self) -> &[TrafficLane] {

@@ -1,4 +1,9 @@
 {
+  "streetDrawing.button": "Dibujar calle",
+  "streetDrawing.select": "Selecciona una calle...",
+  "streetDrawing.drawn": "Calle dibujada.",
+  "streetDrawing.deleted": "Calle eliminada.",
+  "streetDrawing.invalid": "No se puede dibujar esta calle. Comprueba los límites del mapa.",
   "vertices.mode": "Editar vértices (Z) — seleccione una calle y arrastre un punto amarillo",
   "mapFiles.open": "Abrir mapa",
   "mapFiles.save": "Guardar mapa",

@@ -10,6 +10,30 @@ struct State {
 }
 
 #[test]
+fn accepted_street_edits_notify_registered_features_only_after_cleanup() {
+    use ca_app::streets::StreetEvent;
+    use ca_core::streets::{StreetDraft, StreetEdit};
+    let mut session = MapSession::<State>::new(MapDocument::empty());
+    let mut events = Vec::new();
+    session.on_street_event(|event, document| {
+        assert_eq!(
+            document.model().streets().len(),
+            usize::from(matches!(event, StreetEvent::Drawn(_)))
+        );
+    });
+    events.push(
+        session
+            .edit_streets(StreetEdit::Draw(
+                StreetDraft::between([0.0, 0.0], [5.0, 0.0]).unwrap(),
+            ))
+            .unwrap(),
+    );
+    events.push(session.edit_streets(StreetEdit::Delete(0)).unwrap());
+    assert_eq!(events, [StreetEvent::Drawn(0), StreetEvent::Deleted(0)]);
+    assert!(session.edit_streets(StreetEdit::Delete(0)).is_err());
+}
+
+#[test]
 fn cancelled_new_map_and_invalid_load_leave_the_session_unchanged() {
     let mut session = MapSession::<State>::new(
         MapDocument::parse(include_str!("../../ca-core/tests/fixtures/map-v1.json")).unwrap(),

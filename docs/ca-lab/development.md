@@ -92,6 +92,29 @@ Visibility is session-only and starts on.
 Focused checks: `cargo test -p ca-core --test connections` and
 `cargo test -p ca-app --test connection_overlays`.
 
+### Map-first street drawing and deletion
+
+Use Draw Street, then drag on empty map space. The preview shows the quantized
+one-lane footprint and cell count. Escape cancels. A completed street is selected;
+Delete (Supr) removes the selected street without confirmation. Text input and
+vertex mode keep keyboard priority. With Draw Street off, map drags still pan.
+
+`ca-core::streets::StreetDraft` supplies the shared preview/commit geometry.
+`MapDocument::delete_street` removes owned links and remaps surviving indices.
+`ca-app::map_session::MapSession::edit_streets` is the shared edit boundary and
+publishes `StreetEvent::Drawn` / `Deleted` to registered feature callbacks.
+The map input refreshes its oriented cell index and selector after each edit.
+Selectors use Spanish primary-strength numeric collation, with physical index
+as the tie breaker. Sorting never changes model order.
+
+Topology edits use the ordered render edit queue. They rebuild display buffers,
+not the simulation session: surviving traffic, tick count, and display shift stay
+unchanged. New and Open still use the full replacement boundary below.
+
+Focused checks: `cargo test -p ca-core --test street_editing`,
+`cargo test -p ca-app --test map_interaction --test street_lists --test map_session`,
+and `cargo test -p ca-gpu --test traffic`.
+
 ### Map files and session replacement
 
 Use `ca-core::map_json::MapDocument` to validate map JSON before replacing

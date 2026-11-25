@@ -8,6 +8,7 @@ pub struct WorldView {
 
 pub struct Camera {
     extent: [f32; 2],
+    minimum: [f32; 2],
     viewport: [f32; 2],
     origin: [f32; 2],
     scale: f32,
@@ -24,6 +25,7 @@ impl Camera {
         let scale = (viewport[0] / extent[0]).min(viewport[1] / extent[1]);
         Self {
             extent,
+            minimum: [0.0; 2],
             viewport,
             origin: std::array::from_fn(|i| (extent[i] - viewport[i] / scale) * 0.5),
             scale,
@@ -35,6 +37,17 @@ impl Camera {
             origin: self.origin,
             span: self.viewport.map(|v| v / self.scale),
         }
+    }
+
+    /// Geometry edits can extend either side of the map. Keep the current view.
+    pub fn set_bounds(&mut self, minimum: [f32; 2], maximum: [f32; 2]) {
+        assert!(
+            (0..2).all(|i| minimum[i].is_finite()
+                && maximum[i].is_finite()
+                && maximum[i] > minimum[i])
+        );
+        self.minimum = minimum;
+        self.extent = std::array::from_fn(|i| maximum[i] - minimum[i]);
     }
 
     pub fn screen_to_world(&self, screen: [f32; 2]) -> [f32; 2] {
@@ -81,7 +94,10 @@ impl Camera {
         for (i, span) in span.into_iter().enumerate() {
             // Keep a visible strip of the map, even at the zoom limits.
             let margin = self.extent[i].min(span) * 0.1;
-            self.origin[i] = self.origin[i].clamp(margin - span, self.extent[i] - margin);
+            self.origin[i] = self.origin[i].clamp(
+                self.minimum[i] + margin - span,
+                self.minimum[i] + self.extent[i] - margin,
+            );
         }
     }
 }

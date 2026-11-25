@@ -1,4 +1,9 @@
 {
+  "streetDrawing.button": "Draw Street",
+  "streetDrawing.select": "Select a street...",
+  "streetDrawing.drawn": "Street drawn.",
+  "streetDrawing.deleted": "Street deleted.",
+  "streetDrawing.invalid": "Cannot draw this street. Check the map limits.",
   "vertices.mode": "Vertex edit (Z) — select a street and drag a yellow handle",
   "mapFiles.open": "Open Map",
   "mapFiles.save": "Save Map",

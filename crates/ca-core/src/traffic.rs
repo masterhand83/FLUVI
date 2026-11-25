@@ -395,6 +395,30 @@ impl TrafficModel {
         &self.streets
     }
 
+    pub(crate) fn add_street(&mut self, street: Calle) {
+        self.streets.push(street);
+    }
+
+    /// Remove every owned link, then remap surviving physical street indices.
+    pub(crate) fn delete_street(&mut self, street: usize) -> bool {
+        if street >= self.streets.len() {
+            return false;
+        }
+        self.connections.retain(|c| {
+            !c.mappings()
+                .any(|m| m.source_street == street || m.destination_street == street)
+        });
+        for connection in &mut self.connections {
+            connection.remap_after_deletion(street);
+        }
+        self.streets.remove(street);
+        // Waiting marks belong to the old topology.
+        for street in &mut self.streets {
+            street.waiting.fill(false);
+        }
+        true
+    }
+
     /// Session state: never writes the stored street configuration.
     pub fn set_generation_override(
         &mut self,

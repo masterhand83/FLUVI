@@ -251,6 +251,9 @@ impl App {
                 }
                 ui.add_enabled_ui(self.smoke_frames.is_none(), |ui| {
                     action = self.transport.show(ui, &self.shell);
+                    if let Some(map) = &mut self.map {
+                        map.show_tools(ui, &self.shell);
+                    }
                 });
                 if let Some(action) = action
                     && !self.commands.edit(Edit::Vehicles(action))
@@ -317,6 +320,57 @@ impl App {
         } else {
             self.connections = Some(ca_app::connections::ConnectionOverlays::new(arrows));
         }
+    }
+
+    fn edit_streets(&mut self, mut edit: ca_core::streets::StreetEdit) {
+        use ca_core::streets::StreetEdit;
+        if let StreetEdit::Draw(draft) = &mut edit {
+            for i in 0..2 {
+                draft.origin[i] -= self.map_shift[i] as f64;
+            }
+        }
+        // Validate before enqueueing. A rejected/full queue must not change the UI document.
+        if self
+            .session
+            .as_ref()
+            .expect("session")
+            .document()
+            .validate_street_edit(edit)
+            .is_err()
+        {
+            self.shell.notify(
+                ca_app::shell::Severity::Warning,
+                self.shell.tr("streetDrawing.invalid", &[]),
+            );
+            return;
+        }
+        if !self.commands.edit(Edit::Street(edit)) {
+            self.shell.notify(
+                ca_app::shell::Severity::Warning,
+                self.shell.tr("shell.cellEditBusy", &[]),
+            );
+            return;
+        }
+        let session = self.session.as_mut().expect("session");
+        let event = session.edit_streets(edit).expect("validated street edit");
+        let map = self.map.as_mut().expect("map");
+        let geometry = map.configure(session.document(), self.map_shift);
+        let (selected, key) = match event {
+            ca_app::streets::StreetEvent::Drawn(street) => (Some(street), "streetDrawing.drawn"),
+            ca_app::streets::StreetEvent::Deleted(_) => (None, "streetDrawing.deleted"),
+        };
+        map.select(selected);
+        if let Some(connections) = &mut self.connections {
+            connections.set_arrows(
+                session
+                    .document()
+                    .model()
+                    .connection_arrows(&geometry.streets),
+            );
+        }
+        self.playing = false;
+        self.shell
+            .notify(ca_app::shell::Severity::Success, self.shell.tr(key, &[]));
     }
 
     fn map_files(&mut self, ctx: &egui::Context) {
@@ -410,6 +464,9 @@ impl eframe::App for App {
             if map.vertex_mode {
                 self.playing = false;
             }
+            if let Some(edit) = map.street_edit {
+                self.edit_streets(edit);
+            }
             if let Some(edit) = map.vertex_edit {
                 if self.commands.edit(Edit::Vertex(edit)) {
                     let session = self.session.as_mut().expect("session");
@@ -457,6 +514,10 @@ impl eframe::App for App {
                 connections.paint(ui.painter(), map.view, map.rect);
             }
             map.paint_preview(ui.painter());
+            self.map
+                .as_ref()
+                .expect("map")
+                .paint_selection(ui.painter(), map.rect);
             self.map
                 .as_ref()
                 .expect("map")

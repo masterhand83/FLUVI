@@ -66,6 +66,97 @@ pub struct StreetPlacement {
 }
 
 impl MapDocument {
+    /// Shared topology cleanup. Later feature ports extend this boundary.
+    pub fn delete_street(&mut self, street: usize) -> bool {
+        if !self.model.delete_street(street) {
+            return false;
+        }
+        self.layout.remove(street);
+        self.data["calles"]
+            .as_array_mut()
+            .expect("validated roads")
+            .remove(street);
+        let links = self.data["conexiones"]
+            .as_array_mut()
+            .expect("validated links");
+        links.retain(|link| {
+            link["origenIdx"].as_u64() != Some(street as u64)
+                && link["destinoIdx"].as_u64() != Some(street as u64)
+        });
+        for link in links {
+            for key in ["origenIdx", "destinoIdx"] {
+                let index = link[key].as_u64().expect("validated index");
+                link[key] = json!(index - u64::from(index > street as u64));
+            }
+        }
+        true
+    }
+
+    pub fn edit_streets(
+        &mut self,
+        edit: crate::streets::StreetEdit,
+    ) -> Result<crate::streets::StreetEvent, MapError> {
+        use crate::streets::StreetEvent;
+        match edit {
+            crate::streets::StreetEdit::Draw(draft) => {
+                Ok(StreetEvent::Drawn(self.draw_street(draft)?))
+            }
+            crate::streets::StreetEdit::Delete(street) => {
+                if !self.delete_street(street) {
+                    return Err(MapError);
+                }
+                Ok(StreetEvent::Deleted(street))
+            }
+        }
+    }
+
+    pub fn validate_street_edit(&self, edit: crate::streets::StreetEdit) -> Result<(), MapError> {
+        match edit {
+            crate::streets::StreetEdit::Draw(draft) => {
+                self.new_street(draft)?;
+            }
+            crate::streets::StreetEdit::Delete(street) => {
+                if street >= self.layout.len() {
+                    return Err(MapError);
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn new_street(&self, draft: crate::streets::StreetDraft) -> Result<Self, MapError> {
+        let total: usize = self.model.streets().iter().map(|s| s.cells().len()).sum();
+        if total.saturating_add(draft.cells) > 1_000_000 {
+            return Err(MapError);
+        }
+        let mut n = 1;
+        while self.layout.iter().any(|p| p.name == format!("Street {n}")) {
+            n += 1;
+        }
+        // Reuse the file validator for this street only, never reparse the map.
+        Self::parse(
+            &json!({"calles": [{
+                "nombre": format!("Street {n}"), "tipo": "conexion",
+                "tamano": draft.cells, "carriles": 1,
+                "x": draft.origin[0] * 5.0, "y": draft.origin[1] * 5.0,
+                "angulo": draft.angle_degrees, "probabilidadSaltoDeCarril": 0.02
+            }]})
+            .to_string(),
+        )
+    }
+
+    pub fn draw_street(&mut self, draft: crate::streets::StreetDraft) -> Result<usize, MapError> {
+        let mut candidate = self.new_street(draft)?;
+        let id = self.layout.len();
+        self.model.add_street(candidate.model.streets()[0].clone());
+        self.layout.push(candidate.layout.remove(0));
+        self.data["calles"]
+            .as_array_mut()
+            .expect("validated roads")
+            .push(candidate.data["calles"][0].take());
+        Ok(id)
+    }
+
     pub fn campus() -> Self {
         Self::parse(include_str!("campus.json")).expect("exported v1 campus")
     }
@@ -342,6 +433,10 @@ impl MapDocument {
 
     pub fn model(&self) -> &TrafficModel {
         &self.model
+    }
+    /// Live traffic access. Structural edits must use the document edit boundary.
+    pub fn model_mut(&mut self) -> &mut TrafficModel {
+        &mut self.model
     }
     pub fn name(&self) -> &str {
         self.data["nombre"].as_str().expect("validated name")

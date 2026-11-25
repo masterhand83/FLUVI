@@ -55,6 +55,19 @@ pub enum Connection {
 }
 
 impl Connection {
+    pub(crate) fn remap_after_deletion(&mut self, street: usize) {
+        let remap = |m: &mut Mapping| {
+            m.source_street -= usize::from(m.source_street > street);
+            m.destination_street -= usize::from(m.destination_street > street);
+        };
+        match self {
+            Self::Lineal(m) => remap(m),
+            Self::ProbabilityTrial(r) => remap(&mut r.mapping),
+            Self::Incorporacion(rows) => rows.iter_mut().for_each(|r| remap(&mut r.mapping)),
+            Self::Probabilistica(rows) => rows.iter_mut().for_each(|r| remap(&mut r.mapping)),
+        }
+    }
+
     /// Includes disabled merge rows, so editors can display the full link.
     pub fn mappings(&self) -> impl Iterator<Item = &Mapping> {
         let (single, merge, split): (Option<&Mapping>, &[MergeRow], &[WeightedRow]) = match self {

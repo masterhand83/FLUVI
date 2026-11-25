@@ -37,6 +37,7 @@ pub enum Edit {
     Toggle(CellRef),
     Vehicles(VehicleAction),
     Vertex(ca_app::vertices::VertexEdit),
+    Street(ca_core::streets::StreetEdit),
 }
 
 pub struct PaintCallback;
@@ -199,6 +200,12 @@ impl Resources {
                         self.display.upload_street(queue, &self.scene, edit.street);
                     }
                     false
+                }
+                Edit::Street(edit) => {
+                    if self.scene.edit_streets(edit) {
+                        self.display = TrafficDisplay::new(device, &self.scene, self.format);
+                    }
+                    true
                 }
             };
         }
@@ -402,6 +409,67 @@ mod tests {
             assert_eq!(requests.edits.try_recv().unwrap(), action);
         }
         assert!(requests.edits.try_recv().is_err());
+    }
+
+    #[test]
+    fn topology_edits_preserve_tick_count_and_apply_cell_edits_in_physical_order() {
+        use ca_core::{
+            map_json::MapDocument,
+            streets::{StreetDraft, StreetEdit},
+        };
+        let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor::from_env_or_default());
+        let adapter = pollster::block_on(instance.request_adapter(&Default::default())).unwrap();
+        let (device, queue) =
+            pollster::block_on(adapter.request_device(&Default::default())).unwrap();
+        let format = wgpu::TextureFormat::Rgba8Unorm;
+        let scene = TrafficScene::from_document(&MapDocument::empty());
+        let display = TrafficDisplay::new(&device, &scene, format);
+        let (commands, requests) = command_channel();
+        let (events, results) = bounded(2);
+        let mut resources = Resources::new(scene, display, events, requests, format);
+        let state = Paint {
+            playing: false,
+            rate: 10.0,
+            step_ticket: 1,
+            generation_override: None,
+            view: WorldView {
+                origin: [0.0; 2],
+                span: [36.0, 14.0],
+            },
+        };
+        assert!(commands.send(state, None));
+        resources.prepare(&device, &queue);
+        let Event::Progress(first) = results.try_recv().unwrap();
+        assert_eq!(first.generation, 1);
+        let draft = StreetDraft::between([0.0, 0.0], [5.0, 0.0]).unwrap();
+        assert!(commands.edit(Edit::Street(StreetEdit::Draw(draft))));
+        assert!(commands.edit(Edit::Street(StreetEdit::Draw(draft))));
+        assert!(commands.edit(Edit::Toggle(CellRef {
+            street: 1,
+            lane: 0,
+            index: 1
+        })));
+        assert!(commands.edit(Edit::Street(StreetEdit::Delete(0))));
+        resources.prepare(&device, &queue);
+        let Event::Progress(edited) = results.try_recv().unwrap();
+        assert_eq!(
+            edited.generation, 1,
+            "topology must not restart simulation time"
+        );
+        assert_eq!(edited.population, 1);
+        assert_eq!(resources.scene.cells(), [0, 1, 0, 0, 0]);
+        assert!(commands.send(
+            Paint {
+                step_ticket: 2,
+                ..state
+            },
+            None
+        ));
+        resources.prepare(&device, &queue);
+        let Event::Progress(resumed) = results.try_recv().unwrap();
+        assert_eq!(resumed.generation, 2);
+        assert_eq!(resumed.population, 1);
+        assert_eq!(resources.scene.cells(), [0, 0, 1, 0, 0]);
     }
 
     #[test]

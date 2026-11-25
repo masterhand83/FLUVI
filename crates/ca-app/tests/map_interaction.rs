@@ -1,6 +1,241 @@
 use ca_app::map::MapInteraction;
 use eframe::egui;
 
+#[test]
+fn drawing_previews_quantized_cells_cancels_and_commits_without_panning() {
+    let ctx = egui::Context::default();
+    let mut map = MapInteraction::new([30.0, 20.0], &[], vec![]);
+    frame(&ctx, &mut map, vec![], false);
+    map.set_drawing(true);
+    let camera = map.camera().unwrap();
+    let a = camera.world_to_screen([4.0, 4.0]);
+    let b = camera.world_to_screen([7.0, 8.0]);
+    let start = egui::pos2(a[0], a[1]);
+    let end = egui::pos2(b[0], b[1]);
+    let button = |pos, pressed| egui::Event::PointerButton {
+        pos,
+        pressed,
+        button: egui::PointerButton::Primary,
+        modifiers: egui::Modifiers::NONE,
+    };
+    frame(
+        &ctx,
+        &mut map,
+        vec![egui::Event::PointerMoved(start), button(start, true)],
+        false,
+    );
+    let before = map.camera().unwrap().view();
+    let preview = frame(&ctx, &mut map, vec![egui::Event::PointerMoved(end)], false);
+    assert_eq!(preview.view, before);
+    assert_eq!(preview.street_preview.unwrap().cells, 5);
+    let committed = frame(&ctx, &mut map, vec![button(end, false)], false);
+    let ca_core::streets::StreetEdit::Draw(draft) = committed.street_edit.unwrap() else {
+        panic!("draw");
+    };
+    assert_eq!(draft.cells, 5);
+    assert!(committed.clicked.is_none());
+    map.set_drawing(true);
+    frame(
+        &ctx,
+        &mut map,
+        vec![egui::Event::PointerMoved(start), button(start, true)],
+        false,
+    );
+    frame(&ctx, &mut map, vec![egui::Event::PointerMoved(end)], false);
+    let cancelled = frame(
+        &ctx,
+        &mut map,
+        vec![egui::Event::Key {
+            key: egui::Key::Escape,
+            physical_key: None,
+            pressed: true,
+            repeat: false,
+            modifiers: egui::Modifiers::NONE,
+        }],
+        false,
+    );
+    assert!(cancelled.street_preview.is_none());
+    assert_eq!(
+        frame(
+            &ctx,
+            &mut map,
+            vec![egui::Event::PointerMoved(end + egui::vec2(40.0, 0.0))],
+            false
+        )
+        .view,
+        before,
+        "a cancelled drawing gesture must not become a pan"
+    );
+    assert!(
+        frame(&ctx, &mut map, vec![button(end, false)], false)
+            .street_edit
+            .is_none()
+    );
+}
+
+#[test]
+fn deletion_uses_selection_and_refreshes_physical_cell_picks() {
+    use ca_core::{map_json::MapDocument, streets::StreetEdit};
+    let ctx = egui::Context::default();
+    let mut document = MapDocument::parse(
+        r#"{"calles":[
+        {"nombre":"Removed","tipo":"conexion","tamano":4,"x":0,"y":0},
+        {"nombre":"Kept","tipo":"conexion","tamano":4,"x":0,"y":20}
+    ]}"#,
+    )
+    .unwrap();
+    let mut map = MapInteraction::new(
+        [10.0, 10.0],
+        &document.geometry(),
+        vec!["Removed".into(), "Kept".into()],
+    );
+    map.configure(&document, [0.0; 2]);
+    frame(&ctx, &mut map, vec![], false);
+    let a = map.camera().unwrap().world_to_screen([1.5, 0.5]);
+    let pos = egui::pos2(a[0], a[1]);
+    let button = |pressed| egui::Event::PointerButton {
+        pos,
+        pressed,
+        button: egui::PointerButton::Primary,
+        modifiers: egui::Modifiers::NONE,
+    };
+    frame(
+        &ctx,
+        &mut map,
+        vec![egui::Event::PointerMoved(pos), button(true)],
+        false,
+    );
+    frame(&ctx, &mut map, vec![button(false)], false);
+    assert_eq!(map.selected(), Some(0));
+    let deletion = frame(
+        &ctx,
+        &mut map,
+        vec![egui::Event::Key {
+            key: egui::Key::Delete,
+            physical_key: None,
+            pressed: true,
+            repeat: false,
+            modifiers: egui::Modifiers::NONE,
+        }],
+        false,
+    )
+    .street_edit;
+    assert_eq!(deletion, Some(StreetEdit::Delete(0)));
+    document.edit_streets(deletion.unwrap()).unwrap();
+    map.configure(&document, [0.0; 2]);
+    map.select(None);
+    assert!(
+        frame(&ctx, &mut map, vec![egui::Event::PointerMoved(pos)], true)
+            .preview
+            .is_none()
+    );
+    let kept = map.camera().unwrap().world_to_screen([1.5, 4.5]);
+    let hovered = frame(
+        &ctx,
+        &mut map,
+        vec![egui::Event::PointerMoved(egui::pos2(kept[0], kept[1]))],
+        true,
+    );
+    assert_eq!(hovered.tooltip.as_deref(), Some("Kept : 1"));
+    assert_eq!(hovered.preview.unwrap().cell.street, 0);
+}
+
+#[test]
+fn new_street_bounds_remain_reachable_after_zooming_in() {
+    use ca_core::{map_json::MapDocument, streets::StreetDraft};
+    let ctx = egui::Context::default();
+    let mut document = MapDocument::empty();
+    let mut map = MapInteraction::new([5.0, 5.0], &[], vec![]);
+    frame(&ctx, &mut map, vec![], false);
+    document
+        .draw_street(StreetDraft::between([-20.0, 0.0], [40.0, 0.0]).unwrap())
+        .unwrap();
+    let before = map.camera().unwrap().view();
+    map.configure(&document, [0.0; 2]);
+    assert_eq!(
+        map.camera().unwrap().view(),
+        before,
+        "topology must not reset the view"
+    );
+    let center = egui::pos2(360.0, 140.0);
+    frame(
+        &ctx,
+        &mut map,
+        vec![
+            egui::Event::PointerMoved(center),
+            egui::Event::Zoom(4.0),
+            egui::Event::MouseWheel {
+                unit: egui::MouseWheelUnit::Point,
+                delta: egui::vec2(-100000.0, 0.0),
+                modifiers: egui::Modifiers::NONE,
+            },
+        ],
+        false,
+    );
+    let view = map.camera().unwrap().view();
+    assert!(
+        view.origin[0] + view.span[0] > 39.0,
+        "new far endpoint must stay reachable"
+    );
+    frame(
+        &ctx,
+        &mut map,
+        vec![egui::Event::MouseWheel {
+            unit: egui::MouseWheelUnit::Point,
+            delta: egui::vec2(100000.0, 0.0),
+            modifiers: egui::Modifiers::NONE,
+        }],
+        false,
+    );
+    assert!(
+        map.camera().unwrap().view().origin[0] < -19.0,
+        "negative new endpoint must stay reachable"
+    );
+}
+
+#[test]
+fn draw_mode_does_not_start_on_an_existing_street_or_a_short_drag() {
+    use ca_core::cell_index::StreetGeometry;
+    let ctx = egui::Context::default();
+    let mut map = MapInteraction::new(
+        [30.0, 20.0],
+        &[StreetGeometry {
+            id: 0,
+            centers: vec![vec![[4.5, 4.5]]],
+        }],
+        vec!["Existing".into()],
+    );
+    frame(&ctx, &mut map, vec![], false);
+    for start in [[4.5, 4.5], [8.0, 8.0]] {
+        map.set_drawing(true);
+        let a = map.camera().unwrap().world_to_screen(start);
+        let start = egui::pos2(a[0], a[1]);
+        let end = start + egui::vec2(2.0, 0.0);
+        let button = |pos, pressed| egui::Event::PointerButton {
+            pos,
+            pressed,
+            button: egui::PointerButton::Primary,
+            modifiers: egui::Modifiers::NONE,
+        };
+        frame(
+            &ctx,
+            &mut map,
+            vec![egui::Event::PointerMoved(start), button(start, true)],
+            false,
+        );
+        assert!(
+            frame(&ctx, &mut map, vec![egui::Event::PointerMoved(end)], false)
+                .street_preview
+                .is_none()
+        );
+        assert!(
+            frame(&ctx, &mut map, vec![button(end, false)], false)
+                .street_edit
+                .is_none()
+        );
+    }
+}
+
 fn frame(
     ctx: &egui::Context,
     map: &mut MapInteraction,

@@ -1,6 +1,39 @@
 use ca_gpu::TrafficScene;
 
 #[test]
+fn topology_edits_keep_live_cells_and_display_coordinates() {
+    use ca_core::{
+        cell_index::CellRef,
+        map_json::MapDocument,
+        streets::{StreetDraft, StreetEdit},
+    };
+    let mut scene = TrafficScene::from_document(&MapDocument::demo());
+    let shift = scene.shift();
+    let center = scene.geometry()[0].centers[0][0];
+    let population = scene.population();
+    assert!(scene.edit_streets(StreetEdit::Draw(
+        StreetDraft::between([-20.0, -20.0], [-17.0, -16.0]).unwrap()
+    )));
+    assert_eq!(scene.shift(), shift);
+    assert_eq!(scene.geometry()[0].centers[0][0], center);
+    assert_eq!(scene.population(), population);
+    assert_eq!(scene.geometry()[3].centers[0].len(), 5);
+    assert!(scene.edit_streets(StreetEdit::Delete(1)));
+    assert_eq!(scene.geometry().len(), 3);
+    assert!(scene.connection_arrows().is_empty());
+    assert!(scene.toggle_vehicle(
+        CellRef {
+            street: 2,
+            lane: 0,
+            index: 0
+        },
+        true
+    ));
+    scene.tick();
+    assert_eq!(scene.geometry()[2].centers[0].len(), 5);
+}
+
+#[test]
 fn transport_actions_publish_paused_or_on_the_next_tick() {
     use ca_core::traffic::VehicleAction;
     let mut scene = TrafficScene::demo();
