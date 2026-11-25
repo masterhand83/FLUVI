@@ -464,6 +464,89 @@ mod tests {
     }
 
     #[test]
+    fn independent_probabilities_keep_their_chances_and_transfer_to_at_most_one_target() {
+        use ca_app::connection_draft::{ConnectionDraft, DraftKind};
+        use ca_core::map_json::MapDocument;
+        let document = MapDocument::parse(
+            r#"{"calles":[
+            {"nombre":"A","tipo":"conexion","tamano":4,"x":25,"y":25},
+            {"nombre":"B","tipo":"conexion","tamano":4,"x":75,"y":75}
+        ]}"#,
+        )
+        .unwrap();
+        let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor::from_env_or_default());
+        let adapter = pollster::block_on(instance.request_adapter(&Default::default())).unwrap();
+        let (device, queue) =
+            pollster::block_on(adapter.request_device(&Default::default())).unwrap();
+        // Seed 42 starts with a roll of about 0.741565. A 25% trial fails;
+        // an 80% first trial succeeds, even when a later row also has 80%.
+        let cases: &[(&[&str], bool, [u32; 8])] = &[
+            (&["25"], false, [0, 0, 1, 0, 0, 0, 0, 0]),
+            (&["80", "80"], false, [0, 0, 0, 0, 0, 1, 0, 0]),
+            (&["0", "0"], false, [0, 0, 1, 0, 0, 0, 0, 0]),
+            (&["0", "100"], false, [0, 0, 0, 0, 0, 0, 0, 1]),
+            (&["100", "100"], false, [0, 0, 0, 0, 0, 1, 0, 0]),
+            (&["100", "100"], true, [0, 1, 0, 0, 0, 1, 0, 0]),
+        ];
+        for &(percentages, occupied, expected) in cases {
+            let mut draft = ConnectionDraft::default();
+            draft.start();
+            draft.pick(0, &document);
+            draft.pick(1, &document);
+            draft.set_kind(DraftKind::Probabilistica, &document);
+            draft.rows_mut()[0].mapping.source_cell = 1;
+            draft.rows_mut()[0].probability = percentages[0].into();
+            if percentages.len() == 2 {
+                draft.add_destination(&document);
+                draft.rows_mut()[1].mapping.destination_cell = 2;
+                draft.rows_mut()[1].probability = percentages[1].into();
+            }
+            let scene = TrafficScene::from_document(&document);
+            let format = wgpu::TextureFormat::Rgba8Unorm;
+            let display = TrafficDisplay::new(&device, &scene, format);
+            let (commands, requests) = command_channel();
+            let (events, results) = bounded(2);
+            let mut resources = Resources::new(scene, display, events, requests, format);
+            assert!(commands.edit(Edit::Toggle(CellRef {
+                street: 0,
+                lane: 0,
+                index: 1
+            })));
+            if occupied {
+                assert!(commands.edit(Edit::Toggle(CellRef {
+                    street: 1,
+                    lane: 0,
+                    index: 0
+                })));
+            }
+            assert!(commands.edit(Edit::Connection(draft.candidate(&document).unwrap())));
+            assert!(commands.send(
+                Paint {
+                    playing: false,
+                    rate: 10.0,
+                    step_ticket: 1,
+                    generation_override: None,
+                    excluded_street: None,
+                    view: WorldView {
+                        origin: [0.0; 2],
+                        span: [25.0; 2]
+                    },
+                },
+                None
+            ));
+            resources.prepare(&device, &queue);
+            let Event::Progress(progress) = results.try_recv().unwrap();
+            assert_eq!(progress.generation, 1);
+            assert_eq!(progress.population, if occupied { 2 } else { 1 });
+            assert_eq!(
+                resources.scene.cells(),
+                expected,
+                "{percentages:?}, occupied={occupied}"
+            );
+        }
+    }
+
+    #[test]
     fn transport_actions_share_fifo_order_with_cell_edits() {
         use ca_core::traffic::VehicleAction;
         let (commands, requests) = command_channel();

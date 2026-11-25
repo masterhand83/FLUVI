@@ -268,7 +268,7 @@ fn registration_rejects_invalid_links_without_changing_network() {
 }
 
 #[test]
-fn probabilistic_link_requires_several_destinations() {
+fn legacy_weighted_split_requires_several_destinations() {
     let mut model = TrafficModel::new(vec![street(&[0, 0, 0]), street(&[0, 0, 0])], 42);
     assert_eq!(
         model.add_connection(Connection::Probabilistica(vec![WeightedRow {

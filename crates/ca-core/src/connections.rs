@@ -59,7 +59,9 @@ pub enum Connection {
     /// A v1 saved link: one independent probability trial at this point in
     /// registration order, not one destination in a weighted split.
     ProbabilityTrial(WeightedRow),
-    /// All rows share a source. Finite weights in 0..=1 must sum to one.
+    /// Independent per-mapping chances, tested in registration order. No required total.
+    ProbabilityTrials(Vec<WeightedRow>),
+    /// Legacy v2 weighted split. All rows share a source; weights sum to one.
     Probabilistica(Vec<WeightedRow>),
 }
 
@@ -87,7 +89,9 @@ impl Connection {
         match self {
             Self::Lineal(_) => ConnectionKind::Linear,
             Self::Incorporacion(_) => ConnectionKind::Incorporation,
-            Self::ProbabilityTrial(_) | Self::Probabilistica(_) => ConnectionKind::Probabilistic,
+            Self::ProbabilityTrial(_) | Self::ProbabilityTrials(_) | Self::Probabilistica(_) => {
+                ConnectionKind::Probabilistic
+            }
         }
     }
     // Probability exits hold only after an occupied-destination trial has set
@@ -117,7 +121,9 @@ impl Connection {
             Self::Lineal(m) => remap(m),
             Self::ProbabilityTrial(r) => remap(&mut r.mapping),
             Self::Incorporacion(rows) => rows.iter_mut().for_each(|r| remap(&mut r.mapping)),
-            Self::Probabilistica(rows) => rows.iter_mut().for_each(|r| remap(&mut r.mapping)),
+            Self::ProbabilityTrials(rows) | Self::Probabilistica(rows) => {
+                rows.iter_mut().for_each(|r| remap(&mut r.mapping))
+            }
         }
     }
 
@@ -125,6 +131,10 @@ impl Connection {
         match self {
             Self::Lineal(m) => keep(m),
             Self::ProbabilityTrial(r) => keep(&r.mapping),
+            Self::ProbabilityTrials(rows) => {
+                rows.retain(|r| keep(&r.mapping));
+                !rows.is_empty()
+            }
             Self::Incorporacion(rows) => {
                 rows.retain(|r| keep(&r.mapping));
                 !rows.is_empty()
@@ -158,7 +168,9 @@ impl Connection {
             Self::Lineal(m) => remap(m),
             Self::ProbabilityTrial(r) => remap(&mut r.mapping),
             Self::Incorporacion(rows) => rows.iter_mut().for_each(|r| remap(&mut r.mapping)),
-            Self::Probabilistica(rows) => rows.iter_mut().for_each(|r| remap(&mut r.mapping)),
+            Self::ProbabilityTrials(rows) | Self::Probabilistica(rows) => {
+                rows.iter_mut().for_each(|r| remap(&mut r.mapping))
+            }
         }
     }
 
@@ -168,7 +180,7 @@ impl Connection {
             Self::Lineal(row) => (Some(row), &[], &[]),
             Self::ProbabilityTrial(row) => (Some(&row.mapping), &[], &[]),
             Self::Incorporacion(rows) => (None, rows, &[]),
-            Self::Probabilistica(rows) => (None, &[], rows),
+            Self::ProbabilityTrials(rows) | Self::Probabilistica(rows) => (None, &[], rows),
         };
         single
             .into_iter()
@@ -303,6 +315,17 @@ impl TrafficModel {
             {
                 return Err(ConnectionError::Probability);
             }
+            Connection::ProbabilityTrials(rows) => {
+                if rows.is_empty() {
+                    return Err(ConnectionError::InvalidMapping);
+                }
+                if rows
+                    .iter()
+                    .any(|r| !r.weight.is_finite() || !(0.0..=1.0).contains(&r.weight))
+                {
+                    return Err(ConnectionError::Probability);
+                }
+            }
             Connection::Incorporacion(rows) if strict && !rows.iter().any(|r| r.enabled) => {
                 return Err(ConnectionError::NoActiveRows);
             }
@@ -408,11 +431,11 @@ impl TrafficModel {
             match connection {
                 Connection::Lineal(row) => transfer(&mut self.streets, row),
                 Connection::ProbabilityTrial(row) => {
-                    let source = &self.streets[row.mapping.source_street];
-                    if (1..=6).contains(&source.cells[row.mapping.source_index(source)])
-                        && crate::random::unit(&mut self.random_state) < row.weight
-                    {
-                        transfer(&mut self.streets, &row.mapping);
+                    probability_trial(&mut self.streets, &mut self.random_state, row);
+                }
+                Connection::ProbabilityTrials(rows) => {
+                    for row in rows {
+                        probability_trial(&mut self.streets, &mut self.random_state, row);
                     }
                 }
                 Connection::Incorporacion(rows) => {
@@ -439,6 +462,15 @@ impl TrafficModel {
                 }
             }
         }
+    }
+}
+
+fn probability_trial(streets: &mut [Calle], random_state: &mut u64, row: &WeightedRow) {
+    let source = &streets[row.mapping.source_street];
+    if (1..=6).contains(&source.cells[row.mapping.source_index(source)])
+        && crate::random::unit(random_state) < row.weight
+    {
+        transfer(streets, &row.mapping);
     }
 }
 

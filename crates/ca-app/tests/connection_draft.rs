@@ -80,7 +80,7 @@ fn disabled_merge_row_is_absent_from_preview_validation_and_saved_link() {
 }
 
 #[test]
-fn invalid_weights_and_duplicate_mappings_give_stable_translated_reasons() {
+fn invalid_probabilities_and_duplicate_mappings_give_stable_translated_reasons() {
     use ca_core::connections::ConnectionError;
     let mut doc = document();
     let mut draft = ConnectionDraft::default();
@@ -94,19 +94,20 @@ fn invalid_weights_and_duplicate_mappings_give_stable_translated_reasons() {
         ConnectionError::Duplicate.translation_key(),
         "connections.duplicate"
     );
-    // A fresh weighted split shares one source and has two destinations.
+    // Probabilities are checked independently, not as parts of a required total.
     let doc = document();
     draft.set_kind(DraftKind::Probabilistica, &doc);
     assert!(draft.candidate(&doc).is_ok());
-    for invalid in ["", "abc", "NaN", "inf", "-0.1", "1.5", "0.3"] {
+    for invalid in ["", "abc", "NaN", "inf", "-0.1", "100.1", "101"] {
         draft.rows_mut()[0].probability = invalid.into();
         assert_eq!(
             draft.candidate(&doc),
-            Err(ConnectionError::Weights),
+            Err(ConnectionError::Probability),
             "{invalid}"
         );
     }
     draft.rows_mut()[0].probability = "50".into();
+    draft.add_destination(&doc);
     let duplicate = draft.rows_mut()[0].mapping;
     draft.rows_mut()[1].mapping = duplicate;
     assert_eq!(draft.candidate(&doc), Err(ConnectionError::Duplicate));
@@ -120,16 +121,49 @@ fn probability_percentages_convert_to_fractional_simulation_probabilities() {
     draft.pick(0, &doc);
     draft.pick(1, &doc);
     draft.set_kind(DraftKind::Probabilistica, &doc);
-    assert_eq!(draft.rows_mut()[0].probability, "50");
+    assert_eq!(draft.rows_mut()[0].probability, "100");
     draft.rows_mut()[0].probability = "70".into();
+    draft.add_destination(&doc);
+    draft.rows_mut()[1].mapping.destination_lane = 1;
+    draft.rows_mut()[1].mapping.destination_cell = 0;
     draft.rows_mut()[1].probability = "30".into();
-    let Connection::Probabilistica(rows) = draft.candidate(&doc).unwrap() else {
-        panic!("split");
+    let Connection::ProbabilityTrials(rows) = draft.candidate(&doc).unwrap() else {
+        panic!("independent probabilities");
     };
     assert_eq!(rows[0].weight, 0.7);
     assert_eq!(rows[1].weight, 0.3);
     draft.rows_mut()[0].probability = "101".into();
     assert!(draft.candidate(&doc).is_err());
+}
+
+#[test]
+fn probabilistic_draft_accepts_one_destination_and_does_not_require_a_total() {
+    let doc = document();
+    let mut draft = ConnectionDraft::default();
+    draft.start();
+    draft.pick(0, &doc);
+    draft.pick(1, &doc);
+    draft.set_kind(DraftKind::Probabilistica, &doc);
+    assert_eq!(draft.rows_mut().len(), 1);
+    for percentage in ["0", "0.3", "25", "70", "100"] {
+        draft.rows_mut()[0].probability = percentage.into();
+        assert!(
+            draft.candidate(&doc).is_ok(),
+            "{percentage}% is valid on its own"
+        );
+    }
+    draft.add_destination(&doc);
+    draft.rows_mut()[1].mapping.destination_lane = 1;
+    draft.rows_mut()[1].mapping.destination_cell = 0;
+    for percentages in [["20", "30"], ["80", "80"], ["0", "0"]] {
+        for (row, percentage) in draft.rows_mut().iter_mut().zip(percentages) {
+            row.probability = percentage.into();
+        }
+        let Connection::ProbabilityTrials(rows) = draft.candidate(&doc).unwrap() else {
+            panic!("independent trials, not a weighted split");
+        };
+        assert_eq!(rows.len(), 2);
+    }
 }
 
 #[test]
@@ -360,7 +394,7 @@ fn panel_saves_only_valid_drafts_and_cancel_does_not_emit_a_link() {
     draft.rows_mut()[0].probability = "invalid".into();
     let output = run(&mut draft, vec![]).0;
     assert!(output.shapes.iter().any(|shape| matches!(&shape.shape,
-        egui::Shape::Text(s) if s.galley.job.text == shell.tr("connections.weights", &[]))));
+        egui::Shape::Text(s) if s.galley.job.text == shell.tr("connections.probability", &[]))));
     let save = button("Guardar", &output);
     run(&mut draft, click(save, true));
     assert!(run(&mut draft, click(save, false)).1.is_none());
@@ -372,21 +406,29 @@ fn panel_saves_only_valid_drafts_and_cancel_does_not_emit_a_link() {
 }
 
 #[test]
-fn saved_weighted_draft_survives_map_save_load_as_one_weighted_choice() {
+fn saved_independent_draft_retains_probabilities_that_total_more_than_one_hundred_percent() {
     let mut doc = document();
     let mut draft = ConnectionDraft::default();
     draft.start();
     draft.pick(0, &doc);
     draft.pick(1, &doc);
     draft.set_kind(DraftKind::Probabilistica, &doc);
+    draft.rows_mut()[0].probability = "80".into();
+    draft.add_destination(&doc);
+    draft.rows_mut()[1].mapping.destination_lane = 1;
+    draft.rows_mut()[1].mapping.destination_cell = 0;
+    draft.rows_mut()[1].probability = "80".into();
     let link = draft.candidate(&doc).unwrap();
     doc.add_connection(link.clone()).unwrap();
+    let saved: serde_json::Value = serde_json::from_str(&doc.to_json()).unwrap();
+    assert_eq!(saved["conexiones"][0]["independentProbabilities"], true);
+    assert!(saved["conexiones"][0].get("weightedSplit").is_none());
     let loaded = MapDocument::parse(&doc.to_json()).unwrap();
     assert_eq!(loaded.model().connections(), &[link]);
 }
 
 #[test]
-fn saved_weighted_draft_still_loads_after_a_destination_lane_is_removed() {
+fn removing_an_independent_destination_does_not_change_the_remaining_probability() {
     use ca_core::streets::{StreetChange, StreetEdit};
     let mut doc = document();
     let mut draft = ConnectionDraft::default();
@@ -394,6 +436,11 @@ fn saved_weighted_draft_still_loads_after_a_destination_lane_is_removed() {
     draft.pick(0, &doc);
     draft.pick(1, &doc);
     draft.set_kind(DraftKind::Probabilistica, &doc);
+    draft.rows_mut()[0].probability = "35".into();
+    draft.add_destination(&doc);
+    draft.rows_mut()[1].mapping.destination_lane = 1;
+    draft.rows_mut()[1].mapping.destination_cell = 0;
+    draft.rows_mut()[1].probability = "80".into();
     let link = draft.candidate(&doc).unwrap();
     doc.add_connection(link).unwrap();
     doc.edit_streets(StreetEdit::Update(
@@ -405,11 +452,11 @@ fn saved_weighted_draft_still_loads_after_a_destination_lane_is_removed() {
     ))
     .unwrap();
     let loaded = MapDocument::parse(&doc.to_json()).unwrap();
-    let Connection::Probabilistica(rows) = &loaded.model().connections()[0] else {
-        panic!("split");
+    let Connection::ProbabilityTrials(rows) = &loaded.model().connections()[0] else {
+        panic!("independent probabilities");
     };
     assert_eq!(rows.len(), 1);
-    assert_eq!(rows[0].weight, 1.0);
+    assert_eq!(rows[0].weight, 0.35);
 }
 
 #[test]
@@ -809,7 +856,8 @@ fn percentage_text_is_validated_while_typing_before_enter_or_focus_loss() {
     draft.pick(1, &doc);
     draft.set_kind(DraftKind::Probabilistica, &doc);
     let run = |draft: &mut ConnectionDraft, events| {
-        ctx.run(
+        let mut saved = None;
+        let output = ctx.run(
             egui::RawInput {
                 screen_rect: Some(egui::Rect::from_min_size(
                     egui::Pos2::ZERO,
@@ -819,17 +867,18 @@ fn percentage_text_is_validated_while_typing_before_enter_or_focus_loss() {
                 ..Default::default()
             },
             |ctx| {
-                draft.show(ctx, ctx.content_rect(), &doc, &shell);
+                saved = draft.show(ctx, ctx.content_rect(), &doc, &shell);
             },
-        )
+        );
+        (output, saved)
     };
     run(&mut draft, vec![]);
-    let initial = run(&mut draft, vec![]);
+    let initial = run(&mut draft, vec![]).0;
     let pos = initial
         .shapes
         .iter()
         .find_map(|s| match &s.shape {
-            egui::Shape::Text(t) if t.galley.job.text == "50" => {
+            egui::Shape::Text(t) if t.galley.job.text == "100" => {
                 Some(t.visual_bounding_rect().center())
             }
             _ => None,
@@ -861,15 +910,47 @@ fn percentage_text_is_validated_while_typing_before_enter_or_focus_loss() {
             },
             egui::Event::Text("70".into()),
         ],
-    );
+    )
+    .0;
     assert!(ctx.wants_keyboard_input());
     assert_eq!(draft.rows_mut()[0].probability, "70");
-    assert_eq!(
-        draft.candidate(&doc),
-        Err(ca_core::connections::ConnectionError::Weights)
-    );
-    assert!(edited.shapes.iter().any(|s| matches!(&s.shape,
-        egui::Shape::Text(t) if t.galley.job.text == shell.tr("connections.weights", &[]))));
+    let Connection::ProbabilityTrials(rows) = draft.candidate(&doc).unwrap() else {
+        panic!("one independent destination is valid");
+    };
+    assert_eq!(rows.len(), 1);
+    assert_eq!(rows[0].weight, 0.7);
+    assert!(!edited.shapes.iter().any(|s| matches!(&s.shape,
+        egui::Shape::Text(t) if t.galley.job.text == shell.tr("connections.probability", &[]))));
     assert!(edited.shapes.iter().any(|s| matches!(&s.shape,
         egui::Shape::Text(t) if t.galley.job.text == "Probabilidad (%)")));
+    let save = edited
+        .shapes
+        .iter()
+        .find_map(|s| match &s.shape {
+            egui::Shape::Text(t) if t.galley.job.text == "Guardar" => {
+                Some(t.visual_bounding_rect().center())
+            }
+            _ => None,
+        })
+        .expect("save button");
+    let mut saved = None;
+    for pressed in [true, false] {
+        saved = run(
+            &mut draft,
+            vec![
+                egui::Event::PointerMoved(save),
+                egui::Event::PointerButton {
+                    pos: save,
+                    pressed,
+                    button: egui::PointerButton::Primary,
+                    modifiers: egui::Modifiers::NONE,
+                },
+            ],
+        )
+        .1
+        .or(saved);
+    }
+    assert!(
+        matches!(saved, Some(Connection::ProbabilityTrials(rows)) if rows.len() == 1 && rows[0].weight == 0.7)
+    );
 }

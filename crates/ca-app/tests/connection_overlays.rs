@@ -136,6 +136,11 @@ fn saved_connection_arrows_keep_their_type_colors_after_map_load() {
         },
     ]))
     .unwrap();
+    doc.add_connection(Connection::ProbabilityTrials(vec![WeightedRow {
+        mapping: row(0, 3),
+        weight: 0.35,
+    }]))
+    .unwrap();
     let loaded = MapDocument::parse(&doc.to_json()).unwrap();
     let scene = TrafficScene::from_document(&loaded);
     let overlays = ConnectionOverlays::new(scene.connection_arrows());
@@ -160,8 +165,8 @@ fn saved_connection_arrows_keep_their_type_colors_after_map_load() {
             _ => None,
         })
         .collect();
-    assert_eq!(colors.len(), 12);
+    assert_eq!(colors.len(), 15);
     assert_eq!(&colors[0..3], &[egui::Color32::from_rgb(34, 197, 94); 3]);
     assert_eq!(&colors[3..6], &[egui::Color32::from_rgb(249, 115, 22); 3]);
-    assert_eq!(&colors[6..12], &[egui::Color32::from_rgb(168, 85, 247); 6]);
+    assert_eq!(&colors[6..15], &[egui::Color32::from_rgb(168, 85, 247); 9]);
 }

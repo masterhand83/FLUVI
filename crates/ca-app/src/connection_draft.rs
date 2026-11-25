@@ -170,6 +170,21 @@ impl ConnectionDraft {
         self.reset_rows(document);
     }
 
+    pub fn add_destination(&mut self, document: &MapDocument) {
+        if self.kind != DraftKind::Probabilistica {
+            return;
+        }
+        if self.rows.is_empty() {
+            self.reset_rows(document);
+        } else {
+            self.rows.push(DraftRow {
+                mapping: self.rows[0].mapping,
+                enabled: true,
+                probability: "0".into(),
+            });
+        }
+    }
+
     fn reset_rows(&mut self, document: &MapDocument) {
         self.rows.clear();
         let (Some(source), Some(destination)) = (self.source, self.destination) else {
@@ -181,7 +196,7 @@ impl ConnectionDraft {
         let count = match self.kind {
             DraftKind::Lineal => 1,
             DraftKind::Incorporacion => from.config().carriles,
-            DraftKind::Probabilistica => to.config().carriles,
+            DraftKind::Probabilistica => 1,
         };
         for lane in 0..count {
             let source_lane = if self.kind == DraftKind::Incorporacion {
@@ -192,7 +207,7 @@ impl ConnectionDraft {
             let selected_target = match self.kind {
                 DraftKind::Lineal => true,
                 DraftKind::Incorporacion => lane == source.lane,
-                DraftKind::Probabilistica => lane == destination.lane,
+                DraftKind::Probabilistica => true,
             };
             let destination_lane = if selected_target {
                 destination.lane
@@ -241,7 +256,7 @@ impl ConnectionDraft {
                     })
                     .collect(),
             ),
-            DraftKind::Probabilistica => Connection::Probabilistica(
+            DraftKind::Probabilistica => Connection::ProbabilityTrials(
                 self.rows
                     .iter()
                     .map(|r| {
@@ -250,7 +265,7 @@ impl ConnectionDraft {
                             weight: r
                                 .probability
                                 .parse::<f64>()
-                                .map_err(|_| ConnectionError::Weights)?
+                                .map_err(|_| ConnectionError::Probability)?
                                 / 100.0,
                         })
                     })
@@ -340,6 +355,8 @@ impl ConnectionDraft {
                             },
                             &[],
                         ));
+                    } else {
+                        ui.small(shell.tr("connectionDraft.probabilityHint", &[]));
                     }
                     ui.small(shell.tr("connectionDraft.indexHint", &[]));
                     egui::ScrollArea::vertical()
@@ -357,7 +374,7 @@ impl ConnectionDraft {
                                         );
                                     }
                                     ui.add_enabled_ui(row.enabled, |ui| {
-                                        // Weighted destinations share the first row's source.
+                                        // Independent destination trials use the selected source.
                                         if self.kind != DraftKind::Probabilistica || index == 0 {
                                             endpoint(
                                                 ui,
@@ -419,15 +436,7 @@ impl ConnectionDraft {
                             .button(shell.tr("connectionDraft.addDestination", &[]))
                             .clicked()
                         {
-                            if self.rows.is_empty() {
-                                self.reset_rows(document);
-                            } else {
-                                self.rows.push(DraftRow {
-                                    mapping: self.rows[0].mapping,
-                                    enabled: true,
-                                    probability: "0".into(),
-                                });
-                            }
+                            self.add_destination(document);
                         }
                     }
                     let candidate = self.candidate(document);

@@ -69,18 +69,21 @@ Focused checks: `cargo test -p ca-core --test transport`,
 
 ### Street connections
 
-`ca-core::connections` owns physical-cell mappings, enabled merge rows, weighted
-splits, and stable validation message keys. `TrafficModel::add_connection` checks
+`ca-core::connections` owns physical-cell mappings, enabled incorporation rows,
+independent probability trials, legacy weighted splits, and validation message keys.
+`TrafficModel::add_connection` checks
 all rows before registration, including disabled rows and equivalent `-1`/last
 physical-cell duplicates. Reverse lanes reject sources at the last physical cell
 and destinations at cell 0, except on single-cell streets, as in v1.
 
 Transfers run after generation and before lane changes, in registration order.
 Only values 1–6 transfer. Occupied destinations mark the source as waiting for
-the street update; existing waiting sources do not transfer. A split makes one
-seeded weighted choice and does not reroute if that destination is occupied.
-Splits require at least two distinct destinations. Weights are finite fractions
-summing to one (tolerance 1e-9).
+the street update; existing waiting sources do not transfer. Independent trials
+test each mapping's own chance in row order. One destination is enough and no
+total is required. A completed transfer empties the source, so later competing
+rows cannot transfer that same car. If a successful trial finds an occupied target,
+the source waits rather than trying another target.
+Legacy `weightedSplit` links retain their saved weighted-choice behavior.
 
 The test demo connects both lane directions across its three streets.
 `TrafficScene::connection_arrows` exports world-space cell-center endpoints on
@@ -102,8 +105,10 @@ are orange, and probabilistic links are purple, in both previews and saved arrow
 Linear links fix their cells at the source lane exit and target lane entry;
 both lanes are editable. Incorporation rows fix only the source exit; each row's
 source lane, target lane, and target cell are editable. Probabilistic links share
-one source with editable destinations and probabilities entered as percentages
-from 0 to 100, totalling 100. The traffic model and map JSON retain fractions.
+one source with editable destinations and independent probabilities from 0 to 100%.
+A new probabilistic draft starts with one destination at 100%. More destinations
+can be added; probabilities are not normalized and do not need to total 100%.
+The traffic model and map JSON retain fractions.
 Lane numbers start
 at 1; physical cell numbers start at 0. Source −1 means the last physical cell.
 Defaults follow each lane's directional exit and entry, including roundabouts.
@@ -123,8 +128,10 @@ Save validates through `TrafficModel::validate_connection`, then uses the ordere
 render edit queue and `MapDocument::add_connection`. A full queue leaves the draft
 open. Registration preserves live vehicles and tick state; the next tick uses
 the new link. The map codec writes v1-compatible link fields plus an optional
-`weightedSplit: true` marker for v2 weighted choices. Unmarked v1 probabilistic
-rows still load as independent trials.
+`independentProbabilities: true` grouping marker for new independent trials.
+Unmarked v1 probabilistic rows still load as independent trials. Existing
+`weightedSplit: true` links keep their original semantics for compatibility.
+Removing an independent destination never changes the remaining probabilities.
 
 Focused checks: `cargo test -p ca-app --test connection_draft` and
 `cargo test -p ca-app --bin ca-app saved_connection_uses_ordered_edits`.
@@ -314,8 +321,9 @@ and Bézier streets.
 
 Keep each saved v1 probabilistic link as a `Connection::ProbabilityTrial`.
 Test its probability independently at its original place in registration order.
-Use `Connection::Probabilistica` only for v2 weighted splits; do not group
-imported v1 links into that type.
+New v2 drafts use `Connection::ProbabilityTrials` for independent per-row chances.
+`Connection::Probabilistica` remains only for previously saved weighted splits;
+do not group imported v1 links into that type.
 
 Register each feature's reset in `ca-app::map_session::MapSession`.
 Use the `Pause`, `Tools`, and `Features` phases in that order. Keep session

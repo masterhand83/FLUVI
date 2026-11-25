@@ -895,7 +895,14 @@ impl MapDocument {
                 .map(|v| v.as_bool().ok_or(MapError))
                 .transpose()?
                 .unwrap_or(false);
-            if weighted_split && kind != "PROBABILISTICA" {
+            let independent = link
+                .get("independentProbabilities")
+                .map(|v| v.as_bool().ok_or(MapError))
+                .transpose()?
+                .unwrap_or(false);
+            if ((weighted_split || independent) && kind != "PROBABILISTICA")
+                || (weighted_split && independent)
+            {
                 return Err(MapError);
             }
             let details = link["detalles"].as_array_mut().ok_or(MapError)?;
@@ -922,7 +929,7 @@ impl MapDocument {
                     }),
                     "PROBABILISTICA" => {
                         let row = WeightedRow { mapping, weight };
-                        if weighted_split {
+                        if weighted_split || independent {
                             split.push(row);
                         } else {
                             connections.push(Connection::ProbabilityTrial(row));
@@ -936,6 +943,8 @@ impl MapDocument {
             }
             if weighted_split {
                 connections.push(Connection::Probabilistica(split));
+            } else if independent {
+                connections.push(Connection::ProbabilityTrials(split));
             }
         }
         for connection in connections {
@@ -977,12 +986,14 @@ impl MapDocument {
         let kind = match &connection {
             Connection::Lineal(_) => "LINEAL",
             Connection::Incorporacion(_) => "INCORPORACION",
-            Connection::ProbabilityTrial(_) | Connection::Probabilistica(_) => "PROBABILISTICA",
+            Connection::ProbabilityTrial(_)
+            | Connection::ProbabilityTrials(_)
+            | Connection::Probabilistica(_) => "PROBABILISTICA",
         };
         let details: Vec<_> = connection.mappings().enumerate().map(|(index, mapping)| {
             let weight = match &connection {
                 Connection::ProbabilityTrial(row) => row.weight,
-                Connection::Probabilistica(rows) => rows[index].weight,
+                Connection::ProbabilityTrials(rows) | Connection::Probabilistica(rows) => rows[index].weight,
                 _ => 1.0,
             };
             let enabled = match &connection {
@@ -1002,6 +1013,8 @@ impl MapDocument {
         // Optional v2 grouping marker. Unmarked v1 links remain independent trials.
         if matches!(connection, Connection::Probabilistica(_)) {
             link["weightedSplit"] = json!(true);
+        } else if matches!(connection, Connection::ProbabilityTrials(_)) {
+            link["independentProbabilities"] = json!(true);
         }
         self.model.add_connection(connection)?;
         self.data["conexiones"]
