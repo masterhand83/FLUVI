@@ -47,6 +47,26 @@ Focused checks: `cargo test -p ca-core --test camera --test cell_index`,
 `cargo test -p ca-app --test map_interaction`, and
 `cargo test -p ca-gpu --test traffic`.
 
+### Lane changes and transport controls
+
+`ca-core::traffic::TrafficModel` runs lane changes after connection transfers and
+before the street update. Changes use adjacent lanes with the same direction,
+snapshot occupancy, destination reservations, waiting flags, and v1 crossing
+cancellation. Scratch buffers are allocated when a street is created, not per tick.
+`scripts/generate-lane-changes.mjs` evaluates v1 to produce the independent fixture.
+
+`ca-app::transport::TransportControls` owns session-only fill and generation
+settings. Clear and Random Fill share the ordered cell-edit queue. Paused edits
+publish before painting; running edits publish at the next completed tick.
+Both actions preserve special cells. Global generation replaces the generator's
+stored probability before the hourly multiplier and respects disabled lanes.
+It never edits the stored street configuration. Until clock/profile support is
+ported, the model's hourly multiplier defaults to 1.
+
+Focused checks: `cargo test -p ca-core --test transport`,
+`cargo test -p ca-app --test transport_controls --bin ca-app`, and
+`cargo test -p ca-gpu --test traffic`.
+
 Use `cargo dev edit` or `bacon check` for compiler feedback. Run focused tests,
 for example `cargo nextest run -p ca-core`, when behavior changes. `bacon` still
 defaults to Clippy; its check/test/run jobs remain available.

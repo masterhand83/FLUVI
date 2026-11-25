@@ -1,6 +1,35 @@
 use ca_gpu::TrafficScene;
 
 #[test]
+fn transport_actions_publish_paused_or_on_the_next_tick() {
+    use ca_core::traffic::VehicleAction;
+    let mut scene = TrafficScene::demo();
+    scene.edit_vehicles(VehicleAction::Clear, true).unwrap();
+    assert_eq!(scene.population(), 0);
+    for index in [18, 82, 146] {
+        assert_eq!(scene.cells()[index], 7);
+    }
+    scene
+        .edit_vehicles(VehicleAction::Fill(1.0), false)
+        .unwrap();
+    assert_eq!(scene.population(), 0);
+    assert!(scene.publish_edits());
+    assert_eq!(scene.population(), 189);
+    scene.edit_vehicles(VehicleAction::Clear, false).unwrap();
+    scene.set_generation_override(Some(0.0)).unwrap();
+    scene.tick();
+    assert_eq!(scene.population(), 0);
+    scene.set_generation_override(Some(1.0)).unwrap();
+    scene.tick();
+    assert_eq!(scene.population(), 2);
+    assert!(
+        scene
+            .edit_vehicles(VehicleAction::Fill(f64::NAN), true)
+            .is_err()
+    );
+}
+
+#[test]
 fn cell_edits_publish_immediately_when_paused_and_at_next_tick_when_running() {
     use ca_core::cell_index::CellRef;
     let cell = CellRef {

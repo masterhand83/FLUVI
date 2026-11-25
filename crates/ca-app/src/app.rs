@@ -4,10 +4,11 @@ use crossbeam_channel::{Receiver, Sender, TryRecvError, bounded};
 use eframe::egui;
 
 use crate::render::{
-    Commands, Event, Paint, PaintCallback, Progress, Requests, Resources, command_channel,
+    Commands, Edit, Event, Paint, PaintCallback, Progress, Requests, Resources, command_channel,
 };
 use ca_app::map::MapInteraction;
 use ca_app::shell::{Shell, config_path};
+use ca_app::transport::TransportControls;
 
 pub struct Report {
     pub progress: Progress,
@@ -38,6 +39,7 @@ pub struct App {
     smoke_frames: Option<u64>,
     shell: Shell,
     startup: Option<Startup>,
+    transport: TransportControls,
 }
 
 impl App {
@@ -70,6 +72,7 @@ impl App {
             profiler: false,
             smoke_frames,
             shell: Shell::load(config_path()),
+            transport: TransportControls::default(),
             startup: Some(Startup {
                 render: render.clone(),
                 events: tx,
@@ -172,6 +175,18 @@ impl App {
                             .text(self.shell.tr("simulation.speed", &[])),
                     );
                 });
+                let mut action = None;
+                ui.add_enabled_ui(self.smoke_frames.is_none(), |ui| {
+                    action = self.transport.show(ui, &self.shell);
+                });
+                if let Some(action) = action
+                    && !self.commands.edit(Edit::Vehicles(action))
+                {
+                    self.shell.notify(
+                        ca_app::shell::Severity::Warning,
+                        self.shell.tr("shell.cellEditBusy", &[]),
+                    );
+                }
                 ui.label(self.shell.tr("shell.profiler", &[]))
                     .on_hover_text(self.shell.tr("shell.legend", &[]));
             });
@@ -227,6 +242,7 @@ impl eframe::App for App {
                 rate: self.rate,
                 step_ticket: self.step_ticket,
                 view: map.view,
+                generation_override: self.transport.generation_override(),
             };
             if !self.commands.send(request, map.clicked) {
                 self.shell.notify(

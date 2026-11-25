@@ -2,7 +2,7 @@
 use bytemuck::{Pod, Zeroable};
 use ca_core::camera::WorldView;
 use ca_core::cell_index::{CellRef, StreetGeometry};
-use ca_core::traffic::{CalleType, LaneDirection, TrafficModel};
+use ca_core::traffic::{CalleType, LaneDirection, TrafficError, TrafficModel, VehicleAction};
 use wgpu::util::DeviceExt;
 
 use crate::{ViewUniform, entry};
@@ -74,6 +74,29 @@ impl TrafficScene {
     pub fn tick(&mut self) {
         self.model.tick();
         self.pack();
+    }
+
+    pub fn set_generation_override(
+        &mut self,
+        probability: Option<f64>,
+    ) -> Result<(), TrafficError> {
+        self.model.set_generation_override(probability)
+    }
+
+    pub fn edit_vehicles(
+        &mut self,
+        action: VehicleAction,
+        paused: bool,
+    ) -> Result<(), TrafficError> {
+        match action {
+            VehicleAction::Clear => self.model.clear_vehicles(),
+            VehicleAction::Fill(probability) => self.model.random_fill(probability)?,
+        }
+        self.edited = true;
+        if paused {
+            self.pack();
+        }
+        Ok(())
     }
 
     /// Paused changes are packed before this frame is painted. Running changes

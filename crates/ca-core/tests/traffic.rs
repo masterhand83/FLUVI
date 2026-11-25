@@ -174,7 +174,7 @@ fn seeded_ticks_match_v1_trajectories() {
 fn tick_hooks_follow_v1_order_and_idle_phases_do_not_change_cells() {
     let config = CalleConfig {
         generation_probability: 0.45,
-        lane_change_probability: 1.0, // Lane changes are still a no-op.
+        lane_change_probability: 1.0, // Opposite directions prohibit lane changes.
         lane_directions: vec![None, Some(LaneDirection::Reverse)],
         ..CalleConfig::new(2, 8, CalleType::Generador)
     };

@@ -13,6 +13,13 @@ pub enum LaneDirection {
     Reverse,
 }
 
+/// One-shot transport actions. Probability is a fraction in 0..=1.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum VehicleAction {
+    Clear,
+    Fill(f64),
+}
+
 /// Lane metadata can be shorter than `carriles`. Missing values use v1 defaults.
 #[derive(Clone, Debug)]
 pub struct CalleConfig {
@@ -49,6 +56,8 @@ pub enum TrafficError {
     Probability,
     #[error("lane metadata must not exceed carriles")]
     Lanes,
+    #[error("hourly multiplier must be finite and nonnegative")]
+    Multiplier,
 }
 
 #[derive(Clone, Debug)]
@@ -56,6 +65,9 @@ pub struct Calle {
     config: CalleConfig,
     cells: Vec<u8>,
     next: Vec<u8>,
+    waiting: Vec<bool>,
+    destinations: Vec<usize>,
+    reserved: Vec<bool>,
 }
 
 impl Calle {
@@ -86,6 +98,9 @@ impl Calle {
         Ok(Self {
             config,
             next: cells.clone(),
+            waiting: vec![false; size],
+            destinations: vec![usize::MAX; size],
+            reserved: vec![false; size],
             cells,
         })
     }
@@ -120,19 +135,120 @@ impl Calle {
         self.config.tamano - 1 - self.entry_cell(lane)
     }
 
-    fn generate(&mut self, random_state: &mut u64) {
-        // Hourly multiplier is fixed at 1 until clock/profile support is ported.
+    /// Mark a physical cell as waiting for this tick's connection phase.
+    pub fn set_waiting(&mut self, lane: usize, index: usize, waiting: bool) -> bool {
+        if lane >= self.config.carriles || index >= self.config.tamano {
+            return false;
+        }
+        self.waiting[lane * self.config.tamano + index] = waiting;
+        true
+    }
+
+    fn change_lanes(&mut self, random_state: &mut u64) {
+        let size = self.config.tamano;
+        if self.config.carriles < 2 || size < 3 || self.config.lane_change_probability <= 0.0 {
+            return;
+        }
+        self.destinations.fill(usize::MAX);
+        self.reserved.fill(false);
+        for lane in 0..self.config.carriles {
+            let direction = self.lane_direction(lane);
+            for index in 1..size - 1 {
+                let source = lane * size + index;
+                if !(1..=6).contains(&self.cells[source]) || self.waiting[source] {
+                    continue;
+                }
+                let ahead = |offset| match direction {
+                    LaneDirection::Forward => index.checked_add(offset).filter(|&i| i < size),
+                    LaneDirection::Reverse => index.checked_sub(offset),
+                };
+                let obstructed = (1..=3)
+                    .filter_map(ahead)
+                    .any(|i| self.cells[lane * size + i] == 7);
+                let probability = if obstructed {
+                    0.30
+                } else {
+                    self.config.lane_change_probability
+                };
+                if crate::random::unit(random_state) >= probability {
+                    continue;
+                }
+                let target_index = ahead(1).expect("interior cell");
+                let mut available = [0; 2];
+                let mut count = 0;
+                for target_lane in [
+                    lane.checked_sub(1),
+                    (lane + 1 < self.config.carriles).then_some(lane + 1),
+                ]
+                .into_iter()
+                .flatten()
+                {
+                    let target = target_lane * size + target_index;
+                    if self.lane_direction(target_lane) == direction
+                        && self.cells[target] == 0
+                        && !self.waiting[target]
+                        && !self.reserved[target]
+                    {
+                        available[count] = target;
+                        count += 1;
+                    }
+                }
+                if count > 0 {
+                    let target =
+                        available[(crate::random::unit(random_state) * count as f64) as usize];
+                    self.destinations[source] = target;
+                    self.reserved[target] = true;
+                }
+            }
+        }
+        self.next.copy_from_slice(&self.cells);
+        for (source, &target) in self.destinations.iter().enumerate() {
+            if target == usize::MAX {
+                continue;
+            }
+            // Reciprocal diagonals from the same column cross in an X.
+            let other_source = target / size * size + source % size;
+            let other_target = self.destinations[other_source];
+            if other_target != usize::MAX
+                && other_target / size == source / size
+                && other_target % size == target % size
+            {
+                continue;
+            }
+            self.next[source] = 0;
+            self.next[target] = self.cells[source];
+            // V1 holds the arrival and forward neighbors for the street update,
+            // but leaves the vacated source free to receive an upstream vehicle.
+            self.waiting[target] = true;
+            let next_target = match self.lane_direction(target / size) {
+                LaneDirection::Forward => (target % size + 1 < size).then_some(target + 1),
+                LaneDirection::Reverse => (target % size).checked_sub(1).map(|_| target - 1),
+            };
+            if let Some(next_target) = next_target {
+                self.waiting[next_target] = true;
+            }
+            self.waiting[source / size * size + target % size] = true;
+        }
+        std::mem::swap(&mut self.cells, &mut self.next);
+    }
+
+    fn generate(
+        &mut self,
+        random_state: &mut u64,
+        override_probability: Option<f64>,
+        multiplier: f64,
+    ) {
         if self.config.tipo != CalleType::Generador {
             return;
         }
+        let probability =
+            override_probability.unwrap_or(self.config.generation_probability) * multiplier;
         for lane in 0..self.config.carriles {
             if self.config.lane_generation_enabled.get(lane) == Some(&Some(false)) {
                 continue;
             }
             let entry = lane * self.config.tamano + self.entry_cell(lane);
-            if self.cells[entry] == 0
-                && crate::random::unit(random_state) < self.config.generation_probability
-            {
+            if self.cells[entry] == 0 && crate::random::unit(random_state) < probability {
                 self.cells[entry] = (crate::random::unit(random_state) * 6.0) as u8 + 1;
             }
         }
@@ -147,6 +263,9 @@ impl Calle {
                 let reverse = self.lane_direction(lane) == LaneDirection::Reverse;
                 let start = lane * size;
                 for i in 0..size {
+                    if self.waiting[start + i] {
+                        continue;
+                    }
                     let left = i.checked_sub(1).map(|p| self.cells[start + p]).unwrap_or(0);
                     let right = if i + 1 < size {
                         self.cells[start + i + 1]
@@ -154,11 +273,19 @@ impl Calle {
                         0
                     };
                     let center = self.cells[start + i];
-                    let (upstream, downstream) = if reverse {
+                    let (mut upstream, downstream) = if reverse {
                         (right, left)
                     } else {
                         (left, right)
                     };
+                    let previous = if reverse {
+                        i.checked_add(1).filter(|&p| p < size)
+                    } else {
+                        i.checked_sub(1)
+                    };
+                    if previous.is_some_and(|p| self.waiting[start + p]) {
+                        upstream = 0;
+                    }
                     self.next[start + i] = match rule(upstream, center, downstream) {
                         Some(result) if result > 0 && center > 0 => center,
                         Some(result) => result,
@@ -173,6 +300,7 @@ impl Calle {
                 }
             }
         }
+        self.waiting.fill(false);
         std::mem::swap(&mut self.cells, &mut self.next);
     }
 }
@@ -186,7 +314,7 @@ pub fn rule(upstream: u8, center: u8, downstream: u8) -> Option<u8> {
         [usize::from(upstream) * 64 + usize::from(center) * 8 + usize::from(downstream)]
 }
 
-/// Hooks run after each phase. Only Generation and StreetUpdate do work for now.
+/// Hooks run after each phase.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum TickPhase {
     Generation,
@@ -202,6 +330,8 @@ pub enum TickPhase {
 pub struct TrafficModel {
     streets: Vec<Calle>,
     random_state: u64,
+    generation_override: Option<f64>,
+    hourly_multiplier: f64,
 }
 
 impl TrafficModel {
@@ -236,11 +366,59 @@ impl TrafficModel {
         Self {
             streets,
             random_state: seed,
+            generation_override: None,
+            hourly_multiplier: 1.0,
         }
     }
 
     pub fn streets(&self) -> &[Calle] {
         &self.streets
+    }
+
+    /// Session state: never writes the stored street configuration.
+    pub fn set_generation_override(
+        &mut self,
+        probability: Option<f64>,
+    ) -> Result<(), TrafficError> {
+        if probability.is_some_and(|p| !p.is_finite() || !(0.0..=1.0).contains(&p)) {
+            return Err(TrafficError::Probability);
+        }
+        self.generation_override = probability;
+        Ok(())
+    }
+
+    /// Input for the clock/profile module; defaults to 1 before that port.
+    pub fn set_hourly_multiplier(&mut self, multiplier: f64) -> Result<(), TrafficError> {
+        if !multiplier.is_finite() || multiplier < 0.0 {
+            return Err(TrafficError::Multiplier);
+        }
+        self.hourly_multiplier = multiplier;
+        Ok(())
+    }
+
+    pub fn clear_vehicles(&mut self) {
+        for street in &mut self.streets {
+            for cell in &mut street.cells {
+                if (1..=6).contains(cell) {
+                    *cell = 0;
+                }
+            }
+            street.waiting.fill(false);
+        }
+    }
+
+    pub fn random_fill(&mut self, probability: f64) -> Result<(), TrafficError> {
+        if !probability.is_finite() || !(0.0..=1.0).contains(&probability) {
+            return Err(TrafficError::Probability);
+        }
+        for street in &mut self.streets {
+            for cell in &mut street.cells {
+                if *cell == 0 && crate::random::unit(&mut self.random_state) < probability {
+                    *cell = (crate::random::unit(&mut self.random_state) * 6.0) as u8 + 1;
+                }
+            }
+        }
+        Ok(())
     }
 
     /// Toggle a physical cell without changing special cells or the RNG sequence.
@@ -265,7 +443,7 @@ impl TrafficModel {
     }
 
     /// Observe phase completion without changing the snapshot or RNG sequence.
-    /// Connection transfers, lane changes, rain, clock and metrics are no-ops.
+    /// Connection transfers, rain, clock and metrics are not yet ported.
     pub fn tick_with_hook(&mut self, mut hook: impl FnMut(TickPhase, &[Calle])) {
         for phase in [
             TickPhase::Generation,
@@ -279,10 +457,19 @@ impl TrafficModel {
             match phase {
                 TickPhase::Generation => {
                     for street in &mut self.streets {
-                        street.generate(&mut self.random_state);
+                        street.generate(
+                            &mut self.random_state,
+                            self.generation_override,
+                            self.hourly_multiplier,
+                        );
                     }
                 }
                 TickPhase::StreetUpdate => self.streets.iter_mut().for_each(Calle::update),
+                TickPhase::LaneChanges => {
+                    for street in &mut self.streets {
+                        street.change_lanes(&mut self.random_state);
+                    }
+                }
                 _ => {}
             }
             hook(phase, &self.streets);

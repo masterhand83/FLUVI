@@ -47,5 +47,10 @@
   "shell.instructionsBody": "Usa Pausar para detener el tráfico. Avanzar un paso ejecuta un ciclo completo cuando está en pausa. Velocidad cambia los ciclos por segundo. F12 abre el perfilador.",
   "shell.demo": "Red de demostración fija",
   "shell.legend": "Arriba: generador. Centro: conexion. Abajo: devorador.\nCada par: → y después ←. Blanco / negro: celda especial 7.",
-  "shell.profiler": "F12: perfilador"
+  "shell.profiler": "F12: perfilador",
+  "transport.clear": "Limpiar vehículos",
+  "transport.fill": "Llenado aleatorio",
+  "transport.fillProbability": "Probabilidad de llenado",
+  "transport.globalGeneration": "Generación global",
+  "transport.generationProbability": "Probabilidad de generación"
 }

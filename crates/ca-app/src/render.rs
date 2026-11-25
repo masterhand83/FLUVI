@@ -1,5 +1,6 @@
 use std::time::Instant;
 
+use ca_core::traffic::VehicleAction;
 use ca_core::{camera::WorldView, cell_index::CellRef};
 use ca_gpu::{TrafficDisplay, TrafficScene};
 use crossbeam_channel::{Receiver, Sender, TrySendError, bounded};
@@ -27,6 +28,13 @@ pub struct Paint {
     pub rate: f64,
     pub step_ticket: u64,
     pub view: WorldView,
+    pub generation_override: Option<f64>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Edit {
+    Toggle(CellRef),
+    Vehicles(VehicleAction),
 }
 
 pub struct PaintCallback;
@@ -35,12 +43,12 @@ pub struct PaintCallback;
 pub struct Commands {
     state: Sender<Paint>,
     stale_state: Receiver<Paint>,
-    edits: Sender<CellRef>,
+    edits: Sender<Edit>,
 }
 
 pub struct Requests {
     state: Receiver<Paint>,
-    edits: Receiver<CellRef>,
+    edits: Receiver<Edit>,
 }
 
 pub fn command_channel() -> (Commands, Requests) {
@@ -64,7 +72,11 @@ impl Commands {
             let _ = self.stale_state.try_recv();
             let _ = self.state.try_send(state);
         }
-        edit.is_none_or(|cell| self.edits.try_send(cell).is_ok())
+        edit.is_none_or(|cell| self.edit(Edit::Toggle(cell)))
+    }
+
+    pub fn edit(&self, edit: Edit) -> bool {
+        self.edits.try_send(edit).is_ok()
     }
 }
 
@@ -97,6 +109,7 @@ impl Resources {
                 playing: true,
                 rate: 10.0,
                 step_ticket: 0,
+                generation_override: None,
                 view: WorldView {
                     origin: [0.0; 2],
                     span,
@@ -116,9 +129,20 @@ impl Resources {
             self.request = request;
         }
         let request = self.request;
+        self.scene
+            .set_generation_override(request.generation_override)
+            .expect("UI probability is in 0..=1");
         let mut edited = false;
-        while let Ok(cell) = self.requests.edits.try_recv() {
-            edited |= self.scene.toggle_vehicle(cell, !request.playing);
+        while let Ok(edit) = self.requests.edits.try_recv() {
+            edited |= match edit {
+                Edit::Toggle(cell) => self.scene.toggle_vehicle(cell, !request.playing),
+                Edit::Vehicles(action) => {
+                    self.scene
+                        .edit_vehicles(action, !request.playing)
+                        .expect("UI probability is in 0..=1");
+                    true
+                }
+            };
         }
         let published = !request.playing && self.scene.publish_edits();
         self.display.set_view(queue, request.view);
@@ -188,6 +212,7 @@ mod tests {
             playing: false,
             rate: 10.0,
             step_ticket: 0,
+            generation_override: None,
             view: WorldView {
                 origin: [0.0; 2],
                 span: [36.0, 14.0],
@@ -218,12 +243,34 @@ mod tests {
         for index in 0..32 {
             assert_eq!(
                 requests.edits.try_recv().unwrap(),
-                CellRef {
+                Edit::Toggle(CellRef {
                     street: 0,
                     lane: 1,
                     index
-                }
+                })
             );
+        }
+        assert!(requests.edits.try_recv().is_err());
+    }
+
+    #[test]
+    fn transport_actions_share_fifo_order_with_cell_edits() {
+        use ca_core::traffic::VehicleAction;
+        let (commands, requests) = command_channel();
+        let actions = [
+            Edit::Vehicles(VehicleAction::Fill(0.5)),
+            Edit::Vehicles(VehicleAction::Clear),
+            Edit::Toggle(CellRef {
+                street: 0,
+                lane: 0,
+                index: 2,
+            }),
+        ];
+        for action in actions {
+            assert!(commands.edit(action));
+        }
+        for action in actions {
+            assert_eq!(requests.edits.try_recv().unwrap(), action);
         }
         assert!(requests.edits.try_recv().is_err());
     }
