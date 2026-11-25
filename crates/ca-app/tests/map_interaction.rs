@@ -2,6 +2,292 @@ use ca_app::map::MapInteraction;
 use eframe::egui;
 
 #[test]
+fn straight_endpoint_drag_commits_geometry_without_panning_at_each_zoom() {
+    use ca_core::streets::{StreetChange, StreetEdit};
+    for zoom in [0.25_f32, 1.0, 4.0] {
+        let mut document = ca_core::map_json::MapDocument::parse(
+            r#"{"calles":[{"nombre":"A","tipo":"conexion","tamano":6,"x":25,"y":25}]}"#,
+        )
+        .unwrap();
+        let ctx = egui::Context::default();
+        let mut map = MapInteraction::new([30.0, 20.0], &document.geometry(), vec!["A".into()]);
+        map.configure(&document, [2.0, 1.0]);
+        map.select(Some(0));
+        frame(&ctx, &mut map, vec![], false);
+        let p = map.camera().unwrap().world_to_screen([13.0, 6.0]);
+        let start = egui::pos2(p[0], p[1]);
+        frame(
+            &ctx,
+            &mut map,
+            vec![egui::Event::PointerMoved(start), egui::Event::Zoom(zoom)],
+            false,
+        );
+        let screen = |p| {
+            let p = map.camera().unwrap().world_to_screen(p);
+            egui::pos2(p[0], p[1])
+        };
+        let start = screen([13.0, 6.0]);
+        let end = screen([15.0, 6.0]);
+        let before = map.camera().unwrap().view();
+        let button = |pos, pressed| egui::Event::PointerButton {
+            pos,
+            pressed,
+            button: egui::PointerButton::Primary,
+            modifiers: Default::default(),
+        };
+        let press = frame(
+            &ctx,
+            &mut map,
+            vec![egui::Event::PointerMoved(start), button(start, true)],
+            false,
+        );
+        assert!(press.structural_edit);
+        frame(&ctx, &mut map, vec![egui::Event::PointerMoved(end)], false);
+        let released = frame(&ctx, &mut map, vec![button(end, false)], false);
+        assert_eq!(map.camera().unwrap().view(), before);
+        let Some(StreetEdit::Update(
+            0,
+            StreetChange::StraightGeometry {
+                origin,
+                angle,
+                length,
+            },
+        )) = released.street_edit
+        else {
+            panic!("endpoint must commit one geometry edit");
+        };
+        assert!((origin[0] - 5.0).abs() < 0.001 && (origin[1] - 5.0).abs() < 0.001);
+        assert!(angle.abs() < 0.001);
+        assert_eq!(length, 8);
+        document
+            .edit_streets(StreetEdit::Update(
+                0,
+                StreetChange::StraightGeometry {
+                    origin,
+                    angle,
+                    length,
+                },
+            ))
+            .unwrap();
+        map.configure(&document, [2.0, 1.0]);
+        let target = screen_position(&map, [14.5, 6.5]);
+        let result = frame(
+            &ctx,
+            &mut map,
+            vec![egui::Event::PointerMoved(target)],
+            false,
+        );
+        assert_eq!(result.preview.unwrap().cell.index, 7);
+    }
+}
+
+fn screen_position(map: &MapInteraction, point: [f32; 2]) -> egui::Pos2 {
+    let p = map.camera().unwrap().world_to_screen(point);
+    egui::pos2(p[0], p[1])
+}
+
+#[test]
+fn selected_bodies_and_roundabout_center_move_without_pan() {
+    use ca_core::{
+        bezier::BezierChange,
+        map_json::MapDocument,
+        streets::{StreetChange, StreetEdit},
+    };
+    for kind in ["straight", "bezier", "roundabout"] {
+        let mut document = MapDocument::parse(if kind == "roundabout" {
+            r#"{"calles":[{"nombre":"A","tipo":"conexion","tamano":22,"geometryType":"roundabout","innerRadius":15,"startAngle":0,"x":50,"y":50}]}"#
+        } else {
+            r#"{"calles":[{"nombre":"A","tipo":"conexion","tamano":12,"x":25,"y":25}]}"#
+        }).unwrap();
+        if kind == "bezier" {
+            document
+                .edit_streets(StreetEdit::Update(
+                    0,
+                    StreetChange::Bezier(BezierChange::Convert),
+                ))
+                .unwrap();
+        }
+        for center in [false, true] {
+            if center && kind != "roundabout" {
+                continue;
+            }
+            let ctx = egui::Context::default();
+            let mut map = MapInteraction::new([30.0, 20.0], &document.geometry(), vec!["A".into()]);
+            map.configure(&document, [2.0, 1.0]);
+            map.select(Some(0));
+            frame(&ctx, &mut map, vec![], false);
+            let world = if center {
+                [12.0, 11.0]
+            } else {
+                let index = if kind == "roundabout" { 5 } else { 2 };
+                let p = document.geometry()[0].centers[0][index];
+                [p[0] + 2.0, p[1] + 1.0]
+            };
+            let start = screen_position(&map, world);
+            let end = screen_position(&map, [world[0] + 2.0, world[1] + 3.0]);
+            let before = map.camera().unwrap().view();
+            let button = |pos, pressed| egui::Event::PointerButton {
+                pos,
+                pressed,
+                button: egui::PointerButton::Primary,
+                modifiers: Default::default(),
+            };
+            frame(
+                &ctx,
+                &mut map,
+                vec![egui::Event::PointerMoved(start), button(start, true)],
+                false,
+            );
+            let moved = frame(&ctx, &mut map, vec![egui::Event::PointerMoved(end)], false);
+            assert!(moved.structural_edit, "{kind} body/center drag must pause");
+            let released = frame(&ctx, &mut map, vec![button(end, false)], false);
+            assert_eq!(map.camera().unwrap().view(), before);
+            let Some(StreetEdit::Update(0, StreetChange::Origin(origin))) = released.street_edit
+            else {
+                panic!("{kind} must commit a translated origin");
+            };
+            let expected = if kind == "roundabout" {
+                [12.0, 13.0]
+            } else {
+                [7.0, 8.0]
+            };
+            assert!((origin[0] - expected[0]).abs() < 0.001);
+            assert!((origin[1] - expected[1]).abs() < 0.001);
+            let mut edited = document.clone();
+            edited
+                .edit_streets(StreetEdit::Update(0, StreetChange::Origin(origin)))
+                .unwrap();
+            let old = document.geometry()[0].centers[0][0];
+            let new = edited.geometry()[0].centers[0][0];
+            assert!((new[0] - old[0] - 2.0).abs() < 0.001);
+            assert!((new[1] - old[1] - 3.0).abs() < 0.001);
+            map.configure(&edited, [2.0, 1.0]);
+            let target = screen_position(&map, [new[0] + 2.0, new[1] + 1.0]);
+            let hit = frame(
+                &ctx,
+                &mut map,
+                vec![egui::Event::PointerMoved(target)],
+                false,
+            );
+            assert_eq!(hit.preview.unwrap().cell.index, 0);
+        }
+    }
+}
+
+#[test]
+fn invalid_endpoint_drag_keeps_document_and_gives_a_translated_reason() {
+    let document = ca_core::map_json::MapDocument::parse(
+        r#"{"calles":[{"nombre":"A","tipo":"conexion","tamano":6,"x":25,"y":25}]}"#,
+    )
+    .unwrap();
+    let before = document.to_json();
+    let ctx = egui::Context::default();
+    let mut map = MapInteraction::new([30.0, 20.0], &document.geometry(), vec!["A".into()]);
+    map.configure(&document, [0.0; 2]);
+    map.select(Some(0));
+    frame(&ctx, &mut map, vec![], false);
+    let start = screen_position(&map, [11.0, 5.0]);
+    let end = screen_position(&map, [5.2, 5.0]);
+    let button = |pos, pressed| egui::Event::PointerButton {
+        pos,
+        pressed,
+        button: egui::PointerButton::Primary,
+        modifiers: Default::default(),
+    };
+    frame(
+        &ctx,
+        &mut map,
+        vec![egui::Event::PointerMoved(start), button(start, true)],
+        false,
+    );
+    frame(&ctx, &mut map, vec![egui::Event::PointerMoved(end)], false);
+    let released = frame(&ctx, &mut map, vec![button(end, false)], false);
+    assert!(released.street_edit.is_none());
+    let error = released.geometry_error.unwrap();
+    assert_eq!(error.translation_key(), "streetInspector.errors.length");
+    let shell = ca_app::shell::Shell::load(None);
+    let reason = ca_app::inspector::geometry_error_message(&shell, error);
+    assert!(!reason.is_empty() && reason != error.translation_key());
+    assert_eq!(document.to_json(), before);
+}
+
+#[test]
+fn active_drawing_tools_block_pan_even_when_pressing_an_existing_street() {
+    let document = ca_core::map_json::MapDocument::parse(
+        r#"{"calles":[{"nombre":"A","tipo":"conexion","tamano":12,"x":25,"y":25}]}"#,
+    )
+    .unwrap();
+    for roundabout in [false, true] {
+        let ctx = egui::Context::default();
+        let mut map = MapInteraction::new([30.0, 20.0], &document.geometry(), vec!["A".into()]);
+        map.configure(&document, [0.0; 2]);
+        map.select(Some(0));
+        if roundabout {
+            map.set_roundabout_drawing(true);
+        } else {
+            map.set_drawing(true);
+        }
+        frame(&ctx, &mut map, vec![], false);
+        let start = screen_position(&map, [8.5, 5.5]);
+        let end = start + egui::vec2(60.0, 40.0);
+        let before = map.camera().unwrap().view();
+        let button = |pos, pressed| egui::Event::PointerButton {
+            pos,
+            pressed,
+            button: egui::PointerButton::Primary,
+            modifiers: Default::default(),
+        };
+        frame(
+            &ctx,
+            &mut map,
+            vec![egui::Event::PointerMoved(start), button(start, true)],
+            false,
+        );
+        frame(&ctx, &mut map, vec![egui::Event::PointerMoved(end)], false);
+        let released = frame(&ctx, &mut map, vec![button(end, false)], false);
+        assert_eq!(map.camera().unwrap().view(), before);
+        assert!(released.street_edit.is_none());
+    }
+}
+
+#[test]
+fn losing_focus_cancels_a_radius_drag() {
+    let document = ca_core::map_json::MapDocument::parse(
+        r#"{"calles":[{"nombre":"A","tipo":"conexion","tamano":22,"geometryType":"roundabout","innerRadius":15,"startAngle":0,"x":50,"y":50}]}"#,
+    ).unwrap();
+    let ctx = egui::Context::default();
+    let mut map = MapInteraction::new([30.0, 20.0], &document.geometry(), vec!["A".into()]);
+    map.configure(&document, [0.0; 2]);
+    map.select(Some(0));
+    frame(&ctx, &mut map, vec![], false);
+    let start = screen_position(&map, [13.0, 10.0]);
+    let end = screen_position(&map, [15.0, 10.0]);
+    let button = |pos, pressed| egui::Event::PointerButton {
+        pos,
+        pressed,
+        button: egui::PointerButton::Primary,
+        modifiers: Default::default(),
+    };
+    frame(
+        &ctx,
+        &mut map,
+        vec![egui::Event::PointerMoved(start), button(start, true)],
+        false,
+    );
+    frame(&ctx, &mut map, vec![egui::Event::PointerMoved(end)], false);
+    let cancelled = frame(
+        &ctx,
+        &mut map,
+        vec![egui::Event::WindowFocused(false)],
+        false,
+    );
+    assert!(!cancelled.structural_edit);
+    assert!(cancelled.roundabout_preview.is_none());
+    let released = frame(&ctx, &mut map, vec![button(end, false)], false);
+    assert!(released.street_edit.is_none());
+}
+
+#[test]
 fn ctrl_click_clears_selection_without_starting_either_drawing_tool() {
     let document = ca_core::map_json::MapDocument::parse(
         r#"{"calles":[

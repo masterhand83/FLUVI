@@ -102,6 +102,7 @@ pub struct MapInteraction {
     touch_gesture: bool,
     vertices: crate::vertices::VertexEditor,
     curves: crate::bezier::CurveEditor,
+    handles: crate::handles::GeometryHandles,
     drawing: bool,
     roundabout_drawing: bool,
     draw_start: Option<[f64; 2]>,
@@ -127,6 +128,7 @@ impl MapInteraction {
             touch_gesture: false,
             vertices: Default::default(),
             curves: Default::default(),
+            handles: Default::default(),
             drawing: false,
             roundabout_drawing: false,
             draw_start: None,
@@ -202,6 +204,7 @@ impl MapInteraction {
         self.drawing_gesture = false;
         self.vertices.finish();
         self.curves.finish();
+        self.handles.finish();
     }
 
     pub fn show_selector(&mut self, ui: &mut egui::Ui, shell: &crate::shell::Shell) {
@@ -273,6 +276,7 @@ impl MapInteraction {
     ) -> ca_core::map_json::MapGeometry {
         let mut geometry = document.geometry_snapshot();
         self.curves.sync(document, shift);
+        self.handles.sync(document, shift);
         geometry.translate(shift);
         self.names = document.layout().iter().map(|p| p.name.clone()).collect();
         self.sorted = crate::streets::sorted_streets(document);
@@ -320,6 +324,7 @@ impl MapInteraction {
         if let Some(camera) = &self.camera {
             self.vertices.paint(painter, rect, camera, self.selected);
             self.curves.paint(painter, rect, camera, self.selected);
+            self.handles.paint(painter, rect, camera, self.selected);
         }
     }
 
@@ -359,20 +364,52 @@ impl MapInteraction {
             !self.drawing && !self.vertices.active(),
             response.contains_pointer(),
         );
-        let mut street_edit = curve_input.edit;
+        let radius_hit = self
+            .selected
+            .and_then(|s| self.roundabouts.get(s).copied().flatten())
+            .zip(pointer.interact_pos())
+            .is_some_and(|(ring, pos)| {
+                let p = camera.world_to_screen(radius_handle(ring));
+                pos.distance(rect.min + egui::vec2(p[0], p[1])) <= 10.0
+            });
+        let handle_input = self.handles.input(
+            ui,
+            rect,
+            camera,
+            (self.selected, street_hit),
+            !self.drawing && !self.vertices.active() && !curve_input.handled,
+            response.contains_pointer() && !radius_hit && self.radius_drag.is_none(),
+        );
+        let mut street_edit = curve_input.edit.or(handle_input.edit);
+        if handle_input.handled {
+            self.drawing_gesture = true;
+        }
         if curve_input.handled {
             self.drawing_gesture = true;
         }
         let mut street_preview = None;
         let mut roundabout_preview = None;
-        let mut geometry_error = curve_input.error;
+        let mut geometry_error = curve_input.error.or(handle_input.error);
         let was_drawing = self.drawing_gesture;
         if self.vertices.active()
-            || ui.input(|i| i.key_pressed(egui::Key::Escape) || i.multi_touch().is_some())
+            || ui.input(|i| {
+                !i.focused
+                    || i.key_pressed(egui::Key::Escape)
+                    || i.multi_touch().is_some()
+                    || i.events
+                        .iter()
+                        .any(|e| matches!(e, egui::Event::WindowFocused(false)))
+            })
         {
             self.drawing = false;
             self.roundabout_drawing = false;
             self.draw_start = None;
+            self.radius_drag = None;
+        }
+        if self
+            .radius_drag
+            .is_some_and(|(street, _)| Some(street) != self.selected)
+        {
             self.radius_drag = None;
         }
         if !self.drawing
@@ -476,6 +513,9 @@ impl MapInteraction {
             });
         }
         let blocks_pan = self.vertices.blocks_pan()
+            || self.drawing
+            || handle_input.handled
+            || handle_input.captured
             || curve_input.handled
             || self.draw_start.is_some()
             || self.radius_drag.is_some()
@@ -586,6 +626,7 @@ impl MapInteraction {
             vertex_mode: self.vertices.active(),
             structural_edit: self.vertices.active()
                 || curve_input.active
+                || handle_input.active
                 || self.draw_start.is_some()
                 || self.radius_drag.is_some(),
             street_preview,

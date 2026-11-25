@@ -3,6 +3,7 @@ pub mod background;
 mod bezier;
 pub mod connections;
 pub mod control_panel;
+mod handles;
 pub mod inspector;
 pub mod map;
 pub mod map_files;

@@ -211,6 +211,27 @@ Focused checks: `cargo test -p ca-core --test bezier`,
 `cargo test -p ca-app --test street_inspector --test map_interaction`, and
 `cargo test -p ca-gpu --test traffic`.
 
+### Direct geometry handles
+
+Select a street with Ctrl+click or the street selector. Drag a yellow straight
+endpoint to change its origin, angle, and cell count in one atomic edit. Drag a
+roundabout's center to move it, or its radial handle to resize it. Bézier anchors
+and controls retain their live curve preview. Drag the selected street's cells
+to move its body; Bézier body picks use the oriented cell index, not its bounds.
+A click without a drag still edits a cell.
+
+`ca-app::handles::GeometryHandles` owns endpoint and body gestures. Handles use
+the shared camera and fixed screen-space pick radii. All commits use the ordered
+street-edit queue and pause boundary. `StreetChange::StraightGeometry` validates
+the complete endpoint candidate before changing any saved fields, and uses the
+dimension reconciler for vehicles and connections. Invalid drags retain the old
+geometry and use the inspector's translated error. Escape, focus loss, and Resume
+end gestures. Active drawing tools block camera pan, including over existing
+streets.
+
+Focused checks: `cargo test -p ca-app --test map_interaction` and
+`cargo test -p ca-core --test street_inspector`.
+
 ### Map files and session replacement
 
 Use `ca-core::map_json::MapDocument` to validate map JSON before replacing

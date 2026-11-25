@@ -5,6 +5,46 @@ use ca_core::{
 };
 
 #[test]
+fn endpoint_edit_is_atomic_and_reconciles_connections() {
+    let mut map = MapDocument::parse(r#"{
+        "calles":[{"nombre":"A","tipo":"conexion","tamano":6},{"nombre":"B","tipo":"conexion","tamano":6}],
+        "conexiones":[{"origenIdx":0,"destinoIdx":1,"tipo":"LINEAL","detalles":[
+            {"carrilOrigen":0,"carrilDestino":0,"posOrigen":5,"posDestino":0}]}]
+    }"#).unwrap();
+    let before = map.to_json();
+    let invalid = StreetEdit::Update(
+        0,
+        StreetChange::StraightGeometry {
+            origin: [3.0, 4.0],
+            angle: -90.0,
+            length: 0,
+        },
+    );
+    assert_eq!(
+        map.edit_streets(invalid).unwrap_err().translation_key(),
+        "streetInspector.errors.length"
+    );
+    assert_eq!(map.to_json(), before);
+    map.edit_streets(StreetEdit::Update(
+        0,
+        StreetChange::StraightGeometry {
+            origin: [3.0, 4.0],
+            angle: -90.0,
+            length: 4,
+        },
+    ))
+    .unwrap();
+    assert_eq!(map.layout()[0].origin, [3.0, 4.0]);
+    assert_eq!(map.layout()[0].angle_degrees, -90.0);
+    assert_eq!(map.model().streets()[0].config().tamano, 4);
+    assert!(map.model().connections().is_empty());
+    let loaded = MapDocument::parse(&map.to_json()).unwrap();
+    let center = loaded.geometry()[0].centers[0][0];
+    assert!((center[0] - 2.5).abs() < 0.001);
+    assert!((center[1] - 4.5).abs() < 0.001);
+}
+
+#[test]
 fn resize_keeps_new_endpoint_aliases_and_self_links_saveable() {
     let mut map = MapDocument::parse(r#"{
         "calles":[{"nombre":"A","tipo":"conexion","tamano":6},{"nombre":"B","tipo":"devorador","tamano":6}],

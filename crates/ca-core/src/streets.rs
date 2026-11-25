@@ -88,6 +88,12 @@ pub enum StreetEdit {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum StreetChange {
+    /// Atomic endpoint edit, in cell-sized world units.
+    StraightGeometry {
+        origin: [f64; 2],
+        angle: f64,
+        length: usize,
+    },
     Bezier(crate::bezier::BezierChange),
     /// Inner radius in cell-sized world units.
     Radius(f64),
@@ -124,6 +130,20 @@ impl StreetError {
 
 impl StreetChange {
     pub fn validate(&self, config: &crate::traffic::CalleConfig) -> Result<(), StreetError> {
+        if let Self::StraightGeometry {
+            origin,
+            angle,
+            length,
+        } = self
+        {
+            Self::Origin(*origin).validate(config)?;
+            Self::Angle(*angle).validate(config)?;
+            return Self::Dimensions {
+                lanes: config.carriles,
+                length: *length,
+            }
+            .validate(config);
+        }
         let key = match self {
             Self::Radius(v) if RoundaboutDraft::new([0.0; 2], *v, 0.0).is_err() => {
                 "roundaboutDrawing.invalid"

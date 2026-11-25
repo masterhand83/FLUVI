@@ -118,6 +118,20 @@ impl MapDocument {
             }
             crate::streets::StreetEdit::Update(street, change) => {
                 match change {
+                    StreetChange::StraightGeometry {
+                        origin,
+                        angle,
+                        length,
+                    } => {
+                        let lanes = self.model.streets()[street].config().carriles;
+                        self.reconcile_dimensions(street, lanes, length);
+                        self.layout[street].origin = origin;
+                        self.layout[street].angle_degrees = angle;
+                        let road = &mut self.data["calles"][street];
+                        road["x"] = json!(origin[0] * 5.0);
+                        road["y"] = json!(origin[1] * 5.0);
+                        road["angulo"] = json!(angle);
+                    }
                     StreetChange::Bezier(_) => {}
                     StreetChange::Radius(radius) => {
                         let mut ring = self.layout[street].roundabout.expect("validated ring");
@@ -233,6 +247,11 @@ impl MapDocument {
                     .ok_or(StreetError("streetDrawing.invalid"))?
                     .config();
                 change.validate(old)?;
+                if matches!(change, StreetChange::StraightGeometry { .. })
+                    && (self.layout[*street].curved || self.layout[*street].roundabout.is_some())
+                {
+                    return Err(StreetError("streetInspector.errors.geometry"));
+                }
                 if let Some(curve) = self.curve_candidate(*street, change)? {
                     let lanes = match change {
                         StreetChange::Dimensions { lanes, .. } => *lanes,
@@ -271,6 +290,7 @@ impl MapDocument {
                         .cells(),
                     )),
                     StreetChange::Dimensions { lanes, length } => Some((*lanes, *length)),
+                    StreetChange::StraightGeometry { length, .. } => Some((old.carriles, *length)),
                     _ => None,
                 };
                 if let Some((lanes, length)) = size {
