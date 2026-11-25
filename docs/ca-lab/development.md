@@ -233,6 +233,7 @@ or Escape. `ca-app::preview::GeometryPreview` supplies the shared display-only
 geometry and cached mesh for direct handles and Bézier point edits. Unchanged
 pointer positions reuse the preview; a camera or panel change refreshes its
 screen coordinates. Body translation checks point bounds without resampling curves.
+Only the active body drag caches source cell geometry.
 Escape, focus loss, and Resume
 end gestures. Active drawing tools block camera pan, including over existing
 streets.

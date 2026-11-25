@@ -13,7 +13,6 @@ use std::sync::Arc;
 struct Street {
     placement: StreetPlacement,
     config: CalleConfig,
-    geometry: CellGeometry,
 }
 
 struct Drag {
@@ -22,6 +21,7 @@ struct Drag {
     start: [f32; 2],
     moved: bool,
     position: [f64; 2],
+    geometry: Option<CellGeometry>,
 }
 
 enum Target {
@@ -65,7 +65,6 @@ impl GeometryHandles {
             .iter()
             .zip(document.model().streets())
             .map(|(p, s)| Street {
-                geometry: p.cells(s.config().carriles, s.config().tamano),
                 placement: p.clone(),
                 config: s.config().clone(),
             })
@@ -106,23 +105,25 @@ impl GeometryHandles {
                 placement.angle_degrees = *angle;
                 placement.cells(street.config.carriles, *length)
             }
-            StreetChange::Origin(origin) => CellGeometry {
-                centers: street
-                    .geometry
-                    .centers
-                    .iter()
-                    .map(|lane| {
-                        lane.iter()
-                            .map(|p| {
-                                std::array::from_fn(|i| {
-                                    p[i] + (origin[i] - street.placement.origin[i]) as f32
+            StreetChange::Origin(origin) => {
+                let source = drag.geometry.as_ref().expect("body drag geometry");
+                CellGeometry {
+                    centers: source
+                        .centers
+                        .iter()
+                        .map(|lane| {
+                            lane.iter()
+                                .map(|p| {
+                                    std::array::from_fn(|i| {
+                                        p[i] + (origin[i] - street.placement.origin[i]) as f32
+                                    })
                                 })
-                            })
-                            .collect()
-                    })
-                    .collect(),
-                axes: street.geometry.axes.clone(),
-            },
+                                .collect()
+                        })
+                        .collect(),
+                    axes: source.axes.clone(),
+                }
+            }
             StreetChange::Radius(radius) => {
                 let mut placement = street.placement.clone();
                 let ring = placement.roundabout.as_mut().expect("radial handle");
@@ -145,14 +146,22 @@ impl GeometryHandles {
         if p.curved || p.roundabout.is_some() {
             return None;
         }
-        let a = -p.angle_degrees.to_radians();
-        Some([
+        Some(Self::straight_endpoints(
             p.origin,
+            p.angle_degrees,
+            street.config.tamano,
+        ))
+    }
+
+    fn straight_endpoints(origin: [f64; 2], angle: f64, length: usize) -> [[f64; 2]; 2] {
+        let a = -angle.to_radians();
+        [
+            origin,
             [
-                p.origin[0] + a.cos() * street.config.tamano as f64,
-                p.origin[1] + a.sin() * street.config.tamano as f64,
+                origin[0] + a.cos() * length as f64,
+                origin[1] + a.sin() * length as f64,
             ],
-        ])
+        ]
     }
 
     fn positions(street: &Street) -> ([[f64; 2]; 2], usize) {
@@ -286,6 +295,7 @@ impl GeometryHandles {
                     start: (pos - rect.min).into(),
                     moved: false,
                     position,
+                    geometry: None,
                 });
                 self.candidate = None;
                 self.preview = None;
@@ -312,6 +322,14 @@ impl GeometryHandles {
             }
             result.handled = !matches!(drag.target, Target::Body) || drag.moved;
             result.active = result.handled;
+            if result.active && matches!(drag.target, Target::Body) && drag.geometry.is_none() {
+                let street = &self.streets[drag.street];
+                drag.geometry = Some(
+                    street
+                        .placement
+                        .cells(street.config.carriles, street.config.tamano),
+                );
+            }
         }
         if let Some(drag) = &self.drag {
             if self.candidate.is_none() {
@@ -367,12 +385,7 @@ impl GeometryHandles {
                     angle,
                     length,
                 })) => {
-                    ends[0] = *origin;
-                    let angle = -angle.to_radians();
-                    ends[1] = [
-                        origin[0] + angle.cos() * *length as f64,
-                        origin[1] + angle.sin() * *length as f64,
-                    ];
+                    ends = Self::straight_endpoints(*origin, *angle, *length);
                 }
                 Some(Ok(StreetChange::Radius(radius))) => {
                     let mut ring = street.placement.roundabout.expect("radial handle");
