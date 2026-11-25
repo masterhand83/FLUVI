@@ -1,4 +1,5 @@
 //! Map input adapter. All picks and drawing use the same local-screen camera.
+pub use crate::bezier::CurvePreview;
 use ca_core::{
     camera::{Camera, WorldView},
     cell_index::{CellIndex, CellRef, StreetGeometry},
@@ -18,6 +19,7 @@ pub struct MapFrame {
     pub street_edit: Option<ca_core::streets::StreetEdit>,
     pub roundabout_preview: Option<ca_core::streets::RoundaboutDraft>,
     pub geometry_error: Option<ca_core::streets::StreetError>,
+    pub bezier_preview: Option<std::sync::Arc<CurvePreview>>,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -30,6 +32,9 @@ pub struct CellPreview {
 impl MapFrame {
     /// Draw after the GPU callback so the target stays visible over the map.
     pub fn paint_preview(&self, painter: &egui::Painter) {
+        if let Some(preview) = &self.bezier_preview {
+            preview.paint(painter);
+        }
         if let Some(ring) = self.roundabout_preview {
             let screen = |p: [f64; 2]| {
                 self.rect.min
@@ -215,6 +220,9 @@ impl MapInteraction {
     }
 
     pub fn paint_selection(&self, painter: &egui::Painter, rect: egui::Rect) {
+        if self.curves.previewing() {
+            return;
+        }
         let (Some(street), Some(camera)) = (self.selected, &self.camera) else {
             return;
         };
@@ -356,7 +364,7 @@ impl MapInteraction {
         }
         let mut street_preview = None;
         let mut roundabout_preview = None;
-        let mut geometry_error = None;
+        let mut geometry_error = curve_input.error;
         let was_drawing = self.drawing_gesture;
         if self.vertices.active()
             || ui.input(|i| i.key_pressed(egui::Key::Escape) || i.multi_touch().is_some())
@@ -579,6 +587,7 @@ impl MapInteraction {
             street_edit,
             roundabout_preview,
             geometry_error,
+            bezier_preview: curve_input.preview,
         }
     }
 }

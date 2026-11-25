@@ -1,11 +1,102 @@
 //! Curve-point selection and drag preview. Commit only on release, through StreetEdit.
 use ca_core::{
-    bezier::{BezierChange, CurvePoint},
+    bezier::{BezierChange, BezierCurve, CurvePoint},
     camera::Camera,
+    geometry::CellGeometry,
     map_json::MapDocument,
-    streets::{StreetChange, StreetEdit},
+    streets::{StreetChange, StreetEdit, StreetError},
 };
 use eframe::egui;
+use std::sync::Arc;
+
+/// Display-only candidate. No model cells, connections, or saved fields change.
+pub struct CurvePreview {
+    pub street: usize,
+    pub geometry: CellGeometry,
+    pub error: Option<StreetError>,
+    drawing: egui::Shape,
+    view: (egui::Rect, ca_core::camera::WorldView, f32),
+}
+
+impl CurvePreview {
+    fn new(
+        street: usize,
+        curve: &BezierCurve,
+        lanes: usize,
+        shift: [f32; 2],
+        ui: &egui::Ui,
+        rect: egui::Rect,
+        camera: &Camera,
+    ) -> Self {
+        let error = curve.validate(lanes).err();
+        let length = curve.cell_count().clamp(1, 2500);
+        let mut geometry = CellGeometry {
+            centers: vec![vec![[0.0; 2]; length]; lanes],
+            axes: vec![vec![[0.0; 2]; length]; lanes],
+        };
+        for lane in 0..lanes {
+            for index in 0..length {
+                let (center, axis) = curve.cell(lane, lanes, index);
+                geometry.centers[lane][index] = std::array::from_fn(|i| center[i] + shift[i]);
+                geometry.axes[lane][index] = axis;
+            }
+        }
+        let screen = |p| {
+            let p = camera.world_to_screen(p);
+            rect.min + egui::vec2(p[0], p[1])
+        };
+        let color = if error.is_some() {
+            egui::Color32::RED
+        } else {
+            egui::Color32::YELLOW
+        };
+        let mut shapes = Vec::with_capacity(lanes * length);
+        for (centers, axes) in geometry.centers.iter().zip(&geometry.axes) {
+            for (&center, &axis) in centers.iter().zip(axes) {
+                let corners = [[-0.5, -0.5], [0.5, -0.5], [0.5, 0.5], [-0.5, 0.5]].map(|[x, y]| {
+                    screen([
+                        center[0] + axis[0] * x - axis[1] * y,
+                        center[1] + axis[1] * x + axis[0] * y,
+                    ])
+                });
+                shapes.push(egui::epaint::ClippedShape {
+                    clip_rect: rect,
+                    shape: egui::Shape::convex_polygon(
+                        corners.to_vec(),
+                        egui::Color32::from_rgb(22, 26, 33),
+                        egui::Stroke::new(1.0_f32, color),
+                    ),
+                });
+            }
+        }
+        let mut mesh = egui::Mesh::default();
+        for primitive in ui.ctx().tessellate(shapes, ui.ctx().pixels_per_point()) {
+            if let egui::epaint::Primitive::Mesh(part) = primitive.primitive {
+                mesh.append(part);
+            }
+        }
+        Self {
+            street,
+            geometry,
+            error,
+            drawing: egui::Shape::mesh(mesh),
+            view: (rect, camera.view(), ui.ctx().pixels_per_point()),
+        }
+    }
+
+    pub(crate) fn paint(&self, painter: &egui::Painter) {
+        // Mesh shapes clone an Arc, not the cell vertex/index buffers.
+        painter.add(self.drawing.clone());
+    }
+}
+
+struct Drag {
+    street: usize,
+    point: CurvePoint,
+    original: [f32; 2],
+    position: [f32; 2],
+    error: Option<StreetError>,
+}
 
 struct Handle {
     street: usize,
@@ -13,12 +104,19 @@ struct Handle {
     position: [f32; 2],
 }
 
+struct Guide {
+    street: usize,
+    points: Vec<(CurvePoint, [f32; 2])>,
+}
+
 #[derive(Default)]
 pub(crate) struct CurveEditor {
     handles: Vec<Handle>,
-    guides: Vec<(usize, Vec<[f32; 2]>)>,
+    guides: Vec<Guide>,
     selected: Option<(usize, CurvePoint)>,
-    drag: Option<(usize, CurvePoint, [f32; 2])>,
+    curves: Vec<Option<(BezierCurve, usize)>>,
+    drag: Option<Drag>,
+    preview: Option<Arc<CurvePreview>>,
     shift: [f32; 2],
 }
 
@@ -27,11 +125,21 @@ pub(crate) struct CurveInput {
     pub edit: Option<StreetEdit>,
     pub handled: bool,
     pub active: bool,
+    pub preview: Option<Arc<CurvePreview>>,
+    pub error: Option<StreetError>,
 }
 
 impl CurveEditor {
     pub fn sync(&mut self, document: &MapDocument, shift: [f32; 2]) {
         self.shift = shift;
+        self.drag = None;
+        self.preview = None;
+        self.curves = document
+            .layout()
+            .iter()
+            .zip(document.model().streets())
+            .map(|(p, s)| p.bezier.clone().map(|curve| (curve, s.config().carriles)))
+            .collect();
         self.handles.clear();
         self.guides.clear();
         let shifted = |p: [f64; 2]| std::array::from_fn(|i| p[i] as f32 + shift[i]);
@@ -46,15 +154,28 @@ impl CurveEditor {
             });
             let mut start = curve.start();
             for (i, s) in curve.sections().iter().enumerate() {
-                self.guides.push((
+                self.guides.push(Guide {
                     street,
-                    [start]
-                        .into_iter()
-                        .chain(s.controls.iter().copied())
-                        .chain([s.end])
-                        .map(shifted)
-                        .collect(),
-                ));
+                    points: [(
+                        if i == 0 {
+                            CurvePoint::Start
+                        } else {
+                            CurvePoint::Anchor(i - 1)
+                        },
+                        start,
+                    )]
+                    .into_iter()
+                    .chain(
+                        s.controls
+                            .iter()
+                            .copied()
+                            .enumerate()
+                            .map(|(j, p)| (CurvePoint::Control(i, j), p)),
+                    )
+                    .chain([(CurvePoint::Anchor(i), s.end)])
+                    .map(|(point, p)| (point, shifted(p)))
+                    .collect(),
+                });
                 self.handles.push(Handle {
                     street,
                     point: CurvePoint::Anchor(i),
@@ -90,7 +211,12 @@ impl CurveEditor {
 
     pub fn finish(&mut self) {
         self.drag = None;
+        self.preview = None;
         self.selected = None;
+    }
+
+    pub fn previewing(&self) -> bool {
+        self.preview.is_some()
     }
 
     pub fn input(
@@ -104,9 +230,23 @@ impl CurveEditor {
     ) -> CurveInput {
         let mut result = CurveInput::default();
         let pointer = ui.input(|i| i.pointer.clone());
-        if !enabled || ui.input(|i| i.key_pressed(egui::Key::Escape) || i.multi_touch().is_some()) {
+        if !enabled
+            || self
+                .drag
+                .as_ref()
+                .is_some_and(|d| Some(d.street) != selected)
+            || ui.input(|i| {
+                !i.focused
+                    || i.key_pressed(egui::Key::Escape)
+                    || i.multi_touch().is_some()
+                    || i.events
+                        .iter()
+                        .any(|e| matches!(e, egui::Event::WindowFocused(false)))
+            })
+        {
             result.handled = self.drag.is_some();
             self.drag = None;
+            self.preview = None;
             return result;
         }
         if pointer.primary_pressed()
@@ -125,28 +265,67 @@ impl CurveEditor {
                 .min_by(|a, b| a.1.total_cmp(&b.1));
             if let Some((h, _)) = candidate {
                 self.selected = Some((h.street, h.point));
-                self.drag = Some((h.street, h.point, h.position));
+                self.drag = Some(Drag {
+                    street: h.street,
+                    point: h.point,
+                    original: h.position,
+                    position: h.position,
+                    error: None,
+                });
             } else {
                 self.selected = None;
             }
         }
-        if let Some((street, point, original)) = self.drag {
+        if let Some(drag) = &mut self.drag {
             result.handled = true;
             result.active = true;
-            if pointer.primary_released() {
-                if let Some(pos) = pointer.interact_pos().filter(|p| rect.contains(*p)) {
-                    let position = camera.screen_to_world((pos - rect.min).into());
-                    if position != original {
-                        let world = std::array::from_fn(|i| (position[i] - self.shift[i]) as f64);
-                        result.edit = Some(StreetEdit::Update(
-                            street,
-                            StreetChange::Bezier(BezierChange::Move(point, world)),
-                        ));
+            if let Some(pos) = pointer.interact_pos().filter(|p| rect.contains(*p)) {
+                let position = camera.screen_to_world((pos - rect.min).into());
+                let view = (rect, camera.view(), ui.ctx().pixels_per_point());
+                if position != drag.position
+                    || self.preview.as_ref().is_some_and(|p| p.view != view)
+                {
+                    drag.position = position;
+                    let world = std::array::from_fn(|i| (position[i] - self.shift[i]) as f64);
+                    let (curve, lanes) = self.curves[drag.street].as_ref().expect("curve handle");
+                    match curve.changed(&BezierChange::Move(drag.point, world)) {
+                        Ok(candidate) => {
+                            let preview = CurvePreview::new(
+                                drag.street,
+                                &candidate,
+                                *lanes,
+                                self.shift,
+                                ui,
+                                rect,
+                                camera,
+                            );
+                            drag.error = preview.error;
+                            self.preview = Some(Arc::new(preview));
+                        }
+                        Err(error) => {
+                            drag.error = Some(error);
+                            self.preview = None;
+                        }
                     }
                 }
+            }
+            result.error = drag.error;
+            if pointer.primary_released() {
+                if pointer.interact_pos().is_some_and(|p| rect.contains(p))
+                    && drag.error.is_none()
+                    && drag.position != drag.original
+                {
+                    let world = std::array::from_fn(|i| (drag.position[i] - self.shift[i]) as f64);
+                    result.edit = Some(StreetEdit::Update(
+                        drag.street,
+                        StreetChange::Bezier(BezierChange::Move(drag.point, world)),
+                    ));
+                }
                 self.drag = None;
+                self.preview = None;
             }
         }
+        result.preview = self.preview.clone();
         result
     }
 
@@ -161,30 +340,46 @@ impl CurveEditor {
             let p = camera.world_to_screen(p);
             rect.min + egui::vec2(p[0], p[1])
         };
-        for (_, guide) in self.guides.iter().filter(|(s, _)| Some(*s) == selected) {
-            for pair in guide.windows(2) {
+        let dragged = self.drag.as_ref().filter(|d| Some(d.street) == selected);
+        for guide in self.guides.iter().filter(|g| Some(g.street) == selected) {
+            let position = |(point, p)| {
+                dragged
+                    .filter(|d| d.point == point)
+                    .map_or(p, |d| d.position)
+            };
+            for pair in guide.points.windows(2) {
+                let invalid = dragged.is_some_and(|d| {
+                    d.error.is_some() && pair.iter().any(|(point, _)| *point == d.point)
+                });
                 painter.line_segment(
-                    [screen(pair[0]), screen(pair[1])],
-                    egui::Stroke::new(1.0_f32, egui::Color32::GRAY),
+                    [screen(position(pair[0])), screen(position(pair[1]))],
+                    egui::Stroke::new(
+                        1.0_f32,
+                        if invalid {
+                            egui::Color32::RED
+                        } else {
+                            egui::Color32::GRAY
+                        },
+                    ),
                 );
             }
         }
         for h in self.handles.iter().filter(|h| Some(h.street) == selected) {
-            let pos = if self
+            let pos = if let Some(drag) = self
                 .drag
-                .is_some_and(|(s, p, _)| s == h.street && p == h.point)
+                .as_ref()
+                .filter(|d| d.street == h.street && d.point == h.point)
             {
-                painter
-                    .ctx()
-                    .input(|i| i.pointer.interact_pos())
-                    .unwrap_or_else(|| screen(h.position))
+                screen(drag.position)
             } else {
                 screen(h.position)
             };
             painter.circle_filled(
                 pos,
                 5.0,
-                if self.selected == Some((h.street, h.point)) {
+                if dragged.is_some_and(|d| d.point == h.point && d.error.is_some()) {
+                    egui::Color32::RED
+                } else if self.selected == Some((h.street, h.point)) {
                     egui::Color32::WHITE
                 } else if matches!(h.point, CurvePoint::Control(_, _)) {
                     egui::Color32::LIGHT_BLUE

@@ -2,6 +2,245 @@ use ca_app::map::MapInteraction;
 use eframe::egui;
 
 #[test]
+fn unsampleable_candidates_keep_live_red_guides_without_changing_the_map() {
+    use ca_core::map_json::MapDocument;
+    let controls: Vec<_> = (1..=32)
+        .map(|i| serde_json::json!({"x":i as f64*50.0/33.0,"y":0}))
+        .collect();
+    let document = MapDocument::parse(
+        &serde_json::json!({"calles":[{
+            "nombre":"Curve","tipo":"conexion","tamano":10,"bezierGeometry":true,
+            "bezierControls":controls,"endX":50,"endY":0
+        }]})
+        .to_string(),
+    )
+    .unwrap();
+    let saved = document.to_json();
+    let ctx = egui::Context::default();
+    let mut map = MapInteraction::new([2000.0, 2000.0], &document.geometry(), vec!["Curve".into()]);
+    map.configure(&document, [0.0; 2]);
+    map.select(Some(0));
+    frame(&ctx, &mut map, vec![], false);
+    let screen = |p: [f32; 2]| {
+        let p = map.camera().unwrap().world_to_screen(p);
+        egui::pos2(p[0], p[1])
+    };
+    let point =
+        document.layout()[0].bezier.as_ref().unwrap().sections()[0].controls[31].map(|v| v as f32);
+    let start = screen(point);
+    let end = screen([1000.0, 1000.0]);
+    frame(
+        &ctx,
+        &mut map,
+        vec![
+            egui::Event::PointerMoved(start),
+            egui::Event::PointerButton {
+                pos: start,
+                pressed: true,
+                button: egui::PointerButton::Primary,
+                modifiers: egui::Modifiers::NONE,
+            },
+        ],
+        false,
+    );
+    let (moving, output) =
+        painted_frame(&ctx, &mut map, vec![egui::Event::PointerMoved(end)], false);
+    assert_eq!(
+        moving.geometry_error.unwrap().translation_key(),
+        "bezier.invalidControls"
+    );
+    assert!(
+        moving.bezier_preview.is_none(),
+        "sampling budget prevents a cell mesh"
+    );
+    assert!(
+        output.shapes.iter().any(|s| matches!(&s.shape,
+        egui::Shape::LineSegment {points,stroke} if stroke.color == egui::Color32::RED
+            && points.iter().any(|p| p.distance(end)<0.001))),
+        "invalid guides still follow the pointer"
+    );
+    assert!(output.shapes.iter().any(|s| matches!(&s.shape,
+        egui::Shape::Circle(circle) if circle.fill == egui::Color32::RED && circle.center.distance(end)<0.001)));
+    assert_eq!(document.to_json(), saved);
+}
+
+#[test]
+fn cancelling_or_releasing_an_invalid_curve_preview_keeps_the_original_map() {
+    use ca_core::{
+        bezier::BezierChange,
+        map_json::MapDocument,
+        streets::{StreetChange, StreetEdit},
+    };
+    let mut document = MapDocument::parse(
+        r#"{"calles":[{
+        "nombre":"Curve","tipo":"conexion","tamano":10,"carriles":2,"x":25,"y":25
+    }]}"#,
+    )
+    .unwrap();
+    document
+        .edit_streets(StreetEdit::Update(
+            0,
+            StreetChange::Bezier(BezierChange::Convert),
+        ))
+        .unwrap();
+    let saved = document.to_json();
+    let ctx = egui::Context::default();
+    let mut map = MapInteraction::new([30.0, 100.0], &document.geometry(), vec!["Curve".into()]);
+    map.configure(&document, [0.0; 2]);
+    map.select(Some(0));
+    frame(&ctx, &mut map, vec![], false);
+    let screen = |p: [f32; 2]| {
+        let p = map.camera().unwrap().world_to_screen(p);
+        egui::pos2(p[0], p[1])
+    };
+    let start = screen([10.0, 5.0]);
+    let ends = [
+        screen([10.0, 8.0]),
+        screen([10.0, 8.0]),
+        screen([10.0, 45.0]),
+    ];
+    let before = map.camera().unwrap().view();
+    let button = |pos, pressed| egui::Event::PointerButton {
+        pos,
+        pressed,
+        button: egui::PointerButton::Primary,
+        modifiers: egui::Modifiers::NONE,
+    };
+    for (case, end) in (0..3).zip(ends) {
+        let invalid = case == 2;
+        frame(
+            &ctx,
+            &mut map,
+            vec![egui::Event::PointerMoved(start), button(start, true)],
+            false,
+        );
+        let (moving, output) =
+            painted_frame(&ctx, &mut map, vec![egui::Event::PointerMoved(end)], false);
+        let preview = moving.bezier_preview.as_ref().unwrap();
+        assert_eq!(moving.view, before);
+        assert_eq!(moving.geometry_error.is_some(), invalid);
+        let idle = frame(&ctx, &mut map, vec![], false);
+        assert!(
+            std::sync::Arc::ptr_eq(preview, idle.bezier_preview.as_ref().unwrap()),
+            "an unchanged pointer reuses the sampled preview"
+        );
+        if invalid {
+            assert_eq!(preview.error.unwrap().translation_key(), "bezier.overlap");
+            assert!(output.shapes.iter().any(|s| matches!(&s.shape,
+                egui::Shape::Mesh(mesh) if mesh.vertices.iter().any(|v| v.color == egui::Color32::RED))));
+        } else {
+            let cancelled = frame(
+                &ctx,
+                &mut map,
+                vec![if case == 0 {
+                    egui::Event::Key {
+                        key: egui::Key::Escape,
+                        physical_key: None,
+                        pressed: true,
+                        repeat: false,
+                        modifiers: egui::Modifiers::NONE,
+                    }
+                } else {
+                    egui::Event::WindowFocused(false)
+                }],
+                false,
+            );
+            assert!(cancelled.bezier_preview.is_none());
+            assert!(cancelled.street_edit.is_none());
+        }
+        let released = frame(&ctx, &mut map, vec![button(end, false)], false);
+        assert!(released.bezier_preview.is_none());
+        assert!(released.street_edit.is_none());
+        assert_eq!(document.to_json(), saved);
+    }
+}
+
+#[test]
+fn bezier_drag_previews_the_shape_and_guides_before_committing() {
+    use ca_core::{
+        bezier::BezierChange,
+        map_json::MapDocument,
+        streets::{StreetChange, StreetEdit},
+    };
+    let mut document = MapDocument::parse(
+        r#"{"calles":[{
+        "nombre":"Curve","tipo":"conexion","tamano":10,"x":25,"y":25
+    }]}"#,
+    )
+    .unwrap();
+    document
+        .edit_streets(StreetEdit::Update(
+            0,
+            StreetChange::Bezier(BezierChange::Convert),
+        ))
+        .unwrap();
+    let saved = document.to_json();
+    let ctx = egui::Context::default();
+    let mut map = MapInteraction::new([30.0, 20.0], &document.geometry(), vec!["Curve".into()]);
+    map.configure(&document, [2.0, 3.0]);
+    map.select(Some(0));
+    frame(&ctx, &mut map, vec![], false);
+    let screen = |p: [f32; 2]| {
+        let p = map.camera().unwrap().world_to_screen(p);
+        egui::pos2(p[0], p[1])
+    };
+    let start = screen([12.0, 8.0]);
+    let end = screen([12.0, 11.0]);
+    let anchor = screen([7.0, 8.0]);
+    let button = |pressed| egui::Event::PointerButton {
+        pos: if pressed { start } else { end },
+        pressed,
+        button: egui::PointerButton::Primary,
+        modifiers: egui::Modifiers::NONE,
+    };
+    frame(
+        &ctx,
+        &mut map,
+        vec![egui::Event::PointerMoved(start), button(true)],
+        false,
+    );
+    let before = map.camera().unwrap().view();
+    let (moving, output) =
+        painted_frame(&ctx, &mut map, vec![egui::Event::PointerMoved(end)], false);
+    assert_eq!(moving.view, before);
+    assert!(
+        moving.street_edit.is_none(),
+        "preview must not commit an edit"
+    );
+    let preview = moving.bezier_preview.as_ref().expect("live curve preview");
+    assert_eq!(preview.street, 0);
+    assert!(preview.error.is_none());
+    let highest = preview.geometry.centers[0]
+        .iter()
+        .map(|p| p[1])
+        .fold(f32::NEG_INFINITY, f32::max);
+    assert!(
+        (9.45..=9.5).contains(&highest),
+        "quadratic midpoint is at y=6.5 plus display shift"
+    );
+    assert_eq!(document.to_json(), saved);
+    assert!(
+        output.shapes.iter().any(|s| matches!(&s.shape,
+        egui::Shape::LineSegment { points,.. }
+            if points[0].distance(anchor)<0.001 && points[1].distance(end)<0.001)),
+        "guide follows the dragged control"
+    );
+    assert!(
+        output.shapes.iter().any(|s| matches!(&s.shape,
+        egui::Shape::Mesh(mesh) if !mesh.indices.is_empty())),
+        "preview draws cell footprints before mouse release"
+    );
+    let released = frame(&ctx, &mut map, vec![button(false)], false);
+    assert!(released.bezier_preview.is_none());
+    document
+        .edit_streets(released.street_edit.unwrap())
+        .unwrap();
+    let mut committed = document.geometry_snapshot();
+    committed.translate([2.0, 3.0]);
+    assert_eq!(preview.geometry.centers, committed.streets[0].centers);
+}
+
+#[test]
 fn bezier_controls_drag_without_panning_and_delete_keeps_the_street() {
     use ca_core::{
         bezier::{BezierChange, CurvePoint},
@@ -433,8 +672,17 @@ fn frame(
     events: Vec<egui::Event>,
     detect: bool,
 ) -> ca_app::map::MapFrame {
+    painted_frame(ctx, map, events, detect).0
+}
+
+fn painted_frame(
+    ctx: &egui::Context,
+    map: &mut MapInteraction,
+    events: Vec<egui::Event>,
+    detect: bool,
+) -> (ca_app::map::MapFrame, egui::FullOutput) {
     let mut result = None;
-    let _ = ctx.run(
+    let output = ctx.run(
         egui::RawInput {
             screen_rect: Some(egui::Rect::from_min_size(
                 egui::Pos2::ZERO,
@@ -447,11 +695,14 @@ fn frame(
             egui::CentralPanel::default()
                 .frame(egui::Frame::NONE)
                 .show(ctx, |ui| {
-                    result = Some(map.show(ui, detect));
+                    let frame = map.show(ui, detect);
+                    frame.paint_preview(ui.painter());
+                    map.paint_vertices(ui.painter(), frame.rect);
+                    result = Some(frame);
                 });
         },
     );
-    result.unwrap()
+    (result.unwrap(), output)
 }
 
 #[test]

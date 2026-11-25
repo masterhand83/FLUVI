@@ -519,15 +519,6 @@ impl eframe::App for App {
             if map.structural_edit {
                 self.edit_pause.begin(&mut self.playing);
             }
-            if let Some(error) = map.geometry_error {
-                ui.painter().text(
-                    map.rect.left_top() + egui::vec2(12.0, 12.0),
-                    egui::Align2::LEFT_TOP,
-                    ca_app::inspector::geometry_error_message(&self.shell, error),
-                    egui::FontId::proportional(14.0),
-                    egui::Color32::RED,
-                );
-            }
             if let Some(edit) = map.street_edit.clone() {
                 self.edit_streets(edit);
             }
@@ -558,6 +549,7 @@ impl eframe::App for App {
                 step_ticket: self.step_ticket,
                 view: map.view,
                 generation_override: self.transport.generation_override(),
+                excluded_street: map.bezier_preview.as_ref().map(|preview| preview.street),
             };
             if !self.commands.send(request, map.clicked) {
                 self.shell.notify(
@@ -586,6 +578,15 @@ impl eframe::App for App {
                 .as_ref()
                 .expect("map")
                 .paint_vertices(ui.painter(), map.rect);
+            if let Some(error) = map.geometry_error {
+                ui.painter().text(
+                    map.rect.left_top() + egui::vec2(12.0, 12.0),
+                    egui::Align2::LEFT_TOP,
+                    ca_app::inspector::geometry_error_message(&self.shell, error),
+                    egui::FontId::proportional(14.0),
+                    egui::Color32::RED,
+                );
+            }
             if map.vertex_mode {
                 ui.painter().text(
                     map.rect.left_top() + egui::vec2(12.0, 12.0),

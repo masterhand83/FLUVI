@@ -175,8 +175,14 @@ Focused checks: `cargo test -p ca-core --test roundabouts`,
 Select a straight street and use Convert to Bézier in its inspector. Select a
 section's control or anchor to add a control or split that section. Splitting uses
 exact De Casteljau subdivision. Select a point in the inspector or on the map;
-drag its map handle to change its world position. Release commits the edit.
-Escape cancels an active drag. Curve strength scales the controls' perpendicular
+drag its map handle to change its world position. The street cells and guide lines
+update during the drag. The preview replaces the original street display, but it
+does not change saved geometry, vehicles, or connections. Unchanged pointer
+positions reuse the cached geometry and drawing mesh. Invalid candidates have a
+red outline and a translated reason; if sampling is not possible, the live guides
+and handle turn red instead. Release commits a valid edit; Escape or window focus
+loss cancels the preview.
+Curve strength scales the controls' perpendicular
 deviation from each section's chord. Invalid edits keep the previous geometry.
 Delete (Supr) removes a selected control or intermediate anchor, not the street.
 The start and final endpoint cannot be removed.

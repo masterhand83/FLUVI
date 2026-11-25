@@ -30,6 +30,7 @@ pub struct Paint {
     pub step_ticket: u64,
     pub view: WorldView,
     pub generation_override: Option<f64>,
+    pub excluded_street: Option<usize>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -147,6 +148,7 @@ impl Resources {
                 rate: 10.0,
                 step_ticket: 0,
                 generation_override: None,
+                excluded_street: None,
                 view: WorldView {
                     origin: [0.0; 2],
                     span,
@@ -265,11 +267,12 @@ impl CallbackTrait for PaintCallback {
         pass: &mut wgpu::RenderPass<'static>,
         resources: &CallbackResources,
     ) {
-        resources
+        let resources = resources
             .get::<Resources>()
-            .expect("traffic resources were installed at startup")
+            .expect("traffic resources were installed at startup");
+        resources
             .display
-            .paint(pass);
+            .paint_excluding(pass, resources.request.excluded_street);
     }
 }
 
@@ -296,6 +299,7 @@ mod tests {
             rate: 10.0,
             step_ticket: 0,
             generation_override: None,
+            excluded_street: None,
             view: WorldView {
                 origin: [0.0; 2],
                 span: [36.0, 14.0],
@@ -349,6 +353,7 @@ mod tests {
             rate: 10.0,
             step_ticket: 0,
             generation_override: None,
+            excluded_street: None,
             view: WorldView {
                 origin: [0.0; 2],
                 span: [36.0, 14.0],
@@ -432,6 +437,7 @@ mod tests {
             rate: 10.0,
             step_ticket: 1,
             generation_override: None,
+            excluded_street: None,
             view: WorldView {
                 origin: [0.0; 2],
                 span: [36.0, 14.0],
@@ -566,6 +572,7 @@ mod tests {
                                     step_ticket: 0,
                                     view: frame.view,
                                     generation_override: None,
+                                    excluded_street: None,
                                 },
                                 frame.clicked
                             ));

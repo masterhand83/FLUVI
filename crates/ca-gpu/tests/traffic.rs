@@ -1,6 +1,51 @@
 use ca_gpu::TrafficScene;
 
 #[test]
+fn a_live_preview_can_hide_only_its_original_street_without_changing_the_scene() {
+    use ca_core::{camera::WorldView, map_json::MapDocument};
+    let map = MapDocument::parse(
+        r#"{"calles":[
+        {"nombre":"Preview","tipo":"conexion","tamano":4},
+        {"nombre":"Other","tipo":"conexion","tamano":4,"y":20}
+    ]}"#,
+    )
+    .unwrap();
+    let scene = TrafficScene::from_document(&map);
+    let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor::from_env_or_default());
+    let adapter = pollster::block_on(instance.request_adapter(&Default::default())).unwrap();
+    let (device, queue) = pollster::block_on(adapter.request_device(&Default::default())).unwrap();
+    let display = ca_gpu::TrafficDisplay::new(&device, &scene, wgpu::TextureFormat::Rgba8Unorm);
+    display.set_view(
+        &queue,
+        WorldView {
+            origin: scene.shift(),
+            span: [36.0, 14.0],
+        },
+    );
+    let before = render_display(&device, &queue, &display);
+    let preview = render_display_excluding(&device, &queue, &display, Some(0));
+    assert!(pixel(&before, 0.5, 0.5)[0] > 10);
+    assert!(
+        pixel(&preview, 0.5, 0.5)[0] < 10,
+        "original footprint is hidden while previewing"
+    );
+    assert_eq!(
+        pixel(&preview, 0.5, 4.5),
+        pixel(&before, 0.5, 4.5),
+        "other street stays visible"
+    );
+    assert_eq!(
+        render_display(&device, &queue, &display),
+        before,
+        "cancel restores the original display"
+    );
+    assert_eq!(
+        scene.geometry()[0].centers[0],
+        [[2.5, 2.5], [3.5, 2.5], [4.5, 2.5], [5.5, 2.5]]
+    );
+}
+
+#[test]
 fn bezier_display_uses_the_v1_curve_not_the_straight_footprint() {
     use ca_core::{camera::WorldView, cell_index::CellRef, map_json::MapDocument};
     let fixtures: Vec<serde_json::Value> =
@@ -426,6 +471,15 @@ fn render_display(
     queue: &wgpu::Queue,
     display: &ca_gpu::TrafficDisplay,
 ) -> Vec<u8> {
+    render_display_excluding(device, queue, display, None)
+}
+
+fn render_display_excluding(
+    device: &wgpu::Device,
+    queue: &wgpu::Queue,
+    display: &ca_gpu::TrafficDisplay,
+    excluded: Option<usize>,
+) -> Vec<u8> {
     // 32 pixels per world cell. Row bytes are a multiple of 256.
     let size = wgpu::Extent3d {
         width: 1152,
@@ -464,7 +518,11 @@ fn render_display(
             })],
             ..Default::default()
         });
-        display.paint(&mut pass);
+        if excluded.is_some() {
+            display.paint_excluding(&mut pass, excluded);
+        } else {
+            display.paint(&mut pass);
+        }
     }
     encoder.copy_texture_to_buffer(
         texture.as_image_copy(),

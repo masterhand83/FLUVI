@@ -363,6 +363,7 @@ pub struct TrafficDisplay {
     group: wgpu::BindGroup,
     pipeline: wgpu::RenderPipeline,
     instances: u32,
+    street_instances: Vec<std::ops::Range<u32>>,
     layout: wgpu::Buffer,
     background: crate::background::BackgroundDisplay,
 }
@@ -471,6 +472,11 @@ impl TrafficDisplay {
             group,
             pipeline,
             instances: scene.tiles.len() as u32,
+            street_instances: scene
+                .street_tiles
+                .iter()
+                .map(|range| range.start as u32..range.end as u32)
+                .collect(),
             layout: lanes,
         }
     }
@@ -503,9 +509,23 @@ impl TrafficDisplay {
     }
 
     pub fn paint(&self, pass: &mut wgpu::RenderPass<'_>) {
+        self.paint_excluding(pass, None);
+    }
+
+    /// Replace one street with a UI preview without editing or uploading the model.
+    pub fn paint_excluding(&self, pass: &mut wgpu::RenderPass<'_>, street: Option<usize>) {
         pass.set_pipeline(&self.pipeline);
         pass.set_bind_group(0, &self.group, &[]);
-        pass.draw(0..6, 0..self.instances);
+        if let Some(range) = street.and_then(|s| self.street_instances.get(s)) {
+            if range.start > 0 {
+                pass.draw(0..6, 0..range.start);
+            }
+            if range.end < self.instances {
+                pass.draw(0..6, range.end..self.instances);
+            }
+        } else {
+            pass.draw(0..6, 0..self.instances);
+        }
     }
 
     pub fn paint_background(&self, pass: &mut wgpu::RenderPass<'_>) {
