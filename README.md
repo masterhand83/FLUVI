@@ -2,9 +2,10 @@
 
 ## CA Lab — offline native Rust scaffold
 
-The root Cargo workspace contains a separate native Conway simulator. It does
+The root Cargo workspace contains a separate native traffic demo. It does
 not change the web application below. It uses stable Rust (edition 2024), egui
-with wgpu, WGSL kernels, and a Polars analysis worker. All direct external
+with wgpu, and a CPU traffic model. Conway GPU kernels and the Polars analysis
+worker remain available as library components. All direct external
 dependency versions are pinned in `Cargo.toml`; `Cargo.lock` fixes the resolution.
 
 ```sh
@@ -37,24 +38,23 @@ The Cargo driver has no app dependencies. See
 [`docs/ca-lab/development.md`](docs/ca-lab/development.md) for stage selection,
 background progress, cancellation, and direct script use in automation.
 
-Controls: Play/Pause, single Step while paused, Reset to the current seed,
-Randomize, simulation rate, and brush radius. Drag left to paint; drag right to
-erase. The circular brush includes integer cell centers within its radius and
-clips at the grid boundary. Simulation wraps at both edges. F12 toggles puffin.
+Controls: Play/Pause, one full Step while paused, and simulation speed.
+The fixed network has three separate streets: a generator, a connection street,
+and a sink. Each street has two lanes with opposite travel directions. Arrows
+show travel direction; reverse lanes keep their physical cell positions.
+The six vehicle classes have distinct colours. Special value 7 is white with a
+black diagonal mark and does not count as a vehicle. F12 toggles puffin.
 Profiling collection is off until F12 is pressed. Puffin uses its own internal
 locks while enabled; simulation state uses owned callback resources and channels.
 The display uses direct storage-buffer lookup with nearest-neighbor scaling.
 There is no display readback.
 
-The population chart retains samples from the last 1,024 generations. Statistics
-use samples from the last 64 generations, with sample standard deviation
-(`ddof = 1`); fewer than two observations have no standard deviation.
-Readback occurs once per generation batch. At rates above the frame rate,
-intermediate populations are not sampled or invented. Busy staging buffers
-and full channels drop samples rather than block the UI. Resets start a new
-epoch so late GPU/worker results cannot enter a new history.
-The smoke summary reports the latest completed population readback and its
-generation; it can lag the simulation because readback never waits for the GPU.
+The info bar shows completed generations, vehicle population, and measured
+simulation FPS. FPS counts completed CPU ticks, not UI frames. Pause clears the
+FPS sample window. The CPU model uploads cell values into a GPU storage buffer
+after each tick batch; the shader reads that buffer directly.
+The smoke summary reports completed ticks and the current CPU population.
+It does not need Conway population readbacks or analysis results.
 
 Logging supports `RUST_LOG`, for example:
 `RUST_LOG=ca_app=debug,wgpu=warn,naga=warn cargo run -p ca-app`.

@@ -205,6 +205,33 @@ pub struct TrafficModel {
 }
 
 impl TrafficModel {
+    /// Fixed tracer network: generator, connection and sink, each with two
+    /// opposite lanes. Positions remain physical, including in reverse lanes.
+    pub fn demo() -> Self {
+        let streets = [
+            CalleType::Generador,
+            CalleType::Conexion,
+            CalleType::Devorador,
+        ]
+        .into_iter()
+        .map(|tipo| {
+            let mut config = CalleConfig::new(2, 32, tipo);
+            config.generation_probability = 0.35;
+            config.lane_directions =
+                vec![Some(LaneDirection::Forward), Some(LaneDirection::Reverse)];
+            let mut cells = vec![0; 64];
+            for lane in 0..2 {
+                for (i, position) in [5, 14, 23].into_iter().enumerate() {
+                    cells[lane * 32 + position] = (lane * 3 + i + 1) as u8;
+                }
+            }
+            cells[18] = 7;
+            Calle::new(config, cells).expect("fixed demo is valid")
+        })
+        .collect();
+        Self::new(streets, 42)
+    }
+
     pub fn new(streets: Vec<Calle>, seed: u64) -> Self {
         Self {
             streets,

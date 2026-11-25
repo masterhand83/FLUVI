@@ -3,6 +3,32 @@ use bytemuck::{Pod, Zeroable};
 pub use ca_core::{Grid, PopulationSample};
 use crossbeam_channel::{Receiver, Sender, bounded};
 use wgpu::util::DeviceExt;
+mod traffic;
+pub use traffic::{TrafficDisplay, TrafficLane, TrafficScene};
+
+#[cfg(test)]
+mod layout_tests {
+    use super::*;
+    use std::mem::offset_of;
+
+    #[test]
+    fn shader_facing_layouts_match_wgsl() {
+        assert_eq!(size_of::<Dimensions>(), 16);
+        assert_eq!(offset_of!(Dimensions, padding), 8);
+        assert_eq!(size_of::<Brush>(), 16);
+        assert_eq!(offset_of!(Brush, radius), 8);
+        assert_eq!(offset_of!(Brush, value), 12);
+        assert_eq!(size_of::<TrafficLane>(), 32);
+        assert_eq!(offset_of!(TrafficLane, origin), 0);
+        assert_eq!(offset_of!(TrafficLane, offset), 8);
+        assert_eq!(offset_of!(TrafficLane, length), 12);
+        assert_eq!(offset_of!(TrafficLane, direction), 16);
+        assert_eq!(offset_of!(TrafficLane, street_type), 20);
+        assert_eq!(offset_of!(TrafficLane, padding), 24);
+        // WGSL array<u32> cell storage and the population counter.
+        assert_eq!(size_of::<u32>(), 4);
+    }
+}
 
 #[derive(Debug, thiserror::Error)]
 pub enum GpuError {

@@ -61,25 +61,19 @@ fn main() -> anyhow::Result<()> {
         .context("application closed without a shutdown report")?;
     if smoke.is_some() {
         println!(
-            "smoke frames={} generations={} final_population={} population_generation={} readbacks={} analysis_results={} adapter={}",
+            "smoke frames={} ticks={} final_population={} simulation_fps={:.1} adapter={}",
             report.progress.frames,
-            report.progress.total_generations,
-            report.population.map_or(0, |s| s.population),
-            report.population.map_or(0, |s| s.generation),
-            report.readbacks,
-            report.analysis_results,
+            report.progress.generation,
+            report.progress.population,
+            report.progress.fps,
             report.adapter
         );
         ensure!(
             report.progress.frames >= smoke.unwrap_or_default(),
             "smoke closed before its frame limit"
         );
-        ensure!(
-            report.progress.total_generations > 0,
-            "smoke: no generations simulated"
-        );
-        ensure!(report.readbacks > 0, "smoke: no population readbacks");
-        ensure!(report.analysis_results > 0, "smoke: no analysis results");
+        ensure!(report.progress.generation > 0, "smoke: no ticks simulated");
+        ensure!(report.progress.population > 0, "smoke: no vehicles");
     }
     if let Some(error) = report.error {
         bail!(error);
