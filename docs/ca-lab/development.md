@@ -2,6 +2,8 @@
 
 ## Fast edit loop
 
+The native [app shell](app-shell.md) owns localization and saved UI preferences.
+
 Use `cargo dev edit` or `bacon check` for compiler feedback. Run focused tests,
 for example `cargo nextest run -p ca-core`, when behavior changes. `bacon` still
 defaults to Clippy; its check/test/run jobs remain available.

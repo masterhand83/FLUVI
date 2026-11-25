@@ -1,14 +1,22 @@
 use anyhow::Context;
 use ca_gpu::{TrafficDisplay, TrafficScene};
-use crossbeam_channel::{Receiver, Sender, bounded};
+use crossbeam_channel::{Receiver, Sender, TryRecvError, bounded};
 use eframe::egui;
 
 use crate::render::{Event, Paint, PaintCallback, Progress, Resources};
+use ca_app::shell::{Shell, config_path};
 
 pub struct Report {
     pub progress: Progress,
     pub adapter: String,
     pub error: Option<String>,
+}
+
+struct Startup {
+    render: egui_wgpu::RenderState,
+    events: Sender<Event>,
+    requests: Receiver<Paint>,
+    ready: Option<Receiver<(TrafficScene, TrafficDisplay)>>,
 }
 
 pub struct App {
@@ -25,6 +33,8 @@ pub struct App {
     step_ticket: u64,
     profiler: bool,
     smoke_frames: Option<u64>,
+    shell: Shell,
+    startup: Option<Startup>,
 }
 
 impl App {
@@ -40,23 +50,13 @@ impl App {
         let info = render.adapter.get_info();
         tracing::info!(?info, surface_format = ?render.target_format, "CA Lab GPU");
         let adapter = format!("{} ({:?})", info.name, info.backend);
-        let scene = TrafficScene::demo();
-        let [width, height] = scene.extent();
-        let view_aspect = width as f32 / height as f32;
-        let display = TrafficDisplay::new(&render.device, &scene, render.target_format);
         let (tx, events) = bounded(2);
         let (commands, requests) = bounded(2);
-        // Setup-only framework lock. Mutable frame work uses owned resources.
-        render
-            .renderer
-            .write()
-            .callback_resources
-            .insert(Resources::new(scene, display, tx, requests));
         Ok(Self {
             events,
             commands,
             callback: egui_wgpu::Callback::new_paint_callback(egui::Rect::NOTHING, PaintCallback),
-            view_aspect,
+            view_aspect: 1.0,
             report_tx,
             progress: Progress::default(),
             adapter,
@@ -66,6 +66,13 @@ impl App {
             step_ticket: 0,
             profiler: false,
             smoke_frames,
+            shell: Shell::load(config_path()),
+            startup: Some(Startup {
+                render: render.clone(),
+                events: tx,
+                requests,
+                ready: None,
+            }),
         })
     }
 
@@ -77,40 +84,103 @@ impl App {
         }
     }
 
+    fn initialize(&mut self, ctx: &egui::Context, mut startup: Startup) -> anyhow::Result<()> {
+        if let Some(ready) = &startup.ready {
+            match ready.try_recv() {
+                Ok((scene, display)) => {
+                    let [width, height] = scene.extent();
+                    self.view_aspect = width as f32 / height as f32;
+                    // Setup-only framework lock; frame work uses owned resources.
+                    startup
+                        .render
+                        .renderer
+                        .write()
+                        .callback_resources
+                        .insert(Resources::new(
+                            scene,
+                            display,
+                            startup.events,
+                            startup.requests,
+                        ));
+                    self.shell.loading(ctx, 1.0, "loading.status.ready");
+                    return Ok(());
+                }
+                Err(TryRecvError::Empty) => {
+                    self.shell.loading(ctx, 0.4, "loading.status.engine");
+                }
+                Err(TryRecvError::Disconnected) => {
+                    anyhow::bail!("GPU resource initialization worker stopped")
+                }
+            }
+        } else {
+            self.shell.loading(ctx, 0.1, "loading.status.initializing");
+            let (sender, ready) = bounded(1);
+            let device = startup.render.device.clone();
+            let format = startup.render.target_format;
+            let repaint = ctx.clone();
+            std::thread::Builder::new()
+                .name("fluvi-gpu-startup".into())
+                .spawn(move || {
+                    let scene = TrafficScene::demo();
+                    let display = TrafficDisplay::new(&device, &scene, format);
+                    let _ = sender.try_send((scene, display));
+                    repaint.request_repaint();
+                })
+                .context("could not start GPU resource initialization")?;
+            startup.ready = Some(ready);
+        }
+        self.startup = Some(startup);
+        Ok(())
+    }
+
     fn controls(&mut self, ctx: &egui::Context) {
-        egui::SidePanel::left("controls")
-            .resizable(false)
-            .default_width(190.0)
-            .show(ctx, |ui| {
-                ui.heading("Traffic CA");
-                ui.label("Fixed demo network");
-                ui.separator();
+        egui::TopBottomPanel::top("controls").show(ctx, |ui| {
+            ui.horizontal_wrapped(|ui| {
+                ui.label(self.shell.tr("shell.demo", &[]));
                 ui.add_enabled_ui(self.smoke_frames.is_none(), |ui| {
                     if ui
-                        .button(if self.playing { "Pause" } else { "Play" })
+                        .button(self.shell.tr(
+                            if self.playing {
+                                "simulation.pause"
+                            } else {
+                                "simulation.resume"
+                            },
+                            &[],
+                        ))
                         .clicked()
                     {
                         self.playing = !self.playing;
                     }
                     if ui
-                        .add_enabled(!self.playing, egui::Button::new("Step"))
+                        .add_enabled(
+                            !self.playing,
+                            egui::Button::new(self.shell.tr("simulation.step", &[])),
+                        )
                         .clicked()
                     {
                         self.step_ticket += 1;
                     }
-                    ui.add(egui::Slider::new(&mut self.rate, 1.0..=60.0).text("ticks/s"));
+                    ui.add(
+                        egui::Slider::new(&mut self.rate, 1.0..=60.0)
+                            .text(self.shell.tr("simulation.speed", &[])),
+                    );
                 });
-                ui.separator();
-                ui.label("Top: Generador\nMiddle: Conexion\nBottom: Devorador");
-                ui.label("Each pair: → then ←");
-                ui.label("White / black: special cell 7");
-                ui.label("F12: profiler");
+                ui.label(self.shell.tr("shell.profiler", &[]))
+                    .on_hover_text(self.shell.tr("shell.legend", &[]));
             });
+        });
     }
 }
 
 impl eframe::App for App {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        if let Some(startup) = self.startup.take() {
+            if let Err(error) = self.initialize(ctx, startup) {
+                self.error = Some(error.to_string());
+            }
+            ctx.request_repaint();
+            return;
+        }
         if ctx.input(|i| i.key_pressed(egui::Key::F12)) {
             self.profiler = !self.profiler;
         }
@@ -124,11 +194,17 @@ impl eframe::App for App {
             return;
         }
         self.controls(ctx);
+        self.shell.sidebar(ctx);
         egui::TopBottomPanel::bottom("status").show(ctx, |ui| {
             ui.label(format!(
-                "Generation {}  |  Vehicles {}  |  Simulation {:.1} FPS  |  {}",
+                "{} {}  |  {}  |  {} {:.1}  |  {}",
+                self.shell.tr("simulation.info.generation", &[]),
                 self.progress.generation,
-                self.progress.population,
+                self.shell.tr(
+                    "shell.vehicles",
+                    &[("count", &self.progress.population.to_string())]
+                ),
+                self.shell.tr("simulation.info.fps", &[]),
                 if self.playing { self.progress.fps } else { 0.0 },
                 self.adapter,
             ));
@@ -153,6 +229,7 @@ impl eframe::App for App {
             callback.rect = rect;
             ui.painter().add(callback);
         });
+        self.shell.overlays(ctx);
         if self.profiler {
             self.profiler = puffin_egui::profiler_window(ctx);
         }

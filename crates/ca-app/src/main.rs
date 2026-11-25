@@ -36,7 +36,7 @@ fn main() -> anyhow::Result<()> {
     let options = eframe::NativeOptions {
         renderer: eframe::Renderer::Wgpu,
         viewport: egui::ViewportBuilder::default()
-            .with_title("CA Lab")
+            .with_title("FLUVI")
             .with_inner_size([1100.0, 850.0])
             .with_min_inner_size([640.0, 480.0]),
         wgpu_options: egui_wgpu::WgpuConfiguration {
@@ -51,7 +51,7 @@ fn main() -> anyhow::Result<()> {
     };
     let (report_tx, report_rx) = bounded(1);
     eframe::run_native(
-        "CA Lab",
+        "FLUVI",
         options,
         Box::new(move |cc| Ok(Box::new(app::App::new(cc, smoke, report_tx)?))),
     )
