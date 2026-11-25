@@ -971,8 +971,20 @@ impl MapDocument {
         &mut self,
         connection: Connection,
     ) -> Result<(), crate::connections::ConnectionError> {
-        use crate::connections::ConnectionError;
         self.model.validate_connection(&connection)?;
+        let link = Self::connection_data(&connection)?;
+        self.model.add_connection(connection)?;
+        self.data["conexiones"]
+            .as_array_mut()
+            .expect("validated links")
+            .push(link);
+        Ok(())
+    }
+
+    fn connection_data(
+        connection: &Connection,
+    ) -> Result<Value, crate::connections::ConnectionError> {
+        use crate::connections::ConnectionError;
         let first = *connection
             .mappings()
             .next()
@@ -983,7 +995,7 @@ impl MapDocument {
         }) {
             return Err(ConnectionError::InvalidMapping);
         }
-        let kind = match &connection {
+        let kind = match connection {
             Connection::Lineal(_) => "LINEAL",
             Connection::Incorporacion(_) => "INCORPORACION",
             Connection::ProbabilityTrial(_)
@@ -991,12 +1003,12 @@ impl MapDocument {
             | Connection::Probabilistica(_) => "PROBABILISTICA",
         };
         let details: Vec<_> = connection.mappings().enumerate().map(|(index, mapping)| {
-            let weight = match &connection {
+            let weight = match connection {
                 Connection::ProbabilityTrial(row) => row.weight,
                 Connection::ProbabilityTrials(rows) | Connection::Probabilistica(rows) => rows[index].weight,
                 _ => 1.0,
             };
-            let enabled = match &connection {
+            let enabled = match connection {
                 Connection::Incorporacion(rows) => rows[index].enabled,
                 _ => true,
             };
@@ -1016,12 +1028,102 @@ impl MapDocument {
         } else if matches!(connection, Connection::ProbabilityTrials(_)) {
             link["independentProbabilities"] = json!(true);
         }
-        self.model.add_connection(connection)?;
+        Ok(link)
+    }
+
+    pub fn replace_connection(
+        &mut self,
+        index: usize,
+        connection: Connection,
+    ) -> Result<(), crate::connections::ConnectionError> {
+        self.model
+            .validate_connection_replacement(index, &connection)?;
+        let link = Self::connection_data(&connection)?;
+        let slot = self.connection_slot(index);
+        let mut saved = self.data["conexiones"][slot].clone();
+        let old_details = saved["detalles"].as_array().expect("validated details");
+        let mut details = link["detalles"]
+            .as_array()
+            .expect("encoded details")
+            .clone();
+        for (row_index, detail) in details.iter_mut().enumerate() {
+            let previous = old_details
+                .iter()
+                .find(|old| {
+                    ["carrilOrigen", "posOrigen", "carrilDestino", "posDestino"]
+                        .iter()
+                        .all(|key| old[*key] == detail[*key])
+                })
+                .or_else(|| old_details.get(row_index));
+            if let Some(previous) = previous {
+                let mut fields = previous.as_object().expect("validated detail").clone();
+                fields.extend(detail.as_object().expect("encoded detail").clone());
+                *detail = Value::Object(fields);
+            }
+        }
+        let fields = saved.as_object_mut().expect("validated link");
+        fields.remove("weightedSplit");
+        fields.remove("independentProbabilities");
+        fields.extend(link.as_object().expect("encoded link").clone());
+        saved["detalles"] = Value::Array(details);
+        self.model.replace_connection(index, connection)?;
+        self.data["conexiones"][slot] = saved;
+        Ok(())
+    }
+
+    pub fn delete_connection(&mut self, index: usize) -> bool {
+        if index >= self.model.connections().len() {
+            return false;
+        }
+        let slot = self.connection_slot(index);
+        self.model.delete_connection(index);
         self.data["conexiones"]
             .as_array_mut()
             .expect("validated links")
-            .push(link);
-        Ok(())
+            .remove(slot);
+        true
+    }
+
+    /// Only split the selected legacy JSON entry. Other metadata stays intact.
+    fn connection_slot(&mut self, index: usize) -> usize {
+        let links = self.data["conexiones"]
+            .as_array_mut()
+            .expect("validated links");
+        let mut start = 0;
+        for slot in 0..links.len() {
+            let link = &links[slot];
+            let separate = link["tipo"] == "LINEAL"
+                || (link["tipo"] == "PROBABILISTICA"
+                    && link["weightedSplit"] != true
+                    && link["independentProbabilities"] != true);
+            let count = if separate {
+                link["detalles"]
+                    .as_array()
+                    .expect("validated details")
+                    .len()
+            } else {
+                1
+            };
+            if index < start + count {
+                if count == 1 {
+                    return slot;
+                }
+                let parts: Vec<_> = link["detalles"]
+                    .as_array()
+                    .expect("validated details")
+                    .iter()
+                    .map(|detail| {
+                        let mut part = link.clone();
+                        part["detalles"] = json!([detail]);
+                        part
+                    })
+                    .collect();
+                links.splice(slot..=slot, parts);
+                return slot + index - start;
+            }
+            start += count;
+        }
+        unreachable!("validated connection index")
     }
     /// Live traffic access. Structural edits must use the document edit boundary.
     pub fn model_mut(&mut self) -> &mut TrafficModel {

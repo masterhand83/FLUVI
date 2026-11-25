@@ -55,6 +55,7 @@ pub struct App {
     bulk_editor: ca_app::bulk_editor::BulkEditor,
     street_dialog: ca_app::street_dialog::StreetDialog,
     connection_draft: ca_app::connection_draft::ConnectionDraft,
+    saved_connections: ca_app::connections::SavedConnections,
 }
 
 impl App {
@@ -81,6 +82,7 @@ impl App {
             app.bulk_editor = Default::default();
             app.street_dialog = Default::default();
             app.connection_draft.cancel();
+            app.saved_connections = Default::default();
             if let Some(connections) = &mut app.connections {
                 connections.set_arrows(Vec::new());
             }
@@ -124,6 +126,7 @@ impl App {
             bulk_editor: Default::default(),
             street_dialog: Default::default(),
             connection_draft: Default::default(),
+            saved_connections: Default::default(),
             startup: Some(Startup {
                 render: render.clone(),
                 events: tx,
@@ -303,6 +306,7 @@ impl App {
             document: self.session.as_ref().expect("session").document(),
             map: self.map.as_mut(),
             connections: self.connections.as_mut(),
+            saved_connections: &mut self.saved_connections,
             transport: &mut self.transport,
             enabled: self.smoke_frames.is_none()
                 && self
@@ -316,6 +320,35 @@ impl App {
         }
         .show(ctx, &mut self.shell);
         match action {
+            Some(PanelAction::NewConnection) => {
+                self.prepare_connection_edit();
+                self.connection_draft.start_form();
+            }
+            Some(PanelAction::SavedConnection(action)) => {
+                use ca_app::connections::SavedConnectionAction;
+                match action {
+                    SavedConnectionAction::Edit(index) => {
+                        self.prepare_connection_edit();
+                        self.connection_draft
+                            .edit(index, self.session.as_ref().expect("session").document());
+                    }
+                    SavedConnectionAction::Delete(index) => {
+                        if self.commands.edit(Edit::DeleteConnection(index)) {
+                            self.connection_draft.cancel();
+                            self.session
+                                .as_mut()
+                                .expect("session")
+                                .delete_connection(index);
+                            self.refresh_connection_arrows();
+                        } else {
+                            self.shell.notify(
+                                ca_app::shell::Severity::Warning,
+                                self.shell.tr("shell.cellEditBusy", &[]),
+                            );
+                        }
+                    }
+                }
+            }
             Some(PanelAction::Connection) => {
                 if self.connection_draft.active() {
                     self.connection_draft.cancel();
@@ -350,6 +383,31 @@ impl App {
         }
         if self.map.as_ref().is_some_and(|map| map.drawing()) {
             self.connection_draft.cancel();
+        }
+    }
+
+    fn prepare_connection_edit(&mut self) {
+        self.inspector = Default::default();
+        self.street_dialog.close();
+        if let Some(map) = &mut self.map {
+            map.finish_edits();
+            map.clear_bulk();
+            map.select(None);
+            map.set_connection_picking(true);
+        }
+    }
+
+    fn refresh_connection_arrows(&mut self) {
+        let document = self.session.as_ref().expect("session").document();
+        if let Some(connections) = &mut self.connections {
+            let mut geometry = document.geometry();
+            for street in &mut geometry {
+                for point in street.centers.iter_mut().flatten() {
+                    point[0] += self.map_shift[0];
+                    point[1] += self.map_shift[1];
+                }
+            }
+            connections.set_arrows(document.model().connection_arrows(&geometry));
         }
     }
 
@@ -453,6 +511,8 @@ impl App {
         }
         let session = self.session.as_mut().expect("session");
         let event = session.edit_streets(edit).expect("validated street edit");
+        // Resizing or deletion can remove/reindex saved links while a draft is open.
+        self.connection_draft.cancel();
         let map = self.map.as_mut().expect("map");
         let geometry = map.configure(session.document(), self.map_shift);
         let (selected, key) = match event {
@@ -493,24 +553,26 @@ impl App {
         else {
             return;
         };
-        if !self.commands.edit(Edit::Connection(connection.clone())) {
+        let editing = self.connection_draft.editing();
+        let edit = match editing {
+            Some(index) => Edit::ReplaceConnection(index, connection.clone()),
+            None => Edit::Connection(connection.clone()),
+        };
+        if !self.commands.edit(edit) {
             self.shell.notify(
                 ca_app::shell::Severity::Warning,
                 self.shell.tr("shell.cellEditBusy", &[]),
             );
             return;
         }
-        session.add_connection(connection).expect("validated draft");
-        if let Some(connections) = &mut self.connections {
-            let mut geometry = session.document().geometry();
-            for street in &mut geometry {
-                for point in street.centers.iter_mut().flatten() {
-                    point[0] += self.map_shift[0];
-                    point[1] += self.map_shift[1];
-                }
-            }
-            connections.set_arrows(session.document().model().connection_arrows(&geometry));
+        if let Some(index) = editing {
+            session
+                .replace_connection(index, connection)
+                .expect("validated draft");
+        } else {
+            session.add_connection(connection).expect("validated draft");
         }
+        self.refresh_connection_arrows();
         self.connection_draft.cancel();
     }
 

@@ -8,6 +8,8 @@ use eframe::egui;
 
 pub enum PanelAction {
     Connection,
+    NewConnection,
+    SavedConnection(crate::connections::SavedConnectionAction),
     NewStreet,
     Open,
     Save,
@@ -18,6 +20,7 @@ pub struct ControlPanel<'a> {
     pub document: &'a MapDocument,
     pub map: Option<&'a mut MapInteraction>,
     pub connections: Option<&'a mut ConnectionOverlays>,
+    pub saved_connections: &'a mut crate::connections::SavedConnections,
     pub transport: &'a mut TransportControls,
     pub enabled: bool,
     pub files_ready: bool,
@@ -44,6 +47,12 @@ impl ControlPanel<'_> {
                     if ui.button(shell.tr("streetDialog.title", &[])).clicked() {
                         action = Some(PanelAction::NewStreet);
                     }
+                    if ui
+                        .button(shell.tr("savedConnections.newTitle", &[]))
+                        .clicked()
+                    {
+                        action = Some(PanelAction::NewConnection);
+                    }
                     ui.label(if self.document.name().is_empty() {
                         shell.tr("mapFiles.untitled", &[])
                     } else {
@@ -60,6 +69,9 @@ impl ControlPanel<'_> {
                             }
                         }
                     });
+                    if let Some(value) = self.saved_connections.show(ui, self.document, shell) {
+                        action = Some(PanelAction::SavedConnection(value));
+                    }
                 }
                 "streetSettings" => {
                     if let Some(map) = &mut self.map {

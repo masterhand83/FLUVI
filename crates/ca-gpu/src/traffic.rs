@@ -347,6 +347,18 @@ impl TrafficScene {
         self.document.add_connection(connection)
     }
 
+    pub fn replace_connection(
+        &mut self,
+        index: usize,
+        connection: ca_core::connections::Connection,
+    ) -> Result<(), ca_core::connections::ConnectionError> {
+        self.document.replace_connection(index, connection)
+    }
+
+    pub fn delete_connection(&mut self, index: usize) -> bool {
+        self.document.delete_connection(index)
+    }
+
     pub fn lanes(&self) -> &[TrafficLane] {
         &self.lanes
     }

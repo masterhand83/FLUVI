@@ -81,6 +81,7 @@ pub struct ConnectionArrow {
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Registration {
     New,
+    Replacement,
     Saved,
 }
 
@@ -227,6 +228,17 @@ impl TrafficModel {
         &self.connections
     }
 
+    pub fn connection_direction_compatible(&self, connection: &Connection) -> bool {
+        if let Connection::Incorporacion(rows) = connection {
+            return rows
+                .iter()
+                .all(|row| !row.enabled || self.resolve(&row.mapping, true).is_ok());
+        }
+        connection
+            .mappings()
+            .all(|row| self.resolve(row, true).is_ok())
+    }
+
     fn resolve(
         &self,
         row: &Mapping,
@@ -303,12 +315,52 @@ impl TrafficModel {
         self.validate_registration(connection, Registration::New)
     }
 
+    pub fn validate_connection_replacement(
+        &self,
+        index: usize,
+        connection: &Connection,
+    ) -> Result<(), ConnectionError> {
+        if index >= self.connections.len() {
+            return Err(ConnectionError::InvalidMapping);
+        }
+        self.validate_registration_except(connection, Registration::Replacement, Some(index))
+    }
+
+    pub fn replace_connection(
+        &mut self,
+        index: usize,
+        connection: Connection,
+    ) -> Result<(), ConnectionError> {
+        self.validate_connection_replacement(index, &connection)?;
+        self.connections[index] = connection;
+        self.refresh_outgoing();
+        Ok(())
+    }
+
+    pub fn delete_connection(&mut self, index: usize) -> bool {
+        if index >= self.connections.len() {
+            return false;
+        }
+        self.connections.remove(index);
+        self.refresh_outgoing();
+        true
+    }
+
     fn validate_registration(
         &self,
         connection: &Connection,
         policy: Registration,
     ) -> Result<(), ConnectionError> {
-        let strict = policy == Registration::New;
+        self.validate_registration_except(connection, policy, None)
+    }
+
+    fn validate_registration_except(
+        &self,
+        connection: &Connection,
+        policy: Registration,
+        excluding: Option<usize>,
+    ) -> Result<(), ConnectionError> {
+        let strict = policy != Registration::Saved;
         match connection {
             Connection::ProbabilityTrial(row)
                 if !row.weight.is_finite() || !(0.0..=1.0).contains(&row.weight) =>
@@ -326,7 +378,9 @@ impl TrafficModel {
                     return Err(ConnectionError::Probability);
                 }
             }
-            Connection::Incorporacion(rows) if strict && !rows.iter().any(|r| r.enabled) => {
+            Connection::Incorporacion(rows)
+                if policy == Registration::New && !rows.iter().any(|r| r.enabled) =>
+            {
                 return Err(ConnectionError::NoActiveRows);
             }
             Connection::Probabilistica(rows) => {
@@ -353,7 +407,11 @@ impl TrafficModel {
             _ => {}
         }
         for (index, row) in connection.mappings().enumerate() {
-            let resolved = self.resolve(row, strict)?;
+            // Retain inactive saved configuration, even after a direction edit.
+            // Its physical endpoints and duplicate constraints still apply.
+            let inactive = policy == Registration::Replacement
+                && matches!(connection, Connection::Incorporacion(rows) if !rows[index].enabled);
+            let resolved = self.resolve(row, strict && !inactive)?;
             let duplicate = |other: &Mapping| {
                 row.source_street == other.source_street
                     && row.destination_street == other.destination_street
@@ -370,6 +428,9 @@ impl TrafficModel {
                 || self
                     .connections
                     .iter()
+                    .enumerate()
+                    .filter(|(index, _)| Some(*index) != excluding)
+                    .map(|(_, link)| link)
                     .flat_map(Connection::mappings)
                     .any(duplicate)
             {

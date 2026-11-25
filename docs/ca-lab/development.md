@@ -114,7 +114,8 @@ at 1; physical cell numbers start at 0. Source −1 means the last physical cell
 Defaults follow each lane's directional exit and entry, including roundabouts.
 
 `ca-app::connection_draft::ConnectionDraft` owns draft rows and validation.
-Disabled merge rows are absent from preview, validation, and the committed link.
+For new drafts, disabled merge rows are absent from preview, validation, and the
+committed link. Editing a saved link retains its disabled rows for later reuse.
 Invalid probabilities and duplicate mappings disable Save with a translated reason.
 Cancel, Escape, bulk selection, another drawing tool, and map replacement discard
 the draft without changing live connections. Draft picking takes priority over
@@ -135,6 +136,31 @@ Removing an independent destination never changes the remaining probabilities.
 
 Focused checks: `cargo test -p ca-app --test connection_draft` and
 `cargo test -p ca-app --bin ca-app saved_connection_uses_ordered_edits`.
+
+### Saved connections and form dialogs
+
+Map Constructor lists saved connections. Search matches either street name
+without changing saved names. Each frame reads the current lane directions, so
+incompatible links show a warning after a direction edit without a reload.
+Edit opens the selected link in the draft tool. Save replaces it at the same
+registration index; Cancel, Close, and Escape retain the original.
+New Connection opens the alternative form. Both forms and the map tool use
+`ConnectionDraft::candidate` and the core validator. Saved endpoints and legacy
+weighted-split semantics are retained during editing.
+Saved incorporations can keep all rows disabled. Inactive saved rows do not
+produce direction warnings or block replacement on direction alone; their
+physical endpoints and duplicate constraints remain checked.
+
+`MapDocument::replace_connection` and `delete_connection` keep traffic and JSON
+in sync. When a legacy JSON entry contains several independent model links,
+only the selected entry is split for editing; adjacent links remain in order.
+Replacement validation excludes the original link, but still rejects duplicates
+of other links. All commits use the ordered render edit queue. A full queue keeps
+the draft open and leaves the document unchanged. Street topology edits cancel
+open drafts so removed or reindexed links cannot be saved by an old index.
+
+Focused checks: `cargo test -p ca-app --test saved_connections --test connection_draft
+--test control_panel` and `cargo test -p ca-app --bin ca-app saved_connection_uses_ordered_edits`.
 
 ### Map-first street drawing and deletion
 

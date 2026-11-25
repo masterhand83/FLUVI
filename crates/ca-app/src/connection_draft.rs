@@ -38,6 +38,9 @@ pub struct ConnectionDraft {
     destination: Option<CellRef>,
     kind: DraftKind,
     rows: Vec<DraftRow>,
+    editing: Option<usize>,
+    saved_kind: Option<Connection>,
+    form: bool,
 }
 
 impl ConnectionDraft {
@@ -52,8 +55,76 @@ impl ConnectionDraft {
         *self = Self::default();
     }
 
+    pub fn start_form(&mut self) {
+        self.start();
+        self.form = true;
+    }
+
+    pub fn select_streets(&mut self, source: usize, destination: usize, document: &MapDocument) {
+        if source >= document.layout().len() || destination >= document.layout().len() {
+            return;
+        }
+        self.source = None;
+        self.destination = None;
+        self.pick(source, document);
+        self.pick(destination, document);
+    }
+
     pub fn active(&self) -> bool {
         self.active
+    }
+
+    pub fn editing(&self) -> Option<usize> {
+        self.editing
+    }
+
+    pub fn edit(&mut self, index: usize, document: &MapDocument) -> bool {
+        let Some(link) = document.model().connections().get(index) else {
+            return false;
+        };
+        let Some(first) = link.mappings().next() else {
+            return false;
+        };
+        self.start();
+        self.editing = Some(index);
+        self.saved_kind = Some(link.clone());
+        self.kind = match link {
+            Connection::Lineal(_) => DraftKind::Lineal,
+            Connection::Incorporacion(_) => DraftKind::Incorporacion,
+            _ => DraftKind::Probabilistica,
+        };
+        self.source = Some(CellRef {
+            street: first.source_street,
+            lane: first.source_lane,
+            index: first
+                .effective_source_cell(&document.model().streets()[first.source_street])
+                .expect("saved cell"),
+        });
+        self.destination = Some(CellRef {
+            street: first.destination_street,
+            lane: first.destination_lane,
+            index: first.destination_cell,
+        });
+        self.rows = link
+            .mappings()
+            .enumerate()
+            .map(|(i, mapping)| {
+                let (enabled, weight) = match link {
+                    Connection::Incorporacion(rows) => (rows[i].enabled, 1.0),
+                    Connection::ProbabilityTrial(row) => (true, row.weight),
+                    Connection::ProbabilityTrials(rows) | Connection::Probabilistica(rows) => {
+                        (true, rows[i].weight)
+                    }
+                    _ => (true, 1.0),
+                };
+                DraftRow {
+                    mapping: *mapping,
+                    enabled,
+                    probability: (weight * 100.0).to_string(),
+                }
+            })
+            .collect();
+        true
     }
 
     pub fn picking(&self) -> bool {
@@ -122,6 +193,9 @@ impl ConnectionDraft {
     }
 
     fn normalized_mapping(&self, mut mapping: Mapping, document: &MapDocument) -> Mapping {
+        if self.editing.is_some() {
+            return mapping;
+        }
         let streets = document.model().streets();
         if matches!(self.kind, DraftKind::Lineal | DraftKind::Incorporacion)
             && let Some(source) = streets.get(mapping.source_street)
@@ -166,6 +240,7 @@ impl ConnectionDraft {
     }
 
     pub fn set_kind(&mut self, kind: DraftKind, document: &MapDocument) {
+        self.saved_kind = None;
         self.kind = kind;
         self.reset_rows(document);
     }
@@ -237,22 +312,22 @@ impl ConnectionDraft {
         }
     }
 
-    /// Disabled merge rows are absent at this boundary, including validation.
+    /// New drafts omit disabled merge rows; edits retain the saved configuration.
     pub fn candidate(&self, document: &MapDocument) -> Result<Connection, ConnectionError> {
         if !self.active || self.rows.is_empty() {
             return Err(ConnectionError::InvalidMapping);
         }
-        let connection = match self.kind {
+        let mut connection = match self.kind {
             DraftKind::Lineal => {
                 Connection::Lineal(self.normalized_mapping(self.rows[0].mapping, document))
             }
             DraftKind::Incorporacion => Connection::Incorporacion(
                 self.rows
                     .iter()
-                    .filter(|r| r.enabled)
+                    .filter(|r| r.enabled || self.editing.is_some())
                     .map(|r| MergeRow {
                         mapping: self.normalized_mapping(r.mapping, document),
-                        enabled: true,
+                        enabled: r.enabled,
                     })
                     .collect(),
             ),
@@ -272,7 +347,22 @@ impl ConnectionDraft {
                     .collect::<Result<_, ConnectionError>>()?,
             ),
         };
-        document.model().validate_connection(&connection)?;
+        if let Connection::ProbabilityTrials(rows) = &connection {
+            connection = match self.saved_kind {
+                Some(Connection::Probabilistica(_)) => Connection::Probabilistica(rows.clone()),
+                Some(Connection::ProbabilityTrial(_)) if rows.len() == 1 => {
+                    Connection::ProbabilityTrial(rows[0].clone())
+                }
+                _ => connection,
+            };
+        }
+        if let Some(index) = self.editing {
+            document
+                .model()
+                .validate_connection_replacement(index, &connection)?;
+        } else {
+            document.model().validate_connection(&connection)?;
+        }
         Ok(connection)
     }
 
@@ -294,168 +384,236 @@ impl ConnectionDraft {
         }
         let mut save = false;
         let mut cancel = false;
-        egui::Window::new(shell.tr("connectionDraft.title", &[]))
-            .id(egui::Id::new("connection-draft"))
-            .fixed_pos(map_rect.min + egui::vec2(8.0, 8.0))
-            .movable(false)
-            .resizable(false)
-            .collapsible(false)
-            .default_width(320.0)
-            .show(ctx, |ui| {
-                if self.destination.is_none() {
-                    ui.label(shell.tr(
-                        if self.source.is_none() {
-                            "connectionDraft.pickSource"
-                        } else {
-                            "connectionDraft.pickDestination"
-                        },
-                        &[],
-                    ));
-                }
-                if let Some(source) = self.source {
-                    ui.label(format!(
-                        "{}: {}",
-                        shell.tr("connectionDraft.source", &[]),
-                        document.layout()[source.street].name
-                    ));
-                }
-                let old = self.kind;
-                egui::ComboBox::from_id_salt("connection-kind")
+        let mut open = true;
+        let window = egui::Window::new(shell.tr(
+            if self.editing.is_some() {
+                "savedConnections.editTitle"
+            } else if self.form {
+                "savedConnections.newTitle"
+            } else {
+                "connectionDraft.title"
+            },
+            &[],
+        ))
+        .id(egui::Id::new("connection-draft"))
+        .open(&mut open)
+        .resizable(false)
+        .collapsible(false)
+        .default_width(320.0);
+        let window = if self.form {
+            window.default_pos(map_rect.min + egui::vec2(30.0, 30.0))
+        } else {
+            window
+                .fixed_pos(map_rect.min + egui::vec2(8.0, 8.0))
+                .movable(false)
+        };
+        window.show(ctx, |ui| {
+            // Both the map tool and the alternative form share these fields.
+            for source in [true, false] {
+                let current = if source {
+                    self.source
+                } else {
+                    self.destination
+                };
+                let mut selected = current.map(|c| c.street);
+                egui::ComboBox::from_id_salt(("connection-street", source))
                     .selected_text(
-                        egui::RichText::new(shell.tr(self.kind.key(), &[])).color(self.color()),
+                        selected
+                            .map(|i| document.layout()[i].name.clone())
+                            .unwrap_or_else(|| {
+                                shell.tr(
+                                    if source {
+                                        "connectionDraft.source"
+                                    } else {
+                                        "connectionDraft.destination"
+                                    },
+                                    &[],
+                                )
+                            }),
                     )
                     .show_ui(ui, |ui| {
-                        for kind in [
-                            DraftKind::Lineal,
-                            DraftKind::Incorporacion,
-                            DraftKind::Probabilistica,
-                        ] {
+                        for index in crate::streets::sorted_streets(document) {
                             ui.selectable_value(
-                                &mut self.kind,
-                                kind,
-                                egui::RichText::new(shell.tr(kind.key(), &[])).color(kind.color()),
+                                &mut selected,
+                                Some(index),
+                                &document.layout()[index].name,
                             );
                         }
                     });
-                if self.kind != old {
+                if selected != current.map(|c| c.street) {
+                    let street = selected.expect("selected street");
+                    let cell = CellRef {
+                        street,
+                        lane: 0,
+                        index: directional_cell(&document.model().streets()[street], 0, source),
+                    };
+                    if source {
+                        self.source = Some(cell);
+                    } else {
+                        self.destination = Some(cell);
+                    }
                     self.reset_rows(document);
                 }
-                if let (Some(source), Some(destination)) = (self.source, self.destination) {
-                    ui.label(format!(
-                        "{}: {}",
-                        shell.tr("connectionDraft.destination", &[]),
-                        document.layout()[destination.street].name
-                    ));
-                    if self.kind != DraftKind::Probabilistica {
-                        ui.small(shell.tr(
-                            if self.kind == DraftKind::Lineal {
-                                "connectionDraft.linearHint"
-                            } else {
-                                "connectionDraft.incorporationHint"
-                            },
-                            &[],
-                        ));
+            }
+            if self.destination.is_none() {
+                ui.label(shell.tr(
+                    if self.source.is_none() {
+                        "connectionDraft.pickSource"
                     } else {
-                        ui.small(shell.tr("connectionDraft.probabilityHint", &[]));
+                        "connectionDraft.pickDestination"
+                    },
+                    &[],
+                ));
+            }
+            if let Some(source) = self.source {
+                ui.label(format!(
+                    "{}: {}",
+                    shell.tr("connectionDraft.source", &[]),
+                    document.layout()[source.street].name
+                ));
+            }
+            let old = self.kind;
+            egui::ComboBox::from_id_salt("connection-kind")
+                .selected_text(
+                    egui::RichText::new(shell.tr(self.kind.key(), &[])).color(self.color()),
+                )
+                .show_ui(ui, |ui| {
+                    for kind in [
+                        DraftKind::Lineal,
+                        DraftKind::Incorporacion,
+                        DraftKind::Probabilistica,
+                    ] {
+                        ui.selectable_value(
+                            &mut self.kind,
+                            kind,
+                            egui::RichText::new(shell.tr(kind.key(), &[])).color(kind.color()),
+                        );
                     }
-                    ui.small(shell.tr("connectionDraft.indexHint", &[]));
-                    egui::ScrollArea::vertical()
-                        .max_height((map_rect.height() - 270.0).max(100.0))
-                        .show(ui, |ui| {
-                            let streets = document.model().streets();
-                            let mut remove = None;
-                            for (index, row) in self.rows.iter_mut().enumerate() {
-                                ui.push_id(index, |ui| {
-                                    ui.separator();
-                                    if self.kind == DraftKind::Incorporacion {
-                                        ui.checkbox(
-                                            &mut row.enabled,
-                                            shell.tr("connectionDraft.enableLane", &[]),
-                                        );
-                                    }
-                                    ui.add_enabled_ui(row.enabled, |ui| {
-                                        // Independent destination trials use the selected source.
-                                        if self.kind != DraftKind::Probabilistica || index == 0 {
-                                            endpoint(
-                                                ui,
-                                                shell,
-                                                &streets[source.street],
-                                                &mut row.mapping.source_lane,
-                                                &mut row.mapping.source_cell,
-                                                true,
-                                                self.kind != DraftKind::Probabilistica,
-                                            );
-                                        }
-                                        let mut cell = row.mapping.destination_cell as isize;
+                });
+            if self.kind != old {
+                self.saved_kind = None;
+                self.reset_rows(document);
+            }
+            if let (Some(source), Some(destination)) = (self.source, self.destination) {
+                ui.label(format!(
+                    "{}: {}",
+                    shell.tr("connectionDraft.destination", &[]),
+                    document.layout()[destination.street].name
+                ));
+                if self.editing.is_some() {
+                    ui.small(shell.tr("savedConnections.editHint", &[]));
+                } else if self.kind != DraftKind::Probabilistica {
+                    ui.small(shell.tr(
+                        if self.kind == DraftKind::Lineal {
+                            "connectionDraft.linearHint"
+                        } else {
+                            "connectionDraft.incorporationHint"
+                        },
+                        &[],
+                    ));
+                } else {
+                    ui.small(shell.tr("connectionDraft.probabilityHint", &[]));
+                }
+                ui.small(shell.tr("connectionDraft.indexHint", &[]));
+                egui::ScrollArea::vertical()
+                    .max_height((map_rect.height() - 270.0).max(100.0))
+                    .show(ui, |ui| {
+                        let streets = document.model().streets();
+                        let mut remove = None;
+                        for (index, row) in self.rows.iter_mut().enumerate() {
+                            ui.push_id(index, |ui| {
+                                ui.separator();
+                                if self.kind == DraftKind::Incorporacion {
+                                    ui.checkbox(
+                                        &mut row.enabled,
+                                        shell.tr("connectionDraft.enableLane", &[]),
+                                    );
+                                }
+                                ui.add_enabled_ui(row.enabled, |ui| {
+                                    // Independent destination trials use the selected source.
+                                    if self.kind != DraftKind::Probabilistica
+                                        || index == 0
+                                        || matches!(
+                                            self.saved_kind,
+                                            Some(Connection::ProbabilityTrials(_))
+                                        )
+                                    {
                                         endpoint(
                                             ui,
                                             shell,
-                                            &streets[destination.street],
-                                            &mut row.mapping.destination_lane,
-                                            &mut cell,
-                                            false,
-                                            self.kind == DraftKind::Lineal,
+                                            &streets[source.street],
+                                            &mut row.mapping.source_lane,
+                                            &mut row.mapping.source_cell,
+                                            true,
+                                            self.editing.is_none()
+                                                && self.kind != DraftKind::Probabilistica,
                                         );
-                                        row.mapping.destination_cell = cell as usize;
-                                        if self.kind == DraftKind::Probabilistica {
-                                            ui.horizontal(|ui| {
-                                                ui.label(
-                                                    shell.tr("connectionDraft.probability", &[]),
-                                                );
-                                                ui.add(
-                                                    egui::TextEdit::singleline(
-                                                        &mut row.probability,
-                                                    )
+                                    }
+                                    let mut cell = row.mapping.destination_cell as isize;
+                                    endpoint(
+                                        ui,
+                                        shell,
+                                        &streets[destination.street],
+                                        &mut row.mapping.destination_lane,
+                                        &mut cell,
+                                        false,
+                                        self.editing.is_none() && self.kind == DraftKind::Lineal,
+                                    );
+                                    row.mapping.destination_cell = cell as usize;
+                                    if self.kind == DraftKind::Probabilistica {
+                                        ui.horizontal(|ui| {
+                                            ui.label(shell.tr("connectionDraft.probability", &[]));
+                                            ui.add(
+                                                egui::TextEdit::singleline(&mut row.probability)
                                                     .desired_width(65.0),
-                                                );
-                                                if ui
-                                                    .small_button(
-                                                        shell.tr("connectionDraft.remove", &[]),
-                                                    )
-                                                    .clicked()
-                                                {
-                                                    remove = Some(index);
-                                                }
-                                            });
-                                        }
-                                    });
+                                            );
+                                            if ui
+                                                .small_button(
+                                                    shell.tr("connectionDraft.remove", &[]),
+                                                )
+                                                .clicked()
+                                            {
+                                                remove = Some(index);
+                                            }
+                                        });
+                                    }
                                 });
-                            }
-                            if let Some(index) = remove {
-                                self.rows.remove(index);
-                            }
-                        });
-                    if self.kind == DraftKind::Probabilistica {
-                        if let Some(first) = self.rows.first().map(|r| r.mapping) {
-                            for row in &mut self.rows {
-                                row.mapping.source_lane = first.source_lane;
-                                row.mapping.source_cell = first.source_cell;
-                            }
+                            });
                         }
-                        if ui
-                            .button(shell.tr("connectionDraft.addDestination", &[]))
-                            .clicked()
-                        {
-                            self.add_destination(document);
+                        if let Some(index) = remove {
+                            self.rows.remove(index);
+                        }
+                    });
+                if self.kind == DraftKind::Probabilistica {
+                    if !matches!(self.saved_kind, Some(Connection::ProbabilityTrials(_)))
+                        && let Some(first) = self.rows.first().map(|r| r.mapping)
+                    {
+                        for row in &mut self.rows {
+                            row.mapping.source_lane = first.source_lane;
+                            row.mapping.source_cell = first.source_cell;
                         }
                     }
-                    let candidate = self.candidate(document);
-                    if let Err(error) = &candidate {
-                        ui.colored_label(
-                            egui::Color32::RED,
-                            shell.tr(error.translation_key(), &[]),
-                        );
+                    if ui
+                        .button(shell.tr("connectionDraft.addDestination", &[]))
+                        .clicked()
+                    {
+                        self.add_destination(document);
                     }
-                    save = ui
-                        .add_enabled(
-                            candidate.is_ok(),
-                            egui::Button::new(shell.tr("connectionDraft.save", &[])),
-                        )
-                        .clicked();
                 }
-                cancel = ui.button(shell.tr("connectionDraft.cancel", &[])).clicked();
-            });
-        if cancel {
+                let candidate = self.candidate(document);
+                if let Err(error) = &candidate {
+                    ui.colored_label(egui::Color32::RED, shell.tr(error.translation_key(), &[]));
+                }
+                save = ui
+                    .add_enabled(
+                        candidate.is_ok(),
+                        egui::Button::new(shell.tr("connectionDraft.save", &[])),
+                    )
+                    .clicked();
+            }
+            cancel = ui.button(shell.tr("connectionDraft.cancel", &[])).clicked();
+        });
+        if cancel || !open {
             self.cancel();
         }
         save.then(|| self.candidate(document).ok()).flatten()

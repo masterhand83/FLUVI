@@ -36,6 +36,8 @@ pub struct Paint {
 #[derive(Clone, Debug, PartialEq)]
 pub enum Edit {
     Connection(ca_core::connections::Connection),
+    ReplaceConnection(usize, ca_core::connections::Connection),
+    DeleteConnection(usize),
     Toggle(CellRef),
     Vehicles(VehicleAction),
     Vertex(ca_app::vertices::VertexEdit),
@@ -188,6 +190,19 @@ impl Resources {
         let mut edited = false;
         while let Ok(edit) = self.requests.edits.try_recv() {
             edited |= match edit {
+                Edit::ReplaceConnection(index, connection) => {
+                    self.scene
+                        .replace_connection(index, connection)
+                        .expect("validated ordered replacement");
+                    false
+                }
+                Edit::DeleteConnection(index) => {
+                    assert!(
+                        self.scene.delete_connection(index),
+                        "validated ordered deletion"
+                    );
+                    false
+                }
                 Edit::Connection(connection) => {
                     self.scene
                         .add_connection(connection)
@@ -461,6 +476,27 @@ mod tests {
         assert_eq!(ticked.generation, 1);
         assert_eq!(ticked.population, 1);
         assert_eq!(resources.scene.cells(), &[0, 0, 0, 0, 0, 1, 0, 0]);
+        // Replacement/deletion use the same ordered queue, without resetting traffic.
+        let replacement = ca_core::connections::Connection::Lineal(ca_core::connections::Mapping {
+            source_street: 0,
+            source_lane: 0,
+            source_cell: 3,
+            destination_street: 1,
+            destination_lane: 0,
+            destination_cell: 2,
+        });
+        assert!(commands.edit(Edit::ReplaceConnection(0, replacement)));
+        resources.prepare(&device, &queue);
+        let Event::Progress(replaced) = results.try_recv().unwrap();
+        assert_eq!(replaced.generation, 1);
+        assert_eq!(resources.scene.cells(), &[0, 0, 0, 0, 0, 1, 0, 0]);
+        assert!(commands.edit(Edit::DeleteConnection(0)));
+        resources.prepare(&device, &queue);
+        let Event::Progress(deleted) = results.try_recv().unwrap();
+        assert_eq!(deleted.generation, 1);
+        assert_eq!(deleted.population, 1);
+        assert_eq!(resources.scene.cells(), &[0, 0, 0, 0, 0, 1, 0, 0]);
+        assert!(resources.scene.connection_arrows().is_empty());
     }
 
     #[test]
