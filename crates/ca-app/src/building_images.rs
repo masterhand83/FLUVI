@@ -90,7 +90,7 @@ pub fn start(source: Source, repaint: egui::Context) -> std::io::Result<Receiver
         .spawn(move || {
             let result = match source {
                 Source::Data(data) => DecodedImage::from_data(&data).map(Some),
-                Source::Bundled(path) => bundled(path)
+                Source::Bundled(path) => ca_core::buildings::artwork::bytes(path)
                     .ok_or(BuildingError("imageDecode"))
                     .and_then(DecodedImage::from_bytes)
                     .map(Some),
@@ -116,45 +116,4 @@ pub fn start(source: Source, repaint: egui::Context) -> std::io::Result<Receiver
             repaint.request_repaint();
         })?;
     Ok(rx)
-}
-
-fn bundled(path: &str) -> Option<&'static [u8]> {
-    macro_rules! assets {
-        ($($path:literal),* $(,)?) => {
-            match path {
-                $($path => Some(include_bytes!(concat!("../../../apps/v1/assets/images/", $path)).as_slice()),)*
-                _ => None,
-            }
-        };
-    }
-    assets![
-        "buildings/ESCOM.png",
-        "buildings/CIC.png",
-        "buildings/C.F.I.E.png",
-        "buildings/planetario.png",
-        "buildings/torres_lindavista.png",
-        "buildings/ALBERCA.png",
-        "buildings/CAMPO BURROS BLANCOS ESTADIO WILFRIDO MASSIEU.png",
-        "buildings/establo de burros.png",
-        "buildings/CENTRO CULTURAL JTB.png",
-        "buildings/Dirección General.png",
-        "buildings/EDIFICIO INTELIGENTE.png",
-        "buildings/ESIME ESIQIE ESFM ETC.png",
-        "buildings/ESTADIO AMERICANO.png",
-        "buildings/campo beisbol.png",
-        "buildings/campo escom.png",
-        "buildings/campo tiro con arco.png",
-        "buildings/ciclovia.png",
-        "buildings/GIMNASIO.png",
-        "buildings/cenlex.png",
-        "buildings/CIDETEC falta en el mapa.png",
-        "buildings/DAE_falta_en_el_mapa.png",
-        "buildings/estacionamientos.png",
-        "buildings/EST.png",
-        "objects/cono.png",
-        "objects/Bache.png",
-        "objects/Trabajador.png",
-        "objects/Arbol.png",
-        "objects/Inundacion.png",
-    ]
 }

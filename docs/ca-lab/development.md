@@ -384,9 +384,12 @@ Bundled images and uploads marked `imageRotationConvention: 'legacy'` use the
 negative v1 angle. New uploads use the positive angle. Geometry, picking, and
 handles use the same convention as the textured quad.
 
-Image textures draw after background zones and before traffic. Their GPU building
-zones have no opaque fill or border, so transparent pixels show the map below.
-The display cache releases images after replacement or deletion.
+Images and retained GPU shape triangles draw in saved building order after the
+background zones and before traffic. Per-building GPU ranges let shape callbacks
+interleave with image quads without rebuilding triangle buffers. Image zones have
+no opaque fill or border, so transparent pixels show the map below.
+The display cache releases images after replacement or deletion. Native file
+dialogs can take focus without cancelling their pending image jobs.
 
 Focused checks: `cargo test -p ca-core -p ca-app --test building_images` and
 `cargo test -p ca-core -p ca-app -p ca-gpu --test buildings`.

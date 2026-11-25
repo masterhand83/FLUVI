@@ -157,6 +157,9 @@ fn bundled_image_is_decoded_off_thread_and_painted_with_legacy_rotation() {
         .unwrap(),
     )
     .unwrap();
+    let mut cover = Building::rectangle([100., 100.], [20., 20.]);
+    cover.color = "#ff00ff".into();
+    map.add_building(cover).unwrap();
     let mut editor = BuildingEditor::default();
     let rect = egui::Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(200., 200.));
     let mut painted = None;
@@ -172,9 +175,29 @@ fn bundled_image_is_decoded_off_thread_and_painted_with_legacy_rotation() {
                         span: [40., 40.],
                     },
                     [0.; 2],
+                    |index| {
+                        assert_eq!(index, 1);
+                        ui.painter().rect_filled(rect, 0., egui::Color32::MAGENTA);
+                    },
                 );
             });
         });
+        if output
+            .shapes
+            .iter()
+            .any(|s| matches!(s.shape, egui::Shape::Mesh(_)))
+        {
+            let order: Vec<_> = output
+                .shapes
+                .iter()
+                .filter_map(|s| match &s.shape {
+                    egui::Shape::Mesh(_) => Some("image"),
+                    egui::Shape::Rect(r) if r.fill == egui::Color32::MAGENTA => Some("shape"),
+                    _ => None,
+                })
+                .collect();
+            assert_eq!(order, ["image", "shape"]);
+        }
         painted = output
             .shapes
             .into_iter()
@@ -221,4 +244,45 @@ fn legacy_image_rotation_handle_follows_the_pointer() {
     map.edit_buildings(editor.finish_drag().unwrap()).unwrap();
     assert_eq!(map.buildings()[0].angle, -90.);
     assert_eq!(map.buildings()[0].display_angle(), 90.);
+}
+
+#[test]
+fn opening_a_native_file_dialog_does_not_cancel_its_pending_upload() {
+    use ca_app::buildings::BuildingEditor;
+    use ca_core::{camera::WorldView, map_json::MapDocument};
+    use eframe::egui;
+    let ctx = egui::Context::default();
+    let mut editor = BuildingEditor::default();
+    let map = MapDocument::empty();
+    let (tx, rx) = crossbeam_channel::bounded(1);
+    editor.begin_image_load(rx, None);
+    let _ = ctx.run(
+        egui::RawInput {
+            focused: false,
+            ..Default::default()
+        },
+        |ctx| {
+            egui::CentralPanel::default().show(ctx, |ui| {
+                let rect = ui.max_rect();
+                assert!(
+                    editor
+                        .input(
+                            ui,
+                            &map,
+                            rect,
+                            WorldView {
+                                origin: [0.; 2],
+                                span: [40.; 2],
+                            },
+                            [0.; 2]
+                        )
+                        .is_none()
+                );
+            });
+        },
+    );
+    tx.send(Ok(Some(DecodedImage::from_bytes(PNG).unwrap())))
+        .unwrap();
+    assert!(editor.poll_image(&map).is_none());
+    assert!(editor.place_image([10., 20.]).is_some());
 }

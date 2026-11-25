@@ -49,7 +49,12 @@ pub enum Edit {
 }
 
 pub struct PaintCallback;
-pub struct BackgroundCallback;
+pub enum BackgroundCallback {
+    Zones,
+    Building(usize),
+    #[cfg(test)]
+    All,
+}
 
 impl CallbackTrait for BackgroundCallback {
     fn paint(
@@ -58,11 +63,16 @@ impl CallbackTrait for BackgroundCallback {
         pass: &mut wgpu::RenderPass<'static>,
         resources: &CallbackResources,
     ) {
-        resources
+        let display = &resources
             .get::<Resources>()
             .expect("traffic resources installed")
-            .display
-            .paint_background(pass);
+            .display;
+        match self {
+            Self::Zones => display.paint_zones(pass),
+            Self::Building(index) => display.paint_building(pass, *index),
+            #[cfg(test)]
+            Self::All => display.paint_background(pass),
+        }
     }
 }
 
@@ -885,7 +895,7 @@ mod tests {
                                 .rect_filled(frame.rect, 0.0, egui::Color32::BLACK);
                             ui.painter().add(egui_wgpu::Callback::new_paint_callback(
                                 frame.rect,
-                                BackgroundCallback,
+                                BackgroundCallback::All,
                             ));
                             background.paint(ui.painter(), frame.view, frame.rect);
                             ui.painter().add(egui_wgpu::Callback::new_paint_callback(

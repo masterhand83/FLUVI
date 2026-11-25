@@ -1,5 +1,5 @@
 use crate::building_images::{self, ImageResult, Source};
-use ca_core::buildings::{Building, artwork};
+use ca_core::buildings::Building;
 use eframe::egui;
 use std::collections::HashMap;
 
@@ -17,8 +17,7 @@ impl ImageCache {
     ) {
         let used = |key: &str| {
             document.buildings().iter().chain(draft).any(|building| {
-                building.image_data() == Some(key)
-                    || building.image_key().and_then(artwork::path) == Some(key)
+                building.image_data() == Some(key) || building.image_asset() == Some(key)
             })
         };
         self.textures.retain(|key, _| used(key));
@@ -51,7 +50,7 @@ impl ImageCache {
         }
         let (key, source) = if let Some(data) = building.image_data() {
             (data, None)
-        } else if let Some(path) = building.image_key().and_then(artwork::path) {
+        } else if let Some(path) = building.image_asset() {
             (path, Some(path))
         } else {
             return;

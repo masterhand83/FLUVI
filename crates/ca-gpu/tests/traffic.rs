@@ -1,6 +1,38 @@
 use ca_gpu::TrafficScene;
 
 #[test]
+fn retained_building_ranges_draw_only_the_requested_shape() {
+    use ca_core::{buildings::Building, camera::WorldView, map_json::MapDocument};
+    let mut map = MapDocument::empty();
+    for (center, size, color) in [
+        ([10., 10.], [20., 20.], "#ff0000"),
+        ([20., 10.], [10., 20.], "#00ff00"),
+    ] {
+        let mut building = Building::rectangle(center, size);
+        building.color = color.into();
+        map.add_building(building).unwrap();
+    }
+    let scene = TrafficScene::from_document(&map);
+    let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor::from_env_or_default());
+    let adapter = pollster::block_on(instance.request_adapter(&Default::default())).unwrap();
+    let (device, queue) = pollster::block_on(adapter.request_device(&Default::default())).unwrap();
+    let display = ca_gpu::TrafficDisplay::new(&device, &scene, wgpu::TextureFormat::Rgba8Unorm);
+    display.set_view(
+        &queue,
+        WorldView {
+            origin: scene.shift(),
+            span: [36., 14.],
+        },
+    );
+    let first = render_pass(&device, &queue, |pass| display.paint_building(pass, 0));
+    assert_eq!(pixel(&first, 1., 1.), [255, 0, 0, 255]);
+    assert_eq!(pixel(&first, 4.5, 1.), [0, 0, 0, 255]);
+    let second = render_pass(&device, &queue, |pass| display.paint_building(pass, 1));
+    assert_eq!(pixel(&second, 1., 1.), [0, 0, 0, 255]);
+    assert_eq!(pixel(&second, 4.5, 1.), [0, 255, 0, 255]);
+}
+
+#[test]
 fn building_overlay_draws_the_concavity_and_updates_without_changing_the_document() {
     use ca_core::{
         buildings::{Building, BuildingEdit},
@@ -543,6 +575,21 @@ fn render_display_excluding(
     display: &ca_gpu::TrafficDisplay,
     excluded: Option<usize>,
 ) -> Vec<u8> {
+    render_pass(device, queue, |pass| {
+        display.paint_background(pass);
+        if excluded.is_some() {
+            display.paint_excluding(pass, excluded);
+        } else {
+            display.paint(pass);
+        }
+    })
+}
+
+fn render_pass(
+    device: &wgpu::Device,
+    queue: &wgpu::Queue,
+    paint: impl FnOnce(&mut wgpu::RenderPass<'_>),
+) -> Vec<u8> {
     // 32 pixels per world cell. Row bytes are a multiple of 256.
     let size = wgpu::Extent3d {
         width: 1152,
@@ -581,12 +628,7 @@ fn render_display_excluding(
             })],
             ..Default::default()
         });
-        display.paint_background(&mut pass);
-        if excluded.is_some() {
-            display.paint_excluding(&mut pass, excluded);
-        } else {
-            display.paint(&mut pass);
-        }
+        paint(&mut pass);
     }
     encoder.copy_texture_to_buffer(
         texture.as_image_copy(),

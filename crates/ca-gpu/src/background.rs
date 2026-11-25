@@ -21,6 +21,7 @@ pub(crate) struct BackgroundDisplay {
     group: wgpu::BindGroup,
     pipeline: wgpu::RenderPipeline,
     count: u32,
+    ranges: Vec<std::ops::Range<u32>>,
 }
 
 impl BackgroundDisplay {
@@ -33,7 +34,14 @@ impl BackgroundDisplay {
     ) -> Self {
         let mut vertices = Vec::new();
         let mut triangulations = Vec::new();
-        pack_zones(&mut vertices, &mut triangulations, zones, shift);
+        let mut ranges = Vec::new();
+        pack_zones(
+            &mut vertices,
+            &mut triangulations,
+            &mut ranges,
+            zones,
+            shift,
+        );
         let count = vertices.len() as u32;
         let buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("static background zone triangles"),
@@ -116,13 +124,24 @@ impl BackgroundDisplay {
             group,
             pipeline,
             count,
+            ranges,
         }
     }
 
     pub fn paint(&self, pass: &mut wgpu::RenderPass<'_>) {
+        self.paint_range(pass, 0..self.count);
+    }
+
+    pub fn paint_zone(&self, pass: &mut wgpu::RenderPass<'_>, index: usize) {
+        if let Some(range) = self.ranges.get(index) {
+            self.paint_range(pass, range.clone());
+        }
+    }
+
+    fn paint_range(&self, pass: &mut wgpu::RenderPass<'_>, range: std::ops::Range<u32>) {
         pass.set_pipeline(&self.pipeline);
         pass.set_bind_group(0, &self.group, &[]);
-        pass.draw(0..self.count, 0..1);
+        pass.draw(range, 0..1);
     }
 
     pub fn update(
@@ -133,7 +152,13 @@ impl BackgroundDisplay {
         shift: [f32; 2],
     ) {
         self.scratch.clear();
-        pack_zones(&mut self.scratch, &mut self.triangulations, zones, shift);
+        pack_zones(
+            &mut self.scratch,
+            &mut self.triangulations,
+            &mut self.ranges,
+            zones,
+            shift,
+        );
         self.count = self.scratch.len() as u32;
         let bytes = bytemuck::cast_slice(&self.scratch);
         if bytes.len() as u64 > self.buffer.size() {
@@ -185,11 +210,14 @@ impl ZoneTriangles {
 fn pack_zones(
     vertices: &mut Vec<ZoneVertex>,
     caches: &mut Vec<ZoneTriangles>,
+    ranges: &mut Vec<std::ops::Range<u32>>,
     zones: &[BackgroundZone],
     shift: [f32; 2],
 ) {
     caches.resize_with(zones.len(), ZoneTriangles::default);
+    ranges.clear();
     for (zone, cache) in zones.iter().zip(caches) {
+        let start = vertices.len() as u32;
         cache.sync(&zone.points);
         let color = zone.color.map(|c| c as f32 / 255.0);
         for &index in &cache.indices {
@@ -222,6 +250,7 @@ fn pack_zones(
                 }
             }
         }
+        ranges.push(start..vertices.len() as u32);
     }
 }
 

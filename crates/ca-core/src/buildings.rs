@@ -32,6 +32,7 @@ pub struct Building {
     pub vertices: Option<Vec<[f64; 2]>>,
     saved: Value,
     image_key: Option<String>,
+    image_asset: Option<&'static str>,
 }
 
 fn cross(a: [f64; 2], b: [f64; 2], c: [f64; 2]) -> f64 {
@@ -134,11 +135,16 @@ impl Building {
             saved: json!({"esEstacionamiento":false,"capacidadMaxima":50,
                 "vehiculosActuales":0,"conexiones":[]}),
             image_key: None,
+            image_asset: None,
         }
     }
 
     pub fn image_key(&self) -> Option<&str> {
         self.image_key.as_deref()
+    }
+
+    pub fn image_asset(&self) -> Option<&'static str> {
+        self.image_asset
     }
 
     pub fn image_data(&self) -> Option<&str> {
@@ -172,6 +178,7 @@ impl Building {
             self.saved["imageRotationConvention"] = json!("legacy");
         }
         self.image_key = None;
+        self.image_asset = None;
         self.vertices = None;
         self.saved
             .as_object_mut()
@@ -399,7 +406,8 @@ impl Building {
                 .as_str()
                 .filter(|key| !key.is_empty())
                 .unwrap_or(&result.label);
-            if artwork::path(key).is_some() {
+            result.image_asset = artwork::path(key);
+            if result.image_asset.is_some() {
                 result.image_key = Some(key.into());
             }
         }

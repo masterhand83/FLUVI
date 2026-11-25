@@ -1,6 +1,23 @@
-//! Stable v1 artwork keys. Paths are relative to the bundled v1 image directory.
-pub fn path(key: &str) -> Option<&'static str> {
-    Some(match key.to_lowercase().as_str() {
+//! One registry for v1 aliases and embedded artwork.
+struct Artwork {
+    keys: &'static [&'static str],
+    path: &'static str,
+    bytes: &'static [u8],
+}
+
+macro_rules! artwork {
+    ($($($key:literal)|+ => $path:literal,)*) => {
+        static ARTWORK: &[Artwork] = &[
+            $(Artwork {
+                keys: &[$($key),+],
+                path: $path,
+                bytes: include_bytes!(concat!("../../../../apps/v1/assets/images/", $path)),
+            },)*
+        ];
+    };
+}
+
+artwork! {
         "escom" => "buildings/ESCOM.png",
         "cic" | "poi-ipn" | "oic-ipn" | "sad-ipn" | "siis-ipn" | "secademica-ipn" | "cendi"
         | "biblioteca" => "buildings/CIC.png",
@@ -32,6 +49,20 @@ pub fn path(key: &str) -> Option<&'static str> {
         "trabajador" => "objects/Trabajador.png",
         "arbol" => "objects/Arbol.png",
         "inundacion" => "objects/Inundacion.png",
-        _ => return None,
-    })
+}
+
+/// Resolve once at import. Frame code uses `Building::image_asset`.
+pub fn path(key: &str) -> Option<&'static str> {
+    let key = key.to_lowercase();
+    ARTWORK
+        .iter()
+        .find(|asset| asset.keys.contains(&key.as_str()))
+        .map(|asset| asset.path)
+}
+
+pub fn bytes(path: &str) -> Option<&'static [u8]> {
+    ARTWORK
+        .iter()
+        .find(|asset| asset.path == path)
+        .map(|asset| asset.bytes)
 }

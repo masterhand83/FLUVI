@@ -150,9 +150,15 @@ impl BuildingEditor {
         view: WorldView,
         shift: [f32; 2],
     ) -> Option<BuildingEdit> {
-        if ui.input(|i| i.key_pressed(egui::Key::Escape) || !i.focused) {
+        if ui.input(|i| {
+            i.key_pressed(egui::Key::Escape)
+                || (!i.focused && self.image_job.is_none() && self.tool != Some(Tool::Image))
+        }) {
             self.cancel();
             self.form = None;
+            return None;
+        }
+        if !ui.input(|i| i.focused) {
             return None;
         }
         if self.form.is_some() {
@@ -432,6 +438,7 @@ impl BuildingEditor {
         rect: egui::Rect,
         view: WorldView,
         shift: [f32; 2],
+        mut shape: impl FnMut(usize),
     ) {
         let painter = ui.painter().with_clip_rect(rect);
         self.images.retain(document, self.image_draft.as_ref());
@@ -441,22 +448,36 @@ impl BuildingEditor {
             } else {
                 saved
             };
-            self.images.paint(
-                &painter,
-                building,
-                building.corners().map(|p| screen(p, rect, view, shift)),
-            );
+            if building.is_image() {
+                self.images.paint(
+                    &painter,
+                    building,
+                    building.corners().map(|p| screen(p, rect, view, shift)),
+                );
+            } else {
+                shape(i);
+            }
+        }
+        if self.drag.as_ref().is_some_and(|d| d.index.is_none()) && self.preview.is_some() {
+            shape(document.buildings().len());
         }
         if let Some(draft) = &self.image_draft
             && let Some(pos) = ui
                 .input(|i| i.pointer.hover_pos())
                 .filter(|p| rect.contains(*p))
         {
-            let draft = draft.moved(world(pos, rect, view, shift));
+            let center = world(pos, rect, view, shift);
             self.images.paint(
                 &painter,
-                &draft,
-                draft.corners().map(|p| screen(p, rect, view, shift)),
+                draft,
+                draft.corners().map(|p| {
+                    screen(
+                        std::array::from_fn(|i| p[i] + center[i] - draft.center[i]),
+                        rect,
+                        view,
+                        shift,
+                    )
+                }),
             );
         }
         if self.tool == Some(Tool::Polygon) {

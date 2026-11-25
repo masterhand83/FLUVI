@@ -35,6 +35,7 @@ pub struct App {
     commands: Commands,
     callback: egui::PaintCallback,
     background_callback: egui::PaintCallback,
+    building_callbacks: Vec<egui::PaintCallback>,
     map: Option<MapInteraction>,
     report_tx: Sender<Report>,
     progress: Progress,
@@ -124,6 +125,7 @@ impl App {
         session.register_reset(ResetPhase::Pause, |app: &mut Self| app.playing = false);
         session.register_reset(ResetPhase::Tools, |app| {
             app.buildings = Default::default();
+            app.building_callbacks.clear();
             app.time_dialogs = Default::default();
             app.map = None;
             app.inspector = Default::default();
@@ -158,9 +160,10 @@ impl App {
             events,
             commands,
             callback: egui_wgpu::Callback::new_paint_callback(egui::Rect::NOTHING, PaintCallback),
+            building_callbacks: Vec::new(),
             background_callback: egui_wgpu::Callback::new_paint_callback(
                 egui::Rect::NOTHING,
-                crate::render::BackgroundCallback,
+                crate::render::BackgroundCallback::Zones,
             ),
             map: None,
             report_tx,
@@ -1029,12 +1032,33 @@ impl eframe::App for App {
             background_callback.rect = map.rect;
             ui.painter().add(background_callback);
             self.background.paint(ui.painter(), map.view, map.rect);
+            // Keep callback allocations at map/structure changes, not in each paint.
+            let count = self
+                .session
+                .as_ref()
+                .expect("session")
+                .document()
+                .buildings()
+                .len()
+                + 1;
+            for index in self.building_callbacks.len()..count {
+                self.building_callbacks
+                    .push(egui_wgpu::Callback::new_paint_callback(
+                        map.rect,
+                        crate::render::BackgroundCallback::Building(index),
+                    ));
+            }
             self.buildings.paint(
                 ui,
                 self.session.as_ref().expect("session").document(),
                 map.rect,
                 map.view,
                 self.map_shift,
+                |index| {
+                    let mut callback = self.building_callbacks[index].clone();
+                    callback.rect = map.rect;
+                    ui.painter().add(callback);
+                },
             );
             ui.painter().add(callback);
             self.buildings.paint_controls(

@@ -601,6 +601,15 @@ impl TrafficDisplay {
         self.buildings.paint(pass);
     }
 
+    pub fn paint_zones(&self, pass: &mut wgpu::RenderPass<'_>) {
+        self.background.paint(pass);
+    }
+
+    /// Retained triangle ranges let the app interleave shapes with image quads.
+    pub fn paint_building(&self, pass: &mut wgpu::RenderPass<'_>, index: usize) {
+        self.buildings.paint_zone(pass, index);
+    }
+
     pub fn set_buildings(
         &mut self,
         device: &wgpu::Device,
