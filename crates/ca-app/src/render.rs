@@ -44,27 +44,38 @@ pub struct Commands {
     state: Sender<Paint>,
     stale_state: Receiver<Paint>,
     edits: Sender<Edit>,
+    replacement: Sender<TrafficScene>,
 }
 
 pub struct Requests {
     state: Receiver<Paint>,
     edits: Receiver<Edit>,
+    replacement: Receiver<TrafficScene>,
 }
 
 pub fn command_channel() -> (Commands, Requests) {
     let (state_tx, state) = bounded(1);
     let (edits_tx, edits) = bounded(32);
+    let (replacement_tx, replacement) = bounded(1);
     (
         Commands {
             state: state_tx,
             stale_state: state.clone(),
             edits: edits_tx,
+            replacement: replacement_tx,
         },
-        Requests { state, edits },
+        Requests {
+            state,
+            edits,
+            replacement,
+        },
     )
 }
 
 impl Commands {
+    pub fn replace(&self, scene: TrafficScene) -> bool {
+        self.replacement.try_send(scene).is_ok()
+    }
     /// Returns false if the edit queue is full/closed. The caller must report it.
     pub fn send(&self, state: Paint, edit: Option<CellRef>) -> bool {
         if let Err(TrySendError::Full(state)) = self.state.try_send(state) {
@@ -89,6 +100,7 @@ pub struct Resources {
     ticks: TickControl,
     last_tick: Instant,
     progress: Progress,
+    format: wgpu::TextureFormat,
 }
 
 impl Resources {
@@ -97,11 +109,13 @@ impl Resources {
         display: TrafficDisplay,
         events: Sender<Event>,
         requests: Requests,
+        format: wgpu::TextureFormat,
     ) -> Self {
         let population = scene.population();
         let span = scene.extent().map(|v| v as f32);
         Self {
             scene,
+            format,
             display,
             events,
             requests,
@@ -124,11 +138,24 @@ impl Resources {
         }
     }
 
-    fn prepare(&mut self, queue: &wgpu::Queue) {
+    fn prepare(&mut self, device: &wgpu::Device, queue: &wgpu::Queue) {
         if let Ok(request) = self.requests.state.try_recv() {
             self.request = request;
         }
         let request = self.request;
+        if let Ok(scene) = self.requests.replacement.try_recv() {
+            // All old edits are obsolete. UI and render reset in this same frame.
+            while self.requests.edits.try_recv().is_ok() {}
+            self.display = TrafficDisplay::new(device, &scene, self.format);
+            self.scene = scene;
+            self.ticks = TickControl::default();
+            self.last_tick = Instant::now();
+            self.progress = Progress {
+                frames: self.progress.frames,
+                population: self.scene.population(),
+                ..Default::default()
+            };
+        }
         self.scene
             .set_generation_override(request.generation_override)
             .expect("UI probability is in 0..=1");
@@ -174,7 +201,7 @@ impl Resources {
 impl CallbackTrait for PaintCallback {
     fn prepare(
         &self,
-        _device: &wgpu::Device,
+        device: &wgpu::Device,
         queue: &wgpu::Queue,
         _screen: &ScreenDescriptor,
         _encoder: &mut wgpu::CommandEncoder,
@@ -183,7 +210,7 @@ impl CallbackTrait for PaintCallback {
         resources
             .get_mut::<Resources>()
             .expect("traffic resources were installed at startup")
-            .prepare(queue);
+            .prepare(device, queue);
         Vec::new()
     }
 
@@ -204,6 +231,70 @@ impl CallbackTrait for PaintCallback {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn replacing_a_session_discards_old_edits_and_resets_the_render_owned_simulation() {
+        use ca_core::map_json::MapDocument;
+        let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor::from_env_or_default());
+        let adapter = pollster::block_on(instance.request_adapter(&Default::default())).unwrap();
+        let (device, queue) =
+            pollster::block_on(adapter.request_device(&Default::default())).unwrap();
+        let format = wgpu::TextureFormat::Rgba8Unorm;
+        let scene = TrafficScene::demo();
+        let display = TrafficDisplay::new(&device, &scene, format);
+        let (commands, requests) = command_channel();
+        let (events, results) = bounded(2);
+        let mut resources = CallbackResources::default();
+        resources.insert(Resources::new(scene, display, events, requests, format));
+        let state = Paint {
+            playing: false,
+            rate: 10.0,
+            step_ticket: 0,
+            generation_override: None,
+            view: WorldView {
+                origin: [0.0; 2],
+                span: [36.0, 14.0],
+            },
+        };
+        let screen = ScreenDescriptor {
+            size_in_pixels: [360, 140],
+            pixels_per_point: 1.0,
+        };
+        let mut prepare = |commands: &Commands, state| {
+            assert!(commands.send(state, None));
+            let mut encoder = device.create_command_encoder(&Default::default());
+            PaintCallback.prepare(&device, &queue, &screen, &mut encoder, &mut resources);
+            match results.try_recv().unwrap() {
+                Event::Progress(progress) => progress,
+            }
+        };
+        assert_eq!(prepare(&commands, state).population, 18);
+        assert!(commands.edit(Edit::Vehicles(VehicleAction::Fill(1.0))));
+        assert!(commands.replace(TrafficScene::from_document(&MapDocument::empty())));
+        let empty = prepare(&commands, state);
+        assert_eq!(empty.population, 0);
+        assert_eq!(empty.generation, 0);
+        let document =
+            MapDocument::parse(include_str!("../../ca-core/tests/fixtures/map-v1.json")).unwrap();
+        assert!(commands.replace(TrafficScene::from_document(&document)));
+        let loaded = prepare(&commands, state);
+        assert_eq!(
+            loaded.population, 0,
+            "old fill must not enter the loaded map"
+        );
+        assert_eq!(loaded.generation, 0);
+        assert_eq!(
+            prepare(
+                &commands,
+                Paint {
+                    step_ticket: 1,
+                    ..state
+                }
+            )
+            .generation,
+            1
+        );
+    }
 
     #[test]
     fn view_updates_coalesce_but_clicks_remain_ordered_and_queue_full_is_reported() {
@@ -303,9 +394,13 @@ mod tests {
                 wgpu::TextureFormat::Rgba8Unorm,
                 egui_wgpu::RendererOptions::PREDICTABLE,
             );
-            renderer
-                .callback_resources
-                .insert(Resources::new(scene, display, events, requests));
+            renderer.callback_resources.insert(Resources::new(
+                scene,
+                display,
+                events,
+                requests,
+                wgpu::TextureFormat::Rgba8Unorm,
+            ));
             let ctx = egui::Context::default();
             let pos = egui::pos2(490.0, 320.0);
             let button = |pressed| egui::Event::PointerButton {

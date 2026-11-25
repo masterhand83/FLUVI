@@ -89,9 +89,9 @@ fn demo_has_physical_lane_positions_and_both_directions() {
     let scene = TrafficScene::demo();
     let lanes = scene.lanes();
     assert_eq!(lanes.len(), 6);
-    assert_eq!(lanes[0].origin, [2, 2]);
-    assert_eq!(lanes[1].origin, [2, 3]);
-    assert_eq!(lanes[2].origin, [2, 6]);
+    assert_eq!(lanes[0].origin, [2.0, 2.0]);
+    assert_eq!(lanes[1].origin, [2.0, 3.0]);
+    assert_eq!(lanes[2].origin, [2.0, 6.0]);
     assert_eq!(lanes[0].direction, 1);
     assert_eq!(lanes[1].direction, 0);
     assert_eq!(lanes[2].offset, 64);

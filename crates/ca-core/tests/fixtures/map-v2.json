@@ -1,0 +1,283 @@
+{
+  "calles": [
+    {
+      "angulo": 0,
+      "carriles": 2,
+      "esCurva": false,
+      "laneDirections": [
+        1,
+        -1
+      ],
+      "laneGenerationEnabled": [
+        true,
+        true
+      ],
+      "nombre": "Entrada",
+      "probabilidadGeneracion": 0.35,
+      "probabilidadSaltoDeCarril": 0.05,
+      "tamano": 6,
+      "tipo": "generador",
+      "vertices": [],
+      "x": 10,
+      "y": 20
+    },
+    {
+      "angulo": 0,
+      "carriles": 2,
+      "esCurva": false,
+      "laneDirections": [
+        1,
+        -1
+      ],
+      "laneGenerationEnabled": [
+        true,
+        false
+      ],
+      "nombre": "Salida",
+      "probabilidadGeneracion": 0,
+      "probabilidadSaltoDeCarril": 0.05,
+      "tamano": 6,
+      "tipo": "devorador",
+      "vertices": [],
+      "x": 50,
+      "y": 20
+    }
+  ],
+  "conexiones": [
+    {
+      "destinoIdx": 1,
+      "detalles": [
+        {
+          "carrilDestino": 0,
+          "carrilOrigen": 0,
+          "posDestino": 0,
+          "posOrigen": -1,
+          "probabilidad": 1
+        }
+      ],
+      "origenIdx": 0,
+      "tipo": "LINEAL"
+    },
+    {
+      "destinoIdx": 0,
+      "detalles": [
+        {
+          "carrilDestino": 1,
+          "carrilOrigen": 1,
+          "posDestino": 5,
+          "posOrigen": 0,
+          "probabilidad": 1
+        }
+      ],
+      "origenIdx": 1,
+      "tipo": "INCORPORACION"
+    }
+  ],
+  "configuracionTiempo": {
+    "activo": true,
+    "diaActual": 1,
+    "horaActual": 7,
+    "minutoActual": 0,
+    "multiplicadoresPorDiaHora": {
+      "0": [
+        0,
+        0,
+        0.1,
+        0.2,
+        0.2,
+        0.2,
+        0.2,
+        0.2,
+        0.3,
+        0.3,
+        0.4,
+        0.6,
+        0.6,
+        0.7,
+        0.7,
+        0.7,
+        0.7,
+        0.6,
+        0.6,
+        0.5,
+        0.2,
+        0.1,
+        0,
+        0
+      ],
+      "1": [
+        0,
+        0.05,
+        0.08,
+        0.1,
+        0.2,
+        0.1,
+        0.4,
+        1.2,
+        1.4,
+        1,
+        0.6,
+        0.7,
+        0.9,
+        1,
+        0.9,
+        0.8,
+        0.8,
+        1.1,
+        1.4,
+        1.3,
+        1.1,
+        0.4,
+        0.2,
+        0
+      ],
+      "2": [
+        0,
+        0.05,
+        0.08,
+        0.2,
+        0.2,
+        0.2,
+        0.4,
+        1.2,
+        1.4,
+        1,
+        0.7,
+        0.7,
+        0.9,
+        1,
+        0.9,
+        0.8,
+        0.8,
+        1.1,
+        1.5,
+        1.3,
+        1.1,
+        0.2,
+        0.1,
+        0
+      ],
+      "3": [
+        0,
+        0.05,
+        0.08,
+        0.1,
+        0.2,
+        0.1,
+        0.4,
+        1.3,
+        1.5,
+        1,
+        0.5,
+        0.7,
+        0.9,
+        1.1,
+        1,
+        0.8,
+        0.9,
+        1.2,
+        1.5,
+        1.4,
+        1.2,
+        0.3,
+        0.2,
+        0
+      ],
+      "4": [
+        0,
+        0.05,
+        0.08,
+        0.2,
+        0.2,
+        0.2,
+        0.4,
+        1.3,
+        1.5,
+        1,
+        0.7,
+        0.7,
+        0.9,
+        1.1,
+        1,
+        0.8,
+        1,
+        1.3,
+        1.6,
+        1.5,
+        1,
+        0.2,
+        0.1,
+        0
+      ],
+      "5": [
+        0,
+        0.1,
+        0.1,
+        0.1,
+        0.2,
+        0.3,
+        0.5,
+        1.5,
+        1.8,
+        1.3,
+        0.8,
+        0.8,
+        1,
+        1.2,
+        1.1,
+        0.9,
+        1.7,
+        2.1,
+        3,
+        2.5,
+        1,
+        0.5,
+        0.2,
+        0
+      ],
+      "6": [
+        0,
+        0.1,
+        0.2,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.4,
+        0.5,
+        0.8,
+        0.9,
+        1,
+        1.2,
+        1.3,
+        1.3,
+        1.2,
+        1.1,
+        1,
+        0.9,
+        0.5,
+        0.1,
+        0.1,
+        0
+      ]
+    },
+    "segundoActual": 0,
+    "segundosPorPaso": 2,
+    "usarPerfiles": true
+  },
+  "edificios": [],
+  "fecha": "2026-11-25T04:55:13.366Z",
+  "imagenReferencia": null,
+  "lluviaAleatoria": {
+    "probabilidad": 10
+  },
+  "nombre": "Compatibility",
+  "personalizacion": {
+    "fondoMapa": {
+      "color": "#6aa0f0",
+      "preset": "sky"
+    }
+  },
+  "version": "1.0"
+}

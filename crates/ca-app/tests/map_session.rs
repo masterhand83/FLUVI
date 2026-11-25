@@ -1,0 +1,86 @@
+use ca_app::map_session::{MapSession, ResetPhase};
+use ca_core::map_json::MapDocument;
+
+#[derive(Default)]
+struct State {
+    playing: bool,
+    draft: bool,
+    steps: Vec<&'static str>,
+    labels: bool,
+}
+
+#[test]
+fn cancelled_new_map_and_invalid_load_leave_the_session_unchanged() {
+    let mut session = MapSession::<State>::new(
+        MapDocument::parse(include_str!("../../ca-core/tests/fixtures/map-v1.json")).unwrap(),
+    );
+    let mut state = State {
+        playing: true,
+        draft: true,
+        labels: true,
+        ..Default::default()
+    };
+    session.register_reset(ResetPhase::Pause, |s| s.playing = false);
+    session.register_reset(ResetPhase::Tools, |s| s.draft = false);
+    assert!(!session.replace(false, MapDocument::empty(), &mut state));
+    let error = session.load("{}", &mut state).unwrap_err();
+    use ca_app::shell::{Language, Translator};
+    assert_eq!(
+        Translator::new(Language::English).tr(error.translation_key(), &[]),
+        "Cannot open this map. The file is invalid or too large. The current map has not changed."
+    );
+    assert_eq!(
+        Translator::new(Language::Spanish).tr(error.translation_key(), &[]),
+        "No se puede abrir este mapa. El archivo no es válido o es demasiado grande. El mapa actual no ha cambiado."
+    );
+    assert!(state.playing);
+    assert!(state.draft);
+    assert!(state.labels);
+    assert_eq!(session.document().model().streets().len(), 2);
+}
+
+#[test]
+fn shared_reset_pauses_then_cancels_tools_then_resets_registered_features() {
+    let mut session = MapSession::<State>::new(MapDocument::empty());
+    session.register_reset(ResetPhase::Features, |s| {
+        assert!(!s.playing && !s.draft);
+        s.steps.push("features");
+    });
+    session.register_reset(ResetPhase::Tools, |s| {
+        assert!(!s.playing);
+        s.draft = false;
+        s.steps.push("tools");
+    });
+    session.register_reset(ResetPhase::Pause, |s| {
+        s.playing = false;
+        s.steps.push("pause");
+    });
+    let mut state = State {
+        playing: true,
+        draft: true,
+        labels: true,
+        ..Default::default()
+    };
+    assert!(session.replace(true, MapDocument::empty(), &mut state));
+    assert_eq!(state.steps, ["pause", "tools", "features"]);
+    assert!(state.labels, "session-only labels must not be reset");
+}
+
+#[test]
+fn invalid_topology_after_valid_roads_never_resets_the_current_session() {
+    let fixture = include_str!("../../ca-core/tests/fixtures/map-v1.json");
+    let mut session = MapSession::<State>::new(MapDocument::parse(fixture).unwrap());
+    session.register_reset(ResetPhase::Pause, |s| s.playing = false);
+    session.register_reset(ResetPhase::Tools, |s| s.draft = false);
+    let before = session.document().to_json();
+    let mut broken: serde_json::Value = serde_json::from_str(fixture).unwrap();
+    broken["conexiones"][1]["destinoIdx"] = serde_json::json!(999);
+    let mut state = State {
+        playing: true,
+        draft: true,
+        ..Default::default()
+    };
+    assert!(session.load(&broken.to_string(), &mut state).is_err());
+    assert!(state.playing && state.draft);
+    assert_eq!(session.document().to_json(), before);
+}

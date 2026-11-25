@@ -92,6 +92,41 @@ Visibility is session-only and starts on.
 Focused checks: `cargo test -p ca-core --test connections` and
 `cargo test -p ca-app --test connection_overlays`.
 
+### Map files and session replacement
+
+Use `ca-core::map_json::MapDocument` to validate map JSON before replacing
+the current session. Read roads before links. Keep unowned JSON fields for
+later ports; omit language preferences. Save map configuration without live
+vehicles, as in v1. For this ticket, display straight streets; keep saved curve
+fields for the later geometry ports.
+
+Register each feature's reset in `ca-app::map_session::MapSession`.
+Use the `Pause`, `Tools`, and `Features` phases in that order. Keep session
+display settings outside feature resets. When adding load support, restore
+buildings/parking after links, then scenarios, personalization, and the clock.
+Route New and Open through `App::replace_map`; use the render command channel
+to replace CPU/GPU state and discard old cell edits before the next paint.
+
+Use `ca-app::map_files` for native dialogs and file access on a worker thread.
+Keep one file job active at a time. Test Cancel and invalid files without
+pausing or clearing the current session.
+
+Run `cargo test -p ca-core --test map_json`,
+`cargo test -p ca-app --test map_session`, and
+`cargo test -p ca-app --bin ca-app replacing_a_session` for focused checks.
+To repeat the v1 compatibility check:
+
+```sh
+node scripts/check-map-json-compat.mjs --record
+cargo run -p ca-core --example map_round_trip
+node scripts/check-map-json-compat.mjs
+```
+
+Keep both generated fixtures under `crates/ca-core/tests/fixtures/`.
+For a desktop acceptance check, open and save a map with the native dialogs,
+save with Ctrl+S/Cmd+S, and cancel New Map. Check that Cancel retains the map
+and that an invalid file gives a translated error.
+
 Use `cargo dev edit` or `bacon check` for compiler feedback. Run focused tests,
 for example `cargo nextest run -p ca-core`, when behavior changes. `bacon` still
 defaults to Clippy; its check/test/run jobs remain available.

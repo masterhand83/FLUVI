@@ -24,7 +24,7 @@ pub enum VehicleAction {
 }
 
 /// Lane metadata can be shorter than `carriles`. Missing values use v1 defaults.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct CalleConfig {
     pub carriles: usize,
     pub tamano: usize,

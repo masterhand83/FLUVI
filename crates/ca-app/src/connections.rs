@@ -17,6 +17,11 @@ impl ConnectionOverlays {
         }
     }
 
+    /// Map replacement changes topology, not the session display preference.
+    pub fn set_arrows(&mut self, arrows: Vec<[[f32; 2]; 2]>) {
+        self.arrows = arrows;
+    }
+
     pub fn show_toggle(&mut self, ui: &mut egui::Ui, shell: &Shell) -> egui::Response {
         ui.checkbox(&mut self.visible, shell.tr("connections.showArrows", &[]))
     }

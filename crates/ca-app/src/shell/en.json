@@ -1,4 +1,13 @@
 {
+  "mapFiles.open": "Open Map",
+  "mapFiles.save": "Save Map",
+  "mapFiles.new": "New Map",
+  "mapFiles.newConfirm": "Start a new map? The current map and simulation state will be cleared.",
+  "mapFiles.invalidFile": "Cannot open this map. The file is invalid or too large. The current map has not changed.",
+  "mapFiles.saveError": "Cannot save the map. Check the file location and write permission.",
+  "mapFiles.dialogError": "Cannot open the file dialog. The current map has not changed.",
+  "mapFiles.saved": "Map saved.",
+  "mapFiles.untitled": "Untitled map",
   "connections.showArrows": "Connection arrows",
   "connections.invalidMapping": "Select valid streets, lanes, and physical cells.",
   "connections.direction": "The connection goes against the lane direction.",

@@ -45,7 +45,7 @@ mod layout_tests {
         assert_eq!(offset_of!(TrafficLane, length), 12);
         assert_eq!(offset_of!(TrafficLane, direction), 16);
         assert_eq!(offset_of!(TrafficLane, street_type), 20);
-        assert_eq!(offset_of!(TrafficLane, padding), 24);
+        assert_eq!(offset_of!(TrafficLane, axis), 24);
         // WGSL array<u32> cell storage.
         assert_eq!(size_of::<u32>(), 4);
     }

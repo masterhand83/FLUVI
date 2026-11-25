@@ -1,0 +1,283 @@
+{
+  "version": "1.0",
+  "nombre": "Compatibility",
+  "fecha": "2026-11-25T04:55:13.366Z",
+  "calles": [
+    {
+      "nombre": "Entrada",
+      "tamano": 6,
+      "tipo": "generador",
+      "x": 10,
+      "y": 20,
+      "angulo": 0,
+      "probabilidadGeneracion": 0.35,
+      "carriles": 2,
+      "laneDirections": [
+        1,
+        -1
+      ],
+      "laneGenerationEnabled": [
+        true,
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.05,
+      "vertices": [],
+      "esCurva": false
+    },
+    {
+      "nombre": "Salida",
+      "tamano": 6,
+      "tipo": "devorador",
+      "x": 50,
+      "y": 20,
+      "angulo": 0,
+      "probabilidadGeneracion": 0,
+      "carriles": 2,
+      "laneDirections": [
+        1,
+        -1
+      ],
+      "laneGenerationEnabled": [
+        true,
+        false
+      ],
+      "probabilidadSaltoDeCarril": 0.05,
+      "vertices": [],
+      "esCurva": false
+    }
+  ],
+  "conexiones": [
+    {
+      "origenIdx": 0,
+      "destinoIdx": 1,
+      "tipo": "LINEAL",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 0,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 1,
+      "destinoIdx": 0,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 1,
+          "carrilDestino": 1,
+          "posOrigen": 0,
+          "posDestino": 5,
+          "probabilidad": 1
+        }
+      ]
+    }
+  ],
+  "edificios": [],
+  "imagenReferencia": null,
+  "configuracionTiempo": {
+    "activo": true,
+    "diaActual": 1,
+    "horaActual": 7,
+    "minutoActual": 0,
+    "segundoActual": 0,
+    "usarPerfiles": true,
+    "segundosPorPaso": 2,
+    "multiplicadoresPorDiaHora": {
+      "0": [
+        0,
+        0,
+        0.1,
+        0.2,
+        0.2,
+        0.2,
+        0.2,
+        0.2,
+        0.3,
+        0.3,
+        0.4,
+        0.6,
+        0.6,
+        0.7,
+        0.7,
+        0.7,
+        0.7,
+        0.6,
+        0.6,
+        0.5,
+        0.2,
+        0.1,
+        0,
+        0
+      ],
+      "1": [
+        0,
+        0.05,
+        0.08,
+        0.1,
+        0.2,
+        0.1,
+        0.4,
+        1.2,
+        1.4,
+        1,
+        0.6,
+        0.7,
+        0.9,
+        1,
+        0.9,
+        0.8,
+        0.8,
+        1.1,
+        1.4,
+        1.3,
+        1.1,
+        0.4,
+        0.2,
+        0
+      ],
+      "2": [
+        0,
+        0.05,
+        0.08,
+        0.2,
+        0.2,
+        0.2,
+        0.4,
+        1.2,
+        1.4,
+        1,
+        0.7,
+        0.7,
+        0.9,
+        1,
+        0.9,
+        0.8,
+        0.8,
+        1.1,
+        1.5,
+        1.3,
+        1.1,
+        0.2,
+        0.1,
+        0
+      ],
+      "3": [
+        0,
+        0.05,
+        0.08,
+        0.1,
+        0.2,
+        0.1,
+        0.4,
+        1.3,
+        1.5,
+        1,
+        0.5,
+        0.7,
+        0.9,
+        1.1,
+        1,
+        0.8,
+        0.9,
+        1.2,
+        1.5,
+        1.4,
+        1.2,
+        0.3,
+        0.2,
+        0
+      ],
+      "4": [
+        0,
+        0.05,
+        0.08,
+        0.2,
+        0.2,
+        0.2,
+        0.4,
+        1.3,
+        1.5,
+        1,
+        0.7,
+        0.7,
+        0.9,
+        1.1,
+        1,
+        0.8,
+        1,
+        1.3,
+        1.6,
+        1.5,
+        1,
+        0.2,
+        0.1,
+        0
+      ],
+      "5": [
+        0,
+        0.1,
+        0.1,
+        0.1,
+        0.2,
+        0.3,
+        0.5,
+        1.5,
+        1.8,
+        1.3,
+        0.8,
+        0.8,
+        1,
+        1.2,
+        1.1,
+        0.9,
+        1.7,
+        2.1,
+        3,
+        2.5,
+        1,
+        0.5,
+        0.2,
+        0
+      ],
+      "6": [
+        0,
+        0.1,
+        0.2,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.4,
+        0.5,
+        0.8,
+        0.9,
+        1,
+        1.2,
+        1.3,
+        1.3,
+        1.2,
+        1.1,
+        1,
+        0.9,
+        0.5,
+        0.1,
+        0.1,
+        0
+      ]
+    }
+  },
+  "lluviaAleatoria": {
+    "probabilidad": 10
+  },
+  "personalizacion": {
+    "fondoMapa": {
+      "preset": "sky",
+      "color": "#6aa0f0"
+    }
+  }
+}

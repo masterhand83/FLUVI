@@ -1,4 +1,13 @@
 {
+  "mapFiles.open": "Abrir mapa",
+  "mapFiles.save": "Guardar mapa",
+  "mapFiles.new": "Nuevo mapa",
+  "mapFiles.newConfirm": "¿Iniciar un mapa nuevo? Se borrarán el mapa actual y el estado de la simulación.",
+  "mapFiles.invalidFile": "No se puede abrir este mapa. El archivo no es válido o es demasiado grande. El mapa actual no ha cambiado.",
+  "mapFiles.saveError": "No se puede guardar el mapa. Compruebe la ubicación y el permiso de escritura.",
+  "mapFiles.dialogError": "No se puede abrir el diálogo de archivos. El mapa actual no ha cambiado.",
+  "mapFiles.saved": "Mapa guardado.",
+  "mapFiles.untitled": "Mapa sin título",
   "connections.showArrows": "Flechas de conexiones",
   "connections.invalidMapping": "Seleccione calles, carriles y celdas físicas válidos.",
   "connections.direction": "La conexión va contra el sentido del carril.",

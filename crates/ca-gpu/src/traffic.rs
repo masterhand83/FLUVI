@@ -10,13 +10,13 @@ use crate::{ViewUniform, entry};
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Pod, Zeroable)]
 pub struct TrafficLane {
-    pub origin: [u32; 2],
+    pub origin: [f32; 2],
     pub offset: u32,
     pub length: u32,
     /// 1 means physical indices increase in the travel direction; 0 reverses it.
     pub direction: u32,
     pub street_type: u32,
-    pub padding: [u32; 2],
+    pub axis: [f32; 2],
 }
 const _: () = assert!(size_of::<TrafficLane>() == 32);
 
@@ -25,6 +25,8 @@ pub struct TrafficScene {
     lanes: Vec<TrafficLane>,
     cells: Vec<u32>,
     edited: bool,
+    names: Vec<String>,
+    extent: [u32; 2],
 }
 
 impl TrafficScene {
@@ -35,7 +37,7 @@ impl TrafficScene {
         for (street_index, street) in model.streets().iter().enumerate() {
             for lane in 0..street.config().carriles {
                 lanes.push(TrafficLane {
-                    origin: [2, 2 + street_index as u32 * 4 + lane as u32],
+                    origin: [2.0, 2.0 + street_index as f32 * 4.0 + lane as f32],
                     offset,
                     length: street.config().tamano as u32,
                     direction: u32::from(street.lane_direction(lane) == LaneDirection::Forward),
@@ -44,7 +46,7 @@ impl TrafficScene {
                         CalleType::Conexion => 1,
                         CalleType::Devorador => 2,
                     },
-                    padding: [0; 2],
+                    axis: [1.0, 0.0],
                 });
                 offset += street.config().tamano as u32;
             }
@@ -52,6 +54,78 @@ impl TrafficScene {
         let mut scene = Self {
             model,
             lanes,
+            cells: vec![0; offset as usize],
+            edited: false,
+            names: ["Generador", "Conexion", "Devorador"]
+                .map(String::from)
+                .to_vec(),
+            extent: [36, 14],
+        };
+        scene.pack();
+        scene
+    }
+
+    /// v1 world positions use five units per cell. Only the display is shifted
+    /// to positive coordinates; the saved document keeps its original positions.
+    pub fn from_document(document: &ca_core::map_json::MapDocument) -> Self {
+        let model = document.model().clone();
+        let mut lanes = Vec::new();
+        let mut names = Vec::new();
+        let mut offset = 0;
+        let mut minimum = [0.0f32; 2];
+        let mut maximum = [1.0f32; 2];
+        for (street, road) in model.streets().iter().zip(
+            document.data()["calles"]
+                .as_array()
+                .expect("validated roads"),
+        ) {
+            names.push(road["nombre"].as_str().expect("validated name").to_owned());
+            let angle = road["angulo"]
+                .as_f64()
+                .expect("validated angle")
+                .to_radians() as f32;
+            let axis = [angle.cos(), angle.sin()];
+            let normal = [-axis[1], axis[0]];
+            let origin = [
+                road["x"].as_f64().expect("validated x") as f32 / 5.0,
+                road["y"].as_f64().expect("validated y") as f32 / 5.0,
+            ];
+            for lane in 0..street.config().carriles {
+                let position = std::array::from_fn(|i| origin[i] + normal[i] * lane as f32);
+                for x in [0.0, street.config().tamano as f32] {
+                    for y in [0.0, 1.0] {
+                        for i in 0..2 {
+                            let p = position[i] + axis[i] * x + normal[i] * y;
+                            minimum[i] = minimum[i].min(p);
+                            maximum[i] = maximum[i].max(p);
+                        }
+                    }
+                }
+                lanes.push(TrafficLane {
+                    origin: position,
+                    axis,
+                    offset,
+                    length: street.config().tamano as u32,
+                    direction: u32::from(street.lane_direction(lane) == LaneDirection::Forward),
+                    street_type: match street.config().tipo {
+                        CalleType::Generador => 0,
+                        CalleType::Conexion => 1,
+                        CalleType::Devorador => 2,
+                    },
+                });
+                offset += street.config().tamano as u32;
+            }
+        }
+        for lane in &mut lanes {
+            for (i, min) in minimum.iter().enumerate() {
+                lane.origin[i] += 2.0 - min;
+            }
+        }
+        let mut scene = Self {
+            model,
+            lanes,
+            names,
+            extent: std::array::from_fn(|i| (maximum[i] - minimum[i] + 4.0).ceil() as u32),
             cells: vec![0; offset as usize],
             edited: false,
         };
@@ -137,8 +211,11 @@ impl TrafficScene {
                         (0..lane.length)
                             .map(|i| {
                                 [
-                                    lane.origin[0] as f32 + i as f32 + 0.5,
-                                    lane.origin[1] as f32 + 0.5,
+                                    lane.origin[0] + lane.axis[0] * (i as f32 + 0.5)
+                                        - lane.axis[1] * 0.5,
+                                    lane.origin[1]
+                                        + lane.axis[1] * (i as f32 + 0.5)
+                                        + lane.axis[0] * 0.5,
                                 ]
                             })
                             .collect()
@@ -149,10 +226,7 @@ impl TrafficScene {
     }
 
     pub fn street_names(&self) -> Vec<String> {
-        // Tracer-map names are data, not translated UI labels.
-        ["Generador", "Conexion", "Devorador"]
-            .map(String::from)
-            .to_vec()
+        self.names.clone()
     }
 
     /// World-space arrow endpoints, built on topology edits, never per tick.
@@ -184,7 +258,7 @@ impl TrafficScene {
     }
 
     pub fn extent(&self) -> [u32; 2] {
-        [36, 14]
+        self.extent
     }
 
     /// Value 7 is a special cell, not one of the six vehicle classes.
@@ -204,12 +278,20 @@ impl TrafficDisplay {
     pub fn new(device: &wgpu::Device, scene: &TrafficScene, format: wgpu::TextureFormat) -> Self {
         let state = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("traffic cell storage"),
-            contents: bytemuck::cast_slice(scene.cells()),
+            contents: bytemuck::cast_slice(if scene.cells().is_empty() {
+                &[0]
+            } else {
+                scene.cells()
+            }),
             usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
         });
         let lanes = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("traffic physical lane layout"),
-            contents: bytemuck::cast_slice(scene.lanes()),
+            contents: if scene.lanes().is_empty() {
+                &[0; 32]
+            } else {
+                bytemuck::cast_slice(scene.lanes())
+            },
             usage: wgpu::BufferUsages::STORAGE,
         });
         let [width, height] = scene.extent();
@@ -292,7 +374,9 @@ impl TrafficDisplay {
     }
 
     pub fn upload(&self, queue: &wgpu::Queue, scene: &TrafficScene) {
-        queue.write_buffer(&self.state, 0, bytemuck::cast_slice(scene.cells()));
+        if !scene.cells().is_empty() {
+            queue.write_buffer(&self.state, 0, bytemuck::cast_slice(scene.cells()));
+        }
     }
 
     pub fn set_view(&self, queue: &wgpu::Queue, view: WorldView) {

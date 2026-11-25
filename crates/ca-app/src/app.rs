@@ -7,8 +7,11 @@ use crate::render::{
     Commands, Edit, Event, Paint, PaintCallback, Progress, Requests, Resources, command_channel,
 };
 use ca_app::map::MapInteraction;
+use ca_app::map_files::{self, FileResult};
+use ca_app::map_session::{MapSession, ResetPhase};
 use ca_app::shell::{Shell, config_path};
 use ca_app::transport::TransportControls;
+use ca_core::map_json::MapDocument;
 
 pub struct Report {
     pub progress: Progress,
@@ -41,6 +44,9 @@ pub struct App {
     startup: Option<Startup>,
     transport: TransportControls,
     connections: Option<ca_app::connections::ConnectionOverlays>,
+    session: Option<MapSession<App>>,
+    file_job: Option<Receiver<FileResult>>,
+    new_confirmation: Option<Receiver<bool>>,
 }
 
 impl App {
@@ -58,6 +64,22 @@ impl App {
         let adapter = format!("{} ({:?})", info.name, info.backend);
         let (tx, events) = bounded(2);
         let (commands, requests) = command_channel();
+        let mut session = MapSession::new(MapDocument::demo());
+        session.register_reset(ResetPhase::Pause, |app: &mut Self| app.playing = false);
+        session.register_reset(ResetPhase::Tools, |app| {
+            app.map = None;
+            if let Some(connections) = &mut app.connections {
+                connections.set_arrows(Vec::new());
+            }
+        });
+        session.register_reset(ResetPhase::Features, |app| {
+            app.transport = TransportControls::default();
+            app.step_ticket = 0;
+            app.progress = Progress {
+                frames: app.progress.frames,
+                ..Default::default()
+            };
+        });
         Ok(Self {
             events,
             commands,
@@ -75,6 +97,9 @@ impl App {
             shell: Shell::load(config_path()),
             transport: TransportControls::default(),
             connections: None,
+            session: Some(session),
+            file_job: None,
+            new_confirmation: None,
             startup: Some(Startup {
                 render: render.clone(),
                 events: tx,
@@ -116,6 +141,7 @@ impl App {
                             display,
                             startup.events,
                             startup.requests,
+                            startup.render.target_format,
                         ));
                     self.shell.loading(ctx, 1.0, "loading.status.ready");
                     return Ok(());
@@ -151,7 +177,31 @@ impl App {
     fn controls(&mut self, ctx: &egui::Context) {
         egui::TopBottomPanel::top("controls").show(ctx, |ui| {
             ui.horizontal_wrapped(|ui| {
-                ui.label(self.shell.tr("shell.demo", &[]));
+                let name = self.session.as_ref().expect("session").document().data()["nombre"]
+                    .as_str()
+                    .unwrap_or_default();
+                ui.label(if name.is_empty() {
+                    self.shell.tr("mapFiles.untitled", &[])
+                } else {
+                    name.to_owned()
+                });
+                let ready = self.smoke_frames.is_none()
+                    && self.file_job.is_none()
+                    && self.new_confirmation.is_none();
+                ui.add_enabled_ui(ready, |ui| {
+                    if ui.button(self.shell.tr("mapFiles.open", &[])).clicked() {
+                        self.start_file(false, ctx);
+                    }
+                    if ui.button(self.shell.tr("mapFiles.save", &[])).clicked() {
+                        self.start_file(true, ctx);
+                    }
+                    if ui.button(self.shell.tr("mapFiles.new", &[])).clicked() {
+                        self.new_confirmation = Some(self.shell.confirm(
+                            self.shell.tr("mapFiles.new", &[]),
+                            self.shell.tr("mapFiles.newConfirm", &[]),
+                        ));
+                    }
+                });
                 ui.add_enabled_ui(self.smoke_frames.is_none(), |ui| {
                     if ui
                         .button(self.shell.tr(
@@ -200,6 +250,97 @@ impl App {
             });
         });
     }
+
+    fn start_file(&mut self, save: bool, ctx: &egui::Context) {
+        let text = save.then(|| self.session.as_ref().expect("session").document().to_json());
+        match map_files::start(
+            text,
+            self.shell.tr(
+                if save {
+                    "mapFiles.save"
+                } else {
+                    "mapFiles.open"
+                },
+                &[],
+            ),
+            ctx.clone(),
+        ) {
+            Ok(job) => self.file_job = Some(job),
+            Err(_) => self.shell.notify(
+                ca_app::shell::Severity::Error,
+                self.shell.tr("mapFiles.dialogError", &[]),
+            ),
+        }
+    }
+
+    fn replace_map(&mut self, document: MapDocument) {
+        let scene = TrafficScene::from_document(&document);
+        let map = MapInteraction::new(
+            scene.extent().map(|v| v as f32),
+            &scene.geometry(),
+            scene.street_names(),
+        );
+        let arrows = scene.connection_arrows();
+        if !self.commands.replace(scene) {
+            self.shell.notify(
+                ca_app::shell::Severity::Warning,
+                self.shell.tr("shell.cellEditBusy", &[]),
+            );
+            return;
+        }
+        let mut session = self.session.take().expect("session");
+        session.replace(true, document, self);
+        self.session = Some(session);
+        self.map = Some(map);
+        if let Some(connections) = &mut self.connections {
+            connections.set_arrows(arrows);
+        } else {
+            self.connections = Some(ca_app::connections::ConnectionOverlays::new(arrows));
+        }
+    }
+
+    fn map_files(&mut self, ctx: &egui::Context) {
+        if self.file_job.is_none()
+            && self.new_confirmation.is_none()
+            && self.smoke_frames.is_none()
+            && ctx.input_mut(|i| i.consume_key(egui::Modifiers::COMMAND, egui::Key::S))
+        {
+            self.start_file(true, ctx);
+        }
+        if let Some(job) = &self.file_job {
+            let result = match job.try_recv() {
+                Ok(result) => Some(result),
+                Err(TryRecvError::Empty) => None,
+                Err(TryRecvError::Disconnected) => Some(FileResult::Failed("mapFiles.dialogError")),
+            };
+            if let Some(result) = result {
+                self.file_job = None;
+                match result {
+                    FileResult::Opened(map) => self.replace_map(map),
+                    FileResult::Saved => self.shell.notify(
+                        ca_app::shell::Severity::Success,
+                        self.shell.tr("mapFiles.saved", &[]),
+                    ),
+                    FileResult::Failed(key) => self
+                        .shell
+                        .notify(ca_app::shell::Severity::Error, self.shell.tr(key, &[])),
+                    FileResult::Cancelled => {}
+                }
+            }
+        }
+        if let Some(answer) = &self.new_confirmation {
+            match answer.try_recv() {
+                Ok(accepted) => {
+                    self.new_confirmation = None;
+                    if accepted {
+                        self.replace_map(MapDocument::empty());
+                    }
+                }
+                Err(TryRecvError::Disconnected) => self.new_confirmation = None,
+                Err(TryRecvError::Empty) => {}
+            }
+        }
+    }
 }
 
 impl eframe::App for App {
@@ -219,6 +360,7 @@ impl eframe::App for App {
             puffin::GlobalProfiler::lock().new_frame();
         }
         self.handle_messages();
+        self.map_files(ctx);
         if self.error.is_some() || self.smoke_frames.is_some_and(|n| self.progress.frames >= n) {
             ctx.send_viewport_cmd(egui::ViewportCommand::Close);
             return;

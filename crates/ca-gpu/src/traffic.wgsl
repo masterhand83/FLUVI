@@ -1,7 +1,7 @@
 struct WorldView { origin: vec2<f32>, span: vec2<f32> }
 struct Lane {
-    origin: vec2<u32>, offset: u32, length: u32,
-    direction: u32, street_type: u32, padding: vec2<u32>
+    origin: vec2<f32>, offset: u32, length: u32,
+    direction: u32, street_type: u32, axis: vec2<f32>
 }
 @group(0) @binding(0) var<uniform> view: WorldView;
 @group(0) @binding(1) var<storage, read> cells: array<u32>;
@@ -35,7 +35,9 @@ fn fs_main(in: Vertex) -> @location(0) vec4<f32> {
     var colour = vec3<f32>(0.018, 0.025, 0.04);
     for (var i = 0u; i < arrayLength(&lanes); i++) {
         let lane = lanes[i];
-        let local = p - vec2<f32>(lane.origin);
+        if lane.length == 0u { continue; }
+        let delta = p - lane.origin;
+        let local = vec2<f32>(dot(delta, lane.axis), dot(delta, vec2<f32>(-lane.axis.y, lane.axis.x)));
         if local.y < 0.0 || local.y >= 1.0 { continue; }
         // Direction arrows in both gutters. Reverse changes the arrow, not indices.
         if (local.x > -1.7 && local.x < -0.3) ||
