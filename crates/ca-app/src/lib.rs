@@ -1,6 +1,7 @@
 //! Shared application services for native FLUVI features.
 pub mod background;
 mod bezier;
+pub mod buildings;
 pub mod bulk_editor;
 pub mod connection_draft;
 pub mod connections;

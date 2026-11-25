@@ -19,6 +19,12 @@ pub struct MapSession<S> {
 }
 
 impl<S> MapSession<S> {
+    pub fn edit_buildings(
+        &mut self,
+        edit: ca_core::buildings::BuildingEdit,
+    ) -> Result<Option<usize>, ca_core::buildings::BuildingError> {
+        self.document.edit_buildings(edit)
+    }
     pub fn new(document: MapDocument) -> Self {
         Self {
             document,

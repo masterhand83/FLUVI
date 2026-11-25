@@ -1,6 +1,64 @@
 use ca_gpu::TrafficScene;
 
 #[test]
+fn building_overlay_draws_the_concavity_and_updates_without_changing_the_document() {
+    use ca_core::{
+        buildings::{Building, BuildingEdit},
+        camera::WorldView,
+        map_json::MapDocument,
+    };
+    let mut map = MapDocument::empty();
+    let mut building = Building::polygon(vec![
+        [0., 0.],
+        [30., 0.],
+        [30., 10.],
+        [10., 10.],
+        [10., 30.],
+        [0., 30.],
+    ])
+    .unwrap();
+    building.color = "#123456".into();
+    map.add_building(building.clone()).unwrap();
+    let mut scene = TrafficScene::from_document(&map);
+    let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor::from_env_or_default());
+    let adapter = pollster::block_on(instance.request_adapter(&Default::default())).unwrap();
+    let (device, queue) = pollster::block_on(adapter.request_device(&Default::default())).unwrap();
+    let mut display = ca_gpu::TrafficDisplay::new(&device, &scene, wgpu::TextureFormat::Rgba8Unorm);
+    let view = WorldView {
+        origin: scene.shift(),
+        span: [36., 14.],
+    };
+    display.set_view(&queue, view);
+    let before = render_display(&device, &queue, &display);
+    assert_eq!(pixel(&before, 1., 5.), [18, 52, 86, 255]);
+    assert_eq!(pixel(&before, 4., 4.), [0, 0, 0, 255]);
+    let moved = building.moved([40., 0.]);
+    display.set_buildings(
+        &device,
+        &queue,
+        &[ca_gpu::building_zone(&moved)],
+        scene.shift(),
+    );
+    let preview = render_display(&device, &queue, &display);
+    assert_eq!(pixel(&preview, 1., 5.), [0, 0, 0, 255]);
+    assert_eq!(pixel(&preview, 9., 5.), [18, 52, 86, 255]);
+    assert_eq!(scene.building_zones()[0].points[0], [0., 0.]);
+    scene.edit_buildings(BuildingEdit::Update(0, moved));
+    // A later topology/display rebuild retains the committed building geometry.
+    display = ca_gpu::TrafficDisplay::new(&device, &scene, wgpu::TextureFormat::Rgba8Unorm);
+    display.set_view(&queue, view);
+    assert_eq!(
+        pixel(&render_display(&device, &queue, &display), 9., 5.),
+        [18, 52, 86, 255]
+    );
+    display.set_buildings(&device, &queue, &[], scene.shift());
+    assert_eq!(
+        pixel(&render_display(&device, &queue, &display), 9., 5.),
+        [0, 0, 0, 255]
+    );
+}
+
+#[test]
 fn a_live_preview_can_hide_only_its_original_street_without_changing_the_scene() {
     use ca_core::{camera::WorldView, map_json::MapDocument};
     let map = MapDocument::parse(
@@ -523,6 +581,7 @@ fn render_display_excluding(
             })],
             ..Default::default()
         });
+        display.paint_background(&mut pass);
         if excluded.is_some() {
             display.paint_excluding(&mut pass, excluded);
         } else {

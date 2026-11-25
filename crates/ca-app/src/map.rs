@@ -105,6 +105,7 @@ impl MapFrame {
 }
 
 pub struct MapInteraction {
+    building_input: bool,
     connection_picking: bool,
     editing_street: Option<usize>,
     bulk_start: Option<[f32; 2]>,
@@ -134,6 +135,7 @@ impl MapInteraction {
         index.sync(streets);
         let sorted = (0..names.len()).collect();
         Self {
+            building_input: false,
             connection_picking: false,
             editing_street: None,
             bulk_start: None,
@@ -163,6 +165,10 @@ impl MapInteraction {
 
     pub fn camera(&self) -> Option<&Camera> {
         self.camera.as_ref()
+    }
+
+    pub fn set_building_input(&mut self, active: bool) {
+        self.building_input = active;
     }
 
     pub fn set_connection_picking(&mut self, active: bool) {
@@ -345,6 +351,13 @@ impl MapInteraction {
                 }
             }
         }
+        for building in document.buildings() {
+            let bounds = building.bounds();
+            for i in 0..2 {
+                minimum[i] = minimum[i].min(bounds[0][i] as f32 / 5. + shift[i]);
+                maximum[i] = maximum[i].max(bounds[1][i] as f32 / 5. + shift[i]);
+            }
+        }
         self.bounds = (minimum, maximum);
         if let Some(camera) = &mut self.camera {
             camera.set_bounds(minimum, maximum);
@@ -456,7 +469,8 @@ impl MapInteraction {
         let rect = ui.available_rect_before_wrap();
         let response = ui.allocate_rect(rect, egui::Sense::click_and_drag());
         let pointer = ui.input(|i| i.pointer.clone());
-        let bulk_started = response.contains_pointer()
+        let bulk_started = !self.building_input
+            && response.contains_pointer()
             && pointer.primary_pressed()
             && ui.input(|i| i.modifiers.shift);
         if bulk_started {
@@ -549,10 +563,9 @@ impl MapInteraction {
                     .hit_test(camera.screen_to_world((p - rect.min).into()))
             })
             .map(|c| c.street);
-        if self.connection_picking {
+        if self.connection_picking || self.building_input {
             return MapFrame {
-                connection_pick: response
-                    .clicked()
+                connection_pick: (!self.building_input && response.clicked())
                     .then(|| {
                         pointer.interact_pos().and_then(|p| {
                             self.index

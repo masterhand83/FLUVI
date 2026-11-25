@@ -13,6 +13,11 @@ struct ZoneVertex {
 const _: () = assert!(size_of::<ZoneVertex>() == 32);
 
 pub(crate) struct BackgroundDisplay {
+    triangulations: Vec<ZoneTriangles>,
+    buffer: wgpu::Buffer,
+    view: wgpu::Buffer,
+    layout: wgpu::BindGroupLayout,
+    scratch: Vec<ZoneVertex>,
     group: wgpu::BindGroup,
     pipeline: wgpu::RenderPipeline,
     count: u32,
@@ -27,39 +32,8 @@ impl BackgroundDisplay {
         format: wgpu::TextureFormat,
     ) -> Self {
         let mut vertices = Vec::new();
-        for zone in zones {
-            let color = zone.color.map(|c| c as f32 / 255.0);
-            for index in triangulate(&zone.points) {
-                vertices.push(ZoneVertex {
-                    point: std::array::from_fn(|i| zone.points[index as usize][i] + shift[i]),
-                    padding: [0.0; 2],
-                    color,
-                });
-            }
-            if zone.show_border {
-                for (a, b) in zone.points.iter().zip(zone.points.iter().cycle().skip(1)) {
-                    let delta = [b[0] - a[0], b[1] - a[1]];
-                    let length = delta[0].hypot(delta[1]);
-                    if length == 0.0 {
-                        continue;
-                    }
-                    let normal = [-delta[1] / length * 0.15, delta[0] / length * 0.15];
-                    let points: [[f32; 2]; 4] = [
-                        std::array::from_fn(|i| a[i] + normal[i]),
-                        std::array::from_fn(|i| a[i] - normal[i]),
-                        std::array::from_fn(|i| b[i] + normal[i]),
-                        std::array::from_fn(|i| b[i] - normal[i]),
-                    ];
-                    for index in [0, 1, 2, 2, 1, 3] {
-                        vertices.push(ZoneVertex {
-                            point: std::array::from_fn(|i| points[index][i] + shift[i]),
-                            padding: [0.0; 2],
-                            color,
-                        });
-                    }
-                }
-            }
-        }
+        let mut triangulations = Vec::new();
+        pack_zones(&mut vertices, &mut triangulations, zones, shift);
         let count = vertices.len() as u32;
         let buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("static background zone triangles"),
@@ -68,7 +42,7 @@ impl BackgroundDisplay {
             } else {
                 bytemuck::cast_slice(&vertices)
             },
-            usage: wgpu::BufferUsages::STORAGE,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
         });
         let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("zone bindings"),
@@ -134,6 +108,11 @@ impl BackgroundDisplay {
             cache: None,
         });
         Self {
+            triangulations,
+            buffer,
+            view: view.clone(),
+            layout,
+            scratch: vertices,
             group,
             pipeline,
             count,
@@ -145,10 +124,116 @@ impl BackgroundDisplay {
         pass.set_bind_group(0, &self.group, &[]);
         pass.draw(0..self.count, 0..1);
     }
+
+    pub fn update(
+        &mut self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        zones: &[BackgroundZone],
+        shift: [f32; 2],
+    ) {
+        self.scratch.clear();
+        pack_zones(&mut self.scratch, &mut self.triangulations, zones, shift);
+        self.count = self.scratch.len() as u32;
+        let bytes = bytemuck::cast_slice(&self.scratch);
+        if bytes.len() as u64 > self.buffer.size() {
+            self.buffer = device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some("resizable building triangles"),
+                size: (bytes.len() as u64).next_power_of_two(),
+                usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+                mapped_at_creation: false,
+            });
+            self.group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("building triangles group"),
+                layout: &self.layout,
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: self.view.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: self.buffer.as_entire_binding(),
+                    },
+                ],
+            });
+        }
+        if !bytes.is_empty() {
+            queue.write_buffer(&self.buffer, 0, bytes);
+        }
+    }
+}
+
+#[derive(Default)]
+struct ZoneTriangles {
+    points: Vec<[f32; 2]>,
+    remaining: Vec<usize>,
+    indices: Vec<u32>,
+}
+
+impl ZoneTriangles {
+    fn sync(&mut self, points: &[[f32; 2]]) {
+        if self.points == points {
+            return;
+        }
+        self.points.clear();
+        self.points.extend_from_slice(points);
+        triangulate_into(points, &mut self.remaining, &mut self.indices);
+    }
+}
+
+fn pack_zones(
+    vertices: &mut Vec<ZoneVertex>,
+    caches: &mut Vec<ZoneTriangles>,
+    zones: &[BackgroundZone],
+    shift: [f32; 2],
+) {
+    caches.resize_with(zones.len(), ZoneTriangles::default);
+    for (zone, cache) in zones.iter().zip(caches) {
+        cache.sync(&zone.points);
+        let color = zone.color.map(|c| c as f32 / 255.0);
+        for &index in &cache.indices {
+            vertices.push(ZoneVertex {
+                point: std::array::from_fn(|i| zone.points[index as usize][i] + shift[i]),
+                padding: [0.0; 2],
+                color,
+            });
+        }
+        if zone.show_border {
+            for (a, b) in zone.points.iter().zip(zone.points.iter().cycle().skip(1)) {
+                let delta = [b[0] - a[0], b[1] - a[1]];
+                let length = delta[0].hypot(delta[1]);
+                if length == 0. {
+                    continue;
+                }
+                let normal = [-delta[1] / length * 0.15, delta[0] / length * 0.15];
+                let points: [[f32; 2]; 4] = [
+                    std::array::from_fn(|i| a[i] + normal[i]),
+                    std::array::from_fn(|i| a[i] - normal[i]),
+                    std::array::from_fn(|i| b[i] + normal[i]),
+                    std::array::from_fn(|i| b[i] - normal[i]),
+                ];
+                for index in [0, 1, 2, 2, 1, 3] {
+                    vertices.push(ZoneVertex {
+                        point: std::array::from_fn(|i| points[index][i] + shift[i]),
+                        padding: [0.; 2],
+                        color,
+                    });
+                }
+            }
+        }
+    }
 }
 
 // Ear clipping accepts the concave campus boundary in either winding order.
-fn triangulate(points: &[[f32; 2]]) -> Vec<u32> {
+pub fn triangulate(points: &[[f32; 2]]) -> Vec<u32> {
+    let mut remaining = Vec::new();
+    let mut triangles = Vec::new();
+    triangulate_into(points, &mut remaining, &mut triangles);
+    triangles
+}
+
+fn triangulate_into(points: &[[f32; 2]], remaining: &mut Vec<usize>, triangles: &mut Vec<u32>) {
     let cross = |a: [f32; 2], b: [f32; 2], c: [f32; 2]| {
         (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
     };
@@ -158,8 +243,9 @@ fn triangulate(points: &[[f32; 2]]) -> Vec<u32> {
         .map(|(a, b)| a[0] * b[1] - b[0] * a[1])
         .sum();
     let sign = area.signum();
-    let mut remaining: Vec<_> = (0..points.len()).collect();
-    let mut triangles = Vec::new();
+    remaining.clear();
+    remaining.extend(0..points.len());
+    triangles.clear();
     while remaining.len() >= 3 {
         let ear = (0..remaining.len()).find(|&i| {
             let a = remaining[(i + remaining.len() - 1) % remaining.len()];
@@ -185,5 +271,4 @@ fn triangulate(points: &[[f32; 2]]) -> Vec<u32> {
         ]);
         remaining.remove(i);
     }
-    triangles
 }

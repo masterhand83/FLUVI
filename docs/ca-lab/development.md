@@ -337,6 +337,31 @@ streets.
 Focused checks: `cargo test -p ca-app --test map_interaction` and
 `cargo test -p ca-core --test street_inspector`.
 
+### Rectangular and polygonal buildings
+
+Use Tools → Draw Rectangular Building for a corner-to-corner drag. Use Shift or
+Square Lock to draw a square. Use Draw Polygonal Building to place vertices;
+click the first vertex, press Enter, or select Finish to close the polygon.
+Use Escape or Cancel to discard a draft.
+
+Select a building to edit its stored name, coordinates, rotation, and fixed
+six-color palette in the inspector. Drag the center to move, yellow handles to
+resize or edit vertices, and the green handle to rotate. Use Map Constructor →
+New Building to create either shape with numeric fields. Confirm Delete to
+remove a building; Cancel retains all saved fields.
+
+Keep geometry in v1 pixel coordinates in `ca-core::buildings`; convert by five
+pixels per map unit at the display boundary. Reuse the v1 polygon validation
+order, boundary-inclusive hit test, and error reasons. Apply a validated preview
+only at gesture completion. Extend `MapDocument::delete_building` when adding
+parking release in ticket 21.
+
+Keep unknown JSON fields and custom colors when editing imported buildings.
+Use the GPU zone path to retain building triangles until geometry changes.
+Draw building fills below roads and their controls above roads.
+
+Focused checks: `cargo test -p ca-core -p ca-app -p ca-gpu --test buildings`.
+
 ### Virtual clock and hourly profiles
 
 Tools → Set Scenario Date and Time opens a weekday/time draft with a localized

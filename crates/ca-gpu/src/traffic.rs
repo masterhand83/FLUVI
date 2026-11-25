@@ -50,6 +50,19 @@ pub struct TrafficScene {
 }
 
 impl TrafficScene {
+    pub fn edit_buildings(&mut self, edit: ca_core::buildings::BuildingEdit) {
+        self.document
+            .edit_buildings(edit)
+            .expect("validated ordered building edit");
+    }
+
+    pub fn building_zones(&self) -> Vec<ca_core::map_json::BackgroundZone> {
+        self.document
+            .buildings()
+            .iter()
+            .map(crate::building_zone)
+            .collect()
+    }
     pub fn demo() -> Self {
         Self::from_document(&ca_core::map_json::MapDocument::demo())
     }
@@ -103,6 +116,13 @@ impl TrafficScene {
             for i in 0..2 {
                 minimum[i] = minimum[i].min(point[i]);
                 maximum[i] = maximum[i].max(point[i]);
+            }
+        }
+        for building in document.buildings() {
+            let bounds = building.bounds();
+            for i in 0..2 {
+                minimum[i] = minimum[i].min(bounds[0][i] as f32 / 5.);
+                maximum[i] = maximum[i].max(bounds[1][i] as f32 / 5.);
             }
         }
         if !minimum[0].is_finite() {
@@ -401,6 +421,7 @@ pub struct TrafficDisplay {
     street_instances: Vec<std::ops::Range<u32>>,
     layout: wgpu::Buffer,
     background: crate::background::BackgroundDisplay,
+    buildings: crate::background::BackgroundDisplay,
 }
 
 impl TrafficDisplay {
@@ -502,6 +523,18 @@ impl TrafficDisplay {
                 scene.shift,
                 format,
             ),
+            buildings: crate::background::BackgroundDisplay::new(
+                device,
+                &dims,
+                &scene
+                    .document
+                    .buildings()
+                    .iter()
+                    .map(crate::building_zone)
+                    .collect::<Vec<_>>(),
+                scene.shift,
+                format,
+            ),
             state,
             view: dims,
             group,
@@ -565,5 +598,16 @@ impl TrafficDisplay {
 
     pub fn paint_background(&self, pass: &mut wgpu::RenderPass<'_>) {
         self.background.paint(pass);
+        self.buildings.paint(pass);
+    }
+
+    pub fn set_buildings(
+        &mut self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        zones: &[ca_core::map_json::BackgroundZone],
+        shift: [f32; 2],
+    ) {
+        self.buildings.update(device, queue, zones, shift);
     }
 }

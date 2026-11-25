@@ -27,6 +27,7 @@ struct Startup {
 }
 
 pub struct App {
+    buildings: ca_app::buildings::BuildingEditor,
     time: ca_core::virtual_time::VirtualTime,
     time_dialogs: ca_app::time::TimeDialogs,
     time_labels: ca_app::time::TimeLabels,
@@ -62,6 +63,49 @@ pub struct App {
 }
 
 impl App {
+    fn edit_buildings(&mut self, mut edit: ca_core::buildings::BuildingEdit) {
+        if let ca_core::buildings::BuildingEdit::Create(building) = &mut edit
+            && building.label.trim().is_empty()
+        {
+            building.label = self.shell.tr("buildings.defaultName", &[]);
+        }
+        if let Err(error) = self
+            .session
+            .as_ref()
+            .expect("session")
+            .document()
+            .validate_building_edit(&edit)
+        {
+            self.shell.notify(
+                ca_app::shell::Severity::Warning,
+                self.shell.tr(&error.translation_key(), &[]),
+            );
+            return;
+        }
+        if !self.commands.edit(Edit::Building(edit.clone())) {
+            self.shell.notify(
+                ca_app::shell::Severity::Warning,
+                self.shell.tr("shell.cellEditBusy", &[]),
+            );
+            return;
+        }
+        match self.session.as_mut().expect("session").edit_buildings(edit) {
+            Ok(index) => {
+                self.buildings.select(index);
+                self.buildings.refresh_render();
+                self.map.as_mut().expect("map").configure(
+                    self.session.as_ref().expect("session").document(),
+                    self.map_shift,
+                );
+                self.edit_pause.begin(&mut self.playing);
+            }
+            Err(error) => self.shell.notify(
+                ca_app::shell::Severity::Warning,
+                self.shell.tr(&error.translation_key(), &[]),
+            ),
+        }
+    }
+
     pub fn new(
         cc: &eframe::CreationContext<'_>,
         smoke_frames: Option<u64>,
@@ -79,6 +123,7 @@ impl App {
         let mut session = MapSession::new(MapDocument::campus());
         session.register_reset(ResetPhase::Pause, |app: &mut Self| app.playing = false);
         session.register_reset(ResetPhase::Tools, |app| {
+            app.buildings = Default::default();
             app.time_dialogs = Default::default();
             app.map = None;
             app.inspector = Default::default();
@@ -106,6 +151,7 @@ impl App {
         });
         let time = session.document().time().clone();
         Ok(Self {
+            buildings: Default::default(),
             time,
             time_dialogs: Default::default(),
             time_labels: Default::default(),
@@ -260,6 +306,7 @@ impl App {
                                                 map.finish_edits();
                                             }
                                             self.edit_pause.resume(&mut self.playing);
+                                            self.buildings.cancel();
                                         }
                                     }
                                     Err(error) => self.shell.notify(
@@ -332,7 +379,32 @@ impl App {
             files_ready: self.file_job.is_none() && self.new_confirmation.is_none(),
         }
         .show(ctx, &mut self.shell);
+        if matches!(
+            &action,
+            Some(
+                PanelAction::Connection
+                    | PanelAction::NewConnection
+                    | PanelAction::SavedConnection(_)
+                    | PanelAction::NewStreet
+            )
+        ) {
+            self.buildings.cancel();
+            self.buildings.select(None);
+        }
         match action {
+            Some(PanelAction::BuildingTool(tool)) => {
+                self.prepare_connection_edit();
+                self.connection_draft.cancel();
+                if let Some(map) = &mut self.map {
+                    map.set_connection_picking(false);
+                }
+                self.buildings.start(tool);
+            }
+            Some(PanelAction::NewBuilding) => {
+                self.prepare_connection_edit();
+                self.connection_draft.cancel();
+                self.buildings.open_form();
+            }
             Some(PanelAction::ScenarioTime) => {
                 self.time_dialogs.open_time(self.progress.clock);
             }
@@ -402,11 +474,15 @@ impl App {
             None => {}
         }
         if self.map.as_ref().is_some_and(|map| map.drawing()) {
+            self.buildings.cancel();
+            self.buildings.select(None);
             self.connection_draft.cancel();
         }
     }
 
     fn prepare_connection_edit(&mut self) {
+        self.buildings.cancel();
+        self.buildings.select(None);
         self.inspector = Default::default();
         self.street_dialog.close();
         if let Some(map) = &mut self.map {
@@ -799,9 +875,33 @@ impl eframe::App for App {
             });
         });
         egui::CentralPanel::default().show(ctx, |ui| {
+            self.buildings.delete_shortcut(
+                ctx,
+                self.session.as_ref().expect("session").document(),
+                &mut self.shell,
+            );
             if ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
                 self.connection_draft.cancel();
             }
+            let building_input = !self.connection_draft.active()
+                && !self.map.as_ref().expect("map").drawing()
+                && self
+                    .map
+                    .as_ref()
+                    .and_then(|map| map.camera())
+                    .is_some_and(|camera| {
+                        self.buildings.captures(
+                            ctx,
+                            self.session.as_ref().expect("session").document(),
+                            ui.available_rect_before_wrap(),
+                            camera.view(),
+                            self.map_shift,
+                        )
+                    });
+            self.map
+                .as_mut()
+                .expect("map")
+                .set_building_input(building_input);
             self.map
                 .as_mut()
                 .expect("map")
@@ -811,6 +911,38 @@ impl eframe::App for App {
                 .as_mut()
                 .expect("map installed with render resources")
                 .show(ui, self.shell.preferences().cell_detection);
+            let building_edit = if map.bulk_started {
+                self.buildings.cancel();
+                self.buildings.select(None);
+                None
+            } else if !self.connection_draft.active() && !self.map.as_ref().expect("map").drawing()
+            {
+                self.buildings.input(
+                    ui,
+                    self.session.as_ref().expect("session").document(),
+                    map.rect,
+                    map.view,
+                    self.map_shift,
+                )
+            } else {
+                None
+            };
+            if self.buildings.selected().is_some() || self.buildings.active() {
+                self.map.as_mut().expect("map").select(None);
+            }
+            if self.buildings.dragging() {
+                self.edit_pause.begin(&mut self.playing);
+            }
+            if let Some(edit) = building_edit {
+                self.edit_buildings(edit);
+            }
+            if let Some(edit) = self.buildings.forms(
+                ctx,
+                self.session.as_ref().expect("session").document(),
+                &mut self.shell,
+            ) {
+                self.edit_buildings(edit);
+            }
             if map.structural_edit {
                 self.edit_pause.begin(&mut self.playing);
             }
@@ -869,6 +1001,12 @@ impl eframe::App for App {
                 generation_override: self.transport.generation_override(),
                 excluded_street: map.geometry_preview.as_ref().map(|preview| preview.street),
             };
+            if let Some(zones) = self
+                .buildings
+                .render_update(self.session.as_ref().expect("session").document())
+            {
+                self.commands.buildings(zones);
+            }
             if !self.commands.send(request, map.clicked) {
                 self.shell.notify(
                     ca_app::shell::Severity::Warning,
@@ -883,7 +1021,21 @@ impl eframe::App for App {
             background_callback.rect = map.rect;
             ui.painter().add(background_callback);
             self.background.paint(ui.painter(), map.view, map.rect);
+            self.buildings.paint(
+                ui,
+                self.session.as_ref().expect("session").document(),
+                map.rect,
+                map.view,
+                self.map_shift,
+            );
             ui.painter().add(callback);
+            self.buildings.paint_controls(
+                ui.painter(),
+                self.session.as_ref().expect("session").document(),
+                map.rect,
+                map.view,
+                self.map_shift,
+            );
             if let Some(connections) = &self.connections {
                 connections.paint(ui.painter(), map.view, map.rect);
             }

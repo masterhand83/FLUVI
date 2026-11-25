@@ -20,6 +20,7 @@ impl MapError {
 
 #[derive(Clone, Debug)]
 pub struct MapDocument {
+    buildings: Vec<crate::buildings::Building>,
     time: Box<crate::virtual_time::VirtualTime>,
     edit_session: Option<Box<StreetSnapshot>>,
     data: Value,
@@ -79,6 +80,92 @@ pub struct StreetPlacement {
 }
 
 impl MapDocument {
+    pub fn validate_building_edit(
+        &self,
+        edit: &crate::buildings::BuildingEdit,
+    ) -> Result<(), crate::buildings::BuildingError> {
+        use crate::buildings::{BuildingEdit, BuildingError};
+        match edit {
+            BuildingEdit::Create(building) => building.validate(),
+            BuildingEdit::Update(index, building) => {
+                self.buildings.get(*index).ok_or(BuildingError("missing"))?;
+                building.validate()
+            }
+            BuildingEdit::Delete(index) => self
+                .buildings
+                .get(*index)
+                .map(|_| ())
+                .ok_or(BuildingError("missing")),
+        }
+    }
+    pub fn edit_buildings(
+        &mut self,
+        edit: crate::buildings::BuildingEdit,
+    ) -> Result<Option<usize>, crate::buildings::BuildingError> {
+        use crate::buildings::{BuildingEdit, BuildingError};
+        match edit {
+            BuildingEdit::Create(building) => self.add_building(building).map(Some),
+            BuildingEdit::Update(index, building) => {
+                self.update_building(index, building).map(|()| Some(index))
+            }
+            BuildingEdit::Delete(index) => {
+                if self.delete_building(index) {
+                    Ok(None)
+                } else {
+                    Err(BuildingError("missing"))
+                }
+            }
+        }
+    }
+    pub fn buildings(&self) -> &[crate::buildings::Building] {
+        &self.buildings
+    }
+
+    pub fn add_building(
+        &mut self,
+        building: crate::buildings::Building,
+    ) -> Result<usize, crate::buildings::BuildingError> {
+        building.validate()?;
+        let index = self.buildings.len();
+        if !self.data["edificios"].is_array() {
+            self.data["edificios"] = json!([]);
+        }
+        self.data["edificios"]
+            .as_array_mut()
+            .expect("array")
+            .push(building.to_json());
+        self.buildings.push(building);
+        Ok(index)
+    }
+
+    pub fn update_building(
+        &mut self,
+        index: usize,
+        building: crate::buildings::Building,
+    ) -> Result<(), crate::buildings::BuildingError> {
+        building.validate()?;
+        let target = self
+            .buildings
+            .get_mut(index)
+            .ok_or(crate::buildings::BuildingError("missing"))?;
+        self.data["edificios"][index] = building.to_json();
+        *target = building;
+        Ok(())
+    }
+
+    /// Shared cleanup boundary. Parking release is added here by ticket 21.
+    pub fn delete_building(&mut self, index: usize) -> bool {
+        if index >= self.buildings.len() {
+            return false;
+        }
+        self.buildings.remove(index);
+        self.data["edificios"]
+            .as_array_mut()
+            .expect("buildings")
+            .remove(index);
+        true
+    }
+
     pub fn editing_street(&self) -> Option<usize> {
         self.edit_session.as_ref().map(|s| s.street)
     }
@@ -954,9 +1041,19 @@ impl MapDocument {
                 .map_err(|_| MapError)?;
         }
         let zones = parse_zones(root.get("backgroundAreas"))?;
+        let buildings = match root.get("edificios") {
+            Some(Value::Array(values)) => values
+                .iter()
+                .map(crate::buildings::Building::from_json)
+                .collect::<Result<Vec<_>, _>>()
+                .map_err(|_| MapError)?,
+            None => Vec::new(),
+            _ => return Err(MapError),
+        };
         let time = crate::virtual_time::VirtualTime::from_json(&data["configuracionTiempo"])
             .ok_or(MapError)?;
         Ok(Self {
+            buildings,
             time: Box::new(time),
             edit_session: None,
             data,

@@ -7,6 +7,8 @@ use ca_core::map_json::MapDocument;
 use eframe::egui;
 
 pub enum PanelAction {
+    BuildingTool(crate::buildings::Tool),
+    NewBuilding,
     ScenarioTime,
     Profiles,
     Connection,
@@ -34,6 +36,14 @@ impl ControlPanel<'_> {
         shell.sidebar_with(ctx, |section, ui, shell| {
             ui.add_enabled_ui(self.enabled, |ui| match section {
                 "tools" => {
+                    for (tool, key) in [
+                        (crate::buildings::Tool::Rectangle, "buildings.rectangle"),
+                        (crate::buildings::Tool::Polygon, "buildings.polygon"),
+                    ] {
+                        if ui.button(shell.tr(key, &[])).clicked() {
+                            action = Some(PanelAction::BuildingTool(tool));
+                        }
+                    }
                     if ui.button(shell.tr("clock.setTime", &[])).clicked() {
                         action = Some(PanelAction::ScenarioTime);
                     }
@@ -52,6 +62,9 @@ impl ControlPanel<'_> {
                     ui.label(shell.tr("shell.profiler", &[]));
                 }
                 "constructor" => {
+                    if ui.button(shell.tr("buildings.new", &[])).clicked() {
+                        action = Some(PanelAction::NewBuilding);
+                    }
                     if ui.button(shell.tr("streetDialog.title", &[])).clicked() {
                         action = Some(PanelAction::NewStreet);
                     }

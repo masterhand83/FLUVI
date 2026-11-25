@@ -36,6 +36,7 @@ pub struct Paint {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Edit {
+    Building(ca_core::buildings::BuildingEdit),
     ScenarioTime(ca_core::virtual_time::Clock),
     Profiles(Box<ca_core::virtual_time::VirtualTime>),
     Connection(ca_core::connections::Connection),
@@ -67,6 +68,8 @@ impl CallbackTrait for BackgroundCallback {
 
 /// Only view/control state is coalesced. Cell edits retain FIFO order.
 pub struct Commands {
+    buildings: Sender<Vec<ca_core::map_json::BackgroundZone>>,
+    stale_buildings: Receiver<Vec<ca_core::map_json::BackgroundZone>>,
     state: Sender<Paint>,
     stale_state: Receiver<Paint>,
     edits: Sender<Edit>,
@@ -74,23 +77,28 @@ pub struct Commands {
 }
 
 pub struct Requests {
+    buildings: Receiver<Vec<ca_core::map_json::BackgroundZone>>,
     state: Receiver<Paint>,
     edits: Receiver<Edit>,
     replacement: Receiver<TrafficScene>,
 }
 
 pub fn command_channel() -> (Commands, Requests) {
+    let (building_tx, buildings) = bounded(1);
     let (state_tx, state) = bounded(1);
     let (edits_tx, edits) = bounded(32);
     let (replacement_tx, replacement) = bounded(1);
     (
         Commands {
+            buildings: building_tx,
+            stale_buildings: buildings.clone(),
             state: state_tx,
             stale_state: state.clone(),
             edits: edits_tx,
             replacement: replacement_tx,
         },
         Requests {
+            buildings,
             state,
             edits,
             replacement,
@@ -99,6 +107,12 @@ pub fn command_channel() -> (Commands, Requests) {
 }
 
 impl Commands {
+    pub fn buildings(&self, zones: Vec<ca_core::map_json::BackgroundZone>) {
+        if let Err(TrySendError::Full(zones)) = self.buildings.try_send(zones) {
+            let _ = self.stale_buildings.try_recv();
+            let _ = self.buildings.try_send(zones);
+        }
+    }
     pub fn replace(&self, scene: TrafficScene) -> bool {
         self.replacement.try_send(scene).is_ok()
     }
@@ -177,6 +191,7 @@ impl Resources {
         if let Ok(scene) = self.requests.replacement.try_recv() {
             // All old edits are obsolete. UI and render reset in this same frame.
             while self.requests.edits.try_recv().is_ok() {}
+            while self.requests.buildings.try_recv().is_ok() {}
             self.display = TrafficDisplay::new(device, &scene, self.format);
             self.scene = scene;
             self.ticks = TickControl::default();
@@ -191,9 +206,15 @@ impl Resources {
             .set_generation_override(request.generation_override)
             .expect("UI probability is in 0..=1");
         let mut edited = false;
+        let mut buildings_edited = false;
         let mut reset_time = false;
         while let Ok(edit) = self.requests.edits.try_recv() {
             edited |= match edit {
+                Edit::Building(edit) => {
+                    self.scene.edit_buildings(edit);
+                    buildings_edited = true;
+                    false
+                }
                 Edit::Profiles(time) => {
                     self.scene.set_profiles(*time);
                     false
@@ -247,6 +268,17 @@ impl Resources {
                     true
                 }
             };
+        }
+        if let Ok(zones) = self.requests.buildings.try_recv() {
+            self.display
+                .set_buildings(device, queue, &zones, self.scene.shift());
+        } else if buildings_edited {
+            self.display.set_buildings(
+                device,
+                queue,
+                &self.scene.building_zones(),
+                self.scene.shift(),
+            );
         }
         let published = !request.playing && self.scene.publish_edits();
         self.display.set_view(queue, request.view);
