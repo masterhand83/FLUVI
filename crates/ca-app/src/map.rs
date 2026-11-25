@@ -10,6 +10,28 @@ pub struct MapFrame {
     pub view: WorldView,
     pub clicked: Option<CellRef>,
     pub tooltip: Option<String>,
+    pub preview: Option<CellPreview>,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct CellPreview {
+    pub cell: CellRef,
+    pub rect: egui::Rect,
+}
+
+impl MapFrame {
+    /// Draw after the GPU callback so the target stays visible over the map.
+    pub fn paint_preview(&self, painter: &egui::Painter) {
+        if let Some(preview) = self.preview {
+            painter.rect(
+                preview.rect,
+                0.0,
+                egui::Color32::from_white_alpha(24),
+                egui::Stroke::new(1.5_f32, egui::Color32::WHITE),
+                egui::StrokeKind::Inside,
+            );
+        }
+    }
 }
 
 pub struct MapInteraction {
@@ -107,6 +129,21 @@ impl MapInteraction {
                     .hit_test(camera.screen_to_world((pos - rect.min).into()))
             });
         let clicked = response.clicked().then_some(hit).flatten();
+        let preview = hit.and_then(|cell| {
+            let center = self.index.cell_center(cell)?;
+            let min = camera.world_to_screen(center.map(|v| v - 0.5));
+            let max = camera.world_to_screen(center.map(|v| v + 0.5));
+            Some(CellPreview {
+                cell,
+                rect: egui::Rect::from_min_max(
+                    rect.min + egui::vec2(min[0], min[1]),
+                    rect.min + egui::vec2(max[0], max[1]),
+                ),
+            })
+        });
+        if preview.is_some() {
+            ui.ctx().set_cursor_icon(egui::CursorIcon::Crosshair);
+        }
         let tooltip = hit.filter(|_| detect).and_then(|cell| {
             self.names
                 .get(cell.street)
@@ -123,6 +160,7 @@ impl MapInteraction {
             view: camera.view(),
             clicked,
             tooltip,
+            preview,
         }
     }
 }

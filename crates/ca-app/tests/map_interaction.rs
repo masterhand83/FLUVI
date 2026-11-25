@@ -29,6 +29,74 @@ fn frame(
 }
 
 #[test]
+fn placement_preview_and_paused_click_share_the_cursor_target_in_an_offset_panel() {
+    let scene = ca_gpu::TrafficScene::demo();
+    let mut map = MapInteraction::new(
+        scene.extent().map(|v| v as f32),
+        &scene.geometry(),
+        scene.street_names(),
+    );
+    let ctx = egui::Context::default();
+    let mut show = |events| {
+        let mut result = None;
+        let _ = ctx.run(
+            egui::RawInput {
+                screen_rect: Some(egui::Rect::from_min_size(
+                    egui::Pos2::ZERO,
+                    egui::vec2(1000.0, 600.0),
+                )),
+                events,
+                ..Default::default()
+            },
+            |ctx| {
+                egui::TopBottomPanel::top("toolbar")
+                    .exact_height(60.0)
+                    .frame(egui::Frame::NONE)
+                    .show(ctx, |_| {});
+                egui::SidePanel::left("sidebar")
+                    .exact_width(280.0)
+                    .frame(egui::Frame::NONE)
+                    .show(ctx, |_| {});
+                egui::CentralPanel::default()
+                    .frame(egui::Frame::NONE)
+                    .show(ctx, |ui| result = Some(map.show(ui, false)));
+            },
+        );
+        result.unwrap()
+    };
+    show(vec![]);
+    // Map is (280,60)..(1000,600), with 20 points per world unit and
+    // vertical letterboxing. Empty cell (street 1, lane 0, index 8) has
+    // world center (10.5,6.5), which is screen (490,320).
+    let pos = egui::pos2(490.0, 320.0);
+    let hover = show(vec![egui::Event::PointerMoved(pos)]);
+    let preview = hover.preview.expect("show target even with detection off");
+    assert_eq!(
+        preview.cell,
+        ca_core::cell_index::CellRef {
+            street: 1,
+            lane: 0,
+            index: 8
+        }
+    );
+    assert!((preview.rect.center() - pos).length() < 0.01);
+    assert_eq!(preview.rect.size(), egui::vec2(20.0, 20.0));
+    let button = |pressed| egui::Event::PointerButton {
+        pos,
+        pressed,
+        button: egui::PointerButton::Primary,
+        modifiers: egui::Modifiers::NONE,
+    };
+    show(vec![button(true)]);
+    let clicked = show(vec![button(false)]);
+    assert_eq!(clicked.clicked, Some(preview.cell));
+    let mut scene = scene;
+    assert!(scene.toggle_vehicle(clicked.clicked.unwrap(), true));
+    assert_eq!(scene.cells()[72], 1);
+    assert!(show(vec![egui::Event::PointerGone]).preview.is_none());
+}
+
+#[test]
 fn hover_uses_physical_index_detection_setting_and_clicks_do_not_depend_on_detection() {
     let scene = ca_gpu::TrafficScene::demo();
     let mut map = MapInteraction::new(
@@ -79,6 +147,7 @@ fn mouse_wheel_keeps_cursor_anchor_and_pixel_trackpad_pans() {
         true,
     );
     assert!(zoomed.view.span[0] < 36.0);
+    assert!((zoomed.preview.unwrap().rect.center() - pos).length() < 0.001);
     let anchor = map.camera().unwrap().screen_to_world([150.0, 70.0]);
     assert!((anchor[0] - 7.5).abs() < 0.0001);
     assert!((anchor[1] - 3.5).abs() < 0.0001);
@@ -95,6 +164,18 @@ fn mouse_wheel_keeps_cursor_anchor_and_pixel_trackpad_pans() {
     let moved = map.camera().unwrap().world_to_screen([7.5, 3.5]);
     assert!((moved[0] - 170.0).abs() < 0.0001);
     assert!((moved[1] - 60.0).abs() < 0.0001);
+    let hovered = frame(
+        &ctx,
+        &mut map,
+        vec![egui::Event::PointerMoved(egui::pos2(170.0, 60.0))],
+        false,
+    );
+    let preview = hovered.preview.unwrap();
+    assert_eq!(
+        (preview.cell.street, preview.cell.lane, preview.cell.index),
+        (0, 1, 5)
+    );
+    assert!((preview.rect.center() - egui::pos2(170.0, 60.0)).length() < 0.001);
 }
 
 #[test]
@@ -126,6 +207,7 @@ fn drag_pans_without_editing_a_road() {
     let dragged = frame(&ctx, &mut map, vec![egui::Event::PointerMoved(end)], true);
     assert_eq!(dragged.clicked, None);
     assert_eq!(dragged.tooltip, None);
+    assert!(dragged.preview.is_none());
     assert!(dragged.view.origin[0] < 0.0);
     let released = frame(
         &ctx,
@@ -189,6 +271,7 @@ fn two_finger_touch_pinches_and_pans_without_a_cell_click() {
         true,
     );
     assert!((pinched.view.span[0] - 18.0).abs() < 0.001);
+    assert!(pinched.preview.is_none());
     let anchor = map.camera().unwrap().screen_to_world([150.0, 70.0]);
     assert!((anchor[0] - 7.5).abs() < 0.001);
     assert!((anchor[1] - 3.5).abs() < 0.001);

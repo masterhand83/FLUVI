@@ -274,4 +274,209 @@ mod tests {
         }
         assert!(requests.edits.try_recv().is_err());
     }
+
+    #[test]
+    fn paused_creation_and_preview_align_with_cursor_in_real_egui_gpu_callback() {
+        use ca_app::map::MapInteraction;
+        let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor::from_env_or_default());
+        let adapter = match pollster::block_on(instance.request_adapter(&Default::default())) {
+            Ok(adapter) => adapter,
+            Err(error) => {
+                eprintln!("SKIP placement GPU test: no adapter: {error}");
+                return;
+            }
+        };
+        let (device, queue) =
+            pollster::block_on(adapter.request_device(&Default::default())).unwrap();
+        for pixels_per_point in [1.0, 1.5, 2.0] {
+            let scene = TrafficScene::demo();
+            let mut map = MapInteraction::new(
+                scene.extent().map(|v| v as f32),
+                &scene.geometry(),
+                scene.street_names(),
+            );
+            let display = TrafficDisplay::new(&device, &scene, wgpu::TextureFormat::Rgba8Unorm);
+            let (commands, requests) = command_channel();
+            let (events, _) = bounded(2);
+            let mut renderer = egui_wgpu::Renderer::new(
+                &device,
+                wgpu::TextureFormat::Rgba8Unorm,
+                egui_wgpu::RendererOptions::PREDICTABLE,
+            );
+            renderer
+                .callback_resources
+                .insert(Resources::new(scene, display, events, requests));
+            let ctx = egui::Context::default();
+            let pos = egui::pos2(490.0, 320.0);
+            let button = |pressed| egui::Event::PointerButton {
+                pos,
+                button: egui::PointerButton::Primary,
+                pressed,
+                modifiers: egui::Modifiers::NONE,
+            };
+            let mut output = None;
+            for events in [
+                vec![],
+                vec![egui::Event::PointerMoved(pos), button(true)],
+                vec![button(false)],
+            ] {
+                let mut input = egui::RawInput {
+                    screen_rect: Some(egui::Rect::from_min_size(
+                        egui::Pos2::ZERO,
+                        egui::vec2(1000.0, 600.0),
+                    )),
+                    events,
+                    ..Default::default()
+                };
+                input
+                    .viewports
+                    .get_mut(&egui::ViewportId::ROOT)
+                    .unwrap()
+                    .native_pixels_per_point = Some(pixels_per_point);
+                let frame = ctx.run(input, |ctx| {
+                    egui::TopBottomPanel::top("toolbar")
+                        .exact_height(60.0)
+                        .frame(egui::Frame::NONE)
+                        .show(ctx, |_| {});
+                    egui::SidePanel::left("sidebar")
+                        .exact_width(280.0)
+                        .frame(egui::Frame::NONE)
+                        .show(ctx, |_| {});
+                    egui::CentralPanel::default()
+                        .frame(egui::Frame::NONE)
+                        .show(ctx, |ui| {
+                            let frame = map.show(ui, false);
+                            assert!(commands.send(
+                                Paint {
+                                    playing: false,
+                                    rate: 10.0,
+                                    step_ticket: 0,
+                                    view: frame.view,
+                                    generation_override: None,
+                                },
+                                frame.clicked
+                            ));
+                            ui.painter().add(egui_wgpu::Callback::new_paint_callback(
+                                frame.rect,
+                                PaintCallback,
+                            ));
+                            frame.paint_preview(ui.painter());
+                        });
+                });
+                for (id, delta) in &frame.textures_delta.set {
+                    renderer.update_texture(&device, &queue, *id, delta);
+                }
+                output = Some(frame);
+            }
+            let output = output.unwrap();
+            let jobs = ctx.tessellate(output.shapes, output.pixels_per_point);
+            let screen = ScreenDescriptor {
+                size_in_pixels: [
+                    (1000.0 * pixels_per_point) as u32,
+                    (600.0 * pixels_per_point) as u32,
+                ],
+                pixels_per_point,
+            };
+            let mut encoder = device.create_command_encoder(&Default::default());
+            let callbacks = renderer.update_buffers(&device, &queue, &mut encoder, &jobs, &screen);
+            let size = wgpu::Extent3d {
+                width: screen.size_in_pixels[0],
+                height: screen.size_in_pixels[1],
+                depth_or_array_layers: 1,
+            };
+            let texture = device.create_texture(&wgpu::TextureDescriptor {
+                label: Some("placement integration test"),
+                size,
+                mip_level_count: 1,
+                sample_count: 1,
+                dimension: wgpu::TextureDimension::D2,
+                format: wgpu::TextureFormat::Rgba8Unorm,
+                usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
+                view_formats: &[],
+            });
+            let view = texture.create_view(&Default::default());
+            {
+                let pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                    color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                        view: &view,
+                        depth_slice: None,
+                        resolve_target: None,
+                        ops: wgpu::Operations {
+                            load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
+                            store: wgpu::StoreOp::Store,
+                        },
+                    })],
+                    ..Default::default()
+                });
+                renderer.render(&mut pass.forget_lifetime(), &jobs, &screen);
+            }
+            let row_bytes = (size.width * 4).div_ceil(256) * 256;
+            let buffer = device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some("placement pixel readback"),
+                size: u64::from(row_bytes * size.height),
+                usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
+                mapped_at_creation: false,
+            });
+            encoder.copy_texture_to_buffer(
+                texture.as_image_copy(),
+                wgpu::TexelCopyBufferInfo {
+                    buffer: &buffer,
+                    layout: wgpu::TexelCopyBufferLayout {
+                        offset: 0,
+                        bytes_per_row: Some(row_bytes),
+                        rows_per_image: None,
+                    },
+                },
+                size,
+            );
+            queue.submit(callbacks.into_iter().chain([encoder.finish()]));
+            let (tx, rx) = std::sync::mpsc::channel();
+            buffer.map_async(wgpu::MapMode::Read, .., move |result| {
+                tx.send(result).unwrap()
+            });
+            device.poll(wgpu::PollType::wait_indefinitely()).unwrap();
+            rx.recv().unwrap().unwrap();
+            let bytes = buffer.slice(..).get_mapped_range();
+            let pixel = |x: f32, y: f32| {
+                let index = (y * pixels_per_point) as usize * row_bytes as usize
+                    + (x * pixels_per_point) as usize * 4;
+                &bytes[index..index + 4]
+            };
+            // Known empty cell center, not a position computed from the picking code.
+            let center = pixel(490.0, 320.0);
+            assert!(
+                center[0] > 220 && center[1] < 100 && center[2] < 100,
+                "cursor center must contain the created red vehicle at scale {pixels_per_point}: {center:?}"
+            );
+            // Measure the whole rendered vehicle, not only a pixel beneath the
+            // cursor: an off-center rectangle could still cover that pixel.
+            let mut bounds = [u32::MAX, u32::MAX, 0, 0];
+            for y in (300.0 * pixels_per_point) as u32..(340.0 * pixels_per_point) as u32 {
+                for x in (470.0 * pixels_per_point) as u32..(510.0 * pixels_per_point) as u32 {
+                    let index = (y * row_bytes + x * 4) as usize;
+                    let colour = &bytes[index..index + 3];
+                    if colour[0] > 220 && colour[1] < 100 && colour[2] < 100 {
+                        bounds[0] = bounds[0].min(x);
+                        bounds[1] = bounds[1].min(y);
+                        bounds[2] = bounds[2].max(x);
+                        bounds[3] = bounds[3].max(y);
+                    }
+                }
+            }
+            assert_ne!(bounds[0], u32::MAX, "created vehicle must be rendered");
+            for (axis, expected) in [(0, 490.0), (1, 320.0)] {
+                // Include both boundary pixels' areas, not only their centers.
+                let midpoint = (bounds[axis] + bounds[axis + 2] + 1) as f32 * 0.5;
+                assert!(
+                    (midpoint - expected * pixels_per_point).abs() <= 0.5,
+                    "vehicle midpoint must match cursor within half a physical pixel at scale {pixels_per_point}: {bounds:?}"
+                );
+            }
+            let outline = pixel(480.5, 320.0);
+            assert!(
+                outline[..3].iter().all(|&v| v > 180),
+                "preview outline must be visible over GPU map at scale {pixels_per_point}: {outline:?}"
+            );
+        }
+    }
 }

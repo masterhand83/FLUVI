@@ -119,6 +119,17 @@ impl CellIndex {
         self.order.clear();
     }
 
+    /// World-space center for a physical cell, using the current geometry.
+    pub fn cell_center(&self, cell: CellRef) -> Option<[f32; 2]> {
+        self.streets
+            .get(&cell.street)?
+            .geometry
+            .centers
+            .get(cell.lane)?
+            .get(cell.index)
+            .copied()
+    }
+
     pub fn find_nearest(&self, point: [f32; 2]) -> Option<CellRef> {
         let mut best = None;
         let mut distance = self.size * self.size;

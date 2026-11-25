@@ -253,6 +253,7 @@ impl eframe::App for App {
             let mut callback = self.callback.clone();
             callback.rect = map.rect;
             ui.painter().add(callback);
+            map.paint_preview(ui.painter());
         });
         self.shell.overlays(ctx);
         if self.profiler {

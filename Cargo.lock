@@ -260,6 +260,7 @@ dependencies = [
  "eframe",
  "egui",
  "egui-wgpu",
+ "pollster 1.0.3",
  "puffin",
  "puffin_egui",
  "serde_json",
