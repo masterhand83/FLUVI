@@ -120,6 +120,24 @@ impl Calle {
         self.config.tamano - 1 - self.entry_cell(lane)
     }
 
+    fn generate(&mut self, random_state: &mut u64) {
+        // Hourly multiplier is fixed at 1 until clock/profile support is ported.
+        if self.config.tipo != CalleType::Generador {
+            return;
+        }
+        for lane in 0..self.config.carriles {
+            if self.config.lane_generation_enabled.get(lane) == Some(&Some(false)) {
+                continue;
+            }
+            let entry = lane * self.config.tamano + self.entry_cell(lane);
+            if self.cells[entry] == 0
+                && crate::random::unit(random_state) < self.config.generation_probability
+            {
+                self.cells[entry] = (crate::random::unit(random_state) * 6.0) as u8 + 1;
+            }
+        }
+    }
+
     /// Snapshot update with open, empty boundaries. No allocations per update.
     pub fn update(&mut self) {
         let size = self.config.tamano;
@@ -215,40 +233,15 @@ impl TrafficModel {
             TickPhase::Metrics,
         ] {
             match phase {
-                TickPhase::Generation => self.generate(),
+                TickPhase::Generation => {
+                    for street in &mut self.streets {
+                        street.generate(&mut self.random_state);
+                    }
+                }
                 TickPhase::StreetUpdate => self.streets.iter_mut().for_each(Calle::update),
                 _ => {}
             }
             hook(phase, &self.streets);
         }
     }
-
-    fn generate(&mut self) {
-        // Hourly multiplier is fixed at 1 until clock/profile support is ported.
-        for street in &mut self.streets {
-            if street.config.tipo != CalleType::Generador {
-                continue;
-            }
-            for lane in 0..street.config.carriles {
-                if street.config.lane_generation_enabled.get(lane) == Some(&Some(false)) {
-                    continue;
-                }
-                let entry = lane * street.config.tamano + street.entry_cell(lane);
-                if street.cells[entry] == 0
-                    && random_unit(&mut self.random_state) < street.config.generation_probability
-                {
-                    street.cells[entry] = (random_unit(&mut self.random_state) * 6.0) as u8 + 1;
-                }
-            }
-        }
-    }
-}
-
-fn random_unit(state: &mut u64) -> f64 {
-    // SplitMix64, as in Grid::seeded; use the high 53 bits for a value in [0, 1).
-    *state = state.wrapping_add(0x9e3779b97f4a7c15);
-    let mut z = *state;
-    z = (z ^ (z >> 30)).wrapping_mul(0xbf58476d1ce4e5b9);
-    z = (z ^ (z >> 27)).wrapping_mul(0x94d049bb133111eb);
-    ((z ^ (z >> 31)) >> 11) as f64 / (1_u64 << 53) as f64
 }

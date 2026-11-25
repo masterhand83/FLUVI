@@ -1,5 +1,6 @@
 //! Headless CPU reference models. Conway coordinates increase right and down.
 
+mod random;
 pub mod traffic;
 mod traffic_rules;
 
@@ -55,13 +56,7 @@ impl Grid {
         // SplitMix64: fixed algorithm, independent of external RNG versions.
         let mut state = seed;
         let cells = (0..size)
-            .map(|_| {
-                state = state.wrapping_add(0x9e3779b97f4a7c15);
-                let mut z = state;
-                z = (z ^ (z >> 30)).wrapping_mul(0xbf58476d1ce4e5b9);
-                z = (z ^ (z >> 27)).wrapping_mul(0x94d049bb133111eb);
-                u32::from(((z ^ (z >> 31)) & 3) == 0)
-            })
+            .map(|_| u32::from((random::next_u64(&mut state) & 3) == 0))
             .collect();
         Self::new(width, height, cells)
     }
