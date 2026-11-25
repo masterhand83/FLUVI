@@ -7,6 +7,7 @@ use ca_core::map_json::MapDocument;
 use eframe::egui;
 
 pub enum PanelAction {
+    NewStreet,
     Open,
     Save,
     New,
@@ -36,6 +37,9 @@ impl ControlPanel<'_> {
                     ui.label(shell.tr("shell.profiler", &[]));
                 }
                 "constructor" => {
+                    if ui.button(shell.tr("streetDialog.title", &[])).clicked() {
+                        action = Some(PanelAction::NewStreet);
+                    }
                     ui.label(if self.document.name().is_empty() {
                         shell.tr("mapFiles.untitled", &[])
                     } else {

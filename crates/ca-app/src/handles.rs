@@ -25,6 +25,7 @@ struct Drag {
 }
 
 enum Target {
+    Rotate,
     Endpoint(usize),
     Body,
     Radius,
@@ -32,6 +33,7 @@ enum Target {
 
 #[derive(Default)]
 pub(crate) struct GeometryHandles {
+    session: bool,
     streets: Vec<Street>,
     shift: [f32; 2],
     total: usize,
@@ -53,6 +55,7 @@ pub(crate) struct HandleInput {
 impl GeometryHandles {
     pub fn sync(&mut self, document: &MapDocument, shift: [f32; 2]) {
         self.finish();
+        self.session = document.editing_street().is_some();
         self.shift = shift;
         self.total = document
             .model()
@@ -95,6 +98,24 @@ impl GeometryHandles {
     fn preview_geometry(&self, drag: &Drag, change: &StreetChange) -> CellGeometry {
         let street = &self.streets[drag.street];
         let mut geometry = match change {
+            StreetChange::Angle(angle) => {
+                let mut placement = street.placement.clone();
+                if let Some(curve) = &placement.bezier {
+                    placement.bezier = Some(
+                        curve
+                            .transformed(
+                                placement.origin,
+                                -(angle - placement.angle_degrees).to_radians(),
+                            )
+                            .expect("rigid rotation"),
+                    );
+                }
+                placement.angle_degrees = *angle;
+                if let Some(ring) = &mut placement.roundabout {
+                    ring.start_angle = *angle;
+                }
+                placement.cells(street.config.carriles, street.config.tamano)
+            }
             StreetChange::StraightGeometry {
                 origin,
                 angle,
@@ -164,7 +185,15 @@ impl GeometryHandles {
         ]
     }
 
-    fn positions(street: &Street) -> ([[f64; 2]; 2], usize) {
+    fn positions(&self, street: &Street) -> ([[f64; 2]; 2], usize) {
+        if self.session {
+            let p = &street.placement;
+            let angle = p.roundabout.map_or(p.angle_degrees, |r| -r.start_angle);
+            return (
+                Self::straight_endpoints(p.origin, angle, street.config.tamano),
+                2,
+            );
+        }
         if let Some(ends) = Self::endpoints(street) {
             (ends, 2)
         } else if let Some(ring) = street.placement.roundabout {
@@ -185,6 +214,27 @@ impl GeometryHandles {
     fn candidate(&self, drag: &Drag) -> Result<StreetChange, StreetError> {
         let street = &self.streets[drag.street];
         let endpoint = match drag.target {
+            Target::Rotate => {
+                let origin = street.placement.origin;
+                let angle = (drag.position[1] - origin[1])
+                    .atan2(drag.position[0] - origin[0])
+                    .to_degrees();
+                let change = StreetChange::Angle(if street.placement.roundabout.is_some() {
+                    angle
+                } else {
+                    -angle
+                });
+                change.validate(&street.config)?;
+                if let Some(curve) = &street.placement.bezier {
+                    curve
+                        .transformed(
+                            origin,
+                            -(-angle - street.placement.angle_degrees).to_radians(),
+                        )?
+                        .validate(street.config.carriles)?;
+                }
+                return Ok(change);
+            }
             Target::Endpoint(endpoint) => endpoint,
             Target::Radius => {
                 let ring = street.placement.roundabout.expect("radial handle");
@@ -267,7 +317,7 @@ impl GeometryHandles {
             && let Some(street) = selected.filter(|s| *s < self.streets.len())
         {
             let placement = &self.streets[street].placement;
-            let (ends, count) = Self::positions(&self.streets[street]);
+            let (ends, count) = self.positions(&self.streets[street]);
             let endpoint = ends[..count]
                 .iter()
                 .enumerate()
@@ -281,6 +331,8 @@ impl GeometryHandles {
             let straight = Self::endpoints(&self.streets[street]).is_some();
             if endpoint.is_some() || body_hit == Some(street) {
                 let target = match endpoint {
+                    Some((1, _)) if self.session => Target::Rotate,
+                    Some(_) if self.session => Target::Body,
                     Some((i, _)) if straight => Target::Endpoint(i),
                     Some((1, _)) => Target::Radius,
                     _ => Target::Body,
@@ -377,9 +429,21 @@ impl GeometryHandles {
         let Some(street) = selected.and_then(|s| self.streets.get(s)) else {
             return;
         };
-        let (mut ends, count) = Self::positions(street);
+        let (mut ends, count) = self.positions(street);
         let invalid = if let Some(drag) = &self.drag {
             match self.candidate.as_ref() {
+                Some(Ok(StreetChange::Angle(angle))) => {
+                    let angle = if street.placement.roundabout.is_some() {
+                        -*angle
+                    } else {
+                        *angle
+                    };
+                    ends = Self::straight_endpoints(
+                        street.placement.origin,
+                        angle,
+                        street.config.tamano,
+                    );
+                }
                 Some(Ok(StreetChange::StraightGeometry {
                     origin,
                     angle,
@@ -395,6 +459,7 @@ impl GeometryHandles {
                 _ => match drag.target {
                     Target::Endpoint(endpoint) => ends[endpoint] = drag.position,
                     Target::Radius => ends[1] = drag.position,
+                    Target::Rotate => ends[1] = drag.position,
                     Target::Body => {
                         for p in &mut ends[..count] {
                             for (i, value) in p.iter_mut().enumerate() {

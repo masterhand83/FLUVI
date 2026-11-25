@@ -79,7 +79,55 @@ impl StreetDraft {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+pub struct StreetDefinition {
+    pub name: String,
+    pub draft: StreetDraft,
+    pub lanes: usize,
+    pub tipo: crate::traffic::CalleType,
+    pub generation: f64,
+    pub lane_change: f64,
+}
+
+impl StreetDefinition {
+    pub fn validate(&self) -> Result<(), StreetError> {
+        if self.name.trim().is_empty() {
+            return Err(StreetError("streetInspector.errors.name"));
+        }
+        if !self
+            .name
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || "áéíóúÁÉÍÓÚñÑ-.".contains(c) || c.is_whitespace())
+        {
+            return Err(StreetError("streetDialog.nameInvalid"));
+        }
+        let config = crate::traffic::CalleConfig::new(1, 1, self.tipo);
+        for change in [
+            StreetChange::Dimensions {
+                lanes: self.lanes,
+                length: self.draft.cells,
+            },
+            StreetChange::Origin(self.draft.origin),
+            StreetChange::Angle(self.draft.angle_degrees),
+            StreetChange::Generation(self.generation),
+            StreetChange::LaneChange(self.lane_change),
+        ] {
+            change.validate(&config)?;
+        }
+        Ok(())
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub enum StreetEdit {
+    Create(StreetDefinition),
+    BeginSession(usize),
+    SaveSession,
+    CancelSession,
+    Bulk {
+        streets: Vec<usize>,
+        lanes: usize,
+        directions: Vec<crate::traffic::LaneDirection>,
+    },
     Draw(StreetDraft),
     DrawRoundabout(RoundaboutDraft),
     Delete(usize),
@@ -197,6 +245,7 @@ pub(crate) fn angular_index(index: usize, old: usize, new: usize) -> usize {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum StreetEvent {
+    BulkUpdated,
     Drawn(usize),
     Deleted(usize),
     Updated(usize),

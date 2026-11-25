@@ -2,6 +2,102 @@ use ca_app::map::MapInteraction;
 use eframe::egui;
 
 #[test]
+fn session_rotation_has_a_live_preview_without_resizing_cells() {
+    use ca_core::streets::{StreetChange, StreetEdit};
+    let mut document = ca_core::map_json::MapDocument::parse(
+        r#"{"calles":[{"nombre":"A","tipo":"conexion","tamano":6,"x":25,"y":25}]}"#,
+    )
+    .unwrap();
+    document.edit_streets(StreetEdit::BeginSession(0)).unwrap();
+    let ctx = egui::Context::default();
+    let mut map = MapInteraction::new([30.0, 20.0], &document.geometry(), vec!["A".into()]);
+    map.configure(&document, [0.0; 2]);
+    map.select(Some(0));
+    frame(&ctx, &mut map, vec![], false);
+    let start = screen_position(&map, [11.0, 5.0]);
+    let end = screen_position(&map, [5.0, 11.0]);
+    let button = |pos, pressed| egui::Event::PointerButton {
+        pos,
+        pressed,
+        button: egui::PointerButton::Primary,
+        modifiers: egui::Modifiers::NONE,
+    };
+    frame(
+        &ctx,
+        &mut map,
+        vec![egui::Event::PointerMoved(start), button(start, true)],
+        false,
+    );
+    let moving = frame(&ctx, &mut map, vec![egui::Event::PointerMoved(end)], false);
+    let preview = moving.geometry_preview.expect("live rotation");
+    assert_eq!(preview.geometry.centers[0].len(), 6);
+    let center = preview.geometry.centers[0][0];
+    assert!((center[0] - 4.5).abs() < 0.001 && (center[1] - 5.5).abs() < 0.001);
+    let released = frame(&ctx, &mut map, vec![button(end, false)], false);
+    let Some(StreetEdit::Update(0, StreetChange::Angle(angle))) = released.street_edit else {
+        panic!("rotation must not resize the street");
+    };
+    assert!((angle + 90.0).abs() < 0.001);
+}
+
+#[test]
+fn shift_drag_selects_only_complete_cell_footprints_and_cancels_drawing() {
+    let document = ca_core::map_json::MapDocument::parse(
+        r#"{"calles":[
+        {"nombre":"Inside","tipo":"conexion","tamano":4,"x":25,"y":25},
+        {"nombre":"Partial","tipo":"conexion","tamano":4,"x":40,"y":35}]}"#,
+    )
+    .unwrap();
+    let ctx = egui::Context::default();
+    let mut map = MapInteraction::new(
+        [30.0, 20.0],
+        &document.geometry(),
+        vec!["Inside".into(), "Partial".into()],
+    );
+    map.configure(&document, [0.0; 2]);
+    map.select(Some(1));
+    map.set_drawing(true);
+    frame(&ctx, &mut map, vec![], false);
+    let view = map.camera().unwrap().view();
+    let start = screen_position(&map, [4.0, 4.0]);
+    // Every center of Partial is inside; its final cell's outer edge is not.
+    let end = screen_position(&map, [11.75, 9.0]);
+    let button = |pos, pressed| egui::Event::PointerButton {
+        pos,
+        pressed,
+        button: egui::PointerButton::Primary,
+        modifiers: egui::Modifiers::SHIFT,
+    };
+    let down = frame(
+        &ctx,
+        &mut map,
+        vec![egui::Event::PointerMoved(start), button(start, true)],
+        false,
+    );
+    assert!(down.bulk_started);
+    assert!(!map.drawing());
+    assert_eq!(map.selected(), None);
+    frame(&ctx, &mut map, vec![egui::Event::PointerMoved(end)], false);
+    let released = frame(&ctx, &mut map, vec![button(end, false)], false);
+    assert_eq!(map.bulk_selected(), &[0]);
+    assert_eq!(map.camera().unwrap().view(), view);
+    assert!(released.clicked.is_none() && released.street_edit.is_none());
+    frame(
+        &ctx,
+        &mut map,
+        vec![egui::Event::Key {
+            key: egui::Key::Escape,
+            physical_key: None,
+            pressed: true,
+            repeat: false,
+            modifiers: egui::Modifiers::NONE,
+        }],
+        false,
+    );
+    assert!(map.bulk_selected().is_empty());
+}
+
+#[test]
 fn endpoint_drag_updates_all_lanes_before_release_and_cancel_restores_display() {
     let document = ca_core::map_json::MapDocument::parse(
         r#"{"calles":[{"nombre":"A","tipo":"conexion","tamano":6,"carriles":2,"x":25,"y":25}]}"#,

@@ -155,6 +155,33 @@ Focused checks: `cargo test -p ca-core --test street_inspector`,
 `cargo test -p ca-app --test street_inspector --test control_panel`, and
 `cargo test -p ca-gpu --test traffic`.
 
+### Bulk streets, creation form, and edit sessions
+
+Shift + left drag selects streets only when every oriented cell corner is inside
+the rectangle. This gesture cancels drawing, geometry previews, focused inspector
+input, and single selection before other map handlers run. The floating bulk form
+edits only lane count (1–10) and physical-lane directions. Escape or Close clears
+the selection. `StreetEdit::Bulk` checks every candidate and the combined cell
+budget before applying the batch through the dimension reconciler. A rejected
+batch leaves all streets, traffic, and links unchanged.
+
+Map Constructor → New Street opens the alternative creation form. It uses v1 map
+coordinates, angle (0–360 degrees), and generation/lane-change percentages.
+`StreetEdit::Create` and map drawing use the same street factory.
+
+The inspector's Edit Position and Angle button starts a street-local edit session.
+Its origin handle moves the street; its second handle rotates it without changing
+cell count. Both show live geometry previews. Save retains accepted drags; Cancel,
+Close, or Escape restores the original placement and physical cells. This is not
+general undo. The ordered edit queue owns a separate snapshot in the render model,
+so cancellation restores live traffic rather than the UI document's stale cells.
+Other structural and transport controls are disabled during this session.
+Starting a bulk gesture cancels the session.
+
+Focused checks: `cargo test -p ca-core --test bulk_streets --test street_creation
+--test street_sessions` and `cargo test -p ca-app --test bulk_editor
+--test street_dialog --test street_inspector --test map_interaction`.
+
 ### Roundabout streets
 
 Use Draw Roundabout, then drag from the center to the inner radius. The live

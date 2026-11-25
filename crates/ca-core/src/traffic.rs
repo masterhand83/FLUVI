@@ -440,6 +440,10 @@ impl TrafficModel {
         config
     }
 
+    pub(crate) fn restore_street(&mut self, street: usize, original: Calle) {
+        self.streets[street] = original;
+    }
+
     /// Fixed tracer network: generator, connection and sink, each with two
     /// opposite lanes. Positions remain physical, including in reverse lanes.
     pub fn demo() -> Self {

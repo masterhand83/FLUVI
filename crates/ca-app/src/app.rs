@@ -52,6 +52,8 @@ pub struct App {
     map_shift: [f32; 2],
     inspector: ca_app::inspector::StreetInspector,
     edit_pause: ca_app::inspector::EditPause,
+    bulk_editor: ca_app::bulk_editor::BulkEditor,
+    street_dialog: ca_app::street_dialog::StreetDialog,
 }
 
 impl App {
@@ -75,6 +77,8 @@ impl App {
             app.map = None;
             app.inspector = Default::default();
             app.edit_pause = Default::default();
+            app.bulk_editor = Default::default();
+            app.street_dialog = Default::default();
             if let Some(connections) = &mut app.connections {
                 connections.set_arrows(Vec::new());
             }
@@ -115,6 +119,8 @@ impl App {
             map_shift: [0.0; 2],
             inspector: Default::default(),
             edit_pause: Default::default(),
+            bulk_editor: Default::default(),
+            street_dialog: Default::default(),
             startup: Some(Startup {
                 render: render.clone(),
                 events: tx,
@@ -200,58 +206,82 @@ impl App {
     fn controls(&mut self, ctx: &egui::Context) {
         egui::TopBottomPanel::top("controls").show(ctx, |ui| {
             ui.horizontal_wrapped(|ui| {
-                ui.add_enabled_ui(self.smoke_frames.is_none(), |ui| {
-                    if ui
-                        .button(self.shell.tr(
+                ui.add_enabled_ui(
+                    self.smoke_frames.is_none()
+                        && self
+                            .session
+                            .as_ref()
+                            .expect("session")
+                            .document()
+                            .editing_street()
+                            .is_none(),
+                    |ui| {
+                        if ui
+                            .button(self.shell.tr(
+                                if self.playing {
+                                    "simulation.pause"
+                                } else {
+                                    "simulation.resume"
+                                },
+                                &[],
+                            ))
+                            .clicked()
+                        {
                             if self.playing {
-                                "simulation.pause"
+                                self.playing = false;
                             } else {
-                                "simulation.resume"
-                            },
-                            &[],
-                        ))
-                        .clicked()
-                    {
-                        if self.playing {
-                            self.playing = false;
-                        } else {
-                            let finished = self
-                                .inspector
-                                .finish(ctx, self.session.as_ref().expect("session").document());
-                            match finished {
-                                Ok(edit) => {
-                                    if edit.is_none_or(|edit| self.edit_streets(edit)) {
-                                        if let Some(map) = &mut self.map {
-                                            map.finish_edits();
+                                let finished = self.inspector.finish(
+                                    ctx,
+                                    self.session.as_ref().expect("session").document(),
+                                );
+                                match finished {
+                                    Ok(edit) => {
+                                        if edit.is_none_or(|edit| self.edit_streets(edit)) {
+                                            if let Some(map) = &mut self.map {
+                                                map.finish_edits();
+                                            }
+                                            self.edit_pause.resume(&mut self.playing);
                                         }
-                                        self.edit_pause.resume(&mut self.playing);
                                     }
+                                    Err(error) => self.shell.notify(
+                                        ca_app::shell::Severity::Warning,
+                                        ca_app::inspector::geometry_error_message(
+                                            &self.shell,
+                                            error,
+                                        ),
+                                    ),
                                 }
-                                Err(error) => self.shell.notify(
-                                    ca_app::shell::Severity::Warning,
-                                    ca_app::inspector::geometry_error_message(&self.shell, error),
-                                ),
                             }
                         }
-                    }
-                    if ui
-                        .add_enabled(
-                            self.edit_pause.can_step(self.playing),
-                            egui::Button::new(self.shell.tr("simulation.step", &[])),
-                        )
-                        .clicked()
-                    {
-                        self.step_ticket += 1;
-                    }
-                    ui.add(
-                        egui::Slider::new(&mut self.rate, 1.0..=60.0)
-                            .text(self.shell.tr("simulation.speed", &[])),
-                    );
-                });
+                        if ui
+                            .add_enabled(
+                                self.edit_pause.can_step(self.playing),
+                                egui::Button::new(self.shell.tr("simulation.step", &[])),
+                            )
+                            .clicked()
+                        {
+                            self.step_ticket += 1;
+                        }
+                        ui.add(
+                            egui::Slider::new(&mut self.rate, 1.0..=60.0)
+                                .text(self.shell.tr("simulation.speed", &[])),
+                        );
+                    },
+                );
                 let mut action = None;
-                ui.add_enabled_ui(self.smoke_frames.is_none(), |ui| {
-                    action = self.transport.show_actions(ui, &self.shell);
-                });
+                ui.add_enabled_ui(
+                    self.smoke_frames.is_none()
+                        && self
+                            .session
+                            .as_ref()
+                            .expect("session")
+                            .document()
+                            .editing_street()
+                            .is_none(),
+                    |ui| {
+                        action = self.transport.show_actions(ui, &self.shell);
+                    },
+                );
                 if let Some(action) = action
                     && !self.commands.edit(Edit::Vehicles(action))
                 {
@@ -271,11 +301,27 @@ impl App {
             map: self.map.as_mut(),
             connections: self.connections.as_mut(),
             transport: &mut self.transport,
-            enabled: self.smoke_frames.is_none(),
+            enabled: self.smoke_frames.is_none()
+                && self
+                    .session
+                    .as_ref()
+                    .expect("session")
+                    .document()
+                    .editing_street()
+                    .is_none(),
             files_ready: self.file_job.is_none() && self.new_confirmation.is_none(),
         }
         .show(ctx, &mut self.shell);
         match action {
+            Some(PanelAction::NewStreet) => {
+                if let Some(map) = &mut self.map {
+                    map.finish_edits();
+                    map.clear_bulk();
+                    map.select(None);
+                }
+                self.inspector = Default::default();
+                self.street_dialog.open();
+            }
             Some(PanelAction::Open) => self.start_file(false, ctx),
             Some(PanelAction::Save) => self.start_file(true, ctx),
             Some(PanelAction::New) => {
@@ -343,6 +389,12 @@ impl App {
 
     fn edit_streets(&mut self, mut edit: ca_core::streets::StreetEdit) -> bool {
         use ca_core::streets::StreetEdit;
+        if matches!(edit, StreetEdit::BeginSession(_))
+            && let Some(map) = &mut self.map
+        {
+            map.finish_edits();
+            map.clear_bulk();
+        }
         if let StreetEdit::Draw(draft) = &mut edit {
             for i in 0..2 {
                 draft.origin[i] -= self.map_shift[i] as f64;
@@ -354,6 +406,11 @@ impl App {
             }
         }
         // Validate before enqueueing. A rejected/full queue must not change the UI document.
+        let preserve_bulk = matches!(edit, StreetEdit::CancelSession)
+            && self
+                .map
+                .as_ref()
+                .is_some_and(|map| map.selected().is_none());
         if let Err(error) = self
             .session
             .as_ref()
@@ -379,6 +436,7 @@ impl App {
         let map = self.map.as_mut().expect("map");
         let geometry = map.configure(session.document(), self.map_shift);
         let (selected, key) = match event {
+            ca_app::streets::StreetEvent::BulkUpdated => (None, "streetInspector.updated"),
             ca_app::streets::StreetEvent::Drawn(street) => (Some(street), "streetDrawing.drawn"),
             ca_app::streets::StreetEvent::Deleted(_) => (None, "streetDrawing.deleted"),
             ca_app::streets::StreetEvent::Updated(street) => {
@@ -388,7 +446,9 @@ impl App {
                 (Some(street), "streetInspector.directionsChanged")
             }
         };
-        map.select(selected);
+        if !preserve_bulk {
+            map.select(selected);
+        }
         if let Some(connections) = &mut self.connections {
             connections.set_arrows(
                 session
@@ -409,6 +469,13 @@ impl App {
         if self.file_job.is_none()
             && self.new_confirmation.is_none()
             && self.smoke_frames.is_none()
+            && self
+                .session
+                .as_ref()
+                .expect("session")
+                .document()
+                .editing_street()
+                .is_none()
             && ctx.input_mut(|i| i.consume_key(egui::Modifiers::COMMAND, egui::Key::S))
         {
             self.start_file(true, ctx);
@@ -447,6 +514,54 @@ impl App {
             }
         }
     }
+
+    fn street_forms(&mut self, ctx: &egui::Context) {
+        // Map input has priority: Shift-drag discards, rather than commits,
+        // the inspector's pending focus-loss edit.
+        let selected = self.map.as_ref().and_then(MapInteraction::selected);
+        self.inspector
+            .set_curve_point(self.map.as_ref().and_then(MapInteraction::curve_point));
+        let inspector = self.inspector.show(
+            ctx,
+            self.session.as_ref().expect("session").document(),
+            selected,
+            &self.shell,
+        );
+        if inspector.editing {
+            self.edit_pause.begin(&mut self.playing);
+        }
+        if let Some(map) = &mut self.map {
+            map.set_curve_point(self.inspector.curve_point());
+            if inspector.closed {
+                map.select(None);
+            }
+        }
+        for edit in inspector.edits {
+            self.edit_streets(edit);
+        }
+        let bulk = self.bulk_editor.show(
+            ctx,
+            self.session.as_ref().expect("session").document(),
+            self.map.as_ref().map_or(&[], MapInteraction::bulk_selected),
+            &self.shell,
+        );
+        if bulk.closed
+            && let Some(map) = &mut self.map
+        {
+            map.clear_bulk();
+        }
+        if let Some(edit) = bulk.edit {
+            self.edit_streets(edit);
+        }
+        if let Some(edit) = self.street_dialog.show(
+            ctx,
+            self.session.as_ref().expect("session").document(),
+            &self.shell,
+        ) && self.edit_streets(edit)
+        {
+            self.street_dialog.close();
+        }
+    }
 }
 
 impl eframe::App for App {
@@ -473,29 +588,6 @@ impl eframe::App for App {
         }
         self.controls(ctx);
         self.control_panel(ctx);
-        let selected = self.map.as_ref().and_then(MapInteraction::selected);
-        self.inspector
-            .set_curve_point(self.map.as_ref().and_then(MapInteraction::curve_point));
-        let inspector = self.inspector.show(
-            ctx,
-            self.session.as_ref().expect("session").document(),
-            selected,
-            &self.shell,
-        );
-        if inspector.editing {
-            self.edit_pause.begin(&mut self.playing);
-        }
-        if let Some(map) = &mut self.map {
-            map.set_curve_point(self.inspector.curve_point());
-        }
-        if inspector.closed
-            && let Some(map) = &mut self.map
-        {
-            map.select(None);
-        }
-        for edit in inspector.edits {
-            self.edit_streets(edit);
-        }
         egui::TopBottomPanel::bottom("status").show(ctx, |ui| {
             ui.label(format!(
                 "{} {}  |  {}  |  {} {:.1}  |  {}",
@@ -518,6 +610,22 @@ impl eframe::App for App {
                 .show(ui, self.shell.preferences().cell_detection);
             if map.structural_edit {
                 self.edit_pause.begin(&mut self.playing);
+            }
+            if map.bulk_started {
+                self.inspector = Default::default();
+                self.bulk_editor = Default::default();
+                self.street_dialog.close();
+                if self
+                    .session
+                    .as_ref()
+                    .expect("session")
+                    .document()
+                    .editing_street()
+                    .is_some()
+                {
+                    self.edit_streets(ca_core::streets::StreetEdit::CancelSession);
+                    self.map.as_mut().expect("map").select(None);
+                }
             }
             if let Some(edit) = map.street_edit.clone() {
                 self.edit_streets(edit);
@@ -543,6 +651,7 @@ impl eframe::App for App {
                     );
                 }
             }
+            self.street_forms(ctx);
             let request = Paint {
                 playing: self.playing,
                 rate: self.rate,

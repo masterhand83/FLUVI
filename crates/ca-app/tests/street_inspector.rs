@@ -6,6 +6,28 @@ use ca_core::{
 use eframe::egui::{self, Event, Modifiers, PointerButton};
 
 #[test]
+fn edit_session_has_enter_save_and_cancel_controls() {
+    let ctx = egui::Context::default();
+    let mut inspector = StreetInspector::default();
+    let mut document =
+        MapDocument::parse(r#"{"calles":[{"nombre":"A","tipo":"conexion","tamano":10}]}"#).unwrap();
+    frame(&mut inspector, &ctx, &document, vec![]);
+    frame(&mut inspector, &ctx, &document, vec![]);
+    let edits = click_text(&mut inspector, &ctx, &document, "Editar posición y ángulo");
+    assert_eq!(edits, [StreetEdit::BeginSession(0)]);
+    document.edit_streets(edits[0].clone()).unwrap();
+    frame(&mut inspector, &ctx, &document, vec![]);
+    assert_eq!(
+        click_text(&mut inspector, &ctx, &document, "Guardar"),
+        [StreetEdit::SaveSession]
+    );
+    assert_eq!(
+        click_text(&mut inspector, &ctx, &document, "Cancelar"),
+        [StreetEdit::CancelSession]
+    );
+}
+
+#[test]
 fn inspector_converts_a_street_to_bezier_and_translates_overlap_errors() {
     use ca_core::bezier::BezierChange;
     let ctx = egui::Context::default();

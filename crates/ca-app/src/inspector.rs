@@ -154,6 +154,25 @@ impl StreetInspector {
         shell: &Shell,
     ) -> InspectorResponse {
         let mut result = InspectorResponse::default();
+        if document.editing_street().is_some() {
+            let mut open = true;
+            egui::Window::new(shell.tr("streetSession.title", &[]))
+                .id(egui::Id::new("street-edit-session"))
+                .open(&mut open)
+                .show(ctx, |ui| {
+                    ui.label(shell.tr("streetSession.hint", &[]));
+                    if ui.button(shell.tr("streetSession.save", &[])).clicked() {
+                        result.edits.push(StreetEdit::SaveSession);
+                    }
+                    if ui.button(shell.tr("streetSession.cancel", &[])).clicked() {
+                        result.edits.push(StreetEdit::CancelSession);
+                    }
+                });
+            if !open || ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
+                result.edits = vec![StreetEdit::CancelSession];
+            }
+            return result;
+        }
         if self.selected != selected {
             for field in Field::ALL {
                 ctx.memory_mut(|m| m.surrender_focus(egui::Id::new(("street-field", field))));
@@ -172,6 +191,7 @@ impl StreetInspector {
         let c = model_street.config();
         let mut open = true;
         let mut changes = Vec::new();
+        let mut begin_session = false;
         // Keep the previous field's buffer until every widget has processed blur.
         let pending_dimension = self.dimension_field;
         let mut focused_dimension = None;
@@ -272,6 +292,9 @@ impl StreetInspector {
                                 ui.end_row();
                             });
                         ui.separator();
+                        if ui.button(shell.tr("streetSession.enter", &[])).clicked() {
+                            begin_session = true;
+                        }
                         if p.roundabout.is_none() {
                             if let Some(curve) = &p.bezier {
                                 self.curve_controls(ui, shell, curve, &mut changes);
@@ -360,6 +383,9 @@ impl StreetInspector {
             }
         }
         result.closed = !open;
+        if begin_session {
+            result.edits.push(StreetEdit::BeginSession(street));
+        }
         result
     }
 
@@ -468,7 +494,7 @@ impl StreetInspector {
     }
 }
 
-fn type_label(shell: &Shell, tipo: CalleType) -> String {
+pub(crate) fn type_label(shell: &Shell, tipo: CalleType) -> String {
     shell.tr(
         match tipo {
             CalleType::Generador => "streetInspector.generator",

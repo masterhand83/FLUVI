@@ -20,10 +20,19 @@ impl MapError {
 
 #[derive(Clone, Debug)]
 pub struct MapDocument {
+    edit_session: Option<Box<StreetSnapshot>>,
     data: Value,
     model: TrafficModel,
     layout: Vec<StreetPlacement>,
     zones: Vec<BackgroundZone>,
+}
+
+#[derive(Clone, Debug)]
+struct StreetSnapshot {
+    street: usize,
+    placement: StreetPlacement,
+    road: Value,
+    traffic: Calle,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -69,6 +78,9 @@ pub struct StreetPlacement {
 }
 
 impl MapDocument {
+    pub fn editing_street(&self) -> Option<usize> {
+        self.edit_session.as_ref().map(|s| s.street)
+    }
     /// Shared topology cleanup. Later feature ports extend this boundary.
     pub fn delete_street(&mut self, street: usize) -> bool {
         if !self.model.delete_street(street) {
@@ -102,6 +114,58 @@ impl MapDocument {
         use crate::streets::StreetEvent;
         let curve = self.prepare_street_edit(&edit)?;
         match edit {
+            crate::streets::StreetEdit::Create(definition) => {
+                let candidate = self
+                    .street_from_definition(&definition)
+                    .map_err(|_| StreetError("streetDrawing.invalid"))?;
+                Ok(StreetEvent::Drawn(self.insert_street(candidate)))
+            }
+            crate::streets::StreetEdit::BeginSession(street) => {
+                self.edit_session = Some(Box::new(StreetSnapshot {
+                    street,
+                    placement: self.layout[street].clone(),
+                    road: self.data["calles"][street].clone(),
+                    traffic: self.model.streets()[street].clone(),
+                }));
+                Ok(StreetEvent::Updated(street))
+            }
+            crate::streets::StreetEdit::SaveSession => {
+                let snapshot = self.edit_session.take().expect("validated session");
+                Ok(StreetEvent::Updated(snapshot.street))
+            }
+            crate::streets::StreetEdit::CancelSession => {
+                let snapshot = self.edit_session.take().expect("validated session");
+                self.layout[snapshot.street] = snapshot.placement;
+                self.data["calles"][snapshot.street] = snapshot.road;
+                self.model.restore_street(snapshot.street, snapshot.traffic);
+                Ok(StreetEvent::Updated(snapshot.street))
+            }
+            crate::streets::StreetEdit::Bulk {
+                mut streets,
+                lanes,
+                directions,
+            } => {
+                let mut candidate = self.clone();
+                // Shrink first so a valid final cell budget is also valid at each step.
+                streets.sort_by_key(|&id| {
+                    std::cmp::Reverse(self.model.streets()[id].config().carriles)
+                });
+                for street in streets {
+                    let length = self.model.streets()[street].config().tamano;
+                    candidate.edit_streets(crate::streets::StreetEdit::Update(
+                        street,
+                        StreetChange::Dimensions { lanes, length },
+                    ))?;
+                    for (lane, direction) in directions.iter().copied().enumerate() {
+                        candidate.edit_streets(crate::streets::StreetEdit::Update(
+                            street,
+                            StreetChange::Direction { lane, direction },
+                        ))?;
+                    }
+                }
+                *self = candidate;
+                Ok(StreetEvent::BulkUpdated)
+            }
             crate::streets::StreetEdit::DrawRoundabout(draft) => {
                 let candidate = self.new_roundabout(draft)?;
                 Ok(StreetEvent::Drawn(self.insert_street(candidate)))
@@ -226,7 +290,64 @@ impl MapDocument {
         edit: &crate::streets::StreetEdit,
     ) -> Result<Option<crate::bezier::BezierCurve>, StreetError> {
         let mut prepared_curve = None;
+        if let Some(snapshot) = &self.edit_session {
+            let allowed = matches!(
+                edit,
+                crate::streets::StreetEdit::SaveSession | crate::streets::StreetEdit::CancelSession
+            ) || matches!(edit, crate::streets::StreetEdit::Update(id, StreetChange::Origin(_) | StreetChange::Angle(_))
+                    if *id == snapshot.street);
+            if !allowed {
+                return Err(StreetError("streetInspector.errors.geometry"));
+            }
+        }
         match edit {
+            crate::streets::StreetEdit::Create(definition) => {
+                definition.validate()?;
+                self.street_from_definition(definition)
+                    .map_err(|_| StreetError("streetDrawing.invalid"))?;
+            }
+            crate::streets::StreetEdit::BeginSession(street) => {
+                if *street >= self.layout.len() {
+                    return Err(StreetError("streetDrawing.invalid"));
+                }
+            }
+            crate::streets::StreetEdit::SaveSession | crate::streets::StreetEdit::CancelSession => {
+                if self.edit_session.is_none() {
+                    return Err(StreetError("streetInspector.errors.geometry"));
+                }
+            }
+            crate::streets::StreetEdit::Bulk {
+                streets,
+                lanes,
+                directions,
+            } => {
+                if streets.is_empty() || directions.len() != *lanes {
+                    return Err(StreetError("streetInspector.errors.lanes"));
+                }
+                let mut unique = std::collections::BTreeSet::new();
+                let mut total: usize = self.model.streets().iter().map(|s| s.cells().len()).sum();
+                for &street in streets {
+                    if !unique.insert(street) {
+                        return Err(StreetError("streetDrawing.invalid"));
+                    }
+                    let old = self
+                        .model
+                        .streets()
+                        .get(street)
+                        .ok_or(StreetError("streetDrawing.invalid"))?
+                        .config();
+                    let change = StreetChange::Dimensions {
+                        lanes: *lanes,
+                        length: old.tamano,
+                    };
+                    change.validate(old)?;
+                    if let Some(curve) = self.curve_candidate(street, &change)? {
+                        curve.validate(*lanes)?;
+                    }
+                    total = total - old.carriles * old.tamano + lanes * old.tamano;
+                }
+                crate::streets::validate_cell_capacity(total, 0, 0)?;
+            }
             crate::streets::StreetEdit::DrawRoundabout(draft) => {
                 self.new_roundabout(*draft)?;
             }
@@ -421,17 +542,36 @@ impl MapDocument {
     }
 
     fn new_street(&self, draft: crate::streets::StreetDraft) -> Result<Self, MapError> {
+        self.street_from_definition(&crate::streets::StreetDefinition {
+            name: self.next_street_name(),
+            draft,
+            lanes: 1,
+            tipo: CalleType::Conexion,
+            generation: 0.0,
+            lane_change: 0.02,
+        })
+    }
+
+    fn street_from_definition(
+        &self,
+        definition: &crate::streets::StreetDefinition,
+    ) -> Result<Self, MapError> {
+        definition.validate().map_err(|_| MapError)?;
+        let draft = definition.draft;
         let total: usize = self.model.streets().iter().map(|s| s.cells().len()).sum();
-        if total.saturating_add(draft.cells) > 1_000_000 {
+        if total.saturating_add(draft.cells * definition.lanes) > 1_000_000 {
             return Err(MapError);
         }
         // Reuse the file validator for this street only, never reparse the map.
         Self::parse(
             &json!({"calles": [{
-                "nombre": self.next_street_name(), "tipo": "conexion",
-                "tamano": draft.cells, "carriles": 1,
+                "nombre": definition.name.trim(), "tipo": match definition.tipo {
+                    CalleType::Generador => "generador", CalleType::Conexion => "conexion", CalleType::Devorador => "devorador",
+                },
+                "tamano": draft.cells, "carriles": definition.lanes,
                 "x": draft.origin[0] * 5.0, "y": draft.origin[1] * 5.0,
-                "angulo": draft.angle_degrees, "probabilidadSaltoDeCarril": 0.02
+                "angulo": draft.angle_degrees, "probabilidadSaltoDeCarril": definition.lane_change,
+                "probabilidadGeneracion": if definition.tipo == CalleType::Generador { definition.generation } else { 0.0 },
             }]})
             .to_string(),
         )
@@ -778,6 +918,7 @@ impl MapDocument {
         }
         let zones = parse_zones(root.get("backgroundAreas"))?;
         Ok(Self {
+            edit_session: None,
             data,
             model,
             layout,

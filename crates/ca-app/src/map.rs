@@ -7,6 +7,8 @@ use ca_core::{
 use eframe::egui;
 
 pub struct MapFrame {
+    pub bulk_started: bool,
+    pub bulk_rect: Option<egui::Rect>,
     pub rect: egui::Rect,
     pub view: WorldView,
     pub clicked: Option<CellRef>,
@@ -32,6 +34,14 @@ pub struct CellPreview {
 impl MapFrame {
     /// Draw after the GPU callback so the target stays visible over the map.
     pub fn paint_preview(&self, painter: &egui::Painter) {
+        if let Some(rect) = self.bulk_rect {
+            painter.rect_stroke(
+                rect,
+                0.0,
+                egui::Stroke::new(1.5_f32, egui::Color32::YELLOW),
+                egui::StrokeKind::Inside,
+            );
+        }
         if let Some(preview) = &self.geometry_preview {
             preview.paint(painter);
         }
@@ -94,6 +104,9 @@ impl MapFrame {
 }
 
 pub struct MapInteraction {
+    editing_street: Option<usize>,
+    bulk_start: Option<[f32; 2]>,
+    bulk_selected: Vec<usize>,
     extent: [f32; 2],
     bounds: ([f32; 2], [f32; 2]),
     camera: Option<Camera>,
@@ -119,6 +132,9 @@ impl MapInteraction {
         index.sync(streets);
         let sorted = (0..names.len()).collect();
         Self {
+            editing_street: None,
+            bulk_start: None,
+            bulk_selected: Vec::new(),
             extent,
             bounds: ([0.0; 2], extent),
             camera: None,
@@ -147,6 +163,9 @@ impl MapInteraction {
     }
 
     pub fn set_drawing(&mut self, drawing: bool) {
+        if drawing {
+            self.clear_bulk();
+        }
         self.drawing = drawing;
         self.roundabout_drawing = false;
         self.draw_start = None;
@@ -164,6 +183,13 @@ impl MapInteraction {
     pub fn selected(&self) -> Option<usize> {
         self.selected
     }
+    pub fn bulk_selected(&self) -> &[usize] {
+        &self.bulk_selected
+    }
+    pub fn clear_bulk(&mut self) {
+        self.bulk_start = None;
+        self.bulk_selected.clear();
+    }
     pub fn curve_point(&self) -> Option<ca_core::bezier::CurvePoint> {
         self.curves.selection(self.selected)
     }
@@ -171,6 +197,9 @@ impl MapInteraction {
         self.curves.select(self.selected, point);
     }
     pub fn select(&mut self, street: Option<usize>) {
+        if street.is_some() {
+            self.clear_bulk();
+        }
         self.selected = street;
     }
 
@@ -207,6 +236,7 @@ impl MapInteraction {
     }
 
     pub fn show_selector(&mut self, ui: &mut egui::Ui, shell: &crate::shell::Shell) {
+        let previous = self.selected;
         egui::ComboBox::from_id_salt("street-selector")
             .selected_text(
                 self.selected
@@ -219,40 +249,50 @@ impl MapInteraction {
                     ui.selectable_value(&mut self.selected, Some(id), &self.names[id]);
                 }
             });
+        if self.selected != previous {
+            self.clear_bulk();
+        }
     }
 
     pub fn paint_selection(&self, painter: &egui::Painter, rect: egui::Rect) {
         if self.curves.previewing() || self.handles.previewing() {
             return;
         }
-        let (Some(street), Some(camera)) = (self.selected, &self.camera) else {
+        let Some(camera) = &self.camera else {
             return;
         };
-        let Some(lanes) = self.street_sizes.get(street) else {
-            return;
-        };
-        for (lane, &length) in lanes.iter().enumerate() {
-            for index in 0..length {
-                if let Some(corners) = self.index.cell_corners(CellRef {
-                    street,
-                    lane,
-                    index,
-                }) {
-                    let p = corners.map(|p| {
-                        let p = camera.world_to_screen(p);
-                        rect.min + egui::vec2(p[0], p[1])
-                    });
-                    for (edge, visible) in [
-                        (0, lane == 0),
-                        (1, index + 1 == length),
-                        (2, lane + 1 == lanes.len()),
-                        (3, index == 0),
-                    ] {
-                        if visible {
-                            painter.line_segment(
-                                [p[edge], p[(edge + 1) % 4]],
-                                egui::Stroke::new(2.0_f32, egui::Color32::YELLOW),
-                            );
+        for street in self
+            .selected
+            .iter()
+            .chain(self.bulk_selected.iter())
+            .copied()
+        {
+            let Some(lanes) = self.street_sizes.get(street) else {
+                continue;
+            };
+            for (lane, &length) in lanes.iter().enumerate() {
+                for index in 0..length {
+                    if let Some(corners) = self.index.cell_corners(CellRef {
+                        street,
+                        lane,
+                        index,
+                    }) {
+                        let p = corners.map(|p| {
+                            let p = camera.world_to_screen(p);
+                            rect.min + egui::vec2(p[0], p[1])
+                        });
+                        for (edge, visible) in [
+                            (0, lane == 0),
+                            (1, index + 1 == length),
+                            (2, lane + 1 == lanes.len()),
+                            (3, index == 0),
+                        ] {
+                            if visible {
+                                painter.line_segment(
+                                    [p[edge], p[(edge + 1) % 4]],
+                                    egui::Stroke::new(2.0_f32, egui::Color32::YELLOW),
+                                );
+                            }
                         }
                     }
                 }
@@ -266,6 +306,7 @@ impl MapInteraction {
         shift: [f32; 2],
     ) -> ca_core::map_json::MapGeometry {
         let mut geometry = document.geometry_snapshot();
+        self.editing_street = document.editing_street();
         self.rejected_geometry = None;
         self.curves.sync(document, shift);
         self.handles.sync(document, shift);
@@ -323,6 +364,24 @@ impl MapInteraction {
     pub fn show(&mut self, ui: &mut egui::Ui, detect: bool) -> MapFrame {
         let rect = ui.available_rect_before_wrap();
         let response = ui.allocate_rect(rect, egui::Sense::click_and_drag());
+        let pointer = ui.input(|i| i.pointer.clone());
+        let bulk_started = response.contains_pointer()
+            && pointer.primary_pressed()
+            && ui.input(|i| i.modifiers.shift);
+        if bulk_started {
+            self.finish_edits();
+            self.drawing_gesture = true;
+            self.clear_bulk();
+            self.selected = None;
+            ui.ctx().memory_mut(|m| {
+                if let Some(id) = m.focused() {
+                    m.surrender_focus(id);
+                }
+            });
+        }
+        if ui.input(|i| i.key_pressed(egui::Key::Escape) || !i.focused) {
+            self.clear_bulk();
+        }
         let selecting = ui.input(|i| i.modifiers.ctrl);
         let viewport = [rect.width().max(1.0), rect.height().max(1.0)];
         let camera = self
@@ -330,6 +389,66 @@ impl MapInteraction {
             .get_or_insert_with(|| Camera::fit(self.extent, viewport));
         camera.set_bounds(self.bounds.0, self.bounds.1);
         camera.resize(viewport);
+        if bulk_started {
+            self.bulk_start = pointer
+                .interact_pos()
+                .map(|p| camera.screen_to_world((p - rect.min).into()));
+        }
+        if let Some(start) = self.bulk_start {
+            let end = pointer
+                .interact_pos()
+                .map(|p| camera.screen_to_world((p - rect.min).into()))
+                .unwrap_or(start);
+            let minimum: [f32; 2] = std::array::from_fn(|i| start[i].min(end[i]));
+            let maximum: [f32; 2] = std::array::from_fn(|i| start[i].max(end[i]));
+            if pointer.primary_released() {
+                self.bulk_selected = self
+                    .street_sizes
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(street, lanes)| {
+                        let enclosed = lanes.iter().enumerate().all(|(lane, &length)| {
+                            (0..length).all(|index| {
+                                self.index
+                                    .cell_corners(CellRef {
+                                        street,
+                                        lane,
+                                        index,
+                                    })
+                                    .is_some_and(|corners| {
+                                        corners.iter().all(|p| {
+                                            (0..2).all(|i| p[i] >= minimum[i] && p[i] <= maximum[i])
+                                        })
+                                    })
+                            })
+                        });
+                        enclosed.then_some(street)
+                    })
+                    .collect();
+                self.bulk_start = None;
+            }
+            let screen = |p| {
+                let p = camera.world_to_screen(p);
+                rect.min + egui::vec2(p[0], p[1])
+            };
+            return MapFrame {
+                bulk_started,
+                bulk_rect: Some(egui::Rect::from_two_pos(screen(start), screen(end))),
+                rect,
+                view: camera.view(),
+                clicked: None,
+                tooltip: None,
+                preview: None,
+                vertex_edit: None,
+                vertex_mode: false,
+                structural_edit: true,
+                street_preview: None,
+                street_edit: None,
+                roundabout_preview: None,
+                geometry_error: None,
+                geometry_preview: None,
+            };
+        }
         let street_hit = ui
             .input(|i| i.pointer.interact_pos())
             .filter(|p| rect.contains(*p))
@@ -338,9 +457,12 @@ impl MapInteraction {
                     .hit_test(camera.screen_to_world((p - rect.min).into()))
             })
             .map(|c| c.street);
-        let vertex_edit =
+        let vertex_edit = if self.editing_street.is_none() {
             self.vertices
-                .input(ui, rect, camera, self.selected, response.contains_pointer());
+                .input(ui, rect, camera, self.selected, response.contains_pointer())
+        } else {
+            None
+        };
         let pointer = ui.input(|i| i.pointer.clone());
         if pointer.primary_pressed() || ui.input(|i| i.key_pressed(egui::Key::Escape)) {
             self.rejected_geometry = None;
@@ -350,7 +472,7 @@ impl MapInteraction {
             rect,
             camera,
             self.selected,
-            !self.drawing && !self.vertices.active(),
+            !self.drawing && !self.vertices.active() && self.editing_street.is_none(),
             response.contains_pointer(),
         );
         let handle_input = self.handles.input(
@@ -433,6 +555,7 @@ impl MapInteraction {
             }
         }
         if !self.vertices.active()
+            && self.editing_street.is_none()
             && !ui.ctx().wants_keyboard_input()
             && ui.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::Delete))
         {
@@ -519,11 +642,17 @@ impl MapInteraction {
                 self.index
                     .hit_test(camera.screen_to_world((pos - rect.min).into()))
             });
-        if response.clicked() && selecting && !was_drawing && !curve_input.handled {
+        if response.clicked()
+            && selecting
+            && !was_drawing
+            && !curve_input.handled
+            && self.editing_street.is_none()
+        {
             self.selected = hit.map(|c| c.street);
             self.curves.select(self.selected, None);
         }
         let clicked = (response.clicked()
+            && self.editing_street.is_none()
             && !selecting
             && !self.vertices.active()
             && !was_drawing
@@ -561,6 +690,8 @@ impl MapInteraction {
             self.rejected_geometry = geometry_error;
         }
         MapFrame {
+            bulk_started: false,
+            bulk_rect: None,
             rect,
             view: camera.view(),
             clicked,
