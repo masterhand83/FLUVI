@@ -2405,6 +2405,7 @@ function guardarSimulacion() {
             };
         }) : [],
         edificios: window.edificios ? window.edificios.map(serializarEdificio) : [],
+        backgroundAreas: window.backgroundAreas || [],
         imagenReferencia: window.referenceImage ? {
             ...(window.referenceImage.url ? { url: window.referenceImage.url } : { dataUrl: window.referenceImage.dataUrl }),
             x: window.referenceImage.x,
@@ -2474,6 +2475,9 @@ function cargarSimulacion(event) {
             // Limpiar simulación actual
             limpiarSimulacionActual();
             const loadVersion = simulationVersion;
+            if (Array.isArray(datosSimulacion.backgroundAreas)) {
+                window.backgroundAreas.push(...datosSimulacion.backgroundAreas);
+            }
             if (datosSimulacion.imagenReferencia) {
                 await window.setReferenceImage(datosSimulacion.imagenReferencia);
                 if (loadVersion !== simulationVersion) return;

@@ -31,8 +31,8 @@ Geometry owners call `sync` after geometry edits or map replacement. The full
 coordinate signature rebuilds only changed streets, independent of traffic
 values. `find_nearest` retains v1's strict one-cell radius and street/lane/index
 tie order. `nearby_streets` returns topmost-first candidates. The current
-`hit_test` uses axis-aligned cell footprints, matching the tracer-map renderer;
-later curved geometry must supply its own footprint check.
+`sync_oriented` supplies tangent axes for rotated cell footprint checks.
+Use the same centers and axes for input and GPU display.
 
 `ca-app::map::MapInteraction` handles mouse drag, wheel zoom, pixel-trackpad pan,
 Ctrl-scroll/trackpad pinch zoom, single-touch drag, and two-finger pan/pinch.
@@ -82,7 +82,7 @@ seeded weighted choice and does not reroute if that destination is occupied.
 Splits require at least two distinct destinations. Weights are finite fractions
 summing to one (tolerance 1e-9).
 
-The demo connects both lane directions across its three streets.
+The test demo connects both lane directions across its three streets.
 `TrafficScene::connection_arrows` exports world-space cell-center endpoints on
 topology changes. `ca-app::connections::ConnectionOverlays` transforms them with
 the same view as the GPU map, clips them to the map panel, and draws after the
@@ -97,8 +97,8 @@ Focused checks: `cargo test -p ca-core --test connections` and
 Use `ca-core::map_json::MapDocument` to validate map JSON before replacing
 the current session. Read roads before links. Keep unowned JSON fields for
 later ports; omit language preferences. Save map configuration without live
-vehicles, as in v1. For this ticket, display straight streets; keep saved curve
-fields for the later geometry ports.
+vehicles, as in v1. Display straight streets and legacy vertex curves; keep
+Bezier and roundabout fields for their later geometry ports.
 
 Keep each saved v1 probabilistic link as a `Connection::ProbabilityTrial`.
 Test its probability independently at its original place in registration order.
@@ -131,6 +131,39 @@ Keep both generated fixtures under `crates/ca-core/tests/fixtures/`.
 For a desktop acceptance check, open and save a map with the native dialogs,
 save with Ctrl+S/Cmd+S, and cancel New Map. Check that Cancel retains the map
 and that an invalid file gives a translated error.
+
+### Campus and legacy vertex curves
+
+Use `node scripts/export-campus.mjs` to capture the built-in v1 campus through
+`guardarSimulacion`. Commit `crates/ca-core/src/campus.json` and the independent
+`tests/fixtures/campus-baseline.json` together. Do not copy the v1 construction
+code. On startup, load this document in the UI and the render worker.
+
+Use `StreetPlacement::cells` for cumulative cell centers and tangent axes.
+Keep f64 integration until the final f32 conversion. Preserve v1's negative
+angle convention and its centered lane offsets for legacy curves. Keep saved
+vertices beyond a resized street's last cell: they still control interpolation.
+Initialize missing legacy connection-street vertices at 0, every 10 cells,
+and the last cell.
+
+Press Z to pause and enter vertex mode. Select a street, then drag a yellow
+handle. Press Z again to leave the mode. Check the translated badge while
+the mode is active. Ignore Z in text fields. Route each edit through the
+ordered edit channel; keep vehicles and links when rebuilding display geometry.
+Keep the display shift fixed during edits so other map objects do not move.
+Call `sync_oriented` after each accepted edit to refresh the cell index.
+
+Read rectangular or polygonal zones from `backgroundAreas`. Keep their color
+and label fields in map JSON. Allocate their GPU triangle buffer on map
+installation. Draw it in `BackgroundCallback`, then draw labels before the
+traffic callback. Use ear clipping for concave polygons. On New Map, replace
+the zone layer with an empty layer. Do not add a zone drawing tool.
+
+Run `cargo test -p ca-core --test campus`,
+`cargo test -p ca-app --test map_interaction`, and
+`cargo test -p ca-gpu --test traffic` for focused checks. Run the app's
+`zones_stay_below` test for native layer order at three display scales.
+See [campus-performance.md](campus-performance.md) for the laptop measurement.
 
 Use `cargo dev edit` or `bacon check` for compiler feedback. Run focused tests,
 for example `cargo nextest run -p ca-core`, when behavior changes. `bacon` still

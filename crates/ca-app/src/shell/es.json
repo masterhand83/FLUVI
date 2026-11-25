@@ -1,4 +1,5 @@
 {
+  "vertices.mode": "Editar vértices (Z) — seleccione una calle y arrastre un punto amarillo",
   "mapFiles.open": "Abrir mapa",
   "mapFiles.save": "Guardar mapa",
   "mapFiles.new": "Nuevo mapa",

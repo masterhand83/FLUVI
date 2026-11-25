@@ -29,6 +29,175 @@ fn frame(
 }
 
 #[test]
+fn z_mode_drag_reshapes_a_street_without_panning_or_placing_a_vehicle() {
+    use ca_core::map_json::MapDocument;
+    let mut document = MapDocument::parse(
+        r#"{"calles":[{"nombre":"Road","tipo":"conexion","tamano":21,"carriles":1}]}"#,
+    )
+    .unwrap();
+    let scene = ca_gpu::TrafficScene::from_document(&document);
+    let shift = scene.shift();
+    let mut map = MapInteraction::new(
+        scene.extent().map(|v| v as f32),
+        &scene.geometry(),
+        scene.street_names(),
+    );
+    map.configure(&document, shift);
+    let ctx = egui::Context::default();
+    frame(&ctx, &mut map, vec![], false);
+    let z = egui::Event::Key {
+        key: egui::Key::Z,
+        physical_key: None,
+        pressed: true,
+        repeat: false,
+        modifiers: egui::Modifiers::NONE,
+    };
+    assert!(frame(&ctx, &mut map, vec![z], false).vertex_mode);
+    let position = map
+        .camera()
+        .unwrap()
+        .world_to_screen([10.5 + shift[0], 0.5 + shift[1]]);
+    let start = egui::pos2(position[0], position[1]);
+    let button = |pos, pressed| egui::Event::PointerButton {
+        pos,
+        pressed,
+        button: egui::PointerButton::Primary,
+        modifiers: egui::Modifiers::NONE,
+    };
+    // Select the street, then start a second gesture on its middle handle.
+    frame(
+        &ctx,
+        &mut map,
+        vec![egui::Event::PointerMoved(start), button(start, true)],
+        false,
+    );
+    assert!(
+        frame(&ctx, &mut map, vec![button(start, false)], false)
+            .clicked
+            .is_none()
+    );
+    frame(&ctx, &mut map, vec![button(start, true)], false);
+    let before = map.camera().unwrap().view();
+    let end = start + egui::vec2(0.0, 60.0);
+    let dragged = frame(&ctx, &mut map, vec![egui::Event::PointerMoved(end)], false);
+    assert_eq!(dragged.view, before);
+    let edit = dragged.vertex_edit.expect("handle drag");
+    assert_eq!((edit.street, edit.vertex), (0, 1));
+    assert!((edit.offset + 27.0).abs() < 0.001);
+    assert!(document.set_vertex_offset(edit.street, edit.vertex, edit.offset));
+    map.configure(&document, shift);
+    assert!(
+        frame(&ctx, &mut map, vec![], false).vertex_edit.is_none(),
+        "stationary pointer must not compound an edit"
+    );
+    frame(&ctx, &mut map, vec![button(end, false)], false);
+    let moved = document.geometry()[0].centers[0][10];
+    assert!(moved[1] > 1.0);
+    let location = map
+        .camera()
+        .unwrap()
+        .world_to_screen([moved[0] + shift[0], moved[1] + shift[1]]);
+    let hovered = frame(
+        &ctx,
+        &mut map,
+        vec![egui::Event::PointerMoved(egui::pos2(
+            location[0],
+            location[1],
+        ))],
+        true,
+    );
+    assert_eq!(hovered.tooltip.as_deref(), Some("Road : 10"));
+    let preview = hovered.preview.unwrap();
+    assert!(
+        (preview.corners[1].y - preview.corners[0].y).abs() > 1.0,
+        "preview edge must follow the edited tangent"
+    );
+}
+
+#[test]
+fn a_floating_window_cannot_start_a_vertex_drag_below_it() {
+    use ca_core::map_json::MapDocument;
+    let document = MapDocument::parse(
+        r#"{"calles":[{"nombre":"Road","tipo":"conexion","tamano":21,"carriles":1}]}"#,
+    )
+    .unwrap();
+    let scene = ca_gpu::TrafficScene::from_document(&document);
+    let mut map = MapInteraction::new(
+        scene.extent().map(|v| v as f32),
+        &scene.geometry(),
+        scene.street_names(),
+    );
+    map.configure(&document, scene.shift());
+    let ctx = egui::Context::default();
+    frame(&ctx, &mut map, vec![], false);
+    frame(
+        &ctx,
+        &mut map,
+        vec![egui::Event::Key {
+            key: egui::Key::Z,
+            physical_key: None,
+            pressed: true,
+            repeat: false,
+            modifiers: egui::Modifiers::NONE,
+        }],
+        false,
+    );
+    let p = map.camera().unwrap().world_to_screen([12.5, 2.5]);
+    let start = egui::pos2(p[0], p[1]);
+    let button = |pos, pressed| egui::Event::PointerButton {
+        pos,
+        pressed,
+        button: egui::PointerButton::Primary,
+        modifiers: egui::Modifiers::NONE,
+    };
+    frame(
+        &ctx,
+        &mut map,
+        vec![egui::Event::PointerMoved(start), button(start, true)],
+        false,
+    );
+    frame(&ctx, &mut map, vec![button(start, false)], false);
+    let before = map.camera().unwrap().view();
+    for events in [
+        vec![],
+        vec![button(start, true)],
+        vec![egui::Event::PointerMoved(start + egui::vec2(0.0, 40.0))],
+    ] {
+        let mut result = None;
+        let _ = ctx.run(
+            egui::RawInput {
+                screen_rect: Some(egui::Rect::from_min_size(
+                    egui::Pos2::ZERO,
+                    egui::vec2(720.0, 280.0),
+                )),
+                events,
+                ..Default::default()
+            },
+            |ctx| {
+                egui::Window::new("Profiler")
+                    .fixed_pos(start - egui::vec2(40.0, 40.0))
+                    .fixed_size(egui::vec2(160.0, 120.0))
+                    .title_bar(false)
+                    .show(ctx, |ui| {
+                        ui.label("Overlay");
+                    });
+                egui::CentralPanel::default()
+                    .frame(egui::Frame::NONE)
+                    .show(ctx, |ui| {
+                        result = Some(map.show(ui, false));
+                    });
+            },
+        );
+        let result = result.unwrap();
+        assert!(
+            result.vertex_edit.is_none(),
+            "overlay pointer must not reach the vertex editor"
+        );
+        assert_eq!(result.view, before);
+    }
+}
+
+#[test]
 fn placement_preview_and_paused_click_share_the_cursor_target_in_an_offset_panel() {
     let scene = ca_gpu::TrafficScene::demo();
     let mut map = MapInteraction::new(

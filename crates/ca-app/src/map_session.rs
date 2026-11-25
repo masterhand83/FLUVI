@@ -33,6 +33,10 @@ impl<S> MapSession<S> {
         &self.document
     }
 
+    pub fn set_vertex_offset(&mut self, street: usize, vertex: usize, offset: f64) -> bool {
+        self.document.set_vertex_offset(street, vertex, offset)
+    }
+
     pub fn replace(&mut self, accepted: bool, candidate: MapDocument, state: &mut S) -> bool {
         if !accepted {
             return false;

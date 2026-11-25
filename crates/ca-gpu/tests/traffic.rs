@@ -125,6 +125,61 @@ fn completed_ticks_pack_the_cpu_model_without_changing_physical_indices() {
 }
 
 #[test]
+fn curved_tiles_render_at_v1_centers_and_geometry_edits_preserve_live_traffic() {
+    use ca_core::{camera::WorldView, cell_index::CellRef, map_json::MapDocument};
+    let mut map = MapDocument::parse(r#"{"calles":[{"nombre":"Curve","tipo":"conexion","tamano":3,"carriles":1,"esCurva":true,"vertices":[{"indiceCelda":0,"anguloOffset":0},{"indiceCelda":2,"anguloOffset":90}]}]}"#).unwrap();
+    let mut scene = TrafficScene::from_document(&map);
+    scene.toggle_vehicle(
+        CellRef {
+            street: 0,
+            lane: 0,
+            index: 2,
+        },
+        true,
+    );
+    let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor::from_env_or_default());
+    let adapter = pollster::block_on(instance.request_adapter(&Default::default())).unwrap();
+    let (device, queue) = pollster::block_on(adapter.request_device(&Default::default())).unwrap();
+    let display = ca_gpu::TrafficDisplay::new(&device, &scene, wgpu::TextureFormat::Rgba8Unorm);
+    let shift = scene.shift();
+    display.set_view(
+        &queue,
+        WorldView {
+            origin: [shift[0] - 2.0, shift[1] - 5.0],
+            span: [36.0, 14.0],
+        },
+    );
+    let bytes = render_display(&device, &queue, &display);
+    // Independent worked integration: step 1 at -45°, step 2 at -90°.
+    assert!(
+        pixel(&bytes, 2.707107, 2.792893)[0] > 230,
+        "vehicle at curved cell 2"
+    );
+    assert!(
+        pixel(&bytes, 4.5, 5.5)[0] < 10,
+        "old straight footprint is empty"
+    );
+    assert!(
+        pixel(&bytes, 3.66066, 3.93934)[0] > 15,
+        "45-degree footprint follows its tangent"
+    );
+    assert!(map.set_vertex_offset(0, 1, 0.0));
+    assert!(scene.set_vertex_offset(0, 1, 0.0));
+    display.upload_street(&queue, &scene, 0);
+    assert_eq!(scene.cells(), [0, 0, 1]);
+    assert_eq!(
+        scene.shift(),
+        shift,
+        "editing must not move all other map objects"
+    );
+    let bytes = render_display(&device, &queue, &display);
+    assert!(
+        pixel(&bytes, 4.5, 5.0)[0] > 230,
+        "same car follows the edited curve"
+    );
+}
+
+#[test]
 fn storage_buffer_display_matches_known_vehicle_colours_and_lane_arrows() {
     let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor::from_env_or_default());
     let adapter = match pollster::block_on(instance.request_adapter(&Default::default())) {

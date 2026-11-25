@@ -30,6 +30,7 @@ pub struct App {
     events: Receiver<Event>,
     commands: Commands,
     callback: egui::PaintCallback,
+    background_callback: egui::PaintCallback,
     map: Option<MapInteraction>,
     report_tx: Sender<Report>,
     progress: Progress,
@@ -47,6 +48,8 @@ pub struct App {
     session: Option<MapSession<App>>,
     file_job: Option<Receiver<FileResult>>,
     new_confirmation: Option<Receiver<bool>>,
+    background: ca_app::background::Background,
+    map_shift: [f32; 2],
 }
 
 impl App {
@@ -64,7 +67,7 @@ impl App {
         let adapter = format!("{} ({:?})", info.name, info.backend);
         let (tx, events) = bounded(2);
         let (commands, requests) = command_channel();
-        let mut session = MapSession::new(MapDocument::demo());
+        let mut session = MapSession::new(MapDocument::campus());
         session.register_reset(ResetPhase::Pause, |app: &mut Self| app.playing = false);
         session.register_reset(ResetPhase::Tools, |app| {
             app.map = None;
@@ -84,6 +87,10 @@ impl App {
             events,
             commands,
             callback: egui_wgpu::Callback::new_paint_callback(egui::Rect::NOTHING, PaintCallback),
+            background_callback: egui_wgpu::Callback::new_paint_callback(
+                egui::Rect::NOTHING,
+                crate::render::BackgroundCallback,
+            ),
             map: None,
             report_tx,
             progress: Progress::default(),
@@ -100,6 +107,8 @@ impl App {
             session: Some(session),
             file_job: None,
             new_confirmation: None,
+            background: ca_app::background::Background::new(&[], [0.0; 2]),
+            map_shift: [0.0; 2],
             startup: Some(Startup {
                 render: render.clone(),
                 events: tx,
@@ -130,6 +139,14 @@ impl App {
                         &scene.geometry(),
                         scene.street_names(),
                     ));
+                    self.map_shift = scene.shift();
+                    let document = self.session.as_ref().expect("session").document();
+                    self.map
+                        .as_mut()
+                        .expect("map")
+                        .configure(document, self.map_shift);
+                    self.background =
+                        ca_app::background::Background::new(document.zones(), self.map_shift);
                     // Setup-only framework lock; frame work uses owned resources.
                     startup
                         .render
@@ -162,7 +179,7 @@ impl App {
             std::thread::Builder::new()
                 .name("fluvi-gpu-startup".into())
                 .spawn(move || {
-                    let scene = TrafficScene::demo();
+                    let scene = TrafficScene::from_document(&MapDocument::campus());
                     let display = TrafficDisplay::new(&device, &scene, format);
                     let _ = sender.try_send((scene, display));
                     repaint.request_repaint();
@@ -273,11 +290,14 @@ impl App {
 
     fn replace_map(&mut self, document: MapDocument) {
         let scene = TrafficScene::from_document(&document);
-        let map = MapInteraction::new(
+        let mut map = MapInteraction::new(
             scene.extent().map(|v| v as f32),
             &scene.geometry(),
             scene.street_names(),
         );
+        let shift = scene.shift();
+        map.configure(&document, shift);
+        let background = ca_app::background::Background::new(document.zones(), shift);
         let arrows = scene.connection_arrows();
         if !self.commands.replace(scene) {
             self.shell.notify(
@@ -290,6 +310,8 @@ impl App {
         session.replace(true, document, self);
         self.session = Some(session);
         self.map = Some(map);
+        self.map_shift = shift;
+        self.background = background;
         if let Some(connections) = &mut self.connections {
             connections.set_arrows(arrows);
         } else {
@@ -385,6 +407,30 @@ impl eframe::App for App {
                 .as_mut()
                 .expect("map installed with render resources")
                 .show(ui, self.shell.preferences().cell_detection);
+            if map.vertex_mode {
+                self.playing = false;
+            }
+            if let Some(edit) = map.vertex_edit {
+                if self.commands.edit(Edit::Vertex(edit)) {
+                    let session = self.session.as_mut().expect("session");
+                    session.set_vertex_offset(edit.street, edit.vertex, edit.offset);
+                    let document = session.document();
+                    let geometry = self
+                        .map
+                        .as_mut()
+                        .expect("map")
+                        .configure(document, self.map_shift);
+                    let arrows = document.model().connection_arrows(&geometry.streets);
+                    if let Some(connections) = &mut self.connections {
+                        connections.set_arrows(arrows);
+                    }
+                } else {
+                    self.shell.notify(
+                        ca_app::shell::Severity::Warning,
+                        self.shell.tr("shell.cellEditBusy", &[]),
+                    );
+                }
+            }
             let request = Paint {
                 playing: self.playing,
                 rate: self.rate,
@@ -400,11 +446,30 @@ impl eframe::App for App {
             }
             let mut callback = self.callback.clone();
             callback.rect = map.rect;
+            ui.painter()
+                .rect_filled(map.rect, 0.0, egui::Color32::from_rgb(5, 6, 10));
+            let mut background_callback = self.background_callback.clone();
+            background_callback.rect = map.rect;
+            ui.painter().add(background_callback);
+            self.background.paint(ui.painter(), map.view, map.rect);
             ui.painter().add(callback);
             if let Some(connections) = &self.connections {
                 connections.paint(ui.painter(), map.view, map.rect);
             }
             map.paint_preview(ui.painter());
+            self.map
+                .as_ref()
+                .expect("map")
+                .paint_vertices(ui.painter(), map.rect);
+            if map.vertex_mode {
+                ui.painter().text(
+                    map.rect.left_top() + egui::vec2(12.0, 12.0),
+                    egui::Align2::LEFT_TOP,
+                    self.shell.tr("vertices.mode", &[]),
+                    egui::FontId::proportional(16.0),
+                    egui::Color32::YELLOW,
+                );
+            }
         });
         self.shell.overlays(ctx);
         if self.profiler {

@@ -19,6 +19,7 @@ pub struct CellRef {
 struct Entry {
     cell: CellRef,
     center: [f32; 2],
+    axis: [f32; 2],
 }
 
 type Bucket = (i32, i32);
@@ -85,6 +86,7 @@ impl CellIndex {
                             index,
                         },
                         center,
+                        axis: [1.0, 0.0],
                     });
                 }
             }
@@ -113,6 +115,22 @@ impl CellIndex {
         }
     }
 
+    /// Keep the same index and tie order, but use each rendered cell's tangent.
+    pub fn sync_oriented(
+        &mut self,
+        streets: &[StreetGeometry],
+        axes: &[Vec<Vec<[f32; 2]>>],
+    ) -> usize {
+        let rebuilt = self.sync(streets);
+        for entries in self.buckets.values_mut() {
+            for entry in entries {
+                let cell = entry.cell;
+                entry.axis = axes[self.order[&cell.street]][cell.lane][cell.index];
+            }
+        }
+        rebuilt
+    }
+
     pub fn clear(&mut self) {
         self.streets.clear();
         self.buckets.clear();
@@ -128,6 +146,24 @@ impl CellIndex {
             .get(cell.lane)?
             .get(cell.index)
             .copied()
+    }
+
+    pub fn cell_corners(&self, cell: CellRef) -> Option<[[f32; 2]; 4]> {
+        let center = self.cell_center(cell)?;
+        let entry = self
+            .buckets
+            .get(&self.key(center))?
+            .iter()
+            .find(|entry| entry.cell == cell)?;
+        let axis = entry.axis;
+        Some(
+            [[-0.5, -0.5], [0.5, -0.5], [0.5, 0.5], [-0.5, 0.5]].map(|[x, y]| {
+                [
+                    center[0] + axis[0] * x - axis[1] * y,
+                    center[1] + axis[1] * x + axis[0] * y,
+                ]
+            }),
+        )
     }
 
     pub fn find_nearest(&self, point: [f32; 2]) -> Option<CellRef> {
@@ -160,19 +196,23 @@ impl CellIndex {
         found
     }
 
-    /// Axis-aligned cell footprints used by the current straight-street renderer.
-    /// Topmost street wins; physical lane/index order breaks same-street ties.
+    /// Oriented cell footprints in GPU paint order: last lane/cell wins overlaps.
     pub fn hit_test(&self, point: [f32; 2]) -> Option<CellRef> {
         let mut best = None;
         self.visit(point, |entry, _| {
-            if (0..2).all(|i| {
-                let local = point[i] - entry.center[i];
-                local >= -self.size * 0.5 && local < self.size * 0.5
-            }) {
+            let delta = [point[0] - entry.center[0], point[1] - entry.center[1]];
+            let local = [
+                delta[0] * entry.axis[0] + delta[1] * entry.axis[1],
+                -delta[0] * entry.axis[1] + delta[1] * entry.axis[0],
+            ];
+            if local
+                .into_iter()
+                .all(|local| local >= -self.size * 0.5 && local < self.size * 0.5)
+            {
                 let rank = (
                     std::cmp::Reverse(self.order[&entry.cell.street]),
-                    entry.cell.lane,
-                    entry.cell.index,
+                    std::cmp::Reverse(entry.cell.lane),
+                    std::cmp::Reverse(entry.cell.index),
                 );
                 if best.is_none_or(|(_, old_rank)| rank < old_rank) {
                     best = Some((entry.cell, rank));

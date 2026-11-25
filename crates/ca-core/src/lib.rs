@@ -2,6 +2,7 @@
 
 pub mod camera;
 pub mod cell_index;
+pub mod geometry;
 pub mod map_json;
 mod random;
 pub mod traffic;

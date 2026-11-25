@@ -2,7 +2,9 @@
 //! Unowned fields stay in the document for later feature ports.
 use serde_json::{Value, json};
 
+use crate::cell_index::StreetGeometry;
 use crate::connections::{Connection, Mapping, MergeRow, WeightedRow};
+use crate::geometry::{Vertex, initialize_vertices};
 use crate::traffic::{Calle, CalleConfig, CalleType, LaneDirection, TrafficModel};
 
 #[derive(Debug, thiserror::Error)]
@@ -20,17 +22,98 @@ pub struct MapDocument {
     data: Value,
     model: TrafficModel,
     layout: Vec<StreetPlacement>,
+    zones: Vec<BackgroundZone>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct BackgroundZone {
+    /// Polygon points in cell-sized world units. Rectangles use four points.
+    pub points: Vec<[f32; 2]>,
+    pub color: [u8; 4],
+    pub label: String,
+    pub show_label: bool,
+    pub show_border: bool,
+}
+
+pub struct MapGeometry {
+    pub streets: Vec<StreetGeometry>,
+    pub axes: Vec<Vec<Vec<[f32; 2]>>>,
+}
+
+impl MapGeometry {
+    pub fn translate(&mut self, shift: [f32; 2]) {
+        for center in self
+            .streets
+            .iter_mut()
+            .flat_map(|s| &mut s.centers)
+            .flatten()
+        {
+            for i in 0..2 {
+                center[i] += shift[i];
+            }
+        }
+    }
 }
 
 /// Display metadata in cell-sized world units, in the model's street order.
 #[derive(Clone, Debug)]
 pub struct StreetPlacement {
     pub name: String,
-    pub origin: [f32; 2],
-    pub angle_radians: f32,
+    pub origin: [f64; 2],
+    pub angle_degrees: f64,
+    pub curved: bool,
+    pub vertices: Vec<Vertex>,
 }
 
 impl MapDocument {
+    pub fn campus() -> Self {
+        Self::parse(include_str!("campus.json")).expect("exported v1 campus")
+    }
+
+    pub fn geometry(&self) -> Vec<StreetGeometry> {
+        self.geometry_snapshot().streets
+    }
+
+    pub fn axes(&self) -> Vec<Vec<Vec<[f32; 2]>>> {
+        self.geometry_snapshot().axes
+    }
+
+    pub fn geometry_snapshot(&self) -> MapGeometry {
+        let mut streets = Vec::with_capacity(self.layout.len());
+        let mut axes = Vec::with_capacity(self.layout.len());
+        for (id, (p, s)) in self.layout.iter().zip(self.model.streets()).enumerate() {
+            let geometry = p.cells(s.config().carriles, s.config().tamano);
+            streets.push(StreetGeometry {
+                id,
+                centers: geometry.centers,
+            });
+            axes.push(geometry.axes);
+        }
+        MapGeometry { streets, axes }
+    }
+
+    pub fn zones(&self) -> &[BackgroundZone] {
+        &self.zones
+    }
+
+    /// A geometry edit changes configuration, not traffic or connections.
+    pub fn set_vertex_offset(&mut self, street: usize, vertex: usize, offset: f64) -> bool {
+        let Some(placement) = self.layout.get_mut(street) else {
+            return false;
+        };
+        if !placement.set_vertex_offset(vertex, offset) {
+            return false;
+        }
+        self.data["calles"][street]["esCurva"] = json!(true);
+        self.data["calles"][street]["vertices"] = json!(
+            placement
+                .vertices
+                .iter()
+                .map(|v| json!({"indiceCelda":v.index,"anguloOffset":v.offset}))
+                .collect::<Vec<_>>()
+        );
+        true
+    }
     pub fn demo() -> Self {
         let model = TrafficModel::demo();
         let roads: Vec<_> = model.streets().iter().enumerate().map(|(i, street)| {
@@ -126,11 +209,39 @@ impl MapDocument {
             };
             layout.push(StreetPlacement {
                 name: road["nombre"].as_str().ok_or(MapError)?.to_owned(),
-                origin: [
-                    (number(&road["x"])? / 5.0) as f32,
-                    (number(&road["y"])? / 5.0) as f32,
-                ],
-                angle_radians: number(&road["angulo"])?.to_radians() as f32,
+                origin: [number(&road["x"])? / 5.0, number(&road["y"])? / 5.0],
+                angle_degrees: number(&road["angulo"])?,
+                curved: road["esCurva"].as_bool().ok_or(MapError)?,
+                vertices: {
+                    let saved = road["vertices"].as_array().ok_or(MapError)?;
+                    if saved.len() > 2501 {
+                        return Err(MapError);
+                    }
+                    let vertices: Vec<_> = saved
+                        .iter()
+                        .map(|v| {
+                            let index = integer(&v["indiceCelda"])?;
+                            let offset = number(&v["anguloOffset"])?;
+                            // V1 retains vertices beyond the end after a street resize.
+                            if index > 2500 || offset.abs() > 90.0 {
+                                return Err(MapError);
+                            }
+                            Ok(Vertex { index, offset })
+                        })
+                        .collect::<Result<_, _>>()?;
+                    if vertices.windows(2).any(|v| v[0].index >= v[1].index) {
+                        return Err(MapError);
+                    }
+                    if vertices.is_empty()
+                        && tipo == CalleType::Conexion
+                        && road.get("geometryType").is_none()
+                        && road.get("bezierControls").is_none()
+                    {
+                        initialize_vertices(length)
+                    } else {
+                        vertices
+                    }
+                },
             });
             let mut config = CalleConfig::new(lanes, length, tipo);
             config.generation_probability = number(&road["probabilidadGeneracion"])?;
@@ -220,10 +331,12 @@ impl MapDocument {
         for connection in connections {
             model.add_connection(connection).map_err(|_| MapError)?;
         }
+        let zones = parse_zones(root.get("backgroundAreas"))?;
         Ok(Self {
             data,
             model,
             layout,
+            zones,
         })
     }
 
@@ -249,4 +362,73 @@ fn integer(value: &Value) -> Result<usize, MapError> {
 }
 fn number(value: &Value) -> Result<f64, MapError> {
     value.as_f64().filter(|n| n.is_finite()).ok_or(MapError)
+}
+
+fn parse_zones(value: Option<&Value>) -> Result<Vec<BackgroundZone>, MapError> {
+    let Some(value) = value else {
+        return Ok(Vec::new());
+    };
+    let areas = value.as_array().ok_or(MapError)?;
+    if areas.len() > 10000 {
+        return Err(MapError);
+    }
+    areas
+        .iter()
+        .map(|area| {
+            let coordinate = |v: &Value| -> Result<f32, MapError> {
+                let n = number(v)?;
+                if n.abs() > 1_000_000.0 {
+                    return Err(MapError);
+                }
+                Ok((n / 5.0) as f32)
+            };
+            let points = if let Some(vertices) = area.get("vertices") {
+                let vertices = vertices.as_array().ok_or(MapError)?;
+                if !(3..=10000).contains(&vertices.len()) {
+                    return Err(MapError);
+                }
+                vertices
+                    .iter()
+                    .map(|v| Ok([coordinate(&v["x"])?, coordinate(&v["y"])?]))
+                    .collect::<Result<Vec<_>, MapError>>()?
+            } else {
+                let x = coordinate(&area["x"])?;
+                let y = coordinate(&area["y"])?;
+                let w = coordinate(&area["width"])?;
+                let h = coordinate(&area["height"])?;
+                if w <= 0.0 || h <= 0.0 {
+                    return Err(MapError);
+                }
+                vec![[x, y], [x + w, y], [x + w, y + h], [x, y + h]]
+            };
+            let color = area["color"].as_str().ok_or(MapError)?;
+            if !color.starts_with('#')
+                || ![7, 9].contains(&color.len())
+                || !color[1..].bytes().all(|b| b.is_ascii_hexdigit())
+            {
+                return Err(MapError);
+            }
+            let mut rgba = [255; 4];
+            for (i, channel) in rgba.iter_mut().enumerate().take((color.len() - 1) / 2) {
+                *channel =
+                    u8::from_str_radix(&color[1 + i * 2..3 + i * 2], 16).map_err(|_| MapError)?;
+            }
+            let alpha = area.get("alpha").map(number).transpose()?.unwrap_or(0.3);
+            if !(0.0..=1.0).contains(&alpha) {
+                return Err(MapError);
+            }
+            rgba[3] = (rgba[3] as f64 * alpha).round() as u8;
+            Ok(BackgroundZone {
+                points,
+                color: rgba,
+                label: area
+                    .get("label")
+                    .and_then(Value::as_str)
+                    .unwrap_or("")
+                    .to_owned(),
+                show_label: area["showLabel"] != false,
+                show_border: area["showBorder"] == true,
+            })
+        })
+        .collect()
 }

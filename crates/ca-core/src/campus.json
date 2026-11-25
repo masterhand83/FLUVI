@@ -1,0 +1,7415 @@
+{
+  "version": "1.0",
+  "nombre": "IPN / Zacatenco",
+  "fecha": "2026-11-25T05:17:38.013Z",
+  "calles": [
+    {
+      "nombre": "Retorno M. ←",
+      "tamano": 6,
+      "tipo": "conexion",
+      "x": 1932,
+      "y": 889,
+      "angulo": 260,
+      "probabilidadGeneracion": 0,
+      "carriles": 2,
+      "laneDirections": [
+        1,
+        1
+      ],
+      "laneGenerationEnabled": [
+        true,
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 5,
+          "anguloOffset": 0
+        }
+      ],
+      "esCurva": false
+    },
+    {
+      "nombre": "Retorno M. →",
+      "tamano": 6,
+      "tipo": "conexion",
+      "x": 1941,
+      "y": 926,
+      "angulo": 80,
+      "probabilidadGeneracion": 0,
+      "carriles": 2,
+      "laneDirections": [
+        1,
+        1
+      ],
+      "laneGenerationEnabled": [
+        true,
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 5,
+          "anguloOffset": 0
+        }
+      ],
+      "esCurva": false
+    },
+    {
+      "nombre": "Retorno torres →",
+      "tamano": 7,
+      "tipo": "conexion",
+      "x": 1029,
+      "y": 766,
+      "angulo": 72,
+      "probabilidadGeneracion": 0,
+      "carriles": 1,
+      "laneDirections": [
+        1
+      ],
+      "laneGenerationEnabled": [
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 6,
+          "anguloOffset": 0
+        }
+      ],
+      "esCurva": false
+    },
+    {
+      "nombre": "Retorno torres ←",
+      "tamano": 7,
+      "tipo": "conexion",
+      "x": 1051,
+      "y": 731,
+      "angulo": 252,
+      "probabilidadGeneracion": 0,
+      "carriles": 1,
+      "laneDirections": [
+        1
+      ],
+      "laneGenerationEnabled": [
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 6,
+          "anguloOffset": 0
+        }
+      ],
+      "esCurva": false
+    },
+    {
+      "nombre": "Retorno ESCOM ←",
+      "tamano": 6,
+      "tipo": "conexion",
+      "x": 1222,
+      "y": 766,
+      "angulo": 259,
+      "probabilidadGeneracion": 0,
+      "carriles": 1,
+      "laneDirections": [
+        1
+      ],
+      "laneGenerationEnabled": [
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 5,
+          "anguloOffset": 0
+        }
+      ],
+      "esCurva": false
+    },
+    {
+      "nombre": "Retorno ESCOM →",
+      "tamano": 6,
+      "tipo": "conexion",
+      "x": 1206,
+      "y": 798,
+      "angulo": 79,
+      "probabilidadGeneracion": 0,
+      "carriles": 1,
+      "laneDirections": [
+        1
+      ],
+      "laneGenerationEnabled": [
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 5,
+          "anguloOffset": 0
+        }
+      ],
+      "esCurva": false
+    },
+    {
+      "nombre": "Retorno Estampa ←",
+      "tamano": 6,
+      "tipo": "conexion",
+      "x": 1390,
+      "y": 795,
+      "angulo": 259,
+      "probabilidadGeneracion": 0,
+      "carriles": 1,
+      "laneDirections": [
+        1
+      ],
+      "laneGenerationEnabled": [
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 5,
+          "anguloOffset": 0
+        }
+      ],
+      "esCurva": false
+    },
+    {
+      "nombre": "Retorno Estampa →",
+      "tamano": 6,
+      "tipo": "conexion",
+      "x": 1374,
+      "y": 827,
+      "angulo": 79,
+      "probabilidadGeneracion": 0,
+      "carriles": 1,
+      "laneDirections": [
+        1
+      ],
+      "laneGenerationEnabled": [
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 5,
+          "anguloOffset": 0
+        }
+      ],
+      "esCurva": false
+    },
+    {
+      "nombre": "Retorno Juan F. ←",
+      "tamano": 6,
+      "tipo": "conexion",
+      "x": 1439,
+      "y": 804,
+      "angulo": 259,
+      "probabilidadGeneracion": 0,
+      "carriles": 1,
+      "laneDirections": [
+        1
+      ],
+      "laneGenerationEnabled": [
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 5,
+          "anguloOffset": 0
+        }
+      ],
+      "esCurva": false
+    },
+    {
+      "nombre": "Retorno Juan F. →",
+      "tamano": 6,
+      "tipo": "conexion",
+      "x": 1423,
+      "y": 836,
+      "angulo": 79,
+      "probabilidadGeneracion": 0,
+      "carriles": 1,
+      "laneDirections": [
+        1
+      ],
+      "laneGenerationEnabled": [
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 5,
+          "anguloOffset": 0
+        }
+      ],
+      "esCurva": false
+    },
+    {
+      "nombre": "Retorno Juan F. 2 ←",
+      "tamano": 6,
+      "tipo": "conexion",
+      "x": 1552,
+      "y": 824,
+      "angulo": 259,
+      "probabilidadGeneracion": 0,
+      "carriles": 1,
+      "laneDirections": [
+        1
+      ],
+      "laneGenerationEnabled": [
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 5,
+          "anguloOffset": 0
+        }
+      ],
+      "esCurva": false
+    },
+    {
+      "nombre": "Retorno Juan F. 2 →",
+      "tamano": 6,
+      "tipo": "conexion",
+      "x": 1536,
+      "y": 856,
+      "angulo": 79,
+      "probabilidadGeneracion": 0,
+      "carriles": 1,
+      "laneDirections": [
+        1
+      ],
+      "laneGenerationEnabled": [
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 5,
+          "anguloOffset": 0
+        }
+      ],
+      "esCurva": false
+    },
+    {
+      "nombre": "Retorno Batiz ←",
+      "tamano": 6,
+      "tipo": "conexion",
+      "x": 1745,
+      "y": 858,
+      "angulo": 259,
+      "probabilidadGeneracion": 0,
+      "carriles": 1,
+      "laneDirections": [
+        1
+      ],
+      "laneGenerationEnabled": [
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 5,
+          "anguloOffset": 0
+        }
+      ],
+      "esCurva": false
+    },
+    {
+      "nombre": "Retorno Batiz →",
+      "tamano": 6,
+      "tipo": "conexion",
+      "x": 1729,
+      "y": 890,
+      "angulo": 79,
+      "probabilidadGeneracion": 0,
+      "carriles": 1,
+      "laneDirections": [
+        1
+      ],
+      "laneGenerationEnabled": [
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 5,
+          "anguloOffset": 0
+        }
+      ],
+      "esCurva": false
+    },
+    {
+      "nombre": "Retorno Batiz F. ←",
+      "tamano": 6,
+      "tipo": "conexion",
+      "x": 2040,
+      "y": 910,
+      "angulo": 259,
+      "probabilidadGeneracion": 0,
+      "carriles": 1,
+      "laneDirections": [
+        1
+      ],
+      "laneGenerationEnabled": [
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 5,
+          "anguloOffset": 0
+        }
+      ],
+      "esCurva": false
+    },
+    {
+      "nombre": "Retorno Batiz F. →",
+      "tamano": 6,
+      "tipo": "conexion",
+      "x": 2024,
+      "y": 942,
+      "angulo": 79,
+      "probabilidadGeneracion": 0,
+      "carriles": 1,
+      "laneDirections": [
+        1
+      ],
+      "laneGenerationEnabled": [
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 5,
+          "anguloOffset": 0
+        }
+      ],
+      "esCurva": false
+    },
+    {
+      "nombre": "Retorno SECAD ←",
+      "tamano": 7,
+      "tipo": "conexion",
+      "x": 2345,
+      "y": 962,
+      "angulo": 259,
+      "probabilidadGeneracion": 0,
+      "carriles": 1,
+      "laneDirections": [
+        1
+      ],
+      "laneGenerationEnabled": [
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 6,
+          "anguloOffset": 0
+        }
+      ],
+      "esCurva": false
+    },
+    {
+      "nombre": "Retorno SECAD →",
+      "tamano": 7,
+      "tipo": "conexion",
+      "x": 2328,
+      "y": 999,
+      "angulo": 79,
+      "probabilidadGeneracion": 0,
+      "carriles": 1,
+      "laneDirections": [
+        1
+      ],
+      "laneGenerationEnabled": [
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 6,
+          "anguloOffset": 0
+        }
+      ],
+      "esCurva": false
+    },
+    {
+      "nombre": "Retorno Bernard ←",
+      "tamano": 7,
+      "tipo": "conexion",
+      "x": 2424,
+      "y": 976,
+      "angulo": 259,
+      "probabilidadGeneracion": 0,
+      "carriles": 1,
+      "laneDirections": [
+        1
+      ],
+      "laneGenerationEnabled": [
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 6,
+          "anguloOffset": 0
+        }
+      ],
+      "esCurva": false
+    },
+    {
+      "nombre": "Retorno Bernard →",
+      "tamano": 7,
+      "tipo": "conexion",
+      "x": 2407,
+      "y": 1013,
+      "angulo": 79,
+      "probabilidadGeneracion": 0,
+      "carriles": 1,
+      "laneDirections": [
+        1
+      ],
+      "laneGenerationEnabled": [
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 6,
+          "anguloOffset": 0
+        }
+      ],
+      "esCurva": false
+    },
+    {
+      "nombre": "Retorno Erro 1 ←",
+      "tamano": 4,
+      "tipo": "conexion",
+      "x": 2129,
+      "y": 627,
+      "angulo": 136,
+      "probabilidadGeneracion": 0,
+      "carriles": 2,
+      "laneDirections": [
+        1,
+        1
+      ],
+      "laneGenerationEnabled": [
+        true,
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 3,
+          "anguloOffset": 0
+        }
+      ],
+      "esCurva": false
+    },
+    {
+      "nombre": "Retorno Erro 2 ←",
+      "tamano": 3,
+      "tipo": "conexion",
+      "x": 2048,
+      "y": 701,
+      "angulo": 136,
+      "probabilidadGeneracion": 0,
+      "carriles": 2,
+      "laneDirections": [
+        1,
+        1
+      ],
+      "laneGenerationEnabled": [
+        true,
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 2,
+          "anguloOffset": 0
+        }
+      ],
+      "esCurva": false
+    },
+    {
+      "nombre": "Retorno Wilfrido. ←",
+      "tamano": 4,
+      "tipo": "conexion",
+      "x": 1026,
+      "y": 1475,
+      "angulo": 258,
+      "probabilidadGeneracion": 0,
+      "carriles": 1,
+      "laneDirections": [
+        1
+      ],
+      "laneGenerationEnabled": [
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 3,
+          "anguloOffset": 0
+        }
+      ],
+      "esCurva": false
+    },
+    {
+      "nombre": "Retorno Escalera ←",
+      "tamano": 4,
+      "tipo": "conexion",
+      "x": 1132,
+      "y": 1519,
+      "angulo": 247,
+      "probabilidadGeneracion": 0,
+      "carriles": 1,
+      "laneDirections": [
+        1
+      ],
+      "laneGenerationEnabled": [
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 3,
+          "anguloOffset": 0
+        }
+      ],
+      "esCurva": false
+    },
+    {
+      "nombre": "Retorno Escalera →",
+      "tamano": 4,
+      "tipo": "conexion",
+      "x": 1114,
+      "y": 1537,
+      "angulo": 67,
+      "probabilidadGeneracion": 0,
+      "carriles": 1,
+      "laneDirections": [
+        1
+      ],
+      "laneGenerationEnabled": [
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 3,
+          "anguloOffset": 0
+        }
+      ],
+      "esCurva": false
+    },
+    {
+      "nombre": "Retorno Wilfrido1 ←",
+      "tamano": 4,
+      "tipo": "conexion",
+      "x": 1609,
+      "y": 1764,
+      "angulo": 67,
+      "probabilidadGeneracion": 0,
+      "carriles": 1,
+      "laneDirections": [
+        1
+      ],
+      "laneGenerationEnabled": [
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 3,
+          "anguloOffset": 0
+        }
+      ],
+      "esCurva": false
+    },
+    {
+      "nombre": "Retorno Wilfrido2 →",
+      "tamano": 4,
+      "tipo": "conexion",
+      "x": 1627,
+      "y": 1746,
+      "angulo": 248,
+      "probabilidadGeneracion": 0,
+      "carriles": 1,
+      "laneDirections": [
+        1
+      ],
+      "laneGenerationEnabled": [
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 3,
+          "anguloOffset": 0
+        }
+      ],
+      "esCurva": false
+    },
+    {
+      "nombre": "Retorno Wilfrido3 →",
+      "tamano": 4,
+      "tipo": "conexion",
+      "x": 1737,
+      "y": 1822,
+      "angulo": 68,
+      "probabilidadGeneracion": 0,
+      "carriles": 1,
+      "laneDirections": [
+        1
+      ],
+      "laneGenerationEnabled": [
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 3,
+          "anguloOffset": 0
+        }
+      ],
+      "esCurva": false
+    },
+    {
+      "nombre": "Retorno Wilfrido4 ←",
+      "tamano": 4,
+      "tipo": "conexion",
+      "x": 1755,
+      "y": 1803,
+      "angulo": 248,
+      "probabilidadGeneracion": 0,
+      "carriles": 1,
+      "laneDirections": [
+        1
+      ],
+      "laneGenerationEnabled": [
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 3,
+          "anguloOffset": 0
+        }
+      ],
+      "esCurva": false
+    },
+    {
+      "nombre": "Retorno Wilfrido5 ←",
+      "tamano": 4,
+      "tipo": "conexion",
+      "x": 2135,
+      "y": 1910,
+      "angulo": 259,
+      "probabilidadGeneracion": 0,
+      "carriles": 1,
+      "laneDirections": [
+        1
+      ],
+      "laneGenerationEnabled": [
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 3,
+          "anguloOffset": 0
+        }
+      ],
+      "esCurva": false
+    },
+    {
+      "nombre": "Retorno Wilfrido6 →",
+      "tamano": 4,
+      "tipo": "conexion",
+      "x": 2295,
+      "y": 1974,
+      "angulo": 78,
+      "probabilidadGeneracion": 0,
+      "carriles": 1,
+      "laneDirections": [
+        1
+      ],
+      "laneGenerationEnabled": [
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 3,
+          "anguloOffset": 0
+        }
+      ],
+      "esCurva": false
+    },
+    {
+      "nombre": "Retorno Wilfrido7 ←",
+      "tamano": 4,
+      "tipo": "conexion",
+      "x": 2309,
+      "y": 1952,
+      "angulo": 257,
+      "probabilidadGeneracion": 0,
+      "carriles": 1,
+      "laneDirections": [
+        1
+      ],
+      "laneGenerationEnabled": [
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 3,
+          "anguloOffset": 0
+        }
+      ],
+      "esCurva": false
+    },
+    {
+      "nombre": "Retorno Wilfrido8 →",
+      "tamano": 3,
+      "tipo": "conexion",
+      "x": 2549,
+      "y": 2033,
+      "angulo": 80,
+      "probabilidadGeneracion": 0,
+      "carriles": 1,
+      "laneDirections": [
+        1
+      ],
+      "laneGenerationEnabled": [
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 2,
+          "anguloOffset": 0
+        }
+      ],
+      "esCurva": false
+    },
+    {
+      "nombre": "Retorno Wilfrido9 ←",
+      "tamano": 3,
+      "tipo": "conexion",
+      "x": 2562,
+      "y": 2017,
+      "angulo": 259,
+      "probabilidadGeneracion": 0,
+      "carriles": 1,
+      "laneDirections": [
+        1
+      ],
+      "laneGenerationEnabled": [
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 2,
+          "anguloOffset": 0
+        }
+      ],
+      "esCurva": false
+    },
+    {
+      "nombre": "Retorno Wilfrido10 ←",
+      "tamano": 4,
+      "tipo": "conexion",
+      "x": 1800,
+      "y": 1823,
+      "angulo": 247,
+      "probabilidadGeneracion": 0,
+      "carriles": 1,
+      "laneDirections": [
+        1
+      ],
+      "laneGenerationEnabled": [
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 3,
+          "anguloOffset": 0
+        }
+      ],
+      "esCurva": false
+    },
+    {
+      "nombre": "Retorno Wilfrido11 →",
+      "tamano": 4,
+      "tipo": "conexion",
+      "x": 1781,
+      "y": 1842,
+      "angulo": 67,
+      "probabilidadGeneracion": 0,
+      "carriles": 1,
+      "laneDirections": [
+        1
+      ],
+      "laneGenerationEnabled": [
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 3,
+          "anguloOffset": 0
+        }
+      ],
+      "esCurva": false
+    },
+    {
+      "nombre": "Retorno Erro 3 →",
+      "tamano": 4,
+      "tipo": "conexion",
+      "x": 1904,
+      "y": 1017,
+      "angulo": 350,
+      "probabilidadGeneracion": 0,
+      "carriles": 1,
+      "laneDirections": [
+        1
+      ],
+      "laneGenerationEnabled": [
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 3,
+          "anguloOffset": 0
+        }
+      ],
+      "esCurva": false
+    },
+    {
+      "nombre": "Retorno Erro 3 ←",
+      "tamano": 4,
+      "tipo": "conexion",
+      "x": 1927,
+      "y": 1031,
+      "angulo": 169,
+      "probabilidadGeneracion": 0,
+      "carriles": 1,
+      "laneDirections": [
+        1
+      ],
+      "laneGenerationEnabled": [
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 3,
+          "anguloOffset": 0
+        }
+      ],
+      "esCurva": false
+    },
+    {
+      "nombre": "Retorno Erro 4 →",
+      "tamano": 4,
+      "tipo": "conexion",
+      "x": 1879,
+      "y": 1159,
+      "angulo": 350,
+      "probabilidadGeneracion": 0,
+      "carriles": 1,
+      "laneDirections": [
+        1
+      ],
+      "laneGenerationEnabled": [
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 3,
+          "anguloOffset": 0
+        }
+      ],
+      "esCurva": false
+    },
+    {
+      "nombre": "Retorno Erro 4 ←",
+      "tamano": 4,
+      "tipo": "conexion",
+      "x": 1901,
+      "y": 1174,
+      "angulo": 169,
+      "probabilidadGeneracion": 0,
+      "carriles": 1,
+      "laneDirections": [
+        1
+      ],
+      "laneGenerationEnabled": [
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 3,
+          "anguloOffset": 0
+        }
+      ],
+      "esCurva": false
+    },
+    {
+      "nombre": "Retorno Erro 5 →",
+      "tamano": 4,
+      "tipo": "conexion",
+      "x": 1816,
+      "y": 1519,
+      "angulo": 349,
+      "probabilidadGeneracion": 0,
+      "carriles": 1,
+      "laneDirections": [
+        1
+      ],
+      "laneGenerationEnabled": [
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 3,
+          "anguloOffset": 0
+        }
+      ],
+      "esCurva": false
+    },
+    {
+      "nombre": "Retorno Erro 5 ←",
+      "tamano": 4,
+      "tipo": "conexion",
+      "x": 1838,
+      "y": 1533,
+      "angulo": 169,
+      "probabilidadGeneracion": 0,
+      "carriles": 1,
+      "laneDirections": [
+        1
+      ],
+      "laneGenerationEnabled": [
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 3,
+          "anguloOffset": 0
+        }
+      ],
+      "esCurva": false
+    },
+    {
+      "nombre": "Retorno Barredo →",
+      "tamano": 5,
+      "tipo": "conexion",
+      "x": 2290,
+      "y": 1131,
+      "angulo": 347,
+      "probabilidadGeneracion": 0,
+      "carriles": 1,
+      "laneDirections": [
+        1
+      ],
+      "laneGenerationEnabled": [
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 4,
+          "anguloOffset": 0
+        }
+      ],
+      "esCurva": false
+    },
+    {
+      "nombre": "Retorno Barredo ←",
+      "tamano": 5,
+      "tipo": "conexion",
+      "x": 2317,
+      "y": 1147,
+      "angulo": 167,
+      "probabilidadGeneracion": 0,
+      "carriles": 1,
+      "laneDirections": [
+        1
+      ],
+      "laneGenerationEnabled": [
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 4,
+          "anguloOffset": 0
+        }
+      ],
+      "esCurva": false
+    },
+    {
+      "nombre": "Retorno Barredo 3 →",
+      "tamano": 5,
+      "tipo": "conexion",
+      "x": 2264,
+      "y": 1253,
+      "angulo": 347,
+      "probabilidadGeneracion": 0,
+      "carriles": 1,
+      "laneDirections": [
+        1
+      ],
+      "laneGenerationEnabled": [
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 4,
+          "anguloOffset": 0
+        }
+      ],
+      "esCurva": false
+    },
+    {
+      "nombre": "Retorno Barredo 3 ←",
+      "tamano": 5,
+      "tipo": "conexion",
+      "x": 2291,
+      "y": 1269,
+      "angulo": 167,
+      "probabilidadGeneracion": 0,
+      "carriles": 1,
+      "laneDirections": [
+        1
+      ],
+      "laneGenerationEnabled": [
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 4,
+          "anguloOffset": 0
+        }
+      ],
+      "esCurva": false
+    },
+    {
+      "nombre": "Retorno Barredo 4 →",
+      "tamano": 5,
+      "tipo": "conexion",
+      "x": 2233,
+      "y": 1400,
+      "angulo": 347,
+      "probabilidadGeneracion": 0,
+      "carriles": 1,
+      "laneDirections": [
+        1
+      ],
+      "laneGenerationEnabled": [
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 4,
+          "anguloOffset": 0
+        }
+      ],
+      "esCurva": false
+    },
+    {
+      "nombre": "Retorno Barredo 4 ←",
+      "tamano": 5,
+      "tipo": "conexion",
+      "x": 2260,
+      "y": 1416,
+      "angulo": 167,
+      "probabilidadGeneracion": 0,
+      "carriles": 1,
+      "laneDirections": [
+        1
+      ],
+      "laneGenerationEnabled": [
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 4,
+          "anguloOffset": 0
+        }
+      ],
+      "esCurva": false
+    },
+    {
+      "nombre": "Retorno Barredo 5 →",
+      "tamano": 5,
+      "tipo": "conexion",
+      "x": 2202,
+      "y": 1546,
+      "angulo": 347,
+      "probabilidadGeneracion": 0,
+      "carriles": 1,
+      "laneDirections": [
+        1
+      ],
+      "laneGenerationEnabled": [
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 4,
+          "anguloOffset": 0
+        }
+      ],
+      "esCurva": false
+    },
+    {
+      "nombre": "Retorno Barredo 5 ←",
+      "tamano": 5,
+      "tipo": "conexion",
+      "x": 2228,
+      "y": 1562,
+      "angulo": 167,
+      "probabilidadGeneracion": 0,
+      "carriles": 1,
+      "laneDirections": [
+        1
+      ],
+      "laneGenerationEnabled": [
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 4,
+          "anguloOffset": 0
+        }
+      ],
+      "esCurva": false
+    },
+    {
+      "nombre": "Retorno Barredo 6 →",
+      "tamano": 5,
+      "tipo": "conexion",
+      "x": 2173,
+      "y": 1684,
+      "angulo": 347,
+      "probabilidadGeneracion": 0,
+      "carriles": 1,
+      "laneDirections": [
+        1
+      ],
+      "laneGenerationEnabled": [
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 4,
+          "anguloOffset": 0
+        }
+      ],
+      "esCurva": false
+    },
+    {
+      "nombre": "Retorno Barredo 6 ←",
+      "tamano": 5,
+      "tipo": "conexion",
+      "x": 2199,
+      "y": 1700,
+      "angulo": 167,
+      "probabilidadGeneracion": 0,
+      "carriles": 1,
+      "laneDirections": [
+        1
+      ],
+      "laneGenerationEnabled": [
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 4,
+          "anguloOffset": 0
+        }
+      ],
+      "esCurva": false
+    },
+    {
+      "nombre": "Calle M. Luisa Estampa Ort. →",
+      "tamano": 50,
+      "tipo": "conexion",
+      "x": 1389,
+      "y": 788,
+      "angulo": 86,
+      "probabilidadGeneracion": 0,
+      "carriles": 1,
+      "laneDirections": [
+        1
+      ],
+      "laneGenerationEnabled": [
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": -6.75246815978369
+        },
+        {
+          "indiceCelda": 10,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 20,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 30,
+          "anguloOffset": -4.7146542518544425
+        },
+        {
+          "indiceCelda": 40,
+          "anguloOffset": -1.1090452039524306
+        },
+        {
+          "indiceCelda": 49,
+          "anguloOffset": 26.392890085209743
+        }
+      ],
+      "esCurva": true
+    },
+    {
+      "nombre": "Calle M. Luisa Estampa Ort. ←",
+      "tamano": 49,
+      "tipo": "conexion",
+      "x": 1395,
+      "y": 540,
+      "angulo": 264,
+      "probabilidadGeneracion": 0,
+      "carriles": 1,
+      "laneDirections": [
+        1
+      ],
+      "laneGenerationEnabled": [
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 33.26229205895698
+        },
+        {
+          "indiceCelda": 10,
+          "anguloOffset": 5.788936485168125
+        },
+        {
+          "indiceCelda": 20,
+          "anguloOffset": -4.722625436006455
+        },
+        {
+          "indiceCelda": 30,
+          "anguloOffset": 2.53504905354953
+        },
+        {
+          "indiceCelda": 40,
+          "anguloOffset": 2.101814511806475
+        },
+        {
+          "indiceCelda": 48,
+          "anguloOffset": -2.6525930720032487
+        }
+      ],
+      "esCurva": true
+    },
+    {
+      "nombre": "Av. Miguel Othon de Mendizabal →",
+      "tamano": 248,
+      "tipo": "conexion",
+      "x": 729,
+      "y": 805,
+      "angulo": 22,
+      "probabilidadGeneracion": 0,
+      "carriles": 3,
+      "laneDirections": [
+        1,
+        1,
+        1
+      ],
+      "laneGenerationEnabled": [
+        true,
+        true,
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.02,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 10,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 20,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 30,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 40,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 50,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 60,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 70,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 80,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 90,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 100,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 110,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 120,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 130,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 140,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 150,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 160,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 170,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 180,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 190,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 200,
+          "anguloOffset": 15.782577335816946
+        },
+        {
+          "indiceCelda": 210,
+          "anguloOffset": 5.405854354182056
+        },
+        {
+          "indiceCelda": 220,
+          "anguloOffset": 16.08041053597891
+        },
+        {
+          "indiceCelda": 230,
+          "anguloOffset": 5.828495352842338
+        },
+        {
+          "indiceCelda": 240,
+          "anguloOffset": -15.330152643963826
+        },
+        {
+          "indiceCelda": 247,
+          "anguloOffset": -28.6815865981034
+        }
+      ],
+      "esCurva": true
+    },
+    {
+      "nombre": "Calle Luis Enrique Erro Tramo 2 →",
+      "tamano": 65,
+      "tipo": "conexion",
+      "x": 1952,
+      "y": 888,
+      "angulo": 80,
+      "probabilidadGeneracion": 0,
+      "carriles": 2,
+      "laneDirections": [
+        1,
+        1
+      ],
+      "laneGenerationEnabled": [
+        true,
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 10,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 20,
+          "anguloOffset": -17.39769742368201
+        },
+        {
+          "indiceCelda": 30,
+          "anguloOffset": -29.394106807931976
+        },
+        {
+          "indiceCelda": 40,
+          "anguloOffset": -31.74029755024812
+        },
+        {
+          "indiceCelda": 50,
+          "anguloOffset": -34.93502217043735
+        },
+        {
+          "indiceCelda": 60,
+          "anguloOffset": -35.75625427003757
+        },
+        {
+          "indiceCelda": 65,
+          "anguloOffset": -31.556673587417112
+        }
+      ],
+      "esCurva": true
+    },
+    {
+      "nombre": "Av. Juan de Dios Batiz ←",
+      "tamano": 199,
+      "tipo": "conexion",
+      "x": 2385,
+      "y": 967,
+      "angulo": 170,
+      "probabilidadGeneracion": 0,
+      "carriles": 3,
+      "laneDirections": [
+        1,
+        1,
+        1
+      ],
+      "laneGenerationEnabled": [
+        true,
+        true,
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 10,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 20,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 30,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 40,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 50,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 60,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 70,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 80,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 90,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 100,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 110,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 120,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 130,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 140,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 150,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 160,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 170,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 180,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 190,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 199,
+          "anguloOffset": 0
+        }
+      ],
+      "esCurva": true
+    },
+    {
+      "nombre": "Entrada a Av. Juan de Dios Batiz ←",
+      "tamano": 17,
+      "tipo": "conexion",
+      "x": 2484,
+      "y": 974,
+      "angulo": 170,
+      "probabilidadGeneracion": 0,
+      "carriles": 3,
+      "laneDirections": [
+        1,
+        1,
+        1
+      ],
+      "laneGenerationEnabled": [
+        true,
+        true,
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 25.80263615745194
+        },
+        {
+          "indiceCelda": 10,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 16,
+          "anguloOffset": 0
+        }
+      ],
+      "esCurva": true
+    },
+    {
+      "nombre": "Salida Juan de Dios Batiz ←",
+      "tamano": 84,
+      "tipo": "conexion",
+      "x": 1410,
+      "y": 795,
+      "angulo": 170,
+      "probabilidadGeneracion": 0,
+      "carriles": 3,
+      "laneDirections": [
+        1,
+        1,
+        1
+      ],
+      "laneGenerationEnabled": [
+        true,
+        true,
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 10,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 20,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 30,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 40,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 50,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 60,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 70,
+          "anguloOffset": -4.276161152925752
+        },
+        {
+          "indiceCelda": 80,
+          "anguloOffset": -6.541011746692756
+        },
+        {
+          "indiceCelda": 84,
+          "anguloOffset": -38.3378248018302
+        }
+      ],
+      "esCurva": true
+    },
+    {
+      "nombre": "Av. Miguel Bernard →",
+      "tamano": 190,
+      "tipo": "conexion",
+      "x": 1862,
+      "y": 329,
+      "angulo": -46,
+      "probabilidadGeneracion": 0,
+      "carriles": 3,
+      "laneDirections": [
+        1,
+        1,
+        1
+      ],
+      "laneGenerationEnabled": [
+        true,
+        true,
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 29.183651591046115
+        },
+        {
+          "indiceCelda": 10,
+          "anguloOffset": -1.0407776280136602
+        },
+        {
+          "indiceCelda": 20,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 30,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 40,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 50,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 60,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 70,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 80,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 90,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 100,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 110,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 120,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 130,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 140,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 150,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 160,
+          "anguloOffset": 7.115972469568073
+        },
+        {
+          "indiceCelda": 170,
+          "anguloOffset": -0.30063084350775476
+        },
+        {
+          "indiceCelda": 180,
+          "anguloOffset": -28.235936808677508
+        },
+        {
+          "indiceCelda": 190,
+          "anguloOffset": -49.296816694482835
+        }
+      ],
+      "esCurva": true
+    },
+    {
+      "nombre": "Av. Wilfrido Massieu →",
+      "tamano": 343,
+      "tipo": "conexion",
+      "x": 986,
+      "y": 1502,
+      "angulo": 345,
+      "probabilidadGeneracion": 0,
+      "carriles": 2,
+      "laneDirections": [
+        1,
+        1
+      ],
+      "laneGenerationEnabled": [
+        true,
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 34.01911280594667
+        },
+        {
+          "indiceCelda": 10,
+          "anguloOffset": -5.980887194053331
+        },
+        {
+          "indiceCelda": 20,
+          "anguloOffset": -7.198865443321912
+        },
+        {
+          "indiceCelda": 30,
+          "anguloOffset": -9.216817554150742
+        },
+        {
+          "indiceCelda": 40,
+          "anguloOffset": -11.43441987037647
+        },
+        {
+          "indiceCelda": 50,
+          "anguloOffset": -7.965630398413504
+        },
+        {
+          "indiceCelda": 60,
+          "anguloOffset": -9.182982789846694
+        },
+        {
+          "indiceCelda": 70,
+          "anguloOffset": -9.071958977500396
+        },
+        {
+          "indiceCelda": 80,
+          "anguloOffset": -9.340882674320676
+        },
+        {
+          "indiceCelda": 90,
+          "anguloOffset": -9.941219007364822
+        },
+        {
+          "indiceCelda": 100,
+          "anguloOffset": -7.796220976167478
+        },
+        {
+          "indiceCelda": 110,
+          "anguloOffset": -8.149011588852922
+        },
+        {
+          "indiceCelda": 120,
+          "anguloOffset": -11.320184193589338
+        },
+        {
+          "indiceCelda": 130,
+          "anguloOffset": -13.180076970400824
+        },
+        {
+          "indiceCelda": 140,
+          "anguloOffset": -8.438919002612998
+        },
+        {
+          "indiceCelda": 150,
+          "anguloOffset": -8.808264032898121
+        },
+        {
+          "indiceCelda": 160,
+          "anguloOffset": -11.51936318301416
+        },
+        {
+          "indiceCelda": 170,
+          "anguloOffset": -8.390324170084245
+        },
+        {
+          "indiceCelda": 180,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 190,
+          "anguloOffset": 1.7460387687726275
+        },
+        {
+          "indiceCelda": 200,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 210,
+          "anguloOffset": 0.4575348257035403
+        },
+        {
+          "indiceCelda": 220,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 230,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 240,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 250,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 260,
+          "anguloOffset": 2.499802263561486
+        },
+        {
+          "indiceCelda": 270,
+          "anguloOffset": 1.2519063810628852
+        },
+        {
+          "indiceCelda": 280,
+          "anguloOffset": 1.1394180248672738
+        },
+        {
+          "indiceCelda": 290,
+          "anguloOffset": 2.0211681202770686
+        },
+        {
+          "indiceCelda": 300,
+          "anguloOffset": 2.0022947448441974
+        },
+        {
+          "indiceCelda": 310,
+          "anguloOffset": 2.0691502053190396
+        },
+        {
+          "indiceCelda": 320,
+          "anguloOffset": 1.6508201426792355
+        },
+        {
+          "indiceCelda": 330,
+          "anguloOffset": 0.37393566172394005
+        },
+        {
+          "indiceCelda": 340,
+          "anguloOffset": 5.088991945668468
+        },
+        {
+          "indiceCelda": 342,
+          "anguloOffset": 3.3003800222679205
+        }
+      ],
+      "esCurva": true
+    },
+    {
+      "nombre": "Av. Cien Metros ←",
+      "tamano": 230,
+      "tipo": "conexion",
+      "x": 1034,
+      "y": 1671,
+      "angulo": 110,
+      "probabilidadGeneracion": 0.9,
+      "carriles": 3,
+      "laneDirections": [
+        1,
+        1,
+        1
+      ],
+      "laneGenerationEnabled": [
+        true,
+        true,
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 10,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 20,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 30,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 40,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 50,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 60,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 70,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 80,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 90,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 100,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 110,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 120,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 130,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 140,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 150,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 160,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 170,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 180,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 190,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 200,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 210,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 220,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 229,
+          "anguloOffset": 0
+        }
+      ],
+      "esCurva": false
+    },
+    {
+      "nombre": "Calle Interior IPN ←",
+      "tamano": 180,
+      "tipo": "conexion",
+      "x": 1413,
+      "y": 843,
+      "angulo": 257,
+      "probabilidadGeneracion": 0,
+      "carriles": 1,
+      "laneDirections": [
+        1
+      ],
+      "laneGenerationEnabled": [
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 10,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 20,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 30,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 40,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 50,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 60,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 70,
+          "anguloOffset": 62.251548429966434
+        },
+        {
+          "indiceCelda": 80,
+          "anguloOffset": 64.86502331910667
+        },
+        {
+          "indiceCelda": 90,
+          "anguloOffset": 67.76822255642779
+        },
+        {
+          "indiceCelda": 100,
+          "anguloOffset": 67.63279626937843
+        },
+        {
+          "indiceCelda": 110,
+          "anguloOffset": 68.28819931797415
+        },
+        {
+          "indiceCelda": 120,
+          "anguloOffset": 67.4142388009761
+        },
+        {
+          "indiceCelda": 130,
+          "anguloOffset": 66.173107308759
+        },
+        {
+          "indiceCelda": 140,
+          "anguloOffset": 66.2690469423283
+        },
+        {
+          "indiceCelda": 150,
+          "anguloOffset": 67.04561677420118
+        },
+        {
+          "indiceCelda": 160,
+          "anguloOffset": 71.78368971854515
+        },
+        {
+          "indiceCelda": 170,
+          "anguloOffset": 66.87425162471017
+        },
+        {
+          "indiceCelda": 179,
+          "anguloOffset": 90
+        }
+      ],
+      "esCurva": true
+    },
+    {
+      "nombre": "Calle Interior IPN →",
+      "tamano": 179,
+      "tipo": "conexion",
+      "x": 1821,
+      "y": 1487,
+      "angulo": 144,
+      "probabilidadGeneracion": 0,
+      "carriles": 1,
+      "laneDirections": [
+        1
+      ],
+      "laneGenerationEnabled": [
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 28.89548024446025
+        },
+        {
+          "indiceCelda": 10,
+          "anguloOffset": 3.1801712339538493
+        },
+        {
+          "indiceCelda": 20,
+          "anguloOffset": 4.796474299369461
+        },
+        {
+          "indiceCelda": 30,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 40,
+          "anguloOffset": -0.00794727257835708
+        },
+        {
+          "indiceCelda": 50,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 60,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 70,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 80,
+          "anguloOffset": 1.829304467757733
+        },
+        {
+          "indiceCelda": 90,
+          "anguloOffset": 1.4478610439537427
+        },
+        {
+          "indiceCelda": 100,
+          "anguloOffset": -2.030172569923173
+        },
+        {
+          "indiceCelda": 110,
+          "anguloOffset": -4.502270183637761
+        },
+        {
+          "indiceCelda": 120,
+          "anguloOffset": -63.5577432808695
+        },
+        {
+          "indiceCelda": 130,
+          "anguloOffset": -65.69793766474116
+        },
+        {
+          "indiceCelda": 140,
+          "anguloOffset": -65.52183278172396
+        },
+        {
+          "indiceCelda": 150,
+          "anguloOffset": -67.84416906203114
+        },
+        {
+          "indiceCelda": 160,
+          "anguloOffset": -67.21386047837817
+        },
+        {
+          "indiceCelda": 170,
+          "anguloOffset": -66.85664257102005
+        },
+        {
+          "indiceCelda": 178,
+          "anguloOffset": -67.1927676606841
+        }
+      ],
+      "esCurva": true
+    },
+    {
+      "nombre": "Calle Luis Enrique Erro ←",
+      "tamano": 177,
+      "tipo": "conexion",
+      "x": 1920,
+      "y": 928,
+      "angulo": 260,
+      "probabilidadGeneracion": 0,
+      "carriles": 2,
+      "laneDirections": [
+        1,
+        1
+      ],
+      "laneGenerationEnabled": [
+        true,
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 10,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 20,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 30,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 40,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 50,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 60,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 70,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 80,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 90,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 100,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 110,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 120,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 130,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 140,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 150,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 160,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 170,
+          "anguloOffset": -20.06920001085021
+        },
+        {
+          "indiceCelda": 176,
+          "anguloOffset": -12.888080212217028
+        }
+      ],
+      "esCurva": true
+    },
+    {
+      "nombre": "Calle Miguel Anda y Barredo ←",
+      "tamano": 184,
+      "tipo": "conexion",
+      "x": 2322,
+      "y": 1004,
+      "angulo": 258,
+      "probabilidadGeneracion": 0,
+      "carriles": 2,
+      "laneDirections": [
+        1,
+        1
+      ],
+      "laneGenerationEnabled": [
+        true,
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 10,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 20,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 30,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 40,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 50,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 60,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 70,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 80,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 90,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 100,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 110,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 120,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 130,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 140,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 150,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 160,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 170,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 180,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 183,
+          "anguloOffset": 0
+        }
+      ],
+      "esCurva": false
+    },
+    {
+      "nombre": "Entrada Juan de Dios Batiz →",
+      "tamano": 95,
+      "tipo": "conexion",
+      "x": 921,
+      "y": 736,
+      "angulo": -10,
+      "probabilidadGeneracion": 0,
+      "carriles": 3,
+      "laneDirections": [
+        1,
+        1,
+        1
+      ],
+      "laneGenerationEnabled": [
+        true,
+        true,
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": -40
+        },
+        {
+          "indiceCelda": 10,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 20,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 30,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 40,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 50,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 60,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 70,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 80,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 90,
+          "anguloOffset": -0.8179858385372861
+        },
+        {
+          "indiceCelda": 94,
+          "anguloOffset": -0.8876108187661783
+        }
+      ],
+      "esCurva": true
+    },
+    {
+      "nombre": "Av. Juan de Dios Batiz →",
+      "tamano": 204,
+      "tipo": "conexion",
+      "x": 1397,
+      "y": 836,
+      "angulo": -10,
+      "probabilidadGeneracion": 0,
+      "carriles": 3,
+      "laneDirections": [
+        1,
+        1,
+        1
+      ],
+      "laneGenerationEnabled": [
+        true,
+        true,
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 10,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 20,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 30,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 40,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 50,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 60,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 70,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 80,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 90,
+          "anguloOffset": 2.341840612539078
+        },
+        {
+          "indiceCelda": 100,
+          "anguloOffset": 0.6446246298432945
+        },
+        {
+          "indiceCelda": 110,
+          "anguloOffset": -0.24721573725166493
+        },
+        {
+          "indiceCelda": 120,
+          "anguloOffset": -2.0856148088049578
+        },
+        {
+          "indiceCelda": 130,
+          "anguloOffset": -1.9931206794537515
+        },
+        {
+          "indiceCelda": 140,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 150,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 160,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 170,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 180,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 190,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 203,
+          "anguloOffset": 0
+        }
+      ],
+      "esCurva": true
+    },
+    {
+      "nombre": "Salida de Juan de Dios Batiz →",
+      "tamano": 76,
+      "tipo": "conexion",
+      "x": 2399,
+      "y": 1006,
+      "angulo": -10,
+      "probabilidadGeneracion": 0,
+      "carriles": 3,
+      "laneDirections": [
+        1,
+        1,
+        1
+      ],
+      "laneGenerationEnabled": [
+        true,
+        true,
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 10,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 20,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 30,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 40,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 50,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 60,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 70,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 75,
+          "anguloOffset": 0
+        }
+      ],
+      "esCurva": false
+    },
+    {
+      "nombre": "Av. IPN ←",
+      "tamano": 230,
+      "tipo": "conexion",
+      "x": 2805,
+      "y": 950,
+      "angulo": -100,
+      "probabilidadGeneracion": 0,
+      "carriles": 2,
+      "laneDirections": [
+        1,
+        1
+      ],
+      "laneGenerationEnabled": [
+        true,
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 10,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 20,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 30,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 40,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 50,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 60,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 70,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 80,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 90,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 100,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 110,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 120,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 130,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 140,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 150,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 160,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 170,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 180,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 190,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 200,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 210,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 220,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 229,
+          "anguloOffset": 0
+        }
+      ],
+      "esCurva": false
+    },
+    {
+      "nombre": "Calle Luis Enrique Erro →",
+      "tamano": 178,
+      "tipo": "conexion",
+      "x": 1784,
+      "y": 1813,
+      "angulo": 80,
+      "probabilidadGeneracion": 0,
+      "carriles": 2,
+      "laneDirections": [
+        1,
+        1
+      ],
+      "laneGenerationEnabled": [
+        true,
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 10,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 20,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 30,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 40,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 50,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 60,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 70,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 80,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 90,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 100,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 110,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 120,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 130,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 140,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 150,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 160,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 170,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 177,
+          "anguloOffset": 0
+        }
+      ],
+      "esCurva": false
+    },
+    {
+      "nombre": "Calle Luis Enrique Erro Tramo 2 ←",
+      "tamano": 69,
+      "tipo": "conexion",
+      "x": 2118,
+      "y": 603,
+      "angulo": 225,
+      "probabilidadGeneracion": 0,
+      "carriles": 2,
+      "laneDirections": [
+        1,
+        1
+      ],
+      "laneGenerationEnabled": [
+        true,
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 10,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 20,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 30,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 40,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 50,
+          "anguloOffset": 22.188890071588943
+        },
+        {
+          "indiceCelda": 60,
+          "anguloOffset": 34.60708766404601
+        },
+        {
+          "indiceCelda": 68,
+          "anguloOffset": 35.69353556473338
+        }
+      ],
+      "esCurva": true
+    },
+    {
+      "nombre": "Calle Miguel Anda y Barredo →",
+      "tamano": 184,
+      "tipo": "conexion",
+      "x": 2150,
+      "y": 1908,
+      "angulo": 78,
+      "probabilidadGeneracion": 0,
+      "carriles": 2,
+      "laneDirections": [
+        1,
+        1
+      ],
+      "laneGenerationEnabled": [
+        true,
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 10,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 20,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 30,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 40,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 50,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 60,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 70,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 80,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 90,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 100,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 110,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 120,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 130,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 140,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 150,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 160,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 170,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 180,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 183,
+          "anguloOffset": 0
+        }
+      ],
+      "esCurva": false
+    },
+    {
+      "nombre": "Av. Wilfrido Massieu ←",
+      "tamano": 346,
+      "tipo": "conexion",
+      "x": 2605,
+      "y": 2027,
+      "angulo": 166,
+      "probabilidadGeneracion": 0,
+      "carriles": 2,
+      "laneDirections": [
+        1,
+        1
+      ],
+      "laneGenerationEnabled": [
+        true,
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0.01,
+      "vertices": [
+        {
+          "indiceCelda": 0,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 10,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 20,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 30,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 40,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 50,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 60,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 70,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 80,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 90,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 100,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 110,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 120,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 130,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 140,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 150,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 160,
+          "anguloOffset": 0
+        },
+        {
+          "indiceCelda": 170,
+          "anguloOffset": -11.009098478730472
+        },
+        {
+          "indiceCelda": 180,
+          "anguloOffset": -11.407038740359418
+        },
+        {
+          "indiceCelda": 190,
+          "anguloOffset": -11.663564370295632
+        },
+        {
+          "indiceCelda": 200,
+          "anguloOffset": -6.575739493312889
+        },
+        {
+          "indiceCelda": 210,
+          "anguloOffset": -11.606703150263227
+        },
+        {
+          "indiceCelda": 220,
+          "anguloOffset": -14.044688014277959
+        },
+        {
+          "indiceCelda": 230,
+          "anguloOffset": -11.926764002101764
+        },
+        {
+          "indiceCelda": 240,
+          "anguloOffset": -9.308916375838844
+        },
+        {
+          "indiceCelda": 250,
+          "anguloOffset": -8.62069360411787
+        },
+        {
+          "indiceCelda": 260,
+          "anguloOffset": -11.797253613314432
+        },
+        {
+          "indiceCelda": 270,
+          "anguloOffset": -8.451094990844364
+        },
+        {
+          "indiceCelda": 280,
+          "anguloOffset": -10.873446369255475
+        },
+        {
+          "indiceCelda": 290,
+          "anguloOffset": -10.148863339446716
+        },
+        {
+          "indiceCelda": 300,
+          "anguloOffset": -12.044049971264982
+        },
+        {
+          "indiceCelda": 310,
+          "anguloOffset": -9.734523874663381
+        },
+        {
+          "indiceCelda": 320,
+          "anguloOffset": -11.155215416939388
+        },
+        {
+          "indiceCelda": 330,
+          "anguloOffset": -8.107048185852282
+        },
+        {
+          "indiceCelda": 340,
+          "anguloOffset": 0.07275865577794495
+        },
+        {
+          "indiceCelda": 345,
+          "anguloOffset": 32.42406150399883
+        }
+      ],
+      "esCurva": true
+    },
+    {
+      "nombre": "Salida Cien Metros ←",
+      "tamano": 4,
+      "tipo": "devorador",
+      "x": 642,
+      "y": 595,
+      "angulo": 110,
+      "probabilidadGeneracion": 0,
+      "carriles": 3,
+      "laneDirections": [
+        1,
+        1,
+        1
+      ],
+      "laneGenerationEnabled": [
+        true,
+        true,
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0,
+      "vertices": [],
+      "esCurva": false
+    },
+    {
+      "nombre": "Entrada a Cien Metros →",
+      "tamano": 4,
+      "tipo": "generador",
+      "x": 1039,
+      "y": 1685,
+      "angulo": 110,
+      "probabilidadGeneracion": 1,
+      "carriles": 3,
+      "laneDirections": [
+        1,
+        1,
+        1
+      ],
+      "laneGenerationEnabled": [
+        true,
+        true,
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0,
+      "vertices": [],
+      "esCurva": false
+    },
+    {
+      "nombre": "Entrada a Av. IPN ←",
+      "tamano": 5,
+      "tipo": "generador",
+      "x": 2808,
+      "y": 930,
+      "angulo": 260,
+      "probabilidadGeneracion": 0.12,
+      "carriles": 2,
+      "laneDirections": [
+        1,
+        1
+      ],
+      "laneGenerationEnabled": [
+        true,
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0,
+      "vertices": [],
+      "esCurva": false
+    },
+    {
+      "nombre": "Salida Av. IPN ←",
+      "tamano": 5,
+      "tipo": "devorador",
+      "x": 2606,
+      "y": 2078,
+      "angulo": 260,
+      "probabilidadGeneracion": 0,
+      "carriles": 2,
+      "laneDirections": [
+        1,
+        1
+      ],
+      "laneGenerationEnabled": [
+        true,
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0,
+      "vertices": [],
+      "esCurva": false
+    },
+    {
+      "nombre": "Entrada ←",
+      "tamano": 5,
+      "tipo": "generador",
+      "x": 1933,
+      "y": 341,
+      "angulo": 225,
+      "probabilidadGeneracion": 0.1,
+      "carriles": 2,
+      "laneDirections": [
+        1,
+        1
+      ],
+      "laneGenerationEnabled": [
+        true,
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0,
+      "vertices": [],
+      "esCurva": false
+    },
+    {
+      "nombre": "Salida 1 →",
+      "tamano": 5,
+      "tipo": "devorador",
+      "x": 1880,
+      "y": 328,
+      "angulo": 59,
+      "probabilidadGeneracion": 0,
+      "carriles": 2,
+      "laneDirections": [
+        1,
+        1
+      ],
+      "laneGenerationEnabled": [
+        true,
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0,
+      "vertices": [],
+      "esCurva": false
+    },
+    {
+      "nombre": "Salida 2 →",
+      "tamano": 5,
+      "tipo": "devorador",
+      "x": 1758,
+      "y": 346,
+      "angulo": 117,
+      "probabilidadGeneracion": 0,
+      "carriles": 2,
+      "laneDirections": [
+        1,
+        1
+      ],
+      "laneGenerationEnabled": [
+        true,
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0,
+      "vertices": [],
+      "esCurva": false
+    },
+    {
+      "nombre": "E ←",
+      "tamano": 4,
+      "tipo": "generador",
+      "x": 2399,
+      "y": 977,
+      "angulo": 170,
+      "probabilidadGeneracion": 0,
+      "carriles": 3,
+      "laneDirections": [
+        1,
+        1,
+        1
+      ],
+      "laneGenerationEnabled": [
+        true,
+        true,
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0,
+      "vertices": [],
+      "esCurva": false
+    },
+    {
+      "nombre": "E 2→",
+      "tamano": 4,
+      "tipo": "generador",
+      "x": 1383,
+      "y": 826,
+      "angulo": -10,
+      "probabilidadGeneracion": 0,
+      "carriles": 3,
+      "laneDirections": [
+        1,
+        1,
+        1
+      ],
+      "laneGenerationEnabled": [
+        true,
+        true,
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0,
+      "vertices": [],
+      "esCurva": false
+    },
+    {
+      "nombre": "Er→",
+      "tamano": 2,
+      "tipo": "generador",
+      "x": 1783,
+      "y": 1818,
+      "angulo": 80,
+      "probabilidadGeneracion": 0.05,
+      "carriles": 2,
+      "laneDirections": [
+        1,
+        1
+      ],
+      "laneGenerationEnabled": [
+        true,
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0,
+      "vertices": [],
+      "esCurva": false
+    },
+    {
+      "nombre": "B →",
+      "tamano": 2,
+      "tipo": "generador",
+      "x": 2149,
+      "y": 1913,
+      "angulo": 78,
+      "probabilidadGeneracion": 0.05,
+      "carriles": 2,
+      "laneDirections": [
+        1,
+        1
+      ],
+      "laneGenerationEnabled": [
+        true,
+        true
+      ],
+      "probabilidadSaltoDeCarril": 0,
+      "vertices": [],
+      "esCurva": false
+    }
+  ],
+  "conexiones": [
+    {
+      "origenIdx": 83,
+      "destinoIdx": 70,
+      "tipo": "LINEAL",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 0,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 83,
+      "destinoIdx": 70,
+      "tipo": "LINEAL",
+      "detalles": [
+        {
+          "carrilOrigen": 1,
+          "carrilDestino": 1,
+          "posOrigen": -1,
+          "posDestino": 0,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 56,
+      "destinoIdx": 58,
+      "tipo": "LINEAL",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 0,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 56,
+      "destinoIdx": 58,
+      "tipo": "LINEAL",
+      "detalles": [
+        {
+          "carrilOrigen": 1,
+          "carrilDestino": 1,
+          "posOrigen": -1,
+          "posDestino": 0,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 56,
+      "destinoIdx": 58,
+      "tipo": "LINEAL",
+      "detalles": [
+        {
+          "carrilOrigen": 2,
+          "carrilDestino": 2,
+          "posOrigen": -1,
+          "posDestino": 0,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 66,
+      "destinoIdx": 82,
+      "tipo": "LINEAL",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 0,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 66,
+      "destinoIdx": 82,
+      "tipo": "LINEAL",
+      "detalles": [
+        {
+          "carrilOrigen": 1,
+          "carrilDestino": 1,
+          "posOrigen": -1,
+          "posDestino": 0,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 66,
+      "destinoIdx": 82,
+      "tipo": "LINEAL",
+      "detalles": [
+        {
+          "carrilOrigen": 2,
+          "carrilDestino": 2,
+          "posOrigen": -1,
+          "posDestino": 0,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 67,
+      "destinoIdx": 68,
+      "tipo": "LINEAL",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 0,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 67,
+      "destinoIdx": 68,
+      "tipo": "LINEAL",
+      "detalles": [
+        {
+          "carrilOrigen": 1,
+          "carrilDestino": 1,
+          "posOrigen": -1,
+          "posDestino": 0,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 67,
+      "destinoIdx": 68,
+      "tipo": "LINEAL",
+      "detalles": [
+        {
+          "carrilOrigen": 2,
+          "carrilDestino": 2,
+          "posOrigen": -1,
+          "posDestino": 0,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 57,
+      "destinoIdx": 81,
+      "tipo": "LINEAL",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 0,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 57,
+      "destinoIdx": 81,
+      "tipo": "LINEAL",
+      "detalles": [
+        {
+          "carrilOrigen": 1,
+          "carrilDestino": 1,
+          "posOrigen": -1,
+          "posDestino": 0,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 57,
+      "destinoIdx": 81,
+      "tipo": "LINEAL",
+      "detalles": [
+        {
+          "carrilOrigen": 2,
+          "carrilDestino": 2,
+          "posOrigen": -1,
+          "posDestino": 0,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 84,
+      "destinoIdx": 72,
+      "tipo": "LINEAL",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 0,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 84,
+      "destinoIdx": 72,
+      "tipo": "LINEAL",
+      "detalles": [
+        {
+          "carrilOrigen": 1,
+          "carrilDestino": 1,
+          "posOrigen": -1,
+          "posDestino": 0,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 54,
+      "destinoIdx": 59,
+      "tipo": "LINEAL",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 0,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 54,
+      "destinoIdx": 59,
+      "tipo": "LINEAL",
+      "detalles": [
+        {
+          "carrilOrigen": 1,
+          "carrilDestino": 1,
+          "posOrigen": -1,
+          "posDestino": 0,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 54,
+      "destinoIdx": 59,
+      "tipo": "LINEAL",
+      "detalles": [
+        {
+          "carrilOrigen": 2,
+          "carrilDestino": 2,
+          "posOrigen": -1,
+          "posDestino": 0,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 75,
+      "destinoIdx": 61,
+      "tipo": "LINEAL",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 0,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 75,
+      "destinoIdx": 61,
+      "tipo": "LINEAL",
+      "detalles": [
+        {
+          "carrilOrigen": 1,
+          "carrilDestino": 1,
+          "posOrigen": -1,
+          "posDestino": 0,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 75,
+      "destinoIdx": 61,
+      "tipo": "LINEAL",
+      "detalles": [
+        {
+          "carrilOrigen": 2,
+          "carrilDestino": 2,
+          "posOrigen": -1,
+          "posDestino": 0,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 61,
+      "destinoIdx": 74,
+      "tipo": "LINEAL",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 0,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 61,
+      "destinoIdx": 74,
+      "tipo": "LINEAL",
+      "detalles": [
+        {
+          "carrilOrigen": 1,
+          "carrilDestino": 1,
+          "posOrigen": -1,
+          "posDestino": 0,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 61,
+      "destinoIdx": 74,
+      "tipo": "LINEAL",
+      "detalles": [
+        {
+          "carrilOrigen": 2,
+          "carrilDestino": 2,
+          "posOrigen": -1,
+          "posDestino": 0,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 76,
+      "destinoIdx": 69,
+      "tipo": "LINEAL",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 0,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 76,
+      "destinoIdx": 69,
+      "tipo": "LINEAL",
+      "detalles": [
+        {
+          "carrilOrigen": 1,
+          "carrilDestino": 1,
+          "posOrigen": -1,
+          "posDestino": 0,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 69,
+      "destinoIdx": 77,
+      "tipo": "LINEAL",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 0,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 69,
+      "destinoIdx": 77,
+      "tipo": "LINEAL",
+      "detalles": [
+        {
+          "carrilOrigen": 1,
+          "carrilDestino": 1,
+          "posOrigen": -1,
+          "posDestino": 0,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 81,
+      "destinoIdx": 56,
+      "tipo": "LINEAL",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 0,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 81,
+      "destinoIdx": 56,
+      "tipo": "LINEAL",
+      "detalles": [
+        {
+          "carrilOrigen": 1,
+          "carrilDestino": 1,
+          "posOrigen": -1,
+          "posDestino": 0,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 81,
+      "destinoIdx": 56,
+      "tipo": "LINEAL",
+      "detalles": [
+        {
+          "carrilOrigen": 2,
+          "carrilDestino": 2,
+          "posOrigen": -1,
+          "posDestino": 0,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 82,
+      "destinoIdx": 67,
+      "tipo": "LINEAL",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 0,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 82,
+      "destinoIdx": 67,
+      "tipo": "LINEAL",
+      "detalles": [
+        {
+          "carrilOrigen": 1,
+          "carrilDestino": 1,
+          "posOrigen": -1,
+          "posDestino": 0,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 82,
+      "destinoIdx": 67,
+      "tipo": "LINEAL",
+      "detalles": [
+        {
+          "carrilOrigen": 2,
+          "carrilDestino": 2,
+          "posOrigen": -1,
+          "posDestino": 0,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 54,
+      "destinoIdx": 80,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": 226,
+          "posDestino": 0,
+          "probabilidad": 0.8
+        }
+      ]
+    },
+    {
+      "origenIdx": 54,
+      "destinoIdx": 80,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 1,
+          "posOrigen": 227,
+          "posDestino": 0,
+          "probabilidad": 0.5
+        }
+      ]
+    },
+    {
+      "origenIdx": 59,
+      "destinoIdx": 79,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": 3,
+          "posDestino": 0,
+          "probabilidad": 0.8
+        }
+      ]
+    },
+    {
+      "origenIdx": 59,
+      "destinoIdx": 79,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 1,
+          "posOrigen": 4,
+          "posDestino": 0,
+          "probabilidad": 0.5
+        }
+      ]
+    },
+    {
+      "origenIdx": 61,
+      "destinoIdx": 60,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 2,
+          "carrilDestino": 0,
+          "posOrigen": 35,
+          "posDestino": 0,
+          "probabilidad": 0.3
+        }
+      ]
+    },
+    {
+      "origenIdx": 61,
+      "destinoIdx": 60,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 2,
+          "carrilDestino": 1,
+          "posOrigen": 34,
+          "posDestino": 0,
+          "probabilidad": 0.9
+        }
+      ]
+    },
+    {
+      "origenIdx": 54,
+      "destinoIdx": 66,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 2,
+          "carrilDestino": 0,
+          "posOrigen": 41,
+          "posDestino": 0,
+          "probabilidad": 0.34
+        }
+      ]
+    },
+    {
+      "origenIdx": 54,
+      "destinoIdx": 66,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 2,
+          "carrilDestino": 1,
+          "posOrigen": 40,
+          "posDestino": 0,
+          "probabilidad": 0.33
+        }
+      ]
+    },
+    {
+      "origenIdx": 54,
+      "destinoIdx": 66,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 2,
+          "carrilDestino": 2,
+          "posOrigen": 39,
+          "posDestino": 0,
+          "probabilidad": 0.33
+        }
+      ]
+    },
+    {
+      "origenIdx": 54,
+      "destinoIdx": 53,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 2,
+          "carrilDestino": 0,
+          "posOrigen": 143,
+          "posDestino": 0,
+          "probabilidad": 0.35
+        }
+      ]
+    },
+    {
+      "origenIdx": 61,
+      "destinoIdx": 54,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 2,
+          "carrilDestino": 0,
+          "posOrigen": 184,
+          "posDestino": 0,
+          "probabilidad": 0.28
+        }
+      ]
+    },
+    {
+      "origenIdx": 61,
+      "destinoIdx": 54,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 2,
+          "carrilDestino": 1,
+          "posOrigen": 183,
+          "posDestino": 0,
+          "probabilidad": 0.43
+        }
+      ]
+    },
+    {
+      "origenIdx": 61,
+      "destinoIdx": 54,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 2,
+          "carrilDestino": 2,
+          "posOrigen": 182,
+          "posDestino": 0,
+          "probabilidad": 0.5
+        }
+      ]
+    },
+    {
+      "origenIdx": 67,
+      "destinoIdx": 13,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": 67,
+          "posDestino": 0,
+          "probabilidad": 0.35
+        }
+      ]
+    },
+    {
+      "origenIdx": 58,
+      "destinoIdx": 3,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": 73,
+          "posDestino": 0,
+          "probabilidad": 0.2
+        }
+      ]
+    },
+    {
+      "origenIdx": 66,
+      "destinoIdx": 2,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": 23,
+          "posDestino": 0,
+          "probabilidad": 0.25
+        }
+      ]
+    },
+    {
+      "origenIdx": 66,
+      "destinoIdx": 5,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": 59,
+          "posDestino": 0,
+          "probabilidad": 0.2
+        }
+      ]
+    },
+    {
+      "origenIdx": 58,
+      "destinoIdx": 4,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": 38,
+          "posDestino": 0,
+          "probabilidad": 0.2
+        }
+      ]
+    },
+    {
+      "origenIdx": 66,
+      "destinoIdx": 7,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": 93,
+          "posDestino": 0,
+          "probabilidad": 0.12
+        }
+      ]
+    },
+    {
+      "origenIdx": 58,
+      "destinoIdx": 6,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": 4,
+          "posDestino": 0,
+          "probabilidad": 0.13
+        }
+      ]
+    },
+    {
+      "origenIdx": 58,
+      "destinoIdx": 52,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 2,
+          "carrilDestino": 0,
+          "posOrigen": 4,
+          "posDestino": 0,
+          "probabilidad": 0.4
+        }
+      ]
+    },
+    {
+      "origenIdx": 67,
+      "destinoIdx": 9,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": 5,
+          "posDestino": 0,
+          "probabilidad": 0.14
+        }
+      ]
+    },
+    {
+      "origenIdx": 67,
+      "destinoIdx": 62,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 2,
+          "carrilDestino": 0,
+          "posOrigen": 3,
+          "posDestino": 0,
+          "probabilidad": 0.14
+        }
+      ]
+    },
+    {
+      "origenIdx": 64,
+      "destinoIdx": 63,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 1,
+          "carrilDestino": 0,
+          "posOrigen": 113,
+          "posDestino": 0,
+          "probabilidad": 0.14
+        }
+      ]
+    },
+    {
+      "origenIdx": 56,
+      "destinoIdx": 8,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": 192,
+          "posDestino": 0,
+          "probabilidad": 0.2
+        }
+      ]
+    },
+    {
+      "origenIdx": 56,
+      "destinoIdx": 10,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": 169,
+          "posDestino": 0,
+          "probabilidad": 0.11
+        }
+      ]
+    },
+    {
+      "origenIdx": 56,
+      "destinoIdx": 12,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": 130,
+          "posDestino": 0,
+          "probabilidad": 0.31
+        }
+      ]
+    },
+    {
+      "origenIdx": 55,
+      "destinoIdx": 21,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": 43,
+          "posDestino": 0,
+          "probabilidad": 0.42
+        }
+      ]
+    },
+    {
+      "origenIdx": 55,
+      "destinoIdx": 21,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 1,
+          "posOrigen": 44,
+          "posDestino": 0,
+          "probabilidad": 0.2
+        }
+      ]
+    },
+    {
+      "origenIdx": 69,
+      "destinoIdx": 73,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 1,
+          "carrilDestino": 0,
+          "posOrigen": 219,
+          "posDestino": 0,
+          "probabilidad": 0.5
+        }
+      ]
+    },
+    {
+      "origenIdx": 69,
+      "destinoIdx": 73,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 1,
+          "carrilDestino": 1,
+          "posOrigen": 218,
+          "posDestino": 0,
+          "probabilidad": 0.5
+        }
+      ]
+    },
+    {
+      "origenIdx": 67,
+      "destinoIdx": 65,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 2,
+          "carrilDestino": 1,
+          "posOrigen": 186,
+          "posDestino": 0,
+          "probabilidad": 0.5
+        }
+      ]
+    },
+    {
+      "origenIdx": 67,
+      "destinoIdx": 65,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 2,
+          "carrilDestino": 0,
+          "posOrigen": 187,
+          "posDestino": 0,
+          "probabilidad": 0.5
+        }
+      ]
+    },
+    {
+      "origenIdx": 65,
+      "destinoIdx": 42,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": 26,
+          "posDestino": 0,
+          "probabilidad": 0.5
+        }
+      ]
+    },
+    {
+      "origenIdx": 65,
+      "destinoIdx": 44,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": 51,
+          "posDestino": 0,
+          "probabilidad": 0.5
+        }
+      ]
+    },
+    {
+      "origenIdx": 65,
+      "destinoIdx": 46,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": 81,
+          "posDestino": 0,
+          "probabilidad": 0.5
+        }
+      ]
+    },
+    {
+      "origenIdx": 65,
+      "destinoIdx": 48,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": 111,
+          "posDestino": 0,
+          "probabilidad": 0.5
+        }
+      ]
+    },
+    {
+      "origenIdx": 65,
+      "destinoIdx": 50,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": 139,
+          "posDestino": 0,
+          "probabilidad": 0.5
+        }
+      ]
+    },
+    {
+      "origenIdx": 72,
+      "destinoIdx": 51,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": 43,
+          "posDestino": 0,
+          "probabilidad": 0.5
+        }
+      ]
+    },
+    {
+      "origenIdx": 72,
+      "destinoIdx": 49,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": 70,
+          "posDestino": 0,
+          "probabilidad": 0.5
+        }
+      ]
+    },
+    {
+      "origenIdx": 72,
+      "destinoIdx": 47,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": 101,
+          "posDestino": 0,
+          "probabilidad": 0.5
+        }
+      ]
+    },
+    {
+      "origenIdx": 72,
+      "destinoIdx": 45,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": 131,
+          "posDestino": 0,
+          "probabilidad": 0.5
+        }
+      ]
+    },
+    {
+      "origenIdx": 72,
+      "destinoIdx": 43,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": 156,
+          "posDestino": 0,
+          "probabilidad": 0.5
+        }
+      ]
+    },
+    {
+      "origenIdx": 67,
+      "destinoIdx": 64,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 2,
+          "carrilDestino": 1,
+          "posOrigen": 105,
+          "posDestino": 0,
+          "probabilidad": 0.5
+        }
+      ]
+    },
+    {
+      "origenIdx": 67,
+      "destinoIdx": 64,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 2,
+          "carrilDestino": 0,
+          "posOrigen": 106,
+          "posDestino": 0,
+          "probabilidad": 0.5
+        }
+      ]
+    },
+    {
+      "origenIdx": 67,
+      "destinoIdx": 1,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": 110,
+          "posDestino": 0,
+          "probabilidad": 0.2
+        }
+      ]
+    },
+    {
+      "origenIdx": 67,
+      "destinoIdx": 1,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 1,
+          "posOrigen": 111,
+          "posDestino": 0,
+          "probabilidad": 0.1
+        }
+      ]
+    },
+    {
+      "origenIdx": 67,
+      "destinoIdx": 15,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": 127,
+          "posDestino": 0,
+          "probabilidad": 0.52
+        }
+      ]
+    },
+    {
+      "origenIdx": 67,
+      "destinoIdx": 17,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": 189,
+          "posDestino": 0,
+          "probabilidad": 0.25
+        }
+      ]
+    },
+    {
+      "origenIdx": 68,
+      "destinoIdx": 19,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": 2,
+          "posDestino": 0,
+          "probabilidad": 0.25
+        }
+      ]
+    },
+    {
+      "origenIdx": 56,
+      "destinoIdx": 0,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": 92,
+          "posDestino": 0,
+          "probabilidad": 0.3
+        }
+      ]
+    },
+    {
+      "origenIdx": 56,
+      "destinoIdx": 0,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 1,
+          "posOrigen": 93,
+          "posDestino": 0,
+          "probabilidad": 0.15
+        }
+      ]
+    },
+    {
+      "origenIdx": 56,
+      "destinoIdx": 55,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 2,
+          "carrilDestino": 1,
+          "posOrigen": 87,
+          "posDestino": 0,
+          "probabilidad": 0.5
+        }
+      ]
+    },
+    {
+      "origenIdx": 56,
+      "destinoIdx": 55,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 2,
+          "carrilDestino": 0,
+          "posOrigen": 88,
+          "posDestino": 0,
+          "probabilidad": 0.5
+        }
+      ]
+    },
+    {
+      "origenIdx": 56,
+      "destinoIdx": 14,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": 70,
+          "posDestino": 0,
+          "probabilidad": 0.4
+        }
+      ]
+    },
+    {
+      "origenIdx": 56,
+      "destinoIdx": 16,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": 8,
+          "posDestino": 0,
+          "probabilidad": 0.2
+        }
+      ]
+    },
+    {
+      "origenIdx": 57,
+      "destinoIdx": 18,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": 12,
+          "posDestino": 0,
+          "probabilidad": 0.27
+        }
+      ]
+    },
+    {
+      "origenIdx": 73,
+      "destinoIdx": 22,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": 336,
+          "posDestino": 0,
+          "probabilidad": 0.3
+        }
+      ]
+    },
+    {
+      "origenIdx": 58,
+      "destinoIdx": 54,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 2,
+          "posOrigen": -1,
+          "posDestino": 56,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 58,
+      "destinoIdx": 54,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 1,
+          "carrilDestino": 2,
+          "posOrigen": -1,
+          "posDestino": 57,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 58,
+      "destinoIdx": 54,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 2,
+          "carrilDestino": 2,
+          "posOrigen": -1,
+          "posDestino": 58,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 52,
+      "destinoIdx": 54,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 2,
+          "posOrigen": -1,
+          "posDestino": 144,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 59,
+      "destinoIdx": 68,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 19,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 59,
+      "destinoIdx": 68,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 1,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 18,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 59,
+      "destinoIdx": 68,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 2,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 17,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 63,
+      "destinoIdx": 67,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 2,
+          "posOrigen": -1,
+          "posDestino": 4,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 62,
+      "destinoIdx": 64,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 1,
+          "posOrigen": -1,
+          "posDestino": 114,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 3,
+      "destinoIdx": 66,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 24,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 2,
+      "destinoIdx": 58,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 74,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 5,
+      "destinoIdx": 58,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 39,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 4,
+      "destinoIdx": 66,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 60,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 7,
+      "destinoIdx": 58,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 5,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 6,
+      "destinoIdx": 66,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 94,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 53,
+      "destinoIdx": 58,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 2,
+          "posOrigen": -1,
+          "posDestino": 5,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 9,
+      "destinoIdx": 56,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 193,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 8,
+      "destinoIdx": 67,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 6,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 10,
+      "destinoIdx": 67,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 29,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 11,
+      "destinoIdx": 56,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 170,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 12,
+      "destinoIdx": 67,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 68,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 13,
+      "destinoIdx": 56,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 131,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 21,
+      "destinoIdx": 71,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 23,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 21,
+      "destinoIdx": 71,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 1,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 22,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 55,
+      "destinoIdx": 20,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 1,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 55,
+      "destinoIdx": 20,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 1,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 0,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 20,
+      "destinoIdx": 71,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 1,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 20,
+      "destinoIdx": 71,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 1,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 0,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 67,
+      "destinoIdx": 11,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": 28,
+          "posDestino": 0,
+          "probabilidad": 0.3
+        }
+      ]
+    },
+    {
+      "origenIdx": 73,
+      "destinoIdx": 23,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": 313,
+          "posDestino": 0,
+          "probabilidad": 0.2
+        }
+      ]
+    },
+    {
+      "origenIdx": 60,
+      "destinoIdx": 24,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": 27,
+          "posDestino": 0,
+          "probabilidad": 0.14
+        }
+      ]
+    },
+    {
+      "origenIdx": 60,
+      "destinoIdx": 25,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": 135,
+          "posDestino": 0,
+          "probabilidad": 0.17
+        }
+      ]
+    },
+    {
+      "origenIdx": 73,
+      "destinoIdx": 26,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": 203,
+          "posDestino": 0,
+          "probabilidad": 0.22
+        }
+      ]
+    },
+    {
+      "origenIdx": 60,
+      "destinoIdx": 35,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": 173,
+          "posDestino": 0,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 60,
+      "destinoIdx": 27,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": 164,
+          "posDestino": 0,
+          "probabilidad": 0.3
+        }
+      ]
+    },
+    {
+      "origenIdx": 73,
+      "destinoIdx": 28,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": 176,
+          "posDestino": 0,
+          "probabilidad": 0.3
+        }
+      ]
+    },
+    {
+      "origenIdx": 73,
+      "destinoIdx": 34,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": 165,
+          "posDestino": 0,
+          "probabilidad": 0.3
+        }
+      ]
+    },
+    {
+      "origenIdx": 73,
+      "destinoIdx": 29,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": 97,
+          "posDestino": 0,
+          "probabilidad": 0.3
+        }
+      ]
+    },
+    {
+      "origenIdx": 60,
+      "destinoIdx": 30,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": 280,
+          "posDestino": 0,
+          "probabilidad": 0.3
+        }
+      ]
+    },
+    {
+      "origenIdx": 73,
+      "destinoIdx": 31,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": 61,
+          "posDestino": 0,
+          "probabilidad": 0.4
+        }
+      ]
+    },
+    {
+      "origenIdx": 60,
+      "destinoIdx": 32,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": 331,
+          "posDestino": 0,
+          "probabilidad": 0.3
+        }
+      ]
+    },
+    {
+      "origenIdx": 73,
+      "destinoIdx": 33,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": 8,
+          "posDestino": 0,
+          "probabilidad": 0.3
+        }
+      ]
+    },
+    {
+      "origenIdx": 22,
+      "destinoIdx": 60,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 6,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 23,
+      "destinoIdx": 60,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 28,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 24,
+      "destinoIdx": 73,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 314,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 25,
+      "destinoIdx": 73,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 204,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 26,
+      "destinoIdx": 60,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 136,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 27,
+      "destinoIdx": 73,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 177,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 35,
+      "destinoIdx": 73,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 166,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 34,
+      "destinoIdx": 60,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 174,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 28,
+      "destinoIdx": 60,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 165,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 29,
+      "destinoIdx": 60,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 245,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 73,
+      "destinoIdx": 61,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 2,
+          "posOrigen": -1,
+          "posDestino": 40,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 73,
+      "destinoIdx": 61,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 1,
+          "carrilDestino": 2,
+          "posOrigen": -1,
+          "posDestino": 41,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 60,
+      "destinoIdx": 69,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 1,
+          "posOrigen": -1,
+          "posDestino": 222,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 60,
+      "destinoIdx": 69,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 1,
+          "carrilDestino": 1,
+          "posOrigen": -1,
+          "posDestino": 223,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 30,
+      "destinoIdx": 73,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 62,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 31,
+      "destinoIdx": 60,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 281,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 32,
+      "destinoIdx": 73,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 9,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 33,
+      "destinoIdx": 60,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 332,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 65,
+      "destinoIdx": 73,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 1,
+          "posOrigen": -1,
+          "posDestino": 98,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 65,
+      "destinoIdx": 73,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 1,
+          "carrilDestino": 1,
+          "posOrigen": -1,
+          "posDestino": 99,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 72,
+      "destinoIdx": 67,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 2,
+          "posOrigen": -1,
+          "posDestino": 192,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 72,
+      "destinoIdx": 67,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 1,
+          "carrilDestino": 2,
+          "posOrigen": -1,
+          "posDestino": 193,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 64,
+      "destinoIdx": 73,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 1,
+          "posOrigen": -1,
+          "posDestino": 177,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 64,
+      "destinoIdx": 73,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 1,
+          "carrilDestino": 1,
+          "posOrigen": -1,
+          "posDestino": 178,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 41,
+      "destinoIdx": 64,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 121,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 40,
+      "destinoIdx": 70,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 58,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 39,
+      "destinoIdx": 64,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 48,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 38,
+      "destinoIdx": 70,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 131,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 37,
+      "destinoIdx": 64,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 19,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 36,
+      "destinoIdx": 70,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 160,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 70,
+      "destinoIdx": 67,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 2,
+          "posOrigen": -1,
+          "posDestino": 110,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 70,
+      "destinoIdx": 67,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 1,
+          "carrilDestino": 2,
+          "posOrigen": -1,
+          "posDestino": 111,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 0,
+      "destinoIdx": 67,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 106,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 0,
+      "destinoIdx": 67,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 1,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 105,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 1,
+      "destinoIdx": 56,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 88,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 1,
+      "destinoIdx": 56,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 1,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 87,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 71,
+      "destinoIdx": 56,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 2,
+          "posOrigen": -1,
+          "posDestino": 92,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 71,
+      "destinoIdx": 56,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 1,
+          "carrilDestino": 2,
+          "posOrigen": -1,
+          "posDestino": 93,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 15,
+      "destinoIdx": 56,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 71,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 14,
+      "destinoIdx": 67,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 128,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 17,
+      "destinoIdx": 56,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 9,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 16,
+      "destinoIdx": 67,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 190,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 19,
+      "destinoIdx": 57,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 13,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 18,
+      "destinoIdx": 68,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 3,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 68,
+      "destinoIdx": 69,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 1,
+          "posOrigen": -1,
+          "posDestino": 25,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 68,
+      "destinoIdx": 69,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 1,
+          "carrilDestino": 1,
+          "posOrigen": -1,
+          "posDestino": 26,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 68,
+      "destinoIdx": 69,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 2,
+          "carrilDestino": 1,
+          "posOrigen": -1,
+          "posDestino": 27,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 51,
+      "destinoIdx": 65,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 140,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 50,
+      "destinoIdx": 72,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 44,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 49,
+      "destinoIdx": 65,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 112,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 48,
+      "destinoIdx": 72,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 72,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 47,
+      "destinoIdx": 65,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 82,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 46,
+      "destinoIdx": 72,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 102,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 45,
+      "destinoIdx": 65,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 52,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 44,
+      "destinoIdx": 72,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 132,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 43,
+      "destinoIdx": 65,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 27,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 42,
+      "destinoIdx": 72,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 157,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 78,
+      "destinoIdx": 59,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 10,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 78,
+      "destinoIdx": 59,
+      "tipo": "INCORPORACION",
+      "detalles": [
+        {
+          "carrilOrigen": 1,
+          "carrilDestino": 0,
+          "posOrigen": -1,
+          "posDestino": 11,
+          "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 59,
+      "destinoIdx": 57,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 2,
+          "carrilDestino": 2,
+          "posOrigen": 179,
+          "posDestino": 0,
+          "probabilidad": 0.15
+        }
+      ]
+    },
+    {
+      "origenIdx": 59,
+      "destinoIdx": 57,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 2,
+          "carrilDestino": 1,
+          "posOrigen": 180,
+          "posDestino": 0,
+          "probabilidad": 0.1
+        }
+      ]
+    },
+    {
+      "origenIdx": 59,
+      "destinoIdx": 57,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 2,
+          "carrilDestino": 0,
+          "posOrigen": 181,
+          "posDestino": 0,
+          "probabilidad": 0.05
+        }
+      ]
+    },
+    {
+      "origenIdx": 64,
+      "destinoIdx": 36,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": 18,
+          "posDestino": 0,
+          "probabilidad": 0.3
+        }
+      ]
+    },
+    {
+      "origenIdx": 70,
+      "destinoIdx": 37,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": 159,
+          "posDestino": 0,
+          "probabilidad": 0.3
+        }
+      ]
+    },
+    {
+      "origenIdx": 64,
+      "destinoIdx": 38,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": 47,
+          "posDestino": 0,
+          "probabilidad": 0.3
+        }
+      ]
+    },
+    {
+      "origenIdx": 70,
+      "destinoIdx": 39,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": 130,
+          "posDestino": 0,
+          "probabilidad": 0.3
+        }
+      ]
+    },
+    {
+      "origenIdx": 64,
+      "destinoIdx": 40,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": 120,
+          "posDestino": 0,
+          "probabilidad": 0.3
+        }
+      ]
+    },
+    {
+      "origenIdx": 70,
+      "destinoIdx": 41,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": 57,
+          "posDestino": 0,
+          "probabilidad": 0.3
+        }
+      ]
+    }
+  ],
+  "edificios": [
+    {
+      "x": 1642,
+      "y": 1126,
+      "width": 500,
+      "height": 600,
+      "angle": 6,
+      "color": "#8B4513",
+      "label": "ciclovía",
+      "esEstacionamiento": false,
+      "conexiones": [],
+      "vehiculosActuales": 0
+    },
+    {
+      "x": 1239,
+      "y": 701,
+      "width": 250,
+      "height": 120,
+      "color": "#29293aff",
+      "angle": 334,
+      "label": "PLAZA TORRES LINDAVISTA",
+      "esEstacionamiento": false,
+      "conexiones": [],
+      "vehiculosActuales": 0
+    },
+    {
+      "x": 1030,
+      "y": 887,
+      "width": 95,
+      "height": 160,
+      "color": "#0047a3ff",
+      "angle": 350,
+      "label": "ESCOM",
+      "esEstacionamiento": false,
+      "conexiones": [],
+      "vehiculosActuales": 0
+    },
+    {
+      "x": 1149,
+      "y": 893,
+      "width": 180,
+      "height": 90,
+      "color": "#29293aff",
+      "angle": 260,
+      "label": "ESTACIONAMIENTO ESCOM",
+      "imagen": "estacionamiento",
+      "esEstacionamiento": false,
+      "conexiones": [],
+      "vehiculosActuales": 0
+    },
+    {
+      "x": 1002,
+      "y": 1020,
+      "width": 90,
+      "height": 90,
+      "color": "#0047a3ff",
+      "angle": 350,
+      "label": "CIC",
+      "esEstacionamiento": false,
+      "conexiones": [],
+      "vehiculosActuales": 0
+    },
+    {
+      "x": 916,
+      "y": 997,
+      "width": 200,
+      "height": 90,
+      "color": "#29293aff",
+      "angle": 260,
+      "label": "ESTACIONAMIENTO CIC",
+      "imagen": "estacionamiento",
+      "esEstacionamiento": false,
+      "conexiones": [],
+      "vehiculosActuales": 0
+    },
+    {
+      "x": 1096,
+      "y": 1049,
+      "width": 90,
+      "height": 80,
+      "color": "#0047a3ff",
+      "angle": 350,
+      "label": "CIDETEC",
+      "imagen": "cidetec",
+      "esEstacionamiento": false,
+      "conexiones": [],
+      "vehiculosActuales": 0
+    },
+    {
+      "x": 978,
+      "y": 1118,
+      "width": 80,
+      "height": 80,
+      "color": "#0047a3ff",
+      "angle": 350,
+      "label": "CENDI",
+      "imagen": "cic",
+      "esEstacionamiento": false,
+      "conexiones": [],
+      "vehiculosActuales": 0
+    },
+    {
+      "x": 1343,
+      "y": 866,
+      "width": 80,
+      "height": 50,
+      "color": "#0047a3ff",
+      "angle": 170,
+      "label": "ESTABLO DE BURROS",
+      "esEstacionamiento": false,
+      "conexiones": [],
+      "vehiculosActuales": 0
+    },
+    {
+      "x": 1239,
+      "y": 908,
+      "width": 180,
+      "height": 100,
+      "color": "#164916ff",
+      "angle": 260,
+      "label": "CAMPO ESCOM",
+      "esEstacionamiento": false,
+      "conexiones": [],
+      "vehiculosActuales": 0
+    },
+    {
+      "x": 1995.393855899274,
+      "y": 1096.8181821738842,
+      "width": 154,
+      "height": 270,
+      "color": "#164916ff",
+      "angle": 168.0117148460054,
+      "label": "CAMPO BURROS BLANCOS",
+      "esEstacionamiento": false,
+      "conexiones": [],
+      "vehiculosActuales": 0
+    },
+    {
+      "x": 1573,
+      "y": 1114,
+      "width": 100,
+      "height": 80,
+      "color": "#164916ff",
+      "angle": 78.13398190908356,
+      "label": "CAMPO TIRO CON ARCO",
+      "imagen": "campo tiro con arco",
+      "esEstacionamiento": false,
+      "conexiones": [],
+      "vehiculosActuales": 0
+    },
+    {
+      "x": 1974,
+      "y": 1273,
+      "width": 160,
+      "height": 80,
+      "color": "#29293aff",
+      "angle": 350,
+      "label": "ESTACIONAMIENTO",
+      "imagen": "estacionamiento",
+      "esEstacionamiento": false,
+      "conexiones": [],
+      "vehiculosActuales": 0
+    },
+    {
+      "x": 1963,
+      "y": 1413,
+      "width": 150,
+      "height": 200,
+      "color": "#164916ff",
+      "angle": 350,
+      "label": "BEISBOL",
+      "esEstacionamiento": false,
+      "conexiones": [],
+      "vehiculosActuales": 0
+    },
+    {
+      "x": 1923,
+      "y": 1548,
+      "width": 160,
+      "height": 80,
+      "color": "#29293aff",
+      "angle": 350,
+      "label": "ESTACIONAMIENTO",
+      "imagen": "estacionamiento",
+      "esEstacionamiento": false,
+      "conexiones": [],
+      "vehiculosActuales": 0
+    },
+    {
+      "x": 1688,
+      "y": 1662,
+      "width": 140,
+      "height": 140,
+      "color": "#0047a3ff",
+      "angle": 350,
+      "label": "C.F.I.E",
+      "esEstacionamiento": false,
+      "conexiones": [],
+      "vehiculosActuales": 0
+    },
+    {
+      "x": 1392,
+      "y": 1529,
+      "width": 100,
+      "height": 80,
+      "color": "#0047a3ff",
+      "angle": 350,
+      "label": "ENCB",
+      "imagen": "cic",
+      "esEstacionamiento": false,
+      "conexiones": [],
+      "vehiculosActuales": 0
+    },
+    {
+      "x": 1597.7574987652351,
+      "y": 1560.6969323672001,
+      "width": 100,
+      "height": 80,
+      "color": "#0047a3ff",
+      "angle": 73.49923484301729,
+      "label": "UPIEM",
+      "imagen": "cic",
+      "esEstacionamiento": false,
+      "conexiones": [],
+      "vehiculosActuales": 0
+    },
+    {
+      "x": 1937,
+      "y": 905,
+      "width": 45,
+      "height": 45,
+      "color": "#0d0e10ff",
+      "angle": 352,
+      "label": "CONO",
+      "esEstacionamiento": false,
+      "conexiones": [],
+      "vehiculosActuales": 0
+    },
+    {
+      "x": 1750,
+      "y": 1060,
+      "width": 240,
+      "height": 170,
+      "color": "#164916ff",
+      "angle": 260,
+      "label": "ESTADIO AMERICANO",
+      "esEstacionamiento": false,
+      "conexiones": [],
+      "vehiculosActuales": 0
+    },
+    {
+      "x": 2136,
+      "y": 1497,
+      "width": 110,
+      "height": 110,
+      "color": "#4169E1",
+      "angle": 259,
+      "label": "Alberca",
+      "esEstacionamiento": false,
+      "conexiones": [],
+      "vehiculosActuales": 0
+    },
+    {
+      "x": 1918,
+      "y": 1648,
+      "width": 90,
+      "height": 90,
+      "color": "#8b4513",
+      "angle": 33,
+      "label": "GIMNASIO",
+      "imagen": "gimnasio",
+      "esEstacionamiento": false,
+      "conexiones": [],
+      "vehiculosActuales": 0
+    },
+    {
+      "x": 1876,
+      "y": 1740,
+      "width": 100,
+      "height": 100,
+      "color": "#4b0000ff",
+      "angle": 350,
+      "label": "PLANETARIO",
+      "esEstacionamiento": false,
+      "conexiones": [],
+      "vehiculosActuales": 0
+    },
+    {
+      "x": 2050,
+      "y": 1689,
+      "width": 70,
+      "height": 45,
+      "color": "#8b4513",
+      "angle": 350,
+      "label": "CENLEX",
+      "imagen": "cenlex",
+      "esEstacionamiento": false,
+      "conexiones": [],
+      "vehiculosActuales": 0
+    },
+    {
+      "x": 1605,
+      "y": 540,
+      "width": 70,
+      "height": 70,
+      "color": "#29293aff",
+      "angle": 350,
+      "label": "OIC-IPN",
+      "esEstacionamiento": false,
+      "conexiones": [],
+      "vehiculosActuales": 0
+    },
+    {
+      "x": 1456,
+      "y": 605,
+      "width": 70,
+      "height": 70,
+      "color": "#8b7355",
+      "angle": 350,
+      "label": "POI-IPN",
+      "esEstacionamiento": false,
+      "conexiones": [],
+      "vehiculosActuales": 0
+    },
+    {
+      "x": 1756,
+      "y": 466,
+      "width": 70,
+      "height": 70,
+      "color": "#29293aff",
+      "angle": 350,
+      "label": "SAD-IPN",
+      "esEstacionamiento": false,
+      "conexiones": [],
+      "vehiculosActuales": 0
+    },
+    {
+      "x": 1734,
+      "y": 600,
+      "width": 90,
+      "height": 90,
+      "color": "#8b7355",
+      "angle": 350,
+      "label": "DIRECCIÓN GENERAL",
+      "esEstacionamiento": false,
+      "conexiones": [],
+      "vehiculosActuales": 0
+    },
+    {
+      "x": 1819,
+      "y": 810,
+      "width": 70,
+      "height": 70,
+      "color": "#8b7355",
+      "angle": 350,
+      "label": "SIIS-IPN",
+      "esEstacionamiento": false,
+      "conexiones": [],
+      "vehiculosActuales": 0
+    },
+    {
+      "x": 1444,
+      "y": 746,
+      "width": 70,
+      "height": 70,
+      "color": "#8b7355",
+      "angle": 350,
+      "label": "EDIFICIO INTELIGENTE",
+      "esEstacionamiento": false,
+      "conexiones": [],
+      "vehiculosActuales": 0
+    },
+    {
+      "x": 1623,
+      "y": 760,
+      "width": 70,
+      "height": 70,
+      "color": "#8b7355",
+      "angle": 350,
+      "label": "SECADEMICA-IPN",
+      "esEstacionamiento": false,
+      "conexiones": [],
+      "vehiculosActuales": 0
+    },
+    {
+      "x": 2398,
+      "y": 1083,
+      "width": 70,
+      "height": 70,
+      "color": "#4b0000ff",
+      "angle": 350,
+      "label": "ESFM",
+      "esEstacionamiento": false,
+      "conexiones": [],
+      "vehiculosActuales": 0
+    },
+    {
+      "x": 2386,
+      "y": 1150,
+      "width": 70,
+      "height": 70,
+      "color": "#4b0000ff",
+      "angle": 350,
+      "label": "ESIQIE Edificio 8",
+      "esEstacionamiento": false,
+      "conexiones": [],
+      "vehiculosActuales": 0
+    },
+    {
+      "x": 2376,
+      "y": 1209,
+      "width": 70,
+      "height": 70,
+      "color": "#4b0000ff",
+      "angle": 350,
+      "label": "ESIQIE Edificio 7",
+      "esEstacionamiento": false,
+      "conexiones": [],
+      "vehiculosActuales": 0
+    },
+    {
+      "x": 2367,
+      "y": 1270,
+      "width": 70,
+      "height": 70,
+      "color": "#4b0000ff",
+      "angle": 350,
+      "label": "ESIQUIE",
+      "esEstacionamiento": false,
+      "conexiones": [],
+      "vehiculosActuales": 0
+    },
+    {
+      "x": 2352,
+      "y": 1343,
+      "width": 70,
+      "height": 70,
+      "color": "#4b0000ff",
+      "angle": 350,
+      "label": "ESIME Edificio 5",
+      "esEstacionamiento": false,
+      "conexiones": [],
+      "vehiculosActuales": 0
+    },
+    {
+      "x": 2344,
+      "y": 1413,
+      "width": 70,
+      "height": 70,
+      "color": "#4b0000ff",
+      "angle": 350,
+      "label": "ESIME Edificio 4",
+      "esEstacionamiento": false,
+      "conexiones": [],
+      "vehiculosActuales": 0
+    },
+    {
+      "x": 2331,
+      "y": 1488,
+      "width": 70,
+      "height": 70,
+      "color": "#4b0000ff",
+      "angle": 350,
+      "label": "ESIME Edificio 3",
+      "esEstacionamiento": false,
+      "conexiones": [],
+      "vehiculosActuales": 0
+    },
+    {
+      "x": 2319,
+      "y": 1562,
+      "width": 70,
+      "height": 70,
+      "color": "#4b0000ff",
+      "angle": 350,
+      "label": "ESIME Edificio 2",
+      "esEstacionamiento": false,
+      "conexiones": [],
+      "vehiculosActuales": 0
+    },
+    {
+      "x": 2306,
+      "y": 1632,
+      "width": 70,
+      "height": 70,
+      "color": "#4b0000ff",
+      "angle": 350,
+      "label": "ESIME",
+      "esEstacionamiento": false,
+      "conexiones": [],
+      "vehiculosActuales": 0
+    },
+    {
+      "x": 2584,
+      "y": 1370,
+      "width": 90,
+      "height": 90,
+      "color": "#57126fff",
+      "angle": 296,
+      "label": "EST",
+      "imagen": "est",
+      "esEstacionamiento": false,
+      "conexiones": [],
+      "vehiculosActuales": 0
+    },
+    {
+      "x": 2551,
+      "y": 1537,
+      "width": 140,
+      "height": 70,
+      "color": "#29293aff",
+      "angle": 75,
+      "label": "ESTACIONAMIENTO",
+      "imagen": "estacionamiento",
+      "esEstacionamiento": false,
+      "conexiones": [],
+      "vehiculosActuales": 0
+    },
+    {
+      "x": 2216,
+      "y": 897,
+      "width": 100,
+      "height": 100,
+      "color": "#4b0000ff",
+      "angle": 350,
+      "label": "ESIA",
+      "esEstacionamiento": false,
+      "conexiones": [],
+      "vehiculosActuales": 0
+    },
+    {
+      "x": 2306,
+      "y": 1754,
+      "width": 90,
+      "height": 60,
+      "color": "#8b4513",
+      "angle": 350,
+      "label": "CENTRO CULTURAL JTB",
+      "esEstacionamiento": false,
+      "conexiones": [],
+      "vehiculosActuales": 0
+    },
+    {
+      "x": 2504,
+      "y": 1793,
+      "width": 90,
+      "height": 70,
+      "color": "#0047a3ff",
+      "angle": 258,
+      "label": "BIBLIOTECA",
+      "imagen": "cic",
+      "esEstacionamiento": false,
+      "conexiones": [],
+      "vehiculosActuales": 0
+    },
+    {
+      "x": 2399,
+      "y": 1904,
+      "width": 200,
+      "height": 50,
+      "color": "#29293aff",
+      "angle": 350,
+      "label": "ESTACIONAMIENTO",
+      "imagen": "estacionamiento",
+      "esEstacionamiento": false,
+      "conexiones": [],
+      "vehiculosActuales": 0
+    }
+  ],
+  "backgroundAreas": [
+    {
+      "label": "Área IPN/Politécnico",
+      "vertices": [
+        {
+          "x": 848,
+          "y": 1089
+        },
+        {
+          "x": 917,
+          "y": 765
+        },
+        {
+          "x": 1395,
+          "y": 847
+        },
+        {
+          "x": 1418,
+          "y": 552
+        },
+        {
+          "x": 1873,
+          "y": 352
+        },
+        {
+          "x": 2401,
+          "y": 895
+        },
+        {
+          "x": 2405,
+          "y": 1027
+        },
+        {
+          "x": 2763,
+          "y": 1091
+        },
+        {
+          "x": 2594,
+          "y": 2008
+        },
+        {
+          "x": 1816,
+          "y": 1810
+        },
+        {
+          "x": 981,
+          "y": 1455
+        }
+      ],
+      "color": "#ffffffff",
+      "alpha": 0.25,
+      "showBorder": true,
+      "showLabel": false
+    }
+  ],
+  "imagenReferencia": null,
+  "configuracionTiempo": {
+    "activo": true,
+    "diaActual": 1,
+    "horaActual": 7,
+    "minutoActual": 0,
+    "segundoActual": 0,
+    "usarPerfiles": true,
+    "segundosPorPaso": 2,
+    "multiplicadoresPorDiaHora": {
+      "0": [
+        0,
+        0,
+        0.1,
+        0.2,
+        0.2,
+        0.2,
+        0.2,
+        0.2,
+        0.3,
+        0.3,
+        0.4,
+        0.6,
+        0.6,
+        0.7,
+        0.7,
+        0.7,
+        0.7,
+        0.6,
+        0.6,
+        0.5,
+        0.2,
+        0.1,
+        0,
+        0
+      ],
+      "1": [
+        0,
+        0.05,
+        0.08,
+        0.1,
+        0.2,
+        0.1,
+        0.4,
+        1.2,
+        1.4,
+        1,
+        0.6,
+        0.7,
+        0.9,
+        1,
+        0.9,
+        0.8,
+        0.8,
+        1.1,
+        1.4,
+        1.3,
+        1.1,
+        0.4,
+        0.2,
+        0
+      ],
+      "2": [
+        0,
+        0.05,
+        0.08,
+        0.2,
+        0.2,
+        0.2,
+        0.4,
+        1.2,
+        1.4,
+        1,
+        0.7,
+        0.7,
+        0.9,
+        1,
+        0.9,
+        0.8,
+        0.8,
+        1.1,
+        1.5,
+        1.3,
+        1.1,
+        0.2,
+        0.1,
+        0
+      ],
+      "3": [
+        0,
+        0.05,
+        0.08,
+        0.1,
+        0.2,
+        0.1,
+        0.4,
+        1.3,
+        1.5,
+        1,
+        0.5,
+        0.7,
+        0.9,
+        1.1,
+        1,
+        0.8,
+        0.9,
+        1.2,
+        1.5,
+        1.4,
+        1.2,
+        0.3,
+        0.2,
+        0
+      ],
+      "4": [
+        0,
+        0.05,
+        0.08,
+        0.2,
+        0.2,
+        0.2,
+        0.4,
+        1.3,
+        1.5,
+        1,
+        0.7,
+        0.7,
+        0.9,
+        1.1,
+        1,
+        0.8,
+        1,
+        1.3,
+        1.6,
+        1.5,
+        1,
+        0.2,
+        0.1,
+        0
+      ],
+      "5": [
+        0,
+        0.1,
+        0.1,
+        0.1,
+        0.2,
+        0.3,
+        0.5,
+        1.5,
+        1.8,
+        1.3,
+        0.8,
+        0.8,
+        1,
+        1.2,
+        1.1,
+        0.9,
+        1.7,
+        2.1,
+        3,
+        2.5,
+        1,
+        0.5,
+        0.2,
+        0
+      ],
+      "6": [
+        0,
+        0.1,
+        0.2,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.4,
+        0.5,
+        0.8,
+        0.9,
+        1,
+        1.2,
+        1.3,
+        1.3,
+        1.2,
+        1.1,
+        1,
+        0.9,
+        0.5,
+        0.1,
+        0.1,
+        0
+      ]
+    }
+  },
+  "lluviaAleatoria": {
+    "probabilidad": 10
+  },
+  "personalizacion": {
+    "fondoMapa": {
+      "preset": "sky",
+      "color": "#6aa0f0"
+    }
+  }
+}

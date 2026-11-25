@@ -82,6 +82,11 @@ The second accordion is **Herramientas** (`headingMapDrawingTools` / `collapseMa
 
 ## File-level atlas
 
+Campus export for v2: `scripts/export-campus.mjs` captures the built-in map through
+`guardarSimulacion`. The JSON includes `backgroundAreas`; `cargarSimulacion`
+restores these zones after clearing the previous map. Regression:
+`apps/v1/tests/background-zones.spec.mjs`.
+
 ### HTML and styles
 
 - **`index.html`**: `:1-39` head, local Bootstrap/Chart.js, CDN Pyodide/JSZip, CSS, early dark-mode script, then localization (`i18next.min.js`, `catalogs.js`, `ui/i18n.js`); `:44-105` loading screen/sidebar toggle/edit handles; `:106-213` instructions and road probabilities; `:214-420` obstacle/flood/pothole scenarios, base presets and time controls; `:421-639` map constructor (reference-image controls), selectors, editor and connection list; `:640-783` interpretation, five metric canvases, export/heatmap/about accordion; `:788-843` global theme/log/debug/cell-detection switches and language selector; `:845-1210` full instructions modal; `:1211-1568` new road/building/connection and edit-connection modals; `:1569-1938` about modal; `:1939-2092` clock/multiplier modals; `:2228-2355` heatmap modal; `:2357-2620` info bar, simulation canvas, street/building inspectors, minimap and transport/display/Draw controls; `:2482-2567` **ordered application script list** (`ui/streetListUI.js` loads before street-list consumers); `:2569-2674` tooltip, toasts, metrics street selector and scenario save/load modals; `:2787-2878` Pyodide analysis modal. Localization annotations added data attributes without changing IDs, Bootstrap targets, or child controls; later line ranges shift when adding annotated text.

@@ -195,6 +195,27 @@ impl TrafficModel {
         Ok(())
     }
 
+    /// Endpoints in the supplied geometry's world frame, in registration order.
+    pub fn connection_arrows(
+        &self,
+        geometry: &[crate::cell_index::StreetGeometry],
+    ) -> Vec<[[f32; 2]; 2]> {
+        self.connections
+            .iter()
+            .flat_map(Connection::mappings)
+            .map(|row| {
+                let source = row
+                    .effective_source_cell(&self.streets[row.source_street])
+                    .expect("registered source");
+                [
+                    geometry[row.source_street].centers[row.source_lane][source],
+                    geometry[row.destination_street].centers[row.destination_lane]
+                        [row.destination_cell],
+                ]
+            })
+            .collect()
+    }
+
     /// Run only the transfer phase, also useful for network diagnostics.
     pub fn transfer_connections(&mut self) {
         for connection in &self.connections {

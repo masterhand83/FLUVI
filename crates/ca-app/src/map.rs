@@ -11,25 +11,27 @@ pub struct MapFrame {
     pub clicked: Option<CellRef>,
     pub tooltip: Option<String>,
     pub preview: Option<CellPreview>,
+    pub vertex_edit: Option<crate::vertices::VertexEdit>,
+    pub vertex_mode: bool,
 }
 
 #[derive(Clone, Copy, Debug)]
 pub struct CellPreview {
     pub cell: CellRef,
     pub rect: egui::Rect,
+    pub corners: [egui::Pos2; 4],
 }
 
 impl MapFrame {
     /// Draw after the GPU callback so the target stays visible over the map.
     pub fn paint_preview(&self, painter: &egui::Painter) {
         if let Some(preview) = self.preview {
-            painter.rect(
-                preview.rect,
-                0.0,
-                egui::Color32::from_white_alpha(24),
-                egui::Stroke::new(1.5_f32, egui::Color32::WHITE),
-                egui::StrokeKind::Inside,
-            );
+            for i in 0..4 {
+                painter.line_segment(
+                    [preview.corners[i], preview.corners[(i + 1) % 4]],
+                    egui::Stroke::new(1.5_f32, egui::Color32::WHITE),
+                );
+            }
         }
     }
 }
@@ -40,6 +42,7 @@ pub struct MapInteraction {
     index: CellIndex,
     names: Vec<String>,
     touch_gesture: bool,
+    vertices: crate::vertices::VertexEditor,
 }
 
 impl MapInteraction {
@@ -52,11 +55,30 @@ impl MapInteraction {
             index,
             names,
             touch_gesture: false,
+            vertices: Default::default(),
         }
     }
 
     pub fn camera(&self) -> Option<&Camera> {
         self.camera.as_ref()
+    }
+
+    pub fn configure(
+        &mut self,
+        document: &ca_core::map_json::MapDocument,
+        shift: [f32; 2],
+    ) -> ca_core::map_json::MapGeometry {
+        let mut geometry = document.geometry_snapshot();
+        geometry.translate(shift);
+        self.index.sync_oriented(&geometry.streets, &geometry.axes);
+        self.vertices.sync(document, &geometry.streets);
+        geometry
+    }
+
+    pub fn paint_vertices(&self, painter: &egui::Painter, rect: egui::Rect) {
+        if let Some(camera) = &self.camera {
+            self.vertices.paint(painter, rect, camera);
+        }
     }
 
     /// Geometry owners use this only on edits, not on simulation ticks.
@@ -73,11 +95,23 @@ impl MapInteraction {
             .camera
             .get_or_insert_with(|| Camera::fit(self.extent, viewport));
         camera.resize(viewport);
+        let street_hit = ui
+            .input(|i| i.pointer.interact_pos())
+            .filter(|p| rect.contains(*p))
+            .and_then(|p| {
+                self.index
+                    .hit_test(camera.screen_to_world((p - rect.min).into()))
+            })
+            .map(|c| c.street);
+        let vertex_edit =
+            self.vertices
+                .input(ui, rect, camera, street_hit, response.contains_pointer());
         // Response::drag_delta reads the context; do not call it under input's lock.
         let drag_delta = response.drag_delta();
         ui.input(|input| {
             if let Some(touch) = input.multi_touch() {
-                if rect.contains(touch.start_pos)
+                if !self.vertices.blocks_pan()
+                    && rect.contains(touch.start_pos)
                     && (response.contains_pointer() || response.dragged())
                 {
                     self.touch_gesture = true;
@@ -85,7 +119,7 @@ impl MapInteraction {
                     camera.zoom_at(anchor.into(), touch.zoom_delta);
                     camera.pan(touch.translation_delta.into());
                 }
-            } else if response.dragged() && !self.touch_gesture {
+            } else if response.dragged() && !self.touch_gesture && !self.vertices.blocks_pan() {
                 camera.pan(drag_delta.into());
             }
             if response.hovered()
@@ -128,17 +162,18 @@ impl MapInteraction {
                 self.index
                     .hit_test(camera.screen_to_world((pos - rect.min).into()))
             });
-        let clicked = response.clicked().then_some(hit).flatten();
+        let clicked = (response.clicked() && !self.vertices.active())
+            .then_some(hit)
+            .flatten();
         let preview = hit.and_then(|cell| {
-            let center = self.index.cell_center(cell)?;
-            let min = camera.world_to_screen(center.map(|v| v - 0.5));
-            let max = camera.world_to_screen(center.map(|v| v + 0.5));
+            let corners = self.index.cell_corners(cell)?.map(|p| {
+                let p = camera.world_to_screen(p);
+                rect.min + egui::vec2(p[0], p[1])
+            });
             Some(CellPreview {
                 cell,
-                rect: egui::Rect::from_min_max(
-                    rect.min + egui::vec2(min[0], min[1]),
-                    rect.min + egui::vec2(max[0], max[1]),
-                ),
+                rect: egui::Rect::from_points(&corners),
+                corners,
             })
         });
         if preview.is_some() {
@@ -161,6 +196,8 @@ impl MapInteraction {
             clicked,
             tooltip,
             preview,
+            vertex_edit,
+            vertex_mode: self.vertices.active(),
         }
     }
 }

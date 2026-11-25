@@ -1,4 +1,5 @@
 {
+  "vertices.mode": "Vertex edit (Z) — select a street and drag a yellow handle",
   "mapFiles.open": "Open Map",
   "mapFiles.save": "Save Map",
   "mapFiles.new": "New Map",

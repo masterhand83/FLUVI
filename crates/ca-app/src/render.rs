@@ -15,6 +15,7 @@ pub struct Progress {
     pub generation: u64,
     pub population: u32,
     pub fps: f64,
+    pub render_fps: f64,
 }
 
 pub enum Event {
@@ -35,9 +36,26 @@ pub struct Paint {
 pub enum Edit {
     Toggle(CellRef),
     Vehicles(VehicleAction),
+    Vertex(ca_app::vertices::VertexEdit),
 }
 
 pub struct PaintCallback;
+pub struct BackgroundCallback;
+
+impl CallbackTrait for BackgroundCallback {
+    fn paint(
+        &self,
+        _info: egui::PaintCallbackInfo,
+        pass: &mut wgpu::RenderPass<'static>,
+        resources: &CallbackResources,
+    ) {
+        resources
+            .get::<Resources>()
+            .expect("traffic resources installed")
+            .display
+            .paint_background(pass);
+    }
+}
 
 /// Only view/control state is coalesced. Cell edits retain FIFO order.
 pub struct Commands {
@@ -101,6 +119,8 @@ pub struct Resources {
     last_tick: Instant,
     progress: Progress,
     format: wgpu::TextureFormat,
+    frame_window: Instant,
+    window_frames: u64,
 }
 
 impl Resources {
@@ -116,6 +136,8 @@ impl Resources {
         Self {
             scene,
             format,
+            frame_window: Instant::now(),
+            window_frames: 0,
             display,
             events,
             requests,
@@ -169,6 +191,15 @@ impl Resources {
                         .expect("UI probability is in 0..=1");
                     true
                 }
+                Edit::Vertex(edit) => {
+                    if self
+                        .scene
+                        .set_vertex_offset(edit.street, edit.vertex, edit.offset)
+                    {
+                        self.display.upload_street(queue, &self.scene, edit.street);
+                    }
+                    false
+                }
             };
         }
         let published = !request.playing && self.scene.publish_edits();
@@ -194,6 +225,13 @@ impl Resources {
         }
         self.progress.fps = self.ticks.fps();
         self.progress.frames += 1;
+        self.window_frames += 1;
+        let frame_elapsed = now.duration_since(self.frame_window).as_secs_f64();
+        if frame_elapsed >= 1.0 {
+            self.progress.render_fps = self.window_frames as f64 / frame_elapsed;
+            self.window_frames = 0;
+            self.frame_window = now;
+        }
         let _ = self.events.try_send(Event::Progress(self.progress));
     }
 }
@@ -367,7 +405,7 @@ mod tests {
     }
 
     #[test]
-    fn paused_creation_and_preview_align_with_cursor_in_real_egui_gpu_callback() {
+    fn zones_stay_below_traffic_and_paused_creation_preview_in_real_egui_gpu_callback() {
         use ca_app::map::MapInteraction;
         let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor::from_env_or_default());
         let adapter = match pollster::block_on(instance.request_adapter(&Default::default())) {
@@ -380,7 +418,19 @@ mod tests {
         let (device, queue) =
             pollster::block_on(adapter.request_device(&Default::default())).unwrap();
         for pixels_per_point in [1.0, 1.5, 2.0] {
-            let scene = TrafficScene::demo();
+            let zones = ca_core::map_json::MapDocument::parse(r##"{"calles":[],"backgroundAreas":[
+                {"x":10,"y":10,"width":160,"height":50,"color":"#00ff00","alpha":1,"label":"Zone","showLabel":false},
+                {"vertices":[{"x":50,"y":40},{"x":80,"y":40},{"x":80,"y":45},{"x":55,"y":45},{"x":55,"y":60},{"x":50,"y":60}],
+                 "color":"#0000ff","alpha":1,"showLabel":false}
+            ]}"##).unwrap();
+            let mut data: serde_json::Value =
+                serde_json::from_str(&ca_core::map_json::MapDocument::demo().to_json()).unwrap();
+            data["backgroundAreas"] = serde_json::from_str::<serde_json::Value>(&zones.to_json())
+                .unwrap()["backgroundAreas"]
+                .clone();
+            let document = ca_core::map_json::MapDocument::parse(&data.to_string()).unwrap();
+            let scene = TrafficScene::from_document(&document);
+            let background = ca_app::background::Background::new(zones.zones(), [0.0; 2]);
             let mut map = MapInteraction::new(
                 scene.extent().map(|v| v as f32),
                 &scene.geometry(),
@@ -451,6 +501,13 @@ mod tests {
                                 },
                                 frame.clicked
                             ));
+                            ui.painter()
+                                .rect_filled(frame.rect, 0.0, egui::Color32::BLACK);
+                            ui.painter().add(egui_wgpu::Callback::new_paint_callback(
+                                frame.rect,
+                                BackgroundCallback,
+                            ));
+                            background.paint(ui.painter(), frame.view, frame.rect);
                             ui.painter().add(egui_wgpu::Callback::new_paint_callback(
                                 frame.rect,
                                 PaintCallback,
@@ -539,6 +596,16 @@ mod tests {
             };
             // Known empty cell center, not a position computed from the picking code.
             let center = pixel(490.0, 320.0);
+            assert_eq!(
+                &pixel(490.0, 360.0)[..3],
+                &[0, 0, 255],
+                "polygon under the map"
+            );
+            assert_eq!(
+                &pixel(540.0, 380.0)[..3],
+                &[0, 255, 0],
+                "concave notch exposes rectangular zone"
+            );
             assert!(
                 center[0] > 220 && center[1] < 100 && center[2] < 100,
                 "cursor center must contain the created red vehicle at scale {pixels_per_point}: {center:?}"

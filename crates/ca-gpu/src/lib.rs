@@ -1,6 +1,7 @@
 //! Direct GPU display of CPU traffic state.
 use bytemuck::{Pod, Zeroable};
 
+mod background;
 mod traffic;
 pub use traffic::{TrafficDisplay, TrafficLane, TrafficScene};
 

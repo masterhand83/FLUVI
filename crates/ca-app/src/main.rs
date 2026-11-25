@@ -61,11 +61,12 @@ fn main() -> anyhow::Result<()> {
         .context("application closed without a shutdown report")?;
     if smoke.is_some() {
         println!(
-            "smoke frames={} ticks={} final_population={} simulation_fps={:.1} adapter={}",
+            "smoke frames={} ticks={} final_population={} simulation_fps={:.1} render_fps={:.1} adapter={}",
             report.progress.frames,
             report.progress.generation,
             report.progress.population,
             report.progress.fps,
+            report.progress.render_fps,
             report.adapter
         );
         ensure!(

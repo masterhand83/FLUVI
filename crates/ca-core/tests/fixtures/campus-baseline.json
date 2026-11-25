@@ -1,0 +1,816 @@
+{
+  "streets": [
+    {
+      "name": "Retorno M. ←",
+      "lanes": 2,
+      "length": 6
+    },
+    {
+      "name": "Retorno M. →",
+      "lanes": 2,
+      "length": 6
+    },
+    {
+      "name": "Retorno torres →",
+      "lanes": 1,
+      "length": 7
+    },
+    {
+      "name": "Retorno torres ←",
+      "lanes": 1,
+      "length": 7
+    },
+    {
+      "name": "Retorno ESCOM ←",
+      "lanes": 1,
+      "length": 6
+    },
+    {
+      "name": "Retorno ESCOM →",
+      "lanes": 1,
+      "length": 6
+    },
+    {
+      "name": "Retorno Estampa ←",
+      "lanes": 1,
+      "length": 6
+    },
+    {
+      "name": "Retorno Estampa →",
+      "lanes": 1,
+      "length": 6
+    },
+    {
+      "name": "Retorno Juan F. ←",
+      "lanes": 1,
+      "length": 6
+    },
+    {
+      "name": "Retorno Juan F. →",
+      "lanes": 1,
+      "length": 6
+    },
+    {
+      "name": "Retorno Juan F. 2 ←",
+      "lanes": 1,
+      "length": 6
+    },
+    {
+      "name": "Retorno Juan F. 2 →",
+      "lanes": 1,
+      "length": 6
+    },
+    {
+      "name": "Retorno Batiz ←",
+      "lanes": 1,
+      "length": 6
+    },
+    {
+      "name": "Retorno Batiz →",
+      "lanes": 1,
+      "length": 6
+    },
+    {
+      "name": "Retorno Batiz F. ←",
+      "lanes": 1,
+      "length": 6
+    },
+    {
+      "name": "Retorno Batiz F. →",
+      "lanes": 1,
+      "length": 6
+    },
+    {
+      "name": "Retorno SECAD ←",
+      "lanes": 1,
+      "length": 7
+    },
+    {
+      "name": "Retorno SECAD →",
+      "lanes": 1,
+      "length": 7
+    },
+    {
+      "name": "Retorno Bernard ←",
+      "lanes": 1,
+      "length": 7
+    },
+    {
+      "name": "Retorno Bernard →",
+      "lanes": 1,
+      "length": 7
+    },
+    {
+      "name": "Retorno Erro 1 ←",
+      "lanes": 2,
+      "length": 4
+    },
+    {
+      "name": "Retorno Erro 2 ←",
+      "lanes": 2,
+      "length": 3
+    },
+    {
+      "name": "Retorno Wilfrido. ←",
+      "lanes": 1,
+      "length": 4
+    },
+    {
+      "name": "Retorno Escalera ←",
+      "lanes": 1,
+      "length": 4
+    },
+    {
+      "name": "Retorno Escalera →",
+      "lanes": 1,
+      "length": 4
+    },
+    {
+      "name": "Retorno Wilfrido1 ←",
+      "lanes": 1,
+      "length": 4
+    },
+    {
+      "name": "Retorno Wilfrido2 →",
+      "lanes": 1,
+      "length": 4
+    },
+    {
+      "name": "Retorno Wilfrido3 →",
+      "lanes": 1,
+      "length": 4
+    },
+    {
+      "name": "Retorno Wilfrido4 ←",
+      "lanes": 1,
+      "length": 4
+    },
+    {
+      "name": "Retorno Wilfrido5 ←",
+      "lanes": 1,
+      "length": 4
+    },
+    {
+      "name": "Retorno Wilfrido6 →",
+      "lanes": 1,
+      "length": 4
+    },
+    {
+      "name": "Retorno Wilfrido7 ←",
+      "lanes": 1,
+      "length": 4
+    },
+    {
+      "name": "Retorno Wilfrido8 →",
+      "lanes": 1,
+      "length": 3
+    },
+    {
+      "name": "Retorno Wilfrido9 ←",
+      "lanes": 1,
+      "length": 3
+    },
+    {
+      "name": "Retorno Wilfrido10 ←",
+      "lanes": 1,
+      "length": 4
+    },
+    {
+      "name": "Retorno Wilfrido11 →",
+      "lanes": 1,
+      "length": 4
+    },
+    {
+      "name": "Retorno Erro 3 →",
+      "lanes": 1,
+      "length": 4
+    },
+    {
+      "name": "Retorno Erro 3 ←",
+      "lanes": 1,
+      "length": 4
+    },
+    {
+      "name": "Retorno Erro 4 →",
+      "lanes": 1,
+      "length": 4
+    },
+    {
+      "name": "Retorno Erro 4 ←",
+      "lanes": 1,
+      "length": 4
+    },
+    {
+      "name": "Retorno Erro 5 →",
+      "lanes": 1,
+      "length": 4
+    },
+    {
+      "name": "Retorno Erro 5 ←",
+      "lanes": 1,
+      "length": 4
+    },
+    {
+      "name": "Retorno Barredo →",
+      "lanes": 1,
+      "length": 5
+    },
+    {
+      "name": "Retorno Barredo ←",
+      "lanes": 1,
+      "length": 5
+    },
+    {
+      "name": "Retorno Barredo 3 →",
+      "lanes": 1,
+      "length": 5
+    },
+    {
+      "name": "Retorno Barredo 3 ←",
+      "lanes": 1,
+      "length": 5
+    },
+    {
+      "name": "Retorno Barredo 4 →",
+      "lanes": 1,
+      "length": 5
+    },
+    {
+      "name": "Retorno Barredo 4 ←",
+      "lanes": 1,
+      "length": 5
+    },
+    {
+      "name": "Retorno Barredo 5 →",
+      "lanes": 1,
+      "length": 5
+    },
+    {
+      "name": "Retorno Barredo 5 ←",
+      "lanes": 1,
+      "length": 5
+    },
+    {
+      "name": "Retorno Barredo 6 →",
+      "lanes": 1,
+      "length": 5
+    },
+    {
+      "name": "Retorno Barredo 6 ←",
+      "lanes": 1,
+      "length": 5
+    },
+    {
+      "name": "Calle M. Luisa Estampa Ort. →",
+      "lanes": 1,
+      "length": 50
+    },
+    {
+      "name": "Calle M. Luisa Estampa Ort. ←",
+      "lanes": 1,
+      "length": 49
+    },
+    {
+      "name": "Av. Miguel Othon de Mendizabal →",
+      "lanes": 3,
+      "length": 248
+    },
+    {
+      "name": "Calle Luis Enrique Erro Tramo 2 →",
+      "lanes": 2,
+      "length": 65
+    },
+    {
+      "name": "Av. Juan de Dios Batiz ←",
+      "lanes": 3,
+      "length": 199
+    },
+    {
+      "name": "Entrada a Av. Juan de Dios Batiz ←",
+      "lanes": 3,
+      "length": 17
+    },
+    {
+      "name": "Salida Juan de Dios Batiz ←",
+      "lanes": 3,
+      "length": 84
+    },
+    {
+      "name": "Av. Miguel Bernard →",
+      "lanes": 3,
+      "length": 190
+    },
+    {
+      "name": "Av. Wilfrido Massieu →",
+      "lanes": 2,
+      "length": 343
+    },
+    {
+      "name": "Av. Cien Metros ←",
+      "lanes": 3,
+      "length": 230
+    },
+    {
+      "name": "Calle Interior IPN ←",
+      "lanes": 1,
+      "length": 180
+    },
+    {
+      "name": "Calle Interior IPN →",
+      "lanes": 1,
+      "length": 179
+    },
+    {
+      "name": "Calle Luis Enrique Erro ←",
+      "lanes": 2,
+      "length": 177
+    },
+    {
+      "name": "Calle Miguel Anda y Barredo ←",
+      "lanes": 2,
+      "length": 184
+    },
+    {
+      "name": "Entrada Juan de Dios Batiz →",
+      "lanes": 3,
+      "length": 95
+    },
+    {
+      "name": "Av. Juan de Dios Batiz →",
+      "lanes": 3,
+      "length": 204
+    },
+    {
+      "name": "Salida de Juan de Dios Batiz →",
+      "lanes": 3,
+      "length": 76
+    },
+    {
+      "name": "Av. IPN ←",
+      "lanes": 2,
+      "length": 230
+    },
+    {
+      "name": "Calle Luis Enrique Erro →",
+      "lanes": 2,
+      "length": 178
+    },
+    {
+      "name": "Calle Luis Enrique Erro Tramo 2 ←",
+      "lanes": 2,
+      "length": 69
+    },
+    {
+      "name": "Calle Miguel Anda y Barredo →",
+      "lanes": 2,
+      "length": 184
+    },
+    {
+      "name": "Av. Wilfrido Massieu ←",
+      "lanes": 2,
+      "length": 346
+    },
+    {
+      "name": "Salida Cien Metros ←",
+      "lanes": 3,
+      "length": 4
+    },
+    {
+      "name": "Entrada a Cien Metros →",
+      "lanes": 3,
+      "length": 4
+    },
+    {
+      "name": "Entrada a Av. IPN ←",
+      "lanes": 2,
+      "length": 5
+    },
+    {
+      "name": "Salida Av. IPN ←",
+      "lanes": 2,
+      "length": 5
+    },
+    {
+      "name": "Entrada ←",
+      "lanes": 2,
+      "length": 5
+    },
+    {
+      "name": "Salida 1 →",
+      "lanes": 2,
+      "length": 5
+    },
+    {
+      "name": "Salida 2 →",
+      "lanes": 2,
+      "length": 5
+    },
+    {
+      "name": "E ←",
+      "lanes": 3,
+      "length": 4
+    },
+    {
+      "name": "E 2→",
+      "lanes": 3,
+      "length": 4
+    },
+    {
+      "name": "Er→",
+      "lanes": 2,
+      "length": 2
+    },
+    {
+      "name": "B →",
+      "lanes": 2,
+      "length": 2
+    }
+  ],
+  "connections": 203,
+  "samples": [
+    {
+      "street": 52,
+      "lane": 0,
+      "index": 0,
+      "x": 1389.4664158933927,
+      "y": 785.5438940954449,
+      "angulo": 79.24753184021631
+    },
+    {
+      "street": 52,
+      "lane": 0,
+      "index": 25,
+      "x": 1401.246846395226,
+      "y": 661.1556347278091,
+      "angulo": 83.64267287407277
+    },
+    {
+      "street": 52,
+      "lane": 0,
+      "index": 49,
+      "x": 1401.3876615685163,
+      "y": 543.0386817182682,
+      "angulo": 112.39289008520974
+    },
+    {
+      "street": 53,
+      "lane": 0,
+      "index": 0,
+      "x": 1396.1451615789015,
+      "y": 542.2222972254422,
+      "angulo": 297.262292058957
+    },
+    {
+      "street": 53,
+      "lane": 0,
+      "index": 24,
+      "x": 1396.7762403250035,
+      "y": 660.3086527179919,
+      "angulo": 262.18044435981597
+    },
+    {
+      "street": 53,
+      "lane": 0,
+      "index": 48,
+      "x": 1386.1739824146755,
+      "y": 779.7905621335659,
+      "angulo": 261.34740692799676
+    },
+    {
+      "street": 54,
+      "lane": 2,
+      "index": 0,
+      "x": 733.1909926034965,
+      "y": 808.6994027892941,
+      "angulo": 22
+    },
+    {
+      "street": 54,
+      "lane": 2,
+      "index": 124,
+      "x": 1308.0449824349023,
+      "y": 576.4433148714296,
+      "angulo": 22
+    },
+    {
+      "street": 54,
+      "lane": 2,
+      "index": 247,
+      "x": 1863.4504665531356,
+      "y": 334.97131851927065,
+      "angulo": -6.681586598103401
+    },
+    {
+      "street": 55,
+      "lane": 1,
+      "index": 0,
+      "x": 1954.896139826698,
+      "y": 885.9721010616367,
+      "angulo": 80
+    },
+    {
+      "street": 55,
+      "lane": 1,
+      "index": 32,
+      "x": 2015.1868610320466,
+      "y": 742.4421449567128,
+      "angulo": 50.13665504360479
+    },
+    {
+      "street": 55,
+      "lane": 1,
+      "index": 64,
+      "x": 2125.2053035823537,
+      "y": 626.5248875667588,
+      "angulo": 47.603410276058796
+    },
+    {
+      "street": 56,
+      "lane": 2,
+      "index": 0,
+      "x": 2383.4062215058043,
+      "y": 961.6418407907717,
+      "angulo": 170
+    },
+    {
+      "street": 56,
+      "lane": 2,
+      "index": 99,
+      "x": 1895.926383764751,
+      "y": 875.6859928456423,
+      "angulo": 170
+    },
+    {
+      "street": 56,
+      "lane": 2,
+      "index": 198,
+      "x": 1408.4465460236981,
+      "y": 789.730144900513,
+      "angulo": 170
+    },
+    {
+      "street": 57,
+      "lane": 2,
+      "index": 0,
+      "x": 2480.232863747287,
+      "y": 969.8697839701177,
+      "angulo": 195.80263615745193
+    },
+    {
+      "street": 57,
+      "lane": 2,
+      "index": 8,
+      "x": 2442.2497644442856,
+      "y": 971.7149491898697,
+      "angulo": 175.1605272314904
+    },
+    {
+      "street": 57,
+      "lane": 2,
+      "index": 16,
+      "x": 2403.2988466561465,
+      "y": 964.8265035538099,
+      "angulo": 170
+    },
+    {
+      "street": 58,
+      "lane": 2,
+      "index": 0,
+      "x": 1408.406221505804,
+      "y": 789.6418407907717,
+      "angulo": 170
+    },
+    {
+      "street": 58,
+      "lane": 2,
+      "index": 42,
+      "x": 1201.5965933732361,
+      "y": 753.1757234807168,
+      "angulo": 170
+    },
+    {
+      "street": 58,
+      "lane": 2,
+      "index": 83,
+      "x": 1006.3103449746847,
+      "y": 705.4100083479727,
+      "angulo": 139.61137846195416
+    },
+    {
+      "street": 59,
+      "lane": 2,
+      "index": 0,
+      "x": 1862.9465677674318,
+      "y": 334.5094472918487,
+      "angulo": -16.816348408953885
+    },
+    {
+      "street": 59,
+      "lane": 2,
+      "index": 95,
+      "x": 2196.320089755329,
+      "y": 667.5110872130596,
+      "angulo": -46
+    },
+    {
+      "street": 59,
+      "lane": 2,
+      "index": 189,
+      "x": 2485.3128963258987,
+      "y": 1018.0095868834148,
+      "angulo": -93.1907287059023
+    },
+    {
+      "street": 60,
+      "lane": 1,
+      "index": 0,
+      "x": 989.1782336581417,
+      "y": 1503.5488159394374,
+      "angulo": 379.0191128059467
+    },
+    {
+      "street": 60,
+      "lane": 1,
+      "index": 171,
+      "x": 1769.4208186438298,
+      "y": 1839.6963394827987,
+      "angulo": 337.4487082469242
+    },
+    {
+      "street": 60,
+      "lane": 1,
+      "index": 342,
+      "x": 2599.0464373247005,
+      "y": 2047.3035740475632,
+      "angulo": 348.3003800222679
+    },
+    {
+      "street": 62,
+      "lane": 0,
+      "index": 0,
+      "x": 1412.4376223641402,
+      "y": 845.435925161963,
+      "angulo": 257
+    },
+    {
+      "street": 62,
+      "lane": 0,
+      "index": 90,
+      "x": 1443.651154161214,
+      "y": 1242.559006114329,
+      "angulo": 324.76822255642776
+    },
+    {
+      "street": 62,
+      "lane": 0,
+      "index": 179,
+      "x": 1811.6152315753804,
+      "y": 1490.2242708060405,
+      "angulo": 347
+    },
+    {
+      "street": 63,
+      "lane": 0,
+      "index": 0,
+      "x": 1818.5191945386425,
+      "y": 1486.690800609802,
+      "angulo": 172.89548024446026
+    },
+    {
+      "street": 63,
+      "lane": 0,
+      "index": 89,
+      "x": 1448.869853368699,
+      "y": 1241.6982866853764,
+      "angulo": 145.48600538633414
+    },
+    {
+      "street": 63,
+      "lane": 0,
+      "index": 178,
+      "x": 1416.943114198234,
+      "y": 847.5066488259304,
+      "angulo": 76.8072323393159
+    },
+    {
+      "street": 64,
+      "lane": 1,
+      "index": 0,
+      "x": 1917.103860173302,
+      "y": 930.0278989383633,
+      "angulo": 260
+    },
+    {
+      "street": 64,
+      "lane": 1,
+      "index": 88,
+      "x": 1840.6986619998538,
+      "y": 1363.3433102637414,
+      "angulo": 260
+    },
+    {
+      "street": 64,
+      "lane": 1,
+      "index": 176,
+      "x": 1746.860864614899,
+      "y": 1790.5824002698143,
+      "angulo": 247.11191978778297
+    },
+    {
+      "street": 66,
+      "lane": 2,
+      "index": 0,
+      "x": 918.7767468086215,
+      "y": 741.1290491562302,
+      "angulo": -50
+    },
+    {
+      "street": 66,
+      "lane": 2,
+      "index": 47,
+      "x": 1148.0482869131163,
+      "y": 796.4875200443124,
+      "angulo": -10
+    },
+    {
+      "street": 66,
+      "lane": 2,
+      "index": 94,
+      "x": 1379.270362763371,
+      "y": 838.0009289920424,
+      "angulo": -10.887610818766179
+    },
+    {
+      "street": 67,
+      "lane": 2,
+      "index": 0,
+      "x": 1398.593778494196,
+      "y": 841.3581592092283,
+      "angulo": -10
+    },
+    {
+      "street": 67,
+      "lane": 2,
+      "index": 102,
+      "x": 1901.2804216433392,
+      "y": 927.495024245275,
+      "angulo": -9.533743443575698
+    },
+    {
+      "street": 67,
+      "lane": 2,
+      "index": 203,
+      "x": 2397.88403906648,
+      "y": 1018.746707114663,
+      "angulo": -10
+    },
+    {
+      "street": 71,
+      "lane": 1,
+      "index": 0,
+      "x": 2114.4644660940676,
+      "y": 603,
+      "angulo": 225
+    },
+    {
+      "street": 71,
+      "lane": 1,
+      "index": 34,
+      "x": 1994.2563132923526,
+      "y": 723.208152801714,
+      "angulo": 225
+    },
+    {
+      "street": 71,
+      "lane": 1,
+      "index": 68,
+      "x": 1926.2568436710326,
+      "y": 875.6472198320946,
+      "angulo": 260.6935355647334
+    },
+    {
+      "street": 73,
+      "lane": 1,
+      "index": 0,
+      "x": 2603.179065423309,
+      "y": 2023.969455945311,
+      "angulo": 166
+    },
+    {
+      "street": 73,
+      "lane": 1,
+      "index": 173,
+      "x": 1767.0801672811044,
+      "y": 1806.6571531370791,
+      "angulo": 154.87151944278085
+    },
+    {
+      "street": 73,
+      "lane": 1,
+      "index": 345,
+      "x": 979.048795647177,
+      "y": 1469.7402100872323,
+      "angulo": 198.42406150399881
+    }
+  ]
+}

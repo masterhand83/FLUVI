@@ -20,6 +20,18 @@ pub struct TrafficLane {
 }
 const _: () = assert!(size_of::<TrafficLane>() == 32);
 
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Pod, Zeroable)]
+struct TrafficTile {
+    center: [f32; 2],
+    axis: [f32; 2],
+    offset: u32,
+    street_type: u32,
+    direction: u32,
+    arrow: u32,
+}
+const _: () = assert!(size_of::<TrafficTile>() == 32);
+
 pub struct TrafficScene {
     model: TrafficModel,
     lanes: Vec<TrafficLane>,
@@ -27,6 +39,14 @@ pub struct TrafficScene {
     edited: bool,
     names: Vec<String>,
     extent: [u32; 2],
+    geometry: Vec<StreetGeometry>,
+    axes: Vec<Vec<Vec<[f32; 2]>>>,
+    tiles: Vec<TrafficTile>,
+    shift: [f32; 2],
+    placements: Vec<ca_core::map_json::StreetPlacement>,
+    street_tiles: Vec<std::ops::Range<usize>>,
+    street_lanes: Vec<std::ops::Range<usize>>,
+    zones: Vec<ca_core::map_json::BackgroundZone>,
 }
 
 impl TrafficScene {
@@ -38,25 +58,30 @@ impl TrafficScene {
     /// the map's original world positions.
     pub fn from_document(document: &ca_core::map_json::MapDocument) -> Self {
         let model = document.model().clone();
+        let snapshot = document.geometry_snapshot();
+        let mut geometry = snapshot.streets;
+        let axes = snapshot.axes;
         let mut lanes = Vec::new();
         let mut names = Vec::new();
         let mut offset = 0;
         let mut minimum = [f32::INFINITY; 2];
         let mut maximum = [f32::NEG_INFINITY; 2];
-        for (street, placement) in model.streets().iter().zip(document.layout()) {
+        for (id, (street, placement)) in model.streets().iter().zip(document.layout()).enumerate() {
             names.push(placement.name.clone());
-            let axis = [placement.angle_radians.cos(), placement.angle_radians.sin()];
-            let normal = [-axis[1], axis[0]];
-            for lane in 0..street.config().carriles {
-                let position =
-                    std::array::from_fn(|i| placement.origin[i] + normal[i] * lane as f32);
-                for x in [0.0, street.config().tamano as f32] {
-                    for y in [0.0, 1.0] {
-                        for i in 0..2 {
-                            let p = position[i] + axis[i] * x + normal[i] * y;
-                            minimum[i] = minimum[i].min(p);
-                            maximum[i] = maximum[i].max(p);
-                        }
+            for (lane, (centers, lane_axes)) in
+                geometry[id].centers.iter().zip(&axes[id]).enumerate()
+            {
+                let axis = lane_axes[0];
+                let center = centers[0];
+                let position = [
+                    center[0] - axis[0] * 0.5 + axis[1] * 0.5,
+                    center[1] - axis[1] * 0.5 - axis[0] * 0.5,
+                ];
+                for (center, axis) in centers.iter().zip(lane_axes) {
+                    for i in 0..2 {
+                        let radius = (axis[0].abs() + axis[1].abs()) * 0.5;
+                        minimum[i] = minimum[i].min(center[i] - radius);
+                        maximum[i] = maximum[i].max(center[i] + radius);
                     }
                 }
                 lanes.push(TrafficLane {
@@ -74,14 +99,59 @@ impl TrafficScene {
                 offset += street.config().tamano as u32;
             }
         }
-        if lanes.is_empty() {
+        for point in document.zones().iter().flat_map(|zone| &zone.points) {
+            for i in 0..2 {
+                minimum[i] = minimum[i].min(point[i]);
+                maximum[i] = maximum[i].max(point[i]);
+            }
+        }
+        if !minimum[0].is_finite() {
             minimum = [0.0; 2];
             maximum = [1.0; 2];
         }
+        let shift = minimum.map(|v| 2.0 - v);
         for lane in &mut lanes {
             for (i, min) in minimum.iter().enumerate() {
                 lane.origin[i] += 2.0 - min;
             }
+        }
+        let mut tiles = Vec::new();
+        let mut street_tiles = Vec::new();
+        let mut street_lanes = Vec::new();
+        let mut lane_start = 0;
+        let mut lane_layouts = lanes.iter();
+        for (id, street) in geometry.iter_mut().enumerate() {
+            let start = tiles.len();
+            for (lane, centers) in street.centers.iter_mut().enumerate() {
+                let layout = lane_layouts.next().expect("lane layout");
+                for (index, center) in centers.iter_mut().enumerate() {
+                    for i in 0..2 {
+                        center[i] += shift[i];
+                    }
+                    tiles.push(TrafficTile {
+                        center: *center,
+                        axis: axes[id][lane][index],
+                        offset: layout.offset + index as u32,
+                        street_type: layout.street_type,
+                        direction: layout.direction,
+                        arrow: 0,
+                    });
+                }
+                for (index, distance) in [(0, -1.5), (centers.len() - 1, 1.5)] {
+                    let axis = axes[id][lane][index];
+                    tiles.push(TrafficTile {
+                        center: std::array::from_fn(|i| centers[index][i] + axis[i] * distance),
+                        axis,
+                        offset: 0,
+                        street_type: layout.street_type,
+                        direction: layout.direction,
+                        arrow: 1,
+                    });
+                }
+            }
+            street_tiles.push(start..tiles.len());
+            street_lanes.push(lane_start..lane_start + street.centers.len());
+            lane_start += street.centers.len();
         }
         let mut scene = Self {
             model,
@@ -90,6 +160,14 @@ impl TrafficScene {
             extent: std::array::from_fn(|i| (maximum[i] - minimum[i] + 4.0).ceil() as u32),
             cells: vec![0; offset as usize],
             edited: false,
+            geometry,
+            axes,
+            tiles,
+            shift,
+            placements: document.layout().to_vec(),
+            street_tiles,
+            street_lanes,
+            zones: document.zones().to_vec(),
         };
         scene.pack();
         scene
@@ -160,31 +238,51 @@ impl TrafficScene {
 
     /// Layout export for interaction tools; never rebuilt on traffic ticks.
     pub fn geometry(&self) -> Vec<StreetGeometry> {
-        let mut lanes = self.lanes.iter();
-        self.model
-            .streets()
-            .iter()
-            .enumerate()
-            .map(|(id, street)| StreetGeometry {
-                id,
-                centers: (0..street.config().carriles)
-                    .map(|_| {
-                        let lane = lanes.next().expect("one layout per model lane");
-                        (0..lane.length)
-                            .map(|i| {
-                                [
-                                    lane.origin[0] + lane.axis[0] * (i as f32 + 0.5)
-                                        - lane.axis[1] * 0.5,
-                                    lane.origin[1]
-                                        + lane.axis[1] * (i as f32 + 0.5)
-                                        + lane.axis[0] * 0.5,
-                                ]
-                            })
-                            .collect()
-                    })
-                    .collect(),
-            })
-            .collect()
+        self.geometry.clone()
+    }
+
+    pub fn axes(&self) -> &[Vec<Vec<[f32; 2]>>] {
+        &self.axes
+    }
+    pub fn shift(&self) -> [f32; 2] {
+        self.shift
+    }
+
+    /// Update only this street in preallocated CPU/GPU layout storage.
+    pub fn set_vertex_offset(&mut self, street: usize, vertex: usize, offset: f64) -> bool {
+        let Some(placement) = self.placements.get_mut(street) else {
+            return false;
+        };
+        if !placement.set_vertex_offset(vertex, offset) {
+            return false;
+        }
+        let centers = &mut self.geometry[street].centers;
+        let axes = &mut self.axes[street];
+        placement.write_cells(centers, axes);
+        let mut tile = self.street_tiles[street].start;
+        for (lane, (centers, axes)) in centers.iter_mut().zip(axes).enumerate() {
+            for (center, axis) in centers.iter_mut().zip(axes.iter()) {
+                for (i, shift) in self.shift.iter().enumerate() {
+                    center[i] += shift;
+                }
+                self.tiles[tile].center = *center;
+                self.tiles[tile].axis = *axis;
+                tile += 1;
+            }
+            for (index, distance) in [(0, -1.5), (centers.len() - 1, 1.5)] {
+                self.tiles[tile].center =
+                    std::array::from_fn(|i| centers[index][i] + axes[index][i] * distance);
+                self.tiles[tile].axis = axes[index];
+                tile += 1;
+            }
+            let layout = &mut self.lanes[self.street_lanes[street].start + lane];
+            layout.axis = axes[0];
+            layout.origin = [
+                centers[0][0] - axes[0][0] * 0.5 + axes[0][1] * 0.5,
+                centers[0][1] - axes[0][1] * 0.5 - axes[0][0] * 0.5,
+            ];
+        }
+        true
     }
 
     pub fn street_names(&self) -> Vec<String> {
@@ -193,22 +291,7 @@ impl TrafficScene {
 
     /// World-space arrow endpoints, built on topology edits, never per tick.
     pub fn connection_arrows(&self) -> Vec<[[f32; 2]; 2]> {
-        let geometry = self.geometry();
-        self.model
-            .connections()
-            .iter()
-            .flat_map(|link| link.mappings())
-            .map(|row| {
-                let source = row
-                    .effective_source_cell(&self.model.streets()[row.source_street])
-                    .expect("registered source");
-                [
-                    geometry[row.source_street].centers[row.source_lane][source],
-                    geometry[row.destination_street].centers[row.destination_lane]
-                        [row.destination_cell],
-                ]
-            })
-            .collect()
+        self.model.connection_arrows(&self.geometry)
     }
 
     pub fn lanes(&self) -> &[TrafficLane] {
@@ -234,6 +317,9 @@ pub struct TrafficDisplay {
     view: wgpu::Buffer,
     group: wgpu::BindGroup,
     pipeline: wgpu::RenderPipeline,
+    instances: u32,
+    layout: wgpu::Buffer,
+    background: crate::background::BackgroundDisplay,
 }
 
 impl TrafficDisplay {
@@ -248,13 +334,13 @@ impl TrafficDisplay {
             usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
         });
         let lanes = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("traffic physical lane layout"),
-            contents: if scene.lanes().is_empty() {
+            label: Some("traffic oriented cell instances"),
+            contents: if scene.tiles.is_empty() {
                 &[0; 32]
             } else {
-                bytemuck::cast_slice(scene.lanes())
+                bytemuck::cast_slice(&scene.tiles)
             },
-            usage: wgpu::BufferUsages::STORAGE,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
         });
         let [width, height] = scene.extent();
         let dims = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -265,7 +351,7 @@ impl TrafficDisplay {
             }),
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         });
-        let fragment = wgpu::ShaderStages::FRAGMENT;
+        let fragment = wgpu::ShaderStages::VERTEX_FRAGMENT;
         let read = wgpu::BufferBindingType::Storage { read_only: true };
         let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("traffic display bindings"),
@@ -328,10 +414,19 @@ impl TrafficDisplay {
             cache: None,
         });
         Self {
+            background: crate::background::BackgroundDisplay::new(
+                device,
+                &dims,
+                &scene.zones,
+                scene.shift,
+                format,
+            ),
             state,
             view: dims,
             group,
             pipeline,
+            instances: scene.tiles.len() as u32,
+            layout: lanes,
         }
     }
 
@@ -352,9 +447,23 @@ impl TrafficDisplay {
         );
     }
 
+    pub fn upload_street(&self, queue: &wgpu::Queue, scene: &TrafficScene, street: usize) {
+        assert_eq!(self.instances as usize, scene.tiles.len());
+        let range = scene.street_tiles[street].clone();
+        queue.write_buffer(
+            &self.layout,
+            (range.start * size_of::<TrafficTile>()) as u64,
+            bytemuck::cast_slice(&scene.tiles[range]),
+        );
+    }
+
     pub fn paint(&self, pass: &mut wgpu::RenderPass<'_>) {
         pass.set_pipeline(&self.pipeline);
         pass.set_bind_group(0, &self.group, &[]);
-        pass.draw(0..3, 0..1);
+        pass.draw(0..6, 0..self.instances);
+    }
+
+    pub fn paint_background(&self, pass: &mut wgpu::RenderPass<'_>) {
+        self.background.paint(pass);
     }
 }
