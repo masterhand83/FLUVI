@@ -25,6 +25,12 @@ impl TransportControls {
     }
 
     pub fn show(&mut self, ui: &mut egui::Ui, shell: &Shell) -> Option<VehicleAction> {
+        let action = self.show_actions(ui, shell);
+        self.show_generation(ui, shell);
+        action
+    }
+
+    pub fn show_actions(&mut self, ui: &mut egui::Ui, shell: &Shell) -> Option<VehicleAction> {
         let mut action = None;
         ui.horizontal_wrapped(|ui| {
             if ui.button(shell.tr("transport.clear", &[])).clicked() {
@@ -37,16 +43,19 @@ impl TransportControls {
                 egui::Slider::new(&mut self.fill_probability, 0.0..=1.0)
                     .text(shell.tr("transport.fillProbability", &[])),
             );
-            ui.checkbox(
-                &mut self.override_enabled,
-                shell.tr("transport.globalGeneration", &[]),
-            );
-            ui.add_enabled(
-                self.override_enabled,
-                egui::Slider::new(&mut self.generation_probability, 0.0..=1.0)
-                    .text(shell.tr("transport.generationProbability", &[])),
-            );
         });
         action
+    }
+
+    pub fn show_generation(&mut self, ui: &mut egui::Ui, shell: &Shell) {
+        ui.checkbox(
+            &mut self.override_enabled,
+            shell.tr("transport.globalGeneration", &[]),
+        );
+        ui.add_enabled(
+            self.override_enabled,
+            egui::Slider::new(&mut self.generation_probability, 0.0..=1.0)
+                .text(shell.tr("transport.generationProbability", &[])),
+        );
     }
 }

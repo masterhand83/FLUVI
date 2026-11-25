@@ -43,7 +43,7 @@ impl<S> MapSession<S> {
     pub fn edit_streets(
         &mut self,
         edit: ca_core::streets::StreetEdit,
-    ) -> Result<crate::streets::StreetEvent, MapError> {
+    ) -> Result<crate::streets::StreetEvent, ca_core::streets::StreetError> {
         let event = self.document.edit_streets(edit)?;
         for listener in &self.street_listeners {
             listener(event, &self.document);

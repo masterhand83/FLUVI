@@ -32,7 +32,7 @@ pub struct Paint {
     pub generation_override: Option<f64>,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Edit {
     Toggle(CellRef),
     Vehicles(VehicleAction),
@@ -402,7 +402,7 @@ mod tests {
                 index: 2,
             }),
         ];
-        for action in actions {
+        for action in actions.clone() {
             assert!(commands.edit(action));
         }
         for action in actions {

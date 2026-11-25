@@ -5,6 +5,7 @@ use serde_json::{Value, json};
 use crate::cell_index::StreetGeometry;
 use crate::connections::{Connection, Mapping, MergeRow, WeightedRow};
 use crate::geometry::{Vertex, initialize_vertices};
+use crate::streets::{StreetChange, StreetError};
 use crate::traffic::{Calle, CalleConfig, CalleType, LaneDirection, TrafficModel};
 
 #[derive(Debug, thiserror::Error)]
@@ -95,33 +96,145 @@ impl MapDocument {
     pub fn edit_streets(
         &mut self,
         edit: crate::streets::StreetEdit,
-    ) -> Result<crate::streets::StreetEvent, MapError> {
+    ) -> Result<crate::streets::StreetEvent, StreetError> {
         use crate::streets::StreetEvent;
+        self.validate_street_edit(&edit)?;
         match edit {
-            crate::streets::StreetEdit::Draw(draft) => {
-                Ok(StreetEvent::Drawn(self.draw_street(draft)?))
-            }
+            crate::streets::StreetEdit::Draw(draft) => Ok(StreetEvent::Drawn(
+                self.draw_street(draft)
+                    .map_err(|_| StreetError("streetDrawing.invalid"))?,
+            )),
             crate::streets::StreetEdit::Delete(street) => {
                 if !self.delete_street(street) {
-                    return Err(MapError);
+                    return Err(StreetError("streetDrawing.invalid"));
                 }
                 Ok(StreetEvent::Deleted(street))
+            }
+            crate::streets::StreetEdit::Update(street, change) => {
+                match change {
+                    crate::streets::StreetChange::Dimensions { lanes, length } => {
+                        self.reconcile_dimensions(street, lanes, length);
+                    }
+                    crate::streets::StreetChange::Direction { lane, direction } => {
+                        self.model.street_config_mut(street).lane_directions[lane] =
+                            Some(direction);
+                        self.data["calles"][street]["laneDirections"][lane] =
+                            json!(if direction == LaneDirection::Reverse {
+                                -1
+                            } else {
+                                1
+                            });
+                        return Ok(StreetEvent::LaneDirectionsChanged(street));
+                    }
+                    StreetChange::Name(name) => {
+                        self.data["calles"][street]["nombre"] = json!(name);
+                        self.layout[street].name = name;
+                    }
+                    StreetChange::Origin(origin) => {
+                        self.layout[street].origin = origin;
+                        self.data["calles"][street]["x"] = json!(origin[0] * 5.0);
+                        self.data["calles"][street]["y"] = json!(origin[1] * 5.0);
+                    }
+                    StreetChange::Angle(angle) => {
+                        self.layout[street].angle_degrees = angle;
+                        self.data["calles"][street]["angulo"] = json!(angle);
+                    }
+                    StreetChange::Type(tipo) => {
+                        self.model.street_config_mut(street).tipo = tipo;
+                        self.data["calles"][street]["tipo"] = json!(match tipo {
+                            CalleType::Generador => "generador",
+                            CalleType::Conexion => "conexion",
+                            CalleType::Devorador => "devorador",
+                        });
+                    }
+                    StreetChange::Generation(value) => {
+                        self.model.street_config_mut(street).generation_probability = value;
+                        self.data["calles"][street]["probabilidadGeneracion"] = json!(value);
+                    }
+                    StreetChange::LaneChange(value) => {
+                        self.model.street_config_mut(street).lane_change_probability = value;
+                        self.data["calles"][street]["probabilidadSaltoDeCarril"] = json!(value);
+                    }
+                    StreetChange::LaneGeneration { lane, enabled } => {
+                        self.model.street_config_mut(street).lane_generation_enabled[lane] =
+                            Some(enabled);
+                        self.data["calles"][street]["laneGenerationEnabled"][lane] = json!(enabled);
+                    }
+                }
+                Ok(StreetEvent::Updated(street))
             }
         }
     }
 
-    pub fn validate_street_edit(&self, edit: crate::streets::StreetEdit) -> Result<(), MapError> {
+    pub fn validate_street_edit(
+        &self,
+        edit: &crate::streets::StreetEdit,
+    ) -> Result<(), StreetError> {
         match edit {
             crate::streets::StreetEdit::Draw(draft) => {
-                self.new_street(draft)?;
+                self.new_street(*draft)
+                    .map_err(|_| StreetError("streetDrawing.invalid"))?;
             }
             crate::streets::StreetEdit::Delete(street) => {
-                if street >= self.layout.len() {
-                    return Err(MapError);
+                if *street >= self.layout.len() {
+                    return Err(StreetError("streetDrawing.invalid"));
+                }
+            }
+            crate::streets::StreetEdit::Update(street, change) => {
+                let old = self
+                    .model
+                    .streets()
+                    .get(*street)
+                    .ok_or(StreetError("streetDrawing.invalid"))?
+                    .config();
+                change.validate(old)?;
+                if let StreetChange::Dimensions { lanes, length } = change {
+                    let total: usize = self.model.streets().iter().map(|s| s.cells().len()).sum();
+                    if total - old.carriles * old.tamano + lanes * length > 1_000_000 {
+                        return Err(StreetError("streetInspector.errors.capacity"));
+                    }
                 }
             }
         }
         Ok(())
+    }
+
+    /// Central reconciliation boundary. Later ports add parking and scenario state here.
+    fn reconcile_dimensions(&mut self, street: usize, lanes: usize, length: usize) {
+        self.model.resize_street(street, lanes, length);
+        let road = &mut self.data["calles"][street];
+        road["carriles"] = json!(lanes);
+        road["tamano"] = json!(length);
+        let config = self.model.streets()[street].config();
+        road["laneDirections"] = json!(
+            config
+                .lane_directions
+                .iter()
+                .map(|d| if *d == Some(LaneDirection::Reverse) {
+                    -1
+                } else {
+                    1
+                })
+                .collect::<Vec<_>>()
+        );
+        road["laneGenerationEnabled"] = json!(config.lane_generation_enabled);
+        self.data["conexiones"]
+            .as_array_mut()
+            .expect("validated links")
+            .retain_mut(|link| {
+                let source = link["origenIdx"].as_u64() == Some(street as u64);
+                let destination = link["destinoIdx"].as_u64() == Some(street as u64);
+                let rows = link["detalles"].as_array_mut().expect("validated rows");
+                rows.retain(|r| {
+                    (!source
+                        || (r["carrilOrigen"].as_u64().unwrap() < lanes as u64
+                            && r["posOrigen"].as_i64().unwrap() < length as i64))
+                        && (!destination
+                            || (r["carrilDestino"].as_u64().unwrap() < lanes as u64
+                                && r["posDestino"].as_u64().unwrap() < length as u64))
+                });
+                !rows.is_empty()
+            });
     }
 
     fn new_street(&self, draft: crate::streets::StreetDraft) -> Result<Self, MapError> {
@@ -420,7 +533,9 @@ impl MapDocument {
             }
         }
         for connection in connections {
-            model.add_connection(connection).map_err(|_| MapError)?;
+            model
+                .add_saved_connection(connection)
+                .map_err(|_| MapError)?;
         }
         let zones = parse_zones(root.get("backgroundAreas"))?;
         Ok(Self {

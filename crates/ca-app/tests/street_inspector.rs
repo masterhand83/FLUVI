@@ -1,0 +1,152 @@
+use ca_app::{inspector::StreetInspector, shell::Shell};
+use ca_core::{
+    map_json::MapDocument,
+    streets::{StreetChange, StreetEdit},
+};
+use eframe::egui::{self, Event, Modifiers, PointerButton};
+
+fn frame(
+    inspector: &mut StreetInspector,
+    ctx: &egui::Context,
+    document: &MapDocument,
+    events: Vec<Event>,
+) -> (egui::FullOutput, Option<StreetEdit>) {
+    let mut edit = None;
+    let output = ctx.run(
+        egui::RawInput {
+            screen_rect: Some(egui::Rect::from_min_size(
+                egui::Pos2::ZERO,
+                egui::vec2(1100.0, 850.0),
+            )),
+            events,
+            ..Default::default()
+        },
+        |ctx| {
+            edit = inspector
+                .show(ctx, document, Some(0), &Shell::load(None))
+                .edit;
+        },
+    );
+    (output, edit)
+}
+
+fn text_rect(output: &egui::FullOutput, text: &str) -> egui::Rect {
+    output
+        .shapes
+        .iter()
+        .find_map(|s| match &s.shape {
+            egui::Shape::Text(s) if s.galley.job.text == text => Some(s.visual_bounding_rect()),
+            _ => None,
+        })
+        .unwrap_or_else(|| panic!("missing text: {text}"))
+}
+
+#[test]
+fn invalid_length_shows_a_translated_reason_and_keeps_the_document() {
+    let document =
+        MapDocument::parse(r#"{"calles":[{"nombre":"North","tipo":"conexion","tamano":6}]}"#)
+            .unwrap();
+    let ctx = egui::Context::default();
+    let mut inspector = StreetInspector::default();
+    frame(&mut inspector, &ctx, &document, vec![]);
+    let (output, _) = frame(&mut inspector, &ctx, &document, vec![]);
+    let pos = text_rect(&output, "6").center();
+    for pressed in [true, false] {
+        frame(
+            &mut inspector,
+            &ctx,
+            &document,
+            vec![
+                Event::PointerMoved(pos),
+                Event::PointerButton {
+                    pos,
+                    button: PointerButton::Primary,
+                    pressed,
+                    modifiers: Modifiers::NONE,
+                },
+            ],
+        );
+    }
+    let (_, edit) = frame(
+        &mut inspector,
+        &ctx,
+        &document,
+        vec![
+            Event::Key {
+                key: egui::Key::A,
+                physical_key: None,
+                pressed: true,
+                repeat: false,
+                modifiers: Modifiers::COMMAND,
+            },
+            Event::Text("0".into()),
+        ],
+    );
+    assert_eq!(edit, None);
+    let (output, _) = frame(&mut inspector, &ctx, &document, vec![]);
+    text_rect(&output, "Use un número entero de celdas entre 1 y 2500.");
+    assert_eq!(document.model().streets()[0].config().tamano, 6);
+}
+
+#[test]
+fn structural_edits_block_steps_until_explicit_resume() {
+    use ca_app::inspector::EditPause;
+    let mut pause = EditPause::default();
+    let mut playing = true;
+    pause.begin(&mut playing);
+    assert!(!playing);
+    assert!(!pause.can_step(playing));
+    pause.resume(&mut playing);
+    assert!(playing);
+    playing = false; // A normal Pause after Resume permits manual steps.
+    assert!(pause.can_step(playing));
+}
+
+#[test]
+fn selecting_a_street_opens_exact_fields_and_name_edits_apply_immediately() {
+    let document =
+        MapDocument::parse(r#"{"calles":[{"nombre":"North","tipo":"generador","tamano":6}]}"#)
+            .unwrap();
+    let ctx = egui::Context::default();
+    let mut inspector = StreetInspector::default();
+    frame(&mut inspector, &ctx, &document, vec![]);
+    let (output, _) = frame(&mut inspector, &ctx, &document, vec![]);
+    text_rect(&output, "Inspector de calle");
+    text_rect(&output, "Generar vehículos");
+    let pos = text_rect(&output, "North").center();
+    for pressed in [true, false] {
+        frame(
+            &mut inspector,
+            &ctx,
+            &document,
+            vec![
+                Event::PointerMoved(pos),
+                Event::PointerButton {
+                    pos,
+                    button: PointerButton::Primary,
+                    pressed,
+                    modifiers: Modifiers::NONE,
+                },
+            ],
+        );
+    }
+    let (_, edit) = frame(
+        &mut inspector,
+        &ctx,
+        &document,
+        vec![
+            Event::Key {
+                key: egui::Key::A,
+                physical_key: None,
+                pressed: true,
+                repeat: false,
+                modifiers: Modifiers::COMMAND,
+            },
+            Event::Text("South".into()),
+        ],
+    );
+    assert_eq!(
+        edit,
+        Some(StreetEdit::Update(0, StreetChange::Name("South".into())))
+    );
+}

@@ -24,6 +24,11 @@ pub struct VertexEditor {
 }
 
 impl VertexEditor {
+    pub fn finish(&mut self) {
+        self.active = false;
+        self.drag = None;
+    }
+
     pub fn active(&self) -> bool {
         self.active
     }

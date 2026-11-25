@@ -4,6 +4,14 @@ use std::time::Duration;
 
 impl Shell {
     pub fn sidebar(&mut self, ctx: &egui::Context) {
+        self.sidebar_with(ctx, |_, _, _| {});
+    }
+
+    pub fn sidebar_with(
+        &mut self,
+        ctx: &egui::Context,
+        mut section_ui: impl FnMut(&str, &mut egui::Ui, &Shell),
+    ) {
         let mut prefs = self.preferences().clone();
         if prefs.sidebar_visible {
             egui::SidePanel::left("shell-sidebar")
@@ -48,6 +56,9 @@ impl Shell {
                                     if ui.button(self.tr("about.guideButton", &[])).clicked() {
                                         self.help = Some(true);
                                     }
+                                }
+                                if prefs.panels_open[index] {
+                                    section_ui(section, ui, self);
                                 }
                                 ui.separator();
                             }

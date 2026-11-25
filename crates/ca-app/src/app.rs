@@ -50,6 +50,8 @@ pub struct App {
     new_confirmation: Option<Receiver<bool>>,
     background: ca_app::background::Background,
     map_shift: [f32; 2],
+    inspector: ca_app::inspector::StreetInspector,
+    edit_pause: ca_app::inspector::EditPause,
 }
 
 impl App {
@@ -71,6 +73,8 @@ impl App {
         session.register_reset(ResetPhase::Pause, |app: &mut Self| app.playing = false);
         session.register_reset(ResetPhase::Tools, |app| {
             app.map = None;
+            app.inspector = Default::default();
+            app.edit_pause = Default::default();
             if let Some(connections) = &mut app.connections {
                 connections.set_arrows(Vec::new());
             }
@@ -109,6 +113,8 @@ impl App {
             new_confirmation: None,
             background: ca_app::background::Background::new(&[], [0.0; 2]),
             map_shift: [0.0; 2],
+            inspector: Default::default(),
+            edit_pause: Default::default(),
             startup: Some(Startup {
                 render: render.clone(),
                 events: tx,
@@ -194,29 +200,6 @@ impl App {
     fn controls(&mut self, ctx: &egui::Context) {
         egui::TopBottomPanel::top("controls").show(ctx, |ui| {
             ui.horizontal_wrapped(|ui| {
-                let name = self.session.as_ref().expect("session").document().name();
-                ui.label(if name.is_empty() {
-                    self.shell.tr("mapFiles.untitled", &[])
-                } else {
-                    name.to_owned()
-                });
-                let ready = self.smoke_frames.is_none()
-                    && self.file_job.is_none()
-                    && self.new_confirmation.is_none();
-                ui.add_enabled_ui(ready, |ui| {
-                    if ui.button(self.shell.tr("mapFiles.open", &[])).clicked() {
-                        self.start_file(false, ctx);
-                    }
-                    if ui.button(self.shell.tr("mapFiles.save", &[])).clicked() {
-                        self.start_file(true, ctx);
-                    }
-                    if ui.button(self.shell.tr("mapFiles.new", &[])).clicked() {
-                        self.new_confirmation = Some(self.shell.confirm(
-                            self.shell.tr("mapFiles.new", &[]),
-                            self.shell.tr("mapFiles.newConfirm", &[]),
-                        ));
-                    }
-                });
                 ui.add_enabled_ui(self.smoke_frames.is_none(), |ui| {
                     if ui
                         .button(self.shell.tr(
@@ -229,11 +212,19 @@ impl App {
                         ))
                         .clicked()
                     {
-                        self.playing = !self.playing;
+                        if self.playing {
+                            self.playing = false;
+                        } else {
+                            self.inspector.finish(ctx);
+                            if let Some(map) = &mut self.map {
+                                map.finish_edits();
+                            }
+                            self.edit_pause.resume(&mut self.playing);
+                        }
                     }
                     if ui
                         .add_enabled(
-                            !self.playing,
+                            self.edit_pause.can_step(self.playing),
                             egui::Button::new(self.shell.tr("simulation.step", &[])),
                         )
                         .clicked()
@@ -246,14 +237,8 @@ impl App {
                     );
                 });
                 let mut action = None;
-                if let Some(connections) = &mut self.connections {
-                    connections.show_toggle(ui, &self.shell);
-                }
                 ui.add_enabled_ui(self.smoke_frames.is_none(), |ui| {
-                    action = self.transport.show(ui, &self.shell);
-                    if let Some(map) = &mut self.map {
-                        map.show_tools(ui, &self.shell);
-                    }
+                    action = self.transport.show_actions(ui, &self.shell);
                 });
                 if let Some(action) = action
                     && !self.commands.edit(Edit::Vehicles(action))
@@ -263,10 +248,32 @@ impl App {
                         self.shell.tr("shell.cellEditBusy", &[]),
                     );
                 }
-                ui.label(self.shell.tr("shell.profiler", &[]))
-                    .on_hover_text(self.shell.tr("shell.legend", &[]));
             });
         });
+    }
+
+    fn control_panel(&mut self, ctx: &egui::Context) {
+        use ca_app::control_panel::{ControlPanel, PanelAction};
+        let action = ControlPanel {
+            document: self.session.as_ref().expect("session").document(),
+            map: self.map.as_mut(),
+            connections: self.connections.as_mut(),
+            transport: &mut self.transport,
+            enabled: self.smoke_frames.is_none(),
+            files_ready: self.file_job.is_none() && self.new_confirmation.is_none(),
+        }
+        .show(ctx, &mut self.shell);
+        match action {
+            Some(PanelAction::Open) => self.start_file(false, ctx),
+            Some(PanelAction::Save) => self.start_file(true, ctx),
+            Some(PanelAction::New) => {
+                self.new_confirmation = Some(self.shell.confirm(
+                    self.shell.tr("mapFiles.new", &[]),
+                    self.shell.tr("mapFiles.newConfirm", &[]),
+                ));
+            }
+            None => {}
+        }
     }
 
     fn start_file(&mut self, save: bool, ctx: &egui::Context) {
@@ -330,21 +337,20 @@ impl App {
             }
         }
         // Validate before enqueueing. A rejected/full queue must not change the UI document.
-        if self
+        if let Err(error) = self
             .session
             .as_ref()
             .expect("session")
             .document()
-            .validate_street_edit(edit)
-            .is_err()
+            .validate_street_edit(&edit)
         {
             self.shell.notify(
                 ca_app::shell::Severity::Warning,
-                self.shell.tr("streetDrawing.invalid", &[]),
+                ca_app::inspector::geometry_error_message(&self.shell, error),
             );
             return;
         }
-        if !self.commands.edit(Edit::Street(edit)) {
+        if !self.commands.edit(Edit::Street(edit.clone())) {
             self.shell.notify(
                 ca_app::shell::Severity::Warning,
                 self.shell.tr("shell.cellEditBusy", &[]),
@@ -358,6 +364,12 @@ impl App {
         let (selected, key) = match event {
             ca_app::streets::StreetEvent::Drawn(street) => (Some(street), "streetDrawing.drawn"),
             ca_app::streets::StreetEvent::Deleted(_) => (None, "streetDrawing.deleted"),
+            ca_app::streets::StreetEvent::Updated(street) => {
+                (Some(street), "streetInspector.updated")
+            }
+            ca_app::streets::StreetEvent::LaneDirectionsChanged(street) => {
+                (Some(street), "streetInspector.directionsChanged")
+            }
         };
         map.select(selected);
         if let Some(connections) = &mut self.connections {
@@ -368,9 +380,11 @@ impl App {
                     .connection_arrows(&geometry.streets),
             );
         }
-        self.playing = false;
-        self.shell
-            .notify(ca_app::shell::Severity::Success, self.shell.tr(key, &[]));
+        self.edit_pause.begin(&mut self.playing);
+        if !matches!(event, ca_app::streets::StreetEvent::Updated(_)) {
+            self.shell
+                .notify(ca_app::shell::Severity::Success, self.shell.tr(key, &[]));
+        }
     }
 
     fn map_files(&mut self, ctx: &egui::Context) {
@@ -440,7 +454,22 @@ impl eframe::App for App {
             return;
         }
         self.controls(ctx);
-        self.shell.sidebar(ctx);
+        self.control_panel(ctx);
+        let selected = self.map.as_ref().and_then(MapInteraction::selected);
+        let inspector = self.inspector.show(
+            ctx,
+            self.session.as_ref().expect("session").document(),
+            selected,
+            &self.shell,
+        );
+        if inspector.closed
+            && let Some(map) = &mut self.map
+        {
+            map.select(None);
+        }
+        if let Some(edit) = inspector.edit {
+            self.edit_streets(edit);
+        }
         egui::TopBottomPanel::bottom("status").show(ctx, |ui| {
             ui.label(format!(
                 "{} {}  |  {}  |  {} {:.1}  |  {}",
@@ -462,9 +491,9 @@ impl eframe::App for App {
                 .expect("map installed with render resources")
                 .show(ui, self.shell.preferences().cell_detection);
             if map.vertex_mode {
-                self.playing = false;
+                self.edit_pause.begin(&mut self.playing);
             }
-            if let Some(edit) = map.street_edit {
+            if let Some(edit) = map.street_edit.clone() {
                 self.edit_streets(edit);
             }
             if let Some(edit) = map.vertex_edit {

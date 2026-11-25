@@ -112,6 +112,26 @@ impl Calle {
         &self.config
     }
 
+    /// Preserve physical lane/cell addresses, including waiting cells.
+    pub(crate) fn resize(&mut self, lanes: usize, length: usize) {
+        let mut config = self.config.clone();
+        config.carriles = lanes;
+        config.tamano = length;
+        config
+            .lane_directions
+            .resize(lanes, Some(LaneDirection::Forward));
+        config.lane_generation_enabled.resize(lanes, Some(true));
+        let mut resized = Self::new(config, vec![0; lanes * length]).expect("validated dimensions");
+        for lane in 0..lanes.min(self.config.carriles) {
+            let count = length.min(self.config.tamano);
+            let old = lane * self.config.tamano;
+            let new = lane * length;
+            resized.cells[new..new + count].copy_from_slice(&self.cells[old..old + count]);
+            resized.waiting[new..new + count].copy_from_slice(&self.waiting[old..old + count]);
+        }
+        *self = resized;
+    }
+
     pub fn cells(&self) -> &[u8] {
         &self.cells
     }
@@ -339,6 +359,29 @@ pub struct TrafficModel {
 }
 
 impl TrafficModel {
+    pub(crate) fn resize_street(&mut self, street: usize, lanes: usize, length: usize) {
+        self.streets[street].resize(lanes, length);
+        self.connections.retain_mut(|connection| {
+            connection.retain_mappings(|m| {
+                (m.source_street != street
+                    || (m.source_lane < lanes && m.source_cell < length as isize))
+                    && (m.destination_street != street
+                        || (m.destination_lane < lanes && m.destination_cell < length))
+            })
+        });
+    }
+
+    pub(crate) fn street_config_mut(&mut self, street: usize) -> &mut CalleConfig {
+        let config = &mut self.streets[street].config;
+        config
+            .lane_directions
+            .resize(config.carriles, Some(LaneDirection::Forward));
+        config
+            .lane_generation_enabled
+            .resize(config.carriles, Some(true));
+        config
+    }
+
     /// Fixed tracer network: generator, connection and sink, each with two
     /// opposite lanes. Positions remain physical, including in reverse lanes.
     pub fn demo() -> Self {

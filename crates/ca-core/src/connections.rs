@@ -55,6 +55,34 @@ pub enum Connection {
 }
 
 impl Connection {
+    pub(crate) fn retain_mappings(&mut self, keep: impl Fn(&Mapping) -> bool) -> bool {
+        match self {
+            Self::Lineal(m) => keep(m),
+            Self::ProbabilityTrial(r) => keep(&r.mapping),
+            Self::Incorporacion(rows) => {
+                rows.retain(|r| keep(&r.mapping));
+                !rows.is_empty()
+            }
+            Self::Probabilistica(rows) => {
+                rows.retain(|r| keep(&r.mapping));
+                if rows.is_empty() {
+                    return false;
+                }
+                // Retain the remaining destinations as one weighted choice.
+                let sum: f64 = rows.iter().map(|r| r.weight).sum();
+                let count = rows.len() as f64;
+                for row in rows {
+                    row.weight = if sum > 0.0 {
+                        row.weight / sum
+                    } else {
+                        1.0 / count
+                    };
+                }
+                true
+            }
+        }
+    }
+
     pub(crate) fn remap_after_deletion(&mut self, street: usize) {
         let remap = |m: &mut Mapping| {
             m.source_street -= usize::from(m.source_street > street);
@@ -121,7 +149,11 @@ impl TrafficModel {
         &self.connections
     }
 
-    fn resolve(&self, row: &Mapping) -> Result<(usize, usize), ConnectionError> {
+    fn resolve(
+        &self,
+        row: &Mapping,
+        check_direction: bool,
+    ) -> Result<(usize, usize), ConnectionError> {
         let source = self
             .streets
             .get(row.source_street)
@@ -139,12 +171,13 @@ impl TrafficModel {
         {
             return Err(ConnectionError::InvalidMapping);
         }
-        if (source.lane_direction(row.source_lane) == LaneDirection::Reverse
-            && cell == source.config.tamano - 1
-            && source.config.tamano > 1)
-            || (destination.lane_direction(row.destination_lane) == LaneDirection::Reverse
-                && row.destination_cell == 0
-                && destination.config.tamano > 1)
+        if check_direction
+            && ((source.lane_direction(row.source_lane) == LaneDirection::Reverse
+                && cell == source.config.tamano - 1
+                && source.config.tamano > 1)
+                || (destination.lane_direction(row.destination_lane) == LaneDirection::Reverse
+                    && row.destination_cell == 0
+                    && destination.config.tamano > 1))
         {
             return Err(ConnectionError::Direction);
         }
@@ -155,13 +188,31 @@ impl TrafficModel {
     }
 
     pub fn add_connection(&mut self, connection: Connection) -> Result<(), ConnectionError> {
+        self.register_connection(connection, true)
+    }
+
+    /// Saved links remain editable after a lane direction change.
+    pub(crate) fn add_saved_connection(
+        &mut self,
+        connection: Connection,
+    ) -> Result<(), ConnectionError> {
+        self.register_connection(connection, false)
+    }
+
+    fn register_connection(
+        &mut self,
+        connection: Connection,
+        check_direction: bool,
+    ) -> Result<(), ConnectionError> {
         match &connection {
             Connection::ProbabilityTrial(row)
                 if !row.weight.is_finite() || !(0.0..=1.0).contains(&row.weight) =>
             {
                 return Err(ConnectionError::Probability);
             }
-            Connection::Incorporacion(rows) if !rows.iter().any(|r| r.enabled) => {
+            Connection::Incorporacion(rows)
+                if check_direction && !rows.iter().any(|r| r.enabled) =>
+            {
                 return Err(ConnectionError::NoActiveRows);
             }
             Connection::Probabilistica(rows) => {
@@ -176,9 +227,10 @@ impl TrafficModel {
                 let first = &rows[0].mapping;
                 for row in rows {
                     let m = &row.mapping;
-                    self.resolve(m)?;
+                    self.resolve(m, check_direction)?;
                     if m.source_street != first.source_street
-                        || self.resolve(m)?.0 != self.resolve(first)?.0
+                        || self.resolve(m, check_direction)?.0
+                            != self.resolve(first, check_direction)?.0
                     {
                         return Err(ConnectionError::SplitSource);
                     }
@@ -187,11 +239,13 @@ impl TrafficModel {
             _ => {}
         }
         for (index, row) in connection.mappings().enumerate() {
-            let resolved = self.resolve(row)?;
+            let resolved = self.resolve(row, check_direction)?;
             let duplicate = |other: &Mapping| {
                 row.source_street == other.source_street
                     && row.destination_street == other.destination_street
-                    && self.resolve(other).is_ok_and(|pair| pair == resolved)
+                    && self
+                        .resolve(other, false)
+                        .is_ok_and(|pair| pair == resolved)
             };
             if (row.source_street == row.destination_street && resolved.0 == resolved.1)
                 || connection.mappings().take(index).any(duplicate)

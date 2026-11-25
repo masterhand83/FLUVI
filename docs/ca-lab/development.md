@@ -87,7 +87,8 @@ The test demo connects both lane directions across its three streets.
 topology changes. `ca-app::connections::ConnectionOverlays` transforms them with
 the same view as the GPU map, clips them to the map panel, and draws after the
 map callback. The toolbar checkbox hides all arrows without changing transfers.
-Visibility is session-only and starts on.
+Visibility is session-only and starts on. Its checkbox is in the control panel's
+Tools section.
 
 Focused checks: `cargo test -p ca-core --test connections` and
 `cargo test -p ca-app --test connection_overlays`.
@@ -114,6 +115,33 @@ unchanged. New and Open still use the full replacement boundary below.
 Focused checks: `cargo test -p ca-core --test street_editing`,
 `cargo test -p ca-app --test map_interaction --test street_lists --test map_session`,
 and `cargo test -p ca-gpu --test traffic`.
+
+### Street inspector and dimension reconciliation
+
+Select a street on the map or in Street Settings to open its floating inspector.
+Fields apply immediately. X/Y use the saved map's units (five units per cell).
+Probabilities are fractions from 0 to 1. Invalid input shows a translated reason
+and does not change the model. Each lane has a direction and generation switch.
+
+`StreetEdit::Update` uses the same ordered queue as drawing and deletion.
+`MapDocument::reconcile_dimensions` is the shared dimension boundary. It retains
+physical cells and lane settings, adds forward/enabled lanes, and removes only
+out-of-range link rows. A direction edit retains cell and vehicle positions and
+publishes `StreetEvent::LaneDirectionsChanged`. Saved links that now oppose a
+lane direction remain in the document.
+
+Structural edits pause traffic and block manual steps. Resume ends focused
+inspector edits and map gestures before traffic runs again. Closing the inspector
+does not resume traffic. `inspector::geometry_error_message` gives map gestures
+the same translated validation wording.
+
+The control panel owns drawing and connection display in Tools, map file actions
+in Map Constructor, and street selection/global generation in Street Settings.
+Pause, Resume, Step, Speed, Clear and Random Fill remain in the transport bar.
+
+Focused checks: `cargo test -p ca-core --test street_inspector`,
+`cargo test -p ca-app --test street_inspector --test control_panel`, and
+`cargo test -p ca-gpu --test traffic`.
 
 ### Map files and session replacement
 

@@ -128,6 +128,15 @@ impl MapInteraction {
             drawing = !drawing;
             self.set_drawing(drawing);
         }
+    }
+
+    pub fn finish_edits(&mut self) {
+        self.set_drawing(false);
+        self.drawing_gesture = false;
+        self.vertices.finish();
+    }
+
+    pub fn show_selector(&mut self, ui: &mut egui::Ui, shell: &crate::shell::Shell) {
         egui::ComboBox::from_id_salt("street-selector")
             .selected_text(
                 self.selected
