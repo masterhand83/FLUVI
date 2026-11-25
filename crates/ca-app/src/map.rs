@@ -377,7 +377,10 @@ impl MapInteraction {
             .zip(pointer.interact_pos())
             .is_some_and(|(ring, pos)| {
                 let p = camera.world_to_screen(radius_handle(ring));
-                pos.distance(rect.min + egui::vec2(p[0], p[1])) <= 10.0
+                let center = camera.world_to_screen(ring.center.map(|v| v as f32));
+                let distance = pos.distance(rect.min + egui::vec2(p[0], p[1]));
+                distance <= 10.0
+                    && distance < pos.distance(rect.min + egui::vec2(center[0], center[1]))
             });
         let handle_input = self.handles.input(
             ui,
@@ -419,20 +422,18 @@ impl MapInteraction {
         {
             self.radius_drag = None;
         }
-        if !self.drawing
+        if radius_hit
+            && !self.drawing
             && !self.vertices.active()
             && !selecting
             && response.contains_pointer()
             && pointer.primary_pressed()
-            && let Some(pos) = pointer.interact_pos().filter(|p| rect.contains(*p))
+            && pointer.interact_pos().is_some_and(|p| rect.contains(p))
             && let Some(street) = self.selected
             && let Some(ring) = self.roundabouts.get(street).copied().flatten()
         {
-            let point = camera.world_to_screen(radius_handle(ring));
-            if pos.distance(rect.min + egui::vec2(point[0], point[1])) <= 10.0 {
-                self.radius_drag = Some((street, ring));
-                self.drawing_gesture = true;
-            }
+            self.radius_drag = Some((street, ring));
+            self.drawing_gesture = true;
         }
         if let Some((street, ring)) = self.radius_drag
             && let Some(pos) = pointer.interact_pos()

@@ -95,7 +95,7 @@ fn selected_bodies_and_roundabout_center_move_without_pan() {
     };
     for kind in ["straight", "bezier", "roundabout"] {
         let mut document = MapDocument::parse(if kind == "roundabout" {
-            r#"{"calles":[{"nombre":"A","tipo":"conexion","tamano":22,"geometryType":"roundabout","innerRadius":15,"startAngle":0,"x":50,"y":50}]}"#
+            r#"{"calles":[{"nombre":"A","tipo":"conexion","tamano":16,"geometryType":"roundabout","innerRadius":10,"startAngle":0,"x":50,"y":50}]}"#
         } else {
             r#"{"calles":[{"nombre":"A","tipo":"conexion","tamano":12,"x":25,"y":25}]}"#
         }).unwrap();
@@ -123,6 +123,15 @@ fn selected_bodies_and_roundabout_center_move_without_pan() {
                 let p = document.geometry()[0].centers[0][index];
                 [p[0] + 2.0, p[1] + 1.0]
             };
+            if center {
+                let anchor = screen_position(&map, world);
+                frame(
+                    &ctx,
+                    &mut map,
+                    vec![egui::Event::PointerMoved(anchor), egui::Event::Zoom(0.25)],
+                    false,
+                );
+            }
             let start = screen_position(&map, world);
             let end = screen_position(&map, [world[0] + 2.0, world[1] + 3.0]);
             let before = map.camera().unwrap().view();
