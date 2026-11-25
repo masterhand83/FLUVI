@@ -1,4 +1,11 @@
 {
+  "buildings.upload": "Subir edificio de imagen",
+  "buildings.replaceImage": "Reemplazar imagen",
+  "buildings.imageLoading": "Cargando imagen…",
+  "buildings.imagePlace": "Haz clic en el mapa para colocar la imagen.",
+  "buildings.imageTooLarge": "Usa una imagen de 5 MB o menos.",
+  "buildings.imageType": "Usa una imagen PNG, JPEG o WebP.",
+  "buildings.imageDecode": "No se puede decodificar esta imagen. Usa otra imagen.",
   "buildings.rectangle": "Dibujar edificio rectangular",
   "buildings.rectangleShape": "Rectángulo",
   "buildings.polygonShape": "Polígono",

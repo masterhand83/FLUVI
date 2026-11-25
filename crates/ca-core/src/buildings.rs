@@ -1,5 +1,6 @@
 //! v1 building geometry, in saved pixel coordinates. Unknown fields stay intact.
 use serde_json::{Value, json};
+pub mod artwork;
 
 pub const PALETTE: [&str; 6] = [
     "#A0522D", "#6C757D", "#1F4E9E", "#46B5D1", "#2E7D32", "#8B4513",
@@ -30,6 +31,7 @@ pub struct Building {
     pub color: String,
     pub vertices: Option<Vec<[f64; 2]>>,
     saved: Value,
+    image_key: Option<String>,
 }
 
 fn cross(a: [f64; 2], b: [f64; 2], c: [f64; 2]) -> f64 {
@@ -131,7 +133,59 @@ impl Building {
             vertices: None,
             saved: json!({"esEstacionamiento":false,"capacidadMaxima":50,
                 "vehiculosActuales":0,"conexiones":[]}),
+            image_key: None,
         }
+    }
+
+    pub fn image_key(&self) -> Option<&str> {
+        self.image_key.as_deref()
+    }
+
+    pub fn image_data(&self) -> Option<&str> {
+        (self.saved["appearanceMode"] == "uploaded-image")
+            .then(|| self.saved["imageData"].as_str())
+            .flatten()
+    }
+
+    pub fn is_image(&self) -> bool {
+        self.vertices.is_none() && (self.image_key.is_some() || self.image_data().is_some())
+    }
+
+    pub fn display_angle(&self) -> f64 {
+        if self.legacy_image_rotation() {
+            -self.angle
+        } else {
+            self.angle
+        }
+    }
+
+    pub fn legacy_image_rotation(&self) -> bool {
+        self.image_key.is_some() || self.saved["imageRotationConvention"] == "legacy"
+    }
+
+    /// The decoder validates bytes before this geometry/persistence boundary.
+    pub fn replace_image(&mut self, data: String, pixels: [u32; 2]) -> Result<(), BuildingError> {
+        if pixels.contains(&0) {
+            return Err(BuildingError("invalid-size"));
+        }
+        if self.image_key.is_some() {
+            self.saved["imageRotationConvention"] = json!("legacy");
+        }
+        self.image_key = None;
+        self.vertices = None;
+        self.saved
+            .as_object_mut()
+            .expect("object")
+            .remove("geometryType");
+        self.saved
+            .as_object_mut()
+            .expect("object")
+            .remove("vertices");
+        self.saved["appearanceMode"] = json!("uploaded-image");
+        self.saved["imageData"] = json!(data);
+        self.size =
+            pixels.map(|n| n as f64 * 120. / *pixels.iter().max().expect("two dimensions") as f64);
+        Ok(())
     }
 
     pub fn polygon(vertices: Vec<[f64; 2]>) -> Result<Self, BuildingError> {
@@ -172,7 +226,7 @@ impl Building {
             rotate(
                 std::array::from_fn(|i| self.center[i] + sign[i] * self.size[i] / 2.),
                 self.center,
-                self.angle,
+                self.display_angle(),
             )
         })
     }
@@ -254,10 +308,15 @@ impl Building {
         let local = if self.vertices.is_some() {
             point
         } else {
-            rotate(point, fixed, -self.angle)
+            rotate(point, fixed, -self.display_angle())
         };
         let mut delta: [f64; 2] = std::array::from_fn(|i| local[i] - fixed[i]);
-        if square {
+        if self.is_image() {
+            let scale = (delta[0].abs() / self.size[0]).max(delta[1].abs() / self.size[1]);
+            delta = std::array::from_fn(|i| {
+                self.size[i] * scale * if delta[i] < 0. { -1. } else { 1. }
+            });
+        } else if square {
             let length = delta[0].abs().max(delta[1].abs());
             delta = delta.map(|n| if n < 0. { -length } else { length });
         }
@@ -272,7 +331,7 @@ impl Building {
             next.center = rotate(
                 std::array::from_fn(|i| fixed[i] + delta[i] / 2.),
                 fixed,
-                self.angle,
+                self.display_angle(),
             );
             next.size = delta.map(f64::abs);
         }
@@ -335,6 +394,15 @@ impl Building {
         );
         result.saved = value.clone();
         result.label = value["label"].as_str().unwrap_or("").into();
+        if value["geometryType"] != "polygon" && value["appearanceMode"] != "uploaded-image" {
+            let key = value["imagen"]
+                .as_str()
+                .filter(|key| !key.is_empty())
+                .unwrap_or(&result.label);
+            if artwork::path(key).is_some() {
+                result.image_key = Some(key.into());
+            }
+        }
         result.color = value["color"].as_str().unwrap_or(PALETTE[5]).into();
         result.angle = number("angle", 0.);
         if value["geometryType"] == "polygon" {
@@ -370,6 +438,12 @@ impl Building {
             }
         }
         value["label"] = json!(self.label);
+        if let Some(key) = &self.image_key
+            && value["label"] != self.saved["label"]
+            && self.saved["imagen"].as_str().is_none_or(str::is_empty)
+        {
+            value["imagen"] = json!(key);
+        }
         value["color"] = json!(self.color);
         if let Some(points) = &self.vertices {
             value["geometryType"] = json!("polygon");

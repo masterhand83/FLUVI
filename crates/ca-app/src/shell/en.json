@@ -1,4 +1,11 @@
 {
+  "buildings.upload": "Upload image building",
+  "buildings.replaceImage": "Replace image",
+  "buildings.imageLoading": "Loading image…",
+  "buildings.imagePlace": "Click the map to place the image.",
+  "buildings.imageTooLarge": "Use an image of 5 MB or less.",
+  "buildings.imageType": "Use a PNG, JPEG, or WebP image.",
+  "buildings.imageDecode": "Cannot decode this image. Use another image.",
   "buildings.rectangle": "Draw rectangular building",
   "buildings.rectangleShape": "Rectangle",
   "buildings.polygonShape": "Polygon",

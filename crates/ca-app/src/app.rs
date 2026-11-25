@@ -392,6 +392,14 @@ impl App {
             self.buildings.select(None);
         }
         match action {
+            Some(PanelAction::UploadBuildingImage) => {
+                self.prepare_connection_edit();
+                self.connection_draft.cancel();
+                if let Some(map) = &mut self.map {
+                    map.set_connection_picking(false);
+                }
+                self.buildings.upload_image(ctx, &self.shell, None);
+            }
             Some(PanelAction::BuildingTool(tool)) => {
                 self.prepare_connection_edit();
                 self.connection_draft.cancel();

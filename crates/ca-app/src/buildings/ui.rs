@@ -56,13 +56,23 @@ fn handles(building: &Building) -> impl Iterator<Item = (Handle, [f64; 2])> + '_
                         building.center[1] - building.size[1] / 2. - 20.,
                     ],
                     building.center,
-                    building.angle,
+                    building.display_angle(),
                 ),
             ),
         ])
 }
 
 impl BuildingEditor {
+    pub fn upload_image(&mut self, ctx: &egui::Context, shell: &Shell, target: Option<usize>) {
+        match crate::building_images::start(
+            crate::building_images::Source::FileDialog(shell.tr("buildings.upload", &[])),
+            ctx.clone(),
+        ) {
+            Ok(receiver) => self.begin_image_load(receiver, target),
+            Err(_) => self.error = Some(BuildingError("imageDecode")),
+        }
+    }
+
     pub fn delete_shortcut(
         &mut self,
         ctx: &egui::Context,
@@ -163,7 +173,11 @@ impl BuildingEditor {
                     }
                     self.push_vertex(point);
                 }
+                Some(Tool::Image) => return self.place_image(point),
                 None => {
+                    if self.image_job.is_some() {
+                        return None;
+                    }
                     if let Some(handle) = self.hit_handle(document, pos, rect, view, shift) {
                         self.begin_drag(document, self.selected?, handle, point);
                     } else if let Some(index) =
@@ -207,7 +221,34 @@ impl BuildingEditor {
                 return Some(edit);
             }
         }
-        let mut edit = None;
+        let mut edit = self.poll_image(document);
+        if self.image_job.is_some()
+            || self.tool == Some(Tool::Image)
+            || (self.error.is_some()
+                && self.selected.is_none()
+                && self.tool.is_none()
+                && self.form.is_none())
+        {
+            egui::Window::new(shell.tr("buildings.upload", &[]))
+                .id(egui::Id::new("image_building"))
+                .resizable(false)
+                .show(ctx, |ui| {
+                    if self.image_job.is_some() || self.image_draft.is_some() {
+                        ui.label(shell.tr(
+                            if self.image_job.is_some() {
+                                "buildings.imageLoading"
+                            } else {
+                                "buildings.imagePlace"
+                            },
+                            &[],
+                        ));
+                    }
+                    self.show_error(ui, shell);
+                    if ui.button(shell.tr("buildings.cancel", &[])).clicked() {
+                        self.cancel();
+                    }
+                });
+        }
         if self.tool == Some(Tool::Rectangle) {
             egui::Window::new(shell.tr("buildings.rectangle", &[]))
                 .id(egui::Id::new("rectangle_building"))
@@ -302,12 +343,24 @@ impl BuildingEditor {
                                 self.form = None;
                             }
                         }
-                    } else if ui.button(shell.tr("buildings.delete", &[])).clicked() {
-                        self.request_delete();
-                        self.delete_answer = Some(shell.confirm(
-                            shell.tr("buildings.delete", &[]),
-                            shell.tr("buildings.deleteConfirm", &[("name", &candidate.label)]),
-                        ));
+                    } else {
+                        if candidate.is_image()
+                            && ui
+                                .add_enabled(
+                                    self.image_job.is_none(),
+                                    egui::Button::new(shell.tr("buildings.replaceImage", &[])),
+                                )
+                                .clicked()
+                        {
+                            self.upload_image(ctx, shell, self.selected);
+                        }
+                        if ui.button(shell.tr("buildings.delete", &[])).clicked() {
+                            self.request_delete();
+                            self.delete_answer = Some(shell.confirm(
+                                shell.tr("buildings.delete", &[]),
+                                shell.tr("buildings.deleteConfirm", &[("name", &candidate.label)]),
+                            ));
+                        }
                     }
                     self.show_error(ui, shell);
                 });
@@ -373,7 +426,7 @@ impl BuildingEditor {
     }
 
     pub fn paint(
-        &self,
+        &mut self,
         ui: &egui::Ui,
         document: &MapDocument,
         rect: egui::Rect,
@@ -381,6 +434,31 @@ impl BuildingEditor {
         shift: [f32; 2],
     ) {
         let painter = ui.painter().with_clip_rect(rect);
+        self.images.retain(document, self.image_draft.as_ref());
+        for (i, saved) in document.buildings().iter().enumerate() {
+            let building = if self.selected == Some(i) {
+                self.preview.as_ref().unwrap_or(saved)
+            } else {
+                saved
+            };
+            self.images.paint(
+                &painter,
+                building,
+                building.corners().map(|p| screen(p, rect, view, shift)),
+            );
+        }
+        if let Some(draft) = &self.image_draft
+            && let Some(pos) = ui
+                .input(|i| i.pointer.hover_pos())
+                .filter(|p| rect.contains(*p))
+        {
+            let draft = draft.moved(world(pos, rect, view, shift));
+            self.images.paint(
+                &painter,
+                &draft,
+                draft.corners().map(|p| screen(p, rect, view, shift)),
+            );
+        }
         if self.tool == Some(Tool::Polygon) {
             for pair in self.vertices.windows(2) {
                 painter.line_segment(
@@ -448,9 +526,15 @@ fn fields(ui: &mut egui::Ui, building: &mut Building, shell: &Shell) -> bool {
         for (index, key) in [(0, "buildings.width"), (1, "buildings.height")] {
             ui.horizontal(|ui| {
                 ui.label(shell.tr(key, &[]));
-                changed |= ui
+                let before = building.size;
+                let resized = ui
                     .add(egui::DragValue::new(&mut building.size[index]).speed(1.))
                     .changed();
+                if resized && building.is_image() {
+                    building.size[1 - index] =
+                        before[1 - index] * building.size[index] / before[index];
+                }
+                changed |= resized;
             });
         }
     }
@@ -479,6 +563,9 @@ fn fields(ui: &mut egui::Ui, building: &mut Building, shell: &Shell) -> bool {
             building.sync_polygon_bounds();
             changed = true;
         }
+    }
+    if building.is_image() {
+        return changed;
     }
     ui.label(shell.tr("buildings.color", &[]));
     ui.horizontal(|ui| {

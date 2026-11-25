@@ -9,6 +9,7 @@ use eframe::egui;
 pub enum PanelAction {
     BuildingTool(crate::buildings::Tool),
     NewBuilding,
+    UploadBuildingImage,
     ScenarioTime,
     Profiles,
     Connection,
@@ -36,6 +37,9 @@ impl ControlPanel<'_> {
         shell.sidebar_with(ctx, |section, ui, shell| {
             ui.add_enabled_ui(self.enabled, |ui| match section {
                 "tools" => {
+                    if ui.button(shell.tr("buildings.upload", &[])).clicked() {
+                        action = Some(PanelAction::UploadBuildingImage);
+                    }
                     for (tool, key) in [
                         (crate::buildings::Tool::Rectangle, "buildings.rectangle"),
                         (crate::buildings::Tool::Polygon, "buildings.polygon"),

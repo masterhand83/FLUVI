@@ -8,10 +8,14 @@ pub fn building_zone(building: &Building) -> BackgroundZone {
             .into_iter()
             .map(|p| p.map(|n| (n / 5.) as f32))
             .collect(),
-        color: color(&building.color),
+        color: if building.is_image() {
+            [0; 4]
+        } else {
+            color(&building.color)
+        },
         label: String::new(),
         show_label: false,
-        show_border: true,
+        show_border: !building.is_image(),
     }
 }
 

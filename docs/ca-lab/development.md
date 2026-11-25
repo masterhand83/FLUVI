@@ -362,6 +362,35 @@ Draw building fills below roads and their controls above roads.
 
 Focused checks: `cargo test -p ca-core -p ca-app -p ca-gpu --test buildings`.
 
+### Image buildings
+
+Use Tools → Upload Image Building, select a PNG, JPEG, or WebP file of at most
+5 MiB, then click the map to place it. The initial maximum dimension is 120
+saved v1 world pixels. Image corner handles and inspector dimensions keep the
+aspect ratio. The image inspector hides the color palette and has Replace Image.
+Replacement validates first, resets the size to the new aspect ratio, and keeps
+the center, saved angle, name, and selection.
+
+`ca-app::building_images` owns signature validation, bounded file reads, image
+decoding, and native file dialogs. Workers return through bounded channels.
+Cancel drops the receiver. Map replacement resets `BuildingEditor`, which drops
+both upload and display jobs and releases its textures. Imported data URLs remain
+unchanged in `Building` and map JSON. Decodes have a 64 MiB allocation limit.
+
+The native executable embeds the v1 artwork with `include_bytes!`; no external
+asset directory is needed at run time. `ca-core::buildings::artwork` maps v1 keys
+to these assets. Renaming a bundled building writes its original key to `imagen`.
+Bundled images and uploads marked `imageRotationConvention: 'legacy'` use the
+negative v1 angle. New uploads use the positive angle. Geometry, picking, and
+handles use the same convention as the textured quad.
+
+Image textures draw after background zones and before traffic. Their GPU building
+zones have no opaque fill or border, so transparent pixels show the map below.
+The display cache releases images after replacement or deletion.
+
+Focused checks: `cargo test -p ca-core -p ca-app --test building_images` and
+`cargo test -p ca-core -p ca-app -p ca-gpu --test buildings`.
+
 ### Virtual clock and hourly profiles
 
 Tools → Set Scenario Date and Time opens a weekday/time draft with a localized

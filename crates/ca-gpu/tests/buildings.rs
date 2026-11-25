@@ -2,6 +2,17 @@ use ca_core::map_json::MapDocument;
 use ca_gpu::TrafficScene;
 
 #[test]
+fn image_buildings_do_not_have_an_opaque_color_underlay() {
+    let image = ca_core::buildings::Building::from_json(&serde_json::json!({
+        "label":"ESCOM","width":80,"height":40,"angle":90
+    }))
+    .unwrap();
+    let zone = ca_gpu::building_zone(&image);
+    assert_eq!(zone.color[3], 0);
+    assert!(!zone.show_border);
+}
+
+#[test]
 fn building_only_map_fits_saved_pixel_geometry() {
     let document = MapDocument::parse(
         r##"{"version":"1.0","calles":[],"conexiones":[],"edificios":[

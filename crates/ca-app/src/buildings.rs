@@ -1,4 +1,5 @@
 //! Building editor: validated previews are separate from the saved document.
+mod image_paint;
 mod ui;
 
 use ca_core::{
@@ -10,6 +11,7 @@ use ca_core::{
 pub enum Tool {
     Rectangle,
     Polygon,
+    Image,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -41,6 +43,12 @@ pub struct BuildingEditor {
     delete_answer: Option<crossbeam_channel::Receiver<bool>>,
     form: Option<Building>,
     square: bool,
+    image_job: Option<(
+        crossbeam_channel::Receiver<crate::building_images::ImageResult>,
+        Option<usize>,
+    )>,
+    image_draft: Option<Building>,
+    images: image_paint::ImageCache,
 }
 
 impl BuildingEditor {
@@ -49,11 +57,19 @@ impl BuildingEditor {
     }
 
     pub fn select(&mut self, index: Option<usize>) {
+        if self.selected != index
+            && self
+                .image_job
+                .as_ref()
+                .is_some_and(|(_, target)| target.is_some())
+        {
+            self.image_job = None;
+        }
         self.selected = index;
     }
 
     pub fn active(&self) -> bool {
-        self.tool.is_some() || self.drag.is_some()
+        self.tool.is_some() || self.drag.is_some() || self.image_job.is_some()
     }
 
     pub fn dragging(&self) -> bool {
@@ -68,6 +84,8 @@ impl BuildingEditor {
         self.preview = None;
         self.vertices.clear();
         self.error = None;
+        self.image_job = None;
+        self.image_draft = None;
     }
 
     pub fn start(&mut self, tool: Tool) {
@@ -75,6 +93,54 @@ impl BuildingEditor {
         self.selected = None;
         self.form = None;
         self.tool = Some(tool);
+    }
+
+    pub fn begin_image_load(
+        &mut self,
+        receiver: crossbeam_channel::Receiver<crate::building_images::ImageResult>,
+        target: Option<usize>,
+    ) {
+        self.cancel();
+        self.image_job = Some((receiver, target));
+    }
+
+    pub fn poll_image(&mut self, document: &MapDocument) -> Option<BuildingEdit> {
+        let (receiver, target) = self.image_job.as_ref()?;
+        let result = match receiver.try_recv() {
+            Ok(result) => result,
+            Err(crossbeam_channel::TryRecvError::Empty) => return None,
+            Err(_) => Err(BuildingError("imageDecode")),
+        };
+        let target = *target;
+        self.image_job = None;
+        match result {
+            Ok(Some(image)) => {
+                let mut building = match target {
+                    Some(index) => document.buildings().get(index)?.clone(),
+                    None => Building::rectangle([0.; 2], [1.; 2]),
+                };
+                if let Err(error) = building.replace_image(image.data, image.pixels) {
+                    self.error = Some(error);
+                    return None;
+                }
+                if let Some(index) = target {
+                    return Some(BuildingEdit::Update(index, building));
+                }
+                self.selected = None;
+                self.tool = Some(Tool::Image);
+                self.image_draft = Some(building);
+            }
+            Ok(None) => {}
+            Err(error) => self.error = Some(error),
+        }
+        None
+    }
+
+    pub fn place_image(&mut self, center: [f64; 2]) -> Option<BuildingEdit> {
+        let mut building = self.image_draft.take()?;
+        building.center = center;
+        self.tool = None;
+        Some(BuildingEdit::Create(building))
     }
 
     pub fn open_form(&mut self) {
@@ -145,7 +211,13 @@ impl BuildingEditor {
                             .atan2(p[0] - original.center[0])
                             .to_degrees()
                     };
-                    next = original.rotated(original.angle + angle(point) - angle(drag.start));
+                    let sign = if original.legacy_image_rotation() {
+                        -1.
+                    } else {
+                        1.
+                    };
+                    next = original
+                        .rotated(original.angle + sign * (angle(point) - angle(drag.start)));
                 }
                 Handle::Vertex(index) => match original.vertex_moved(index, point) {
                     Ok(building) => next = building,
