@@ -1,23 +1,33 @@
 //! Screen-space direct geometry handles. Saved geometry changes only on release.
+use crate::preview::GeometryPreview;
 use ca_core::{
     camera::Camera,
+    geometry::CellGeometry,
     map_json::{MapDocument, StreetPlacement},
     streets::{StreetChange, StreetEdit, StreetError},
     traffic::CalleConfig,
 };
 use eframe::egui;
+use std::sync::Arc;
 
 struct Street {
     placement: StreetPlacement,
     config: CalleConfig,
+    geometry: CellGeometry,
 }
 
 struct Drag {
     street: usize,
-    endpoint: Option<usize>,
+    target: Target,
     start: [f32; 2],
     moved: bool,
     position: [f64; 2],
+}
+
+enum Target {
+    Endpoint(usize),
+    Body,
+    Radius,
 }
 
 #[derive(Default)]
@@ -27,6 +37,7 @@ pub(crate) struct GeometryHandles {
     total: usize,
     drag: Option<Drag>,
     candidate: Option<Result<StreetChange, StreetError>>,
+    preview: Option<Arc<GeometryPreview>>,
 }
 
 #[derive(Default)]
@@ -36,6 +47,7 @@ pub(crate) struct HandleInput {
     pub handled: bool,
     pub active: bool,
     pub captured: bool,
+    pub preview: Option<Arc<GeometryPreview>>,
 }
 
 impl GeometryHandles {
@@ -53,6 +65,7 @@ impl GeometryHandles {
             .iter()
             .zip(document.model().streets())
             .map(|(p, s)| Street {
+                geometry: p.cells(s.config().carriles, s.config().tamano),
                 placement: p.clone(),
                 config: s.config().clone(),
             })
@@ -62,6 +75,69 @@ impl GeometryHandles {
     pub fn finish(&mut self) {
         self.drag = None;
         self.candidate = None;
+        self.preview = None;
+    }
+
+    pub fn previewing(&self) -> bool {
+        self.preview.is_some()
+    }
+
+    pub fn translation(&self) -> [f32; 2] {
+        self.drag
+            .as_ref()
+            .filter(|d| matches!(d.target, Target::Body) && self.previewing())
+            .map_or([0.0; 2], |d| {
+                std::array::from_fn(|i| {
+                    (d.position[i] - self.streets[d.street].placement.origin[i]) as f32
+                })
+            })
+    }
+
+    fn preview_geometry(&self, drag: &Drag, change: &StreetChange) -> CellGeometry {
+        let street = &self.streets[drag.street];
+        let mut geometry = match change {
+            StreetChange::StraightGeometry {
+                origin,
+                angle,
+                length,
+            } => {
+                let mut placement = street.placement.clone();
+                placement.origin = *origin;
+                placement.angle_degrees = *angle;
+                placement.cells(street.config.carriles, *length)
+            }
+            StreetChange::Origin(origin) => CellGeometry {
+                centers: street
+                    .geometry
+                    .centers
+                    .iter()
+                    .map(|lane| {
+                        lane.iter()
+                            .map(|p| {
+                                std::array::from_fn(|i| {
+                                    p[i] + (origin[i] - street.placement.origin[i]) as f32
+                                })
+                            })
+                            .collect()
+                    })
+                    .collect(),
+                axes: street.geometry.axes.clone(),
+            },
+            StreetChange::Radius(radius) => {
+                let mut placement = street.placement.clone();
+                let ring = placement.roundabout.as_mut().expect("radial handle");
+                ring.inner_radius = *radius;
+                let length = ring.cells();
+                placement.cells(street.config.carriles, length)
+            }
+            _ => unreachable!("direct geometry edit"),
+        };
+        for center in geometry.centers.iter_mut().flatten() {
+            for (value, shift) in center.iter_mut().zip(self.shift) {
+                *value += shift;
+            }
+        }
+        geometry
     }
 
     fn endpoints(street: &Street) -> Option<[[f64; 2]; 2]> {
@@ -83,21 +159,45 @@ impl GeometryHandles {
         if let Some(ends) = Self::endpoints(street) {
             (ends, 2)
         } else if let Some(ring) = street.placement.roundabout {
-            ([ring.center; 2], 1)
+            ([ring.center, Self::radius_handle(ring)], 2)
         } else {
             ([[0.0; 2]; 2], 0)
         }
     }
 
+    fn radius_handle(ring: ca_core::streets::RoundaboutDraft) -> [f64; 2] {
+        let angle = ring.start_angle.to_radians();
+        [
+            ring.center[0] + ring.inner_radius * angle.cos(),
+            ring.center[1] + ring.inner_radius * angle.sin(),
+        ]
+    }
+
     fn candidate(&self, drag: &Drag) -> Result<StreetChange, StreetError> {
         let street = &self.streets[drag.street];
-        let Some(endpoint) = drag.endpoint else {
-            let change = StreetChange::Origin(drag.position);
-            change.validate(&street.config)?;
-            if let Some(curve) = &street.placement.bezier {
-                curve.validate_translation(drag.position)?;
+        let endpoint = match drag.target {
+            Target::Endpoint(endpoint) => endpoint,
+            Target::Radius => {
+                let ring = street.placement.roundabout.expect("radial handle");
+                let radius =
+                    (drag.position[0] - ring.center[0]).hypot(drag.position[1] - ring.center[1]);
+                let ring =
+                    ca_core::streets::RoundaboutDraft::new(ring.center, radius, ring.start_angle)?;
+                ca_core::streets::validate_cell_capacity(
+                    self.total,
+                    street.config.carriles * street.config.tamano,
+                    street.config.carriles * ring.cells(),
+                )?;
+                return Ok(StreetChange::Radius(radius));
             }
-            return Ok(change);
+            Target::Body => {
+                let change = StreetChange::Origin(drag.position);
+                change.validate(&street.config)?;
+                if let Some(curve) = &street.placement.bezier {
+                    curve.validate_translation(drag.position)?;
+                }
+                return Ok(change);
+            }
         };
         let mut ends = Self::endpoints(street).expect("straight endpoint");
         ends[endpoint] = drag.position;
@@ -171,15 +271,24 @@ impl GeometryHandles {
                 .min_by(|a, b| a.1.total_cmp(&b.1));
             let straight = Self::endpoints(&self.streets[street]).is_some();
             if endpoint.is_some() || body_hit == Some(street) {
-                let endpoint = endpoint.filter(|_| straight).map(|(i, _)| i);
+                let target = match endpoint {
+                    Some((i, _)) if straight => Target::Endpoint(i),
+                    Some((1, _)) => Target::Radius,
+                    _ => Target::Body,
+                };
+                let position = match target {
+                    Target::Body => placement.origin,
+                    _ => ends[endpoint.expect("picked handle").0],
+                };
                 self.drag = Some(Drag {
                     street,
-                    endpoint,
+                    target,
                     start: (pos - rect.min).into(),
                     moved: false,
-                    position: endpoint.map_or(placement.origin, |i| ends[i]),
+                    position,
                 });
                 self.candidate = None;
+                self.preview = None;
             }
         }
         if let Some(drag) = &mut self.drag {
@@ -188,7 +297,7 @@ impl GeometryHandles {
                 let local = pos - rect.min;
                 drag.moved |= (local - egui::vec2(drag.start[0], drag.start[1])).length() > 3.0;
                 let p = camera.screen_to_world(local.into());
-                let position = if drag.endpoint.is_some() {
+                let position = if !matches!(drag.target, Target::Body) {
                     std::array::from_fn(|i| (p[i] - self.shift[i]) as f64)
                 } else {
                     let start = camera.screen_to_world(drag.start);
@@ -197,10 +306,11 @@ impl GeometryHandles {
                 };
                 if drag.position != position {
                     self.candidate = None;
+                    self.preview = None;
                     drag.position = position;
                 }
             }
-            result.handled = drag.endpoint.is_some() || drag.moved;
+            result.handled = !matches!(drag.target, Target::Body) || drag.moved;
             result.active = result.handled;
         }
         if let Some(drag) = &self.drag {
@@ -209,6 +319,22 @@ impl GeometryHandles {
             }
             let candidate = self.candidate.as_ref().expect("validated candidate");
             result.error = candidate.as_ref().err().copied();
+            if result.active
+                && let Ok(change) = candidate
+                && self
+                    .preview
+                    .as_ref()
+                    .is_none_or(|p| !p.matches_view(ui, rect, camera))
+            {
+                self.preview = Some(Arc::new(GeometryPreview::new(
+                    drag.street,
+                    self.preview_geometry(drag, change),
+                    None,
+                    ui,
+                    rect,
+                    camera,
+                )));
+            }
             if pointer.primary_released() {
                 if drag.moved && pointer.interact_pos().is_some_and(|p| rect.contains(p)) {
                     result.edit = candidate
@@ -219,6 +345,7 @@ impl GeometryHandles {
                 self.finish();
             }
         }
+        result.preview = self.preview.clone();
         result
     }
 
@@ -234,8 +361,35 @@ impl GeometryHandles {
         };
         let (mut ends, count) = Self::positions(street);
         let invalid = if let Some(drag) = &self.drag {
-            if let Some(endpoint) = drag.endpoint {
-                ends[endpoint] = drag.position;
+            match self.candidate.as_ref() {
+                Some(Ok(StreetChange::StraightGeometry {
+                    origin,
+                    angle,
+                    length,
+                })) => {
+                    ends[0] = *origin;
+                    let angle = -angle.to_radians();
+                    ends[1] = [
+                        origin[0] + angle.cos() * *length as f64,
+                        origin[1] + angle.sin() * *length as f64,
+                    ];
+                }
+                Some(Ok(StreetChange::Radius(radius))) => {
+                    let mut ring = street.placement.roundabout.expect("radial handle");
+                    ring.inner_radius = *radius;
+                    ends[1] = Self::radius_handle(ring);
+                }
+                _ => match drag.target {
+                    Target::Endpoint(endpoint) => ends[endpoint] = drag.position,
+                    Target::Radius => ends[1] = drag.position,
+                    Target::Body => {
+                        for p in &mut ends[..count] {
+                            for (i, value) in p.iter_mut().enumerate() {
+                                *value += drag.position[i] - street.placement.origin[i];
+                            }
+                        }
+                    }
+                },
             }
             self.candidate.as_ref().is_some_and(Result::is_err)
         } else {

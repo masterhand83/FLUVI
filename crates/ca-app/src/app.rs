@@ -549,7 +549,7 @@ impl eframe::App for App {
                 step_ticket: self.step_ticket,
                 view: map.view,
                 generation_override: self.transport.generation_override(),
-                excluded_street: map.bezier_preview.as_ref().map(|preview| preview.street),
+                excluded_street: map.geometry_preview.as_ref().map(|preview| preview.street),
             };
             if !self.commands.send(request, map.clicked) {
                 self.shell.notify(

@@ -2,6 +2,130 @@ use ca_app::map::MapInteraction;
 use eframe::egui;
 
 #[test]
+fn endpoint_drag_updates_all_lanes_before_release_and_cancel_restores_display() {
+    let document = ca_core::map_json::MapDocument::parse(
+        r#"{"calles":[{"nombre":"A","tipo":"conexion","tamano":6,"carriles":2,"x":25,"y":25}]}"#,
+    )
+    .unwrap();
+    let ctx = egui::Context::default();
+    let mut map = MapInteraction::new([30.0, 20.0], &document.geometry(), vec!["A".into()]);
+    map.configure(&document, [2.0, 1.0]);
+    map.select(Some(0));
+    frame(&ctx, &mut map, vec![], false);
+    let start = screen_position(&map, [13.0, 6.0]);
+    let end = screen_position(&map, [15.0, 8.0]);
+    let button = |pos, pressed| egui::Event::PointerButton {
+        pos,
+        pressed,
+        button: egui::PointerButton::Primary,
+        modifiers: Default::default(),
+    };
+    frame(
+        &ctx,
+        &mut map,
+        vec![egui::Event::PointerMoved(start), button(start, true)],
+        false,
+    );
+    let (moving, output) =
+        painted_frame(&ctx, &mut map, vec![egui::Event::PointerMoved(end)], false);
+    assert!(moving.street_edit.is_none());
+    assert!(moving.structural_edit);
+    let preview = moving.geometry_preview.as_ref().expect("live street shape");
+    assert_eq!(preview.street, 0);
+    assert_eq!(preview.geometry.centers.len(), 2);
+    assert_eq!(preview.geometry.centers[0].len(), 8);
+    let first = preview.geometry.centers[0][0];
+    assert!((first[0] - 7.3638034).abs() < 0.001);
+    assert!((first[1] - 6.606339).abs() < 0.001);
+    assert!(
+        output
+            .shapes
+            .iter()
+            .any(|s| matches!(&s.shape, egui::Shape::Mesh(_)))
+    );
+    let idle = frame(&ctx, &mut map, vec![], false);
+    assert!(std::sync::Arc::ptr_eq(
+        preview,
+        idle.geometry_preview.as_ref().unwrap()
+    ));
+    let cancelled = frame(
+        &ctx,
+        &mut map,
+        vec![egui::Event::Key {
+            key: egui::Key::Escape,
+            physical_key: None,
+            pressed: true,
+            repeat: false,
+            modifiers: Default::default(),
+        }],
+        false,
+    );
+    assert!(cancelled.geometry_preview.is_none());
+    assert!(cancelled.street_edit.is_none());
+    let released = frame(&ctx, &mut map, vec![button(end, false)], false);
+    assert!(released.geometry_preview.is_none() && released.street_edit.is_none());
+}
+
+#[test]
+fn radial_handle_redraws_all_roundabout_lanes_before_commit() {
+    use ca_core::streets::{StreetChange, StreetEdit};
+    let document = ca_core::map_json::MapDocument::parse(
+        r#"{"calles":[{"nombre":"Ring","tipo":"conexion","geometryType":"roundabout",
+        "tamano":16,"carriles":2,"x":50,"y":50,"innerRadius":10,"startAngle":0}]}"#,
+    )
+    .unwrap();
+    let ctx = egui::Context::default();
+    let mut map = MapInteraction::new([30.0, 20.0], &document.geometry(), vec!["Ring".into()]);
+    map.configure(&document, [2.0, 1.0]);
+    map.select(Some(0));
+    frame(&ctx, &mut map, vec![], false);
+    let start = screen_position(&map, [14.0, 11.0]);
+    let end = screen_position(&map, [16.0, 11.0]);
+    let button = |pos, pressed| egui::Event::PointerButton {
+        pos,
+        pressed,
+        button: egui::PointerButton::Primary,
+        modifiers: Default::default(),
+    };
+    frame(
+        &ctx,
+        &mut map,
+        vec![egui::Event::PointerMoved(start), button(start, true)],
+        false,
+    );
+    let (moving, output) =
+        painted_frame(&ctx, &mut map, vec![egui::Event::PointerMoved(end)], false);
+    assert!(moving.street_edit.is_none());
+    let preview = moving
+        .geometry_preview
+        .as_ref()
+        .expect("live ring cell geometry");
+    assert_eq!(preview.geometry.centers.len(), 2);
+    assert_eq!(preview.geometry.centers[0].len(), 28);
+    for (lane, radius) in [4.5_f32, 5.5].into_iter().enumerate() {
+        let p = preview.geometry.centers[lane][0];
+        assert!(((p[0] - 12.0).hypot(p[1] - 11.0) - radius).abs() < 0.001);
+    }
+    assert!(
+        output.shapes.iter().any(|s| matches!(&s.shape,
+            egui::Shape::Circle(circle) if circle.center.distance(end) < 0.001
+        )),
+        "radial handle follows the resized ring"
+    );
+    let idle = frame(&ctx, &mut map, vec![], false);
+    assert!(std::sync::Arc::ptr_eq(
+        preview,
+        idle.geometry_preview.as_ref().unwrap()
+    ));
+    let released = frame(&ctx, &mut map, vec![button(end, false)], false);
+    assert!(released.geometry_preview.is_none());
+    let Some(StreetEdit::Update(0, StreetChange::Radius(radius))) = released.street_edit else {
+        panic!("release commits the live radius");
+    };
+    assert!((radius - 4.0).abs() < 0.001);
+}
+
+#[test]
 fn straight_endpoint_drag_commits_geometry_without_panning_at_each_zoom() {
     use ca_core::streets::{StreetChange, StreetEdit};
     for zoom in [0.25_f32, 1.0, 4.0] {
@@ -147,8 +271,27 @@ fn selected_bodies_and_roundabout_center_move_without_pan() {
                 vec![egui::Event::PointerMoved(start), button(start, true)],
                 false,
             );
-            let moved = frame(&ctx, &mut map, vec![egui::Event::PointerMoved(end)], false);
+            let (moved, output) =
+                painted_frame(&ctx, &mut map, vec![egui::Event::PointerMoved(end)], false);
             assert!(moved.structural_edit, "{kind} body/center drag must pause");
+            assert!(moved.street_edit.is_none());
+            let preview = moved
+                .geometry_preview
+                .as_ref()
+                .expect("body moves during input");
+            let old = document.geometry()[0].centers[0][0];
+            let live = preview.geometry.centers[0][0];
+            assert!((live[0] - old[0] - 4.0).abs() < 0.001);
+            assert!((live[1] - old[1] - 4.0).abs() < 0.001);
+            let origin = document.layout()[0].origin;
+            let live_anchor =
+                screen_position(&map, [origin[0] as f32 + 4.0, origin[1] as f32 + 4.0]);
+            assert!(
+                output.shapes.iter().any(|s| matches!(&s.shape,
+                    egui::Shape::Circle(circle) if circle.center.distance(live_anchor) < 0.001
+                )),
+                "{kind} handles follow the body preview"
+            );
             let released = frame(&ctx, &mut map, vec![button(end, false)], false);
             assert_eq!(map.camera().unwrap().view(), before);
             let Some(StreetEdit::Update(0, StreetChange::Origin(origin))) = released.street_edit
@@ -405,7 +548,7 @@ fn ctrl_click_on_selected_geometry_handles_does_not_start_an_edit() {
             assert!(!result.structural_edit);
             assert!(result.street_edit.is_none());
             assert!(result.clicked.is_none());
-            assert!(result.bezier_preview.is_none());
+            assert!(result.geometry_preview.is_none());
         }
     }
 }
@@ -532,7 +675,7 @@ fn unsampleable_candidates_keep_live_red_guides_without_changing_the_map() {
         "bezier.invalidControls"
     );
     assert!(
-        moving.bezier_preview.is_none(),
+        moving.geometry_preview.is_none(),
         "sampling budget prevents a cell mesh"
     );
     assert!(
@@ -598,12 +741,12 @@ fn cancelling_or_releasing_an_invalid_curve_preview_keeps_the_original_map() {
         );
         let (moving, output) =
             painted_frame(&ctx, &mut map, vec![egui::Event::PointerMoved(end)], false);
-        let preview = moving.bezier_preview.as_ref().unwrap();
+        let preview = moving.geometry_preview.as_ref().unwrap();
         assert_eq!(moving.view, before);
         assert_eq!(moving.geometry_error.is_some(), invalid);
         let idle = frame(&ctx, &mut map, vec![], false);
         assert!(
-            std::sync::Arc::ptr_eq(preview, idle.bezier_preview.as_ref().unwrap()),
+            std::sync::Arc::ptr_eq(preview, idle.geometry_preview.as_ref().unwrap()),
             "an unchanged pointer reuses the sampled preview"
         );
         if invalid {
@@ -627,11 +770,11 @@ fn cancelling_or_releasing_an_invalid_curve_preview_keeps_the_original_map() {
                 }],
                 false,
             );
-            assert!(cancelled.bezier_preview.is_none());
+            assert!(cancelled.geometry_preview.is_none());
             assert!(cancelled.street_edit.is_none());
         }
         let released = frame(&ctx, &mut map, vec![button(end, false)], false);
-        assert!(released.bezier_preview.is_none());
+        assert!(released.geometry_preview.is_none());
         assert!(released.street_edit.is_none());
         assert_eq!(document.to_json(), saved);
     }
@@ -689,7 +832,10 @@ fn bezier_drag_previews_the_shape_and_guides_before_committing() {
         moving.street_edit.is_none(),
         "preview must not commit an edit"
     );
-    let preview = moving.bezier_preview.as_ref().expect("live curve preview");
+    let preview = moving
+        .geometry_preview
+        .as_ref()
+        .expect("live curve preview");
     assert_eq!(preview.street, 0);
     assert!(preview.error.is_none());
     let highest = preview.geometry.centers[0]
@@ -713,7 +859,7 @@ fn bezier_drag_previews_the_shape_and_guides_before_committing() {
         "preview draws cell footprints before mouse release"
     );
     let released = frame(&ctx, &mut map, vec![button(false)], false);
-    assert!(released.bezier_preview.is_none());
+    assert!(released.geometry_preview.is_none());
     document
         .edit_streets(released.street_edit.unwrap())
         .unwrap();
@@ -883,7 +1029,10 @@ fn selected_roundabout_radial_handle_resizes_and_escape_cancels() {
         assert!(started.structural_edit);
         let preview = frame(&ctx, &mut map, vec![egui::Event::PointerMoved(end)], false);
         assert_eq!(preview.view, before);
-        assert!((preview.roundabout_preview.unwrap().inner_radius - 4.0).abs() < 0.00001);
+        let geometry = &preview.geometry_preview.as_ref().unwrap().geometry;
+        assert_eq!(geometry.centers[0].len(), 28);
+        let p = geometry.centers[0][0];
+        assert!(((p[0] - 10.0).hypot(p[1] - 10.0) - 4.5).abs() < 0.00001);
         if cancel {
             frame(
                 &ctx,

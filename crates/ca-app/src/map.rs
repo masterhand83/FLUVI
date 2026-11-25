@@ -1,5 +1,5 @@
 //! Map input adapter. All picks and drawing use the same local-screen camera.
-pub use crate::bezier::CurvePreview;
+pub use crate::preview::GeometryPreview;
 use ca_core::{
     camera::{Camera, WorldView},
     cell_index::{CellIndex, CellRef, StreetGeometry},
@@ -19,7 +19,7 @@ pub struct MapFrame {
     pub street_edit: Option<ca_core::streets::StreetEdit>,
     pub roundabout_preview: Option<ca_core::streets::RoundaboutDraft>,
     pub geometry_error: Option<ca_core::streets::StreetError>,
-    pub bezier_preview: Option<std::sync::Arc<CurvePreview>>,
+    pub geometry_preview: Option<std::sync::Arc<GeometryPreview>>,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -32,7 +32,7 @@ pub struct CellPreview {
 impl MapFrame {
     /// Draw after the GPU callback so the target stays visible over the map.
     pub fn paint_preview(&self, painter: &egui::Painter) {
-        if let Some(preview) = &self.bezier_preview {
+        if let Some(preview) = &self.geometry_preview {
             preview.paint(painter);
         }
         if let Some(ring) = self.roundabout_preview {
@@ -110,8 +110,6 @@ pub struct MapInteraction {
     selected: Option<usize>,
     sorted: Vec<usize>,
     street_sizes: Vec<Vec<usize>>,
-    roundabouts: Vec<Option<ca_core::streets::RoundaboutDraft>>,
-    radius_drag: Option<(usize, ca_core::streets::RoundaboutDraft)>,
     rejected_geometry: Option<ca_core::streets::StreetError>,
 }
 
@@ -140,8 +138,6 @@ impl MapInteraction {
                 .iter()
                 .map(|s| s.centers.iter().map(Vec::len).collect())
                 .collect(),
-            roundabouts: Vec::new(),
-            radius_drag: None,
             rejected_geometry: None,
         }
     }
@@ -154,7 +150,7 @@ impl MapInteraction {
         self.drawing = drawing;
         self.roundabout_drawing = false;
         self.draw_start = None;
-        self.radius_drag = None;
+        self.handles.finish();
     }
 
     pub fn set_roundabout_drawing(&mut self, drawing: bool) {
@@ -226,7 +222,7 @@ impl MapInteraction {
     }
 
     pub fn paint_selection(&self, painter: &egui::Painter, rect: egui::Rect) {
-        if self.curves.previewing() {
+        if self.curves.previewing() || self.handles.previewing() {
             return;
         }
         let (Some(street), Some(camera)) = (self.selected, &self.camera) else {
@@ -235,14 +231,6 @@ impl MapInteraction {
         let Some(lanes) = self.street_sizes.get(street) else {
             return;
         };
-        if let Some(ring) = self.roundabouts.get(street).copied().flatten() {
-            let point = camera.world_to_screen(radius_handle(ring));
-            painter.circle_filled(
-                rect.min + egui::vec2(point[0], point[1]),
-                6.0,
-                egui::Color32::YELLOW,
-            );
-        }
         for (lane, &length) in lanes.iter().enumerate() {
             for index in 0..length {
                 if let Some(corners) = self.index.cell_corners(CellRef {
@@ -284,18 +272,6 @@ impl MapInteraction {
         geometry.translate(shift);
         self.names = document.layout().iter().map(|p| p.name.clone()).collect();
         self.sorted = crate::streets::sorted_streets(document);
-        self.roundabouts = document
-            .layout()
-            .iter()
-            .map(|p| {
-                p.roundabout.map(|mut ring| {
-                    for (i, value) in shift.iter().enumerate() {
-                        ring.center[i] += *value as f64;
-                    }
-                    ring
-                })
-            })
-            .collect();
         self.street_sizes = geometry
             .streets
             .iter()
@@ -327,7 +303,13 @@ impl MapInteraction {
     pub fn paint_vertices(&self, painter: &egui::Painter, rect: egui::Rect) {
         if let Some(camera) = &self.camera {
             self.vertices.paint(painter, rect, camera, self.selected);
-            self.curves.paint(painter, rect, camera, self.selected);
+            self.curves.paint(
+                painter,
+                rect,
+                camera,
+                self.selected,
+                self.handles.translation(),
+            );
             self.handles.paint(painter, rect, camera, self.selected);
         }
     }
@@ -371,24 +353,13 @@ impl MapInteraction {
             !self.drawing && !self.vertices.active(),
             response.contains_pointer(),
         );
-        let radius_hit = self
-            .selected
-            .and_then(|s| self.roundabouts.get(s).copied().flatten())
-            .zip(pointer.interact_pos())
-            .is_some_and(|(ring, pos)| {
-                let p = camera.world_to_screen(radius_handle(ring));
-                let center = camera.world_to_screen(ring.center.map(|v| v as f32));
-                let distance = pos.distance(rect.min + egui::vec2(p[0], p[1]));
-                distance <= 10.0
-                    && distance < pos.distance(rect.min + egui::vec2(center[0], center[1]))
-            });
         let handle_input = self.handles.input(
             ui,
             rect,
             camera,
             (self.selected, street_hit),
             !self.drawing && !self.vertices.active() && !curve_input.handled,
-            response.contains_pointer() && !radius_hit && self.radius_drag.is_none(),
+            response.contains_pointer(),
         );
         let mut street_edit = curve_input.edit.or(handle_input.edit);
         if handle_input.handled {
@@ -414,48 +385,6 @@ impl MapInteraction {
             self.drawing = false;
             self.roundabout_drawing = false;
             self.draw_start = None;
-            self.radius_drag = None;
-        }
-        if self
-            .radius_drag
-            .is_some_and(|(street, _)| Some(street) != self.selected)
-        {
-            self.radius_drag = None;
-        }
-        if radius_hit
-            && !self.drawing
-            && !self.vertices.active()
-            && !selecting
-            && response.contains_pointer()
-            && pointer.primary_pressed()
-            && pointer.interact_pos().is_some_and(|p| rect.contains(p))
-            && let Some(street) = self.selected
-            && let Some(ring) = self.roundabouts.get(street).copied().flatten()
-        {
-            self.radius_drag = Some((street, ring));
-            self.drawing_gesture = true;
-        }
-        if let Some((street, ring)) = self.radius_drag
-            && let Some(pos) = pointer.interact_pos()
-        {
-            let point = camera.screen_to_world((pos - rect.min).into());
-            let radius = (point[0] as f64 - ring.center[0]).hypot(point[1] as f64 - ring.center[1]);
-            match ca_core::streets::RoundaboutDraft::new(ring.center, radius, ring.start_angle) {
-                Ok(draft) => {
-                    roundabout_preview = Some(draft);
-                    if pointer.primary_released() && rect.contains(pos) {
-                        street_edit = Some(ca_core::streets::StreetEdit::Update(
-                            street,
-                            ca_core::streets::StreetChange::Radius(radius),
-                        ));
-                    }
-                }
-                Err(error) => geometry_error = Some(error),
-            }
-            if pointer.primary_released() {
-                self.radius_drag = None;
-                roundabout_preview = None;
-            }
         }
         if self.drawing && !self.vertices.active() {
             if response.contains_pointer()
@@ -526,7 +455,6 @@ impl MapInteraction {
             || handle_input.captured
             || curve_input.handled
             || self.draw_start.is_some()
-            || self.radius_drag.is_some()
             || was_drawing
             || self.drawing_gesture;
         // Response::drag_delta reads the context; do not call it under input's lock.
@@ -581,7 +509,12 @@ impl MapInteraction {
         });
         let hit = response
             .hover_pos()
-            .filter(|_| !response.dragged() && !self.touch_gesture)
+            .filter(|_| {
+                !response.dragged()
+                    && !self.touch_gesture
+                    && !handle_input.handled
+                    && !curve_input.handled
+            })
             .and_then(|pos| {
                 self.index
                     .hit_test(camera.screen_to_world((pos - rect.min).into()))
@@ -638,21 +571,12 @@ impl MapInteraction {
             structural_edit: self.vertices.active()
                 || curve_input.active
                 || handle_input.active
-                || self.draw_start.is_some()
-                || self.radius_drag.is_some(),
+                || self.draw_start.is_some(),
             street_preview,
             street_edit,
             roundabout_preview,
             geometry_error: geometry_error.or(self.rejected_geometry),
-            bezier_preview: curve_input.preview,
+            geometry_preview: curve_input.preview.or(handle_input.preview),
         }
     }
-}
-
-fn radius_handle(ring: ca_core::streets::RoundaboutDraft) -> [f32; 2] {
-    let angle = ring.start_angle.to_radians();
-    [
-        (ring.center[0] + ring.inner_radius * angle.cos()) as f32,
-        (ring.center[1] + ring.inner_radius * angle.sin()) as f32,
-    ]
 }

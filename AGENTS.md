@@ -14,6 +14,7 @@ For web apps, run focused tests with `pnpm test`, filtering to the affected modu
 
 - Deepen modules and simplify their interfaces. Keep complex logic inside modules, behind small, clear interfaces.
 - Write clean, simple implementations. Use only the complexity needed to meet the requirements. Avoid overengineering.
+- Prefer real-time visual updates for app drags, handles, and edits. Update the affected shape and controls during input, rather than only after commit. Use validated, cancellable previews when intermediate values must not change saved state. Reuse unchanged previews to keep input responsive.
 
 ## Communication
 
