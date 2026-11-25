@@ -45,7 +45,7 @@ impl VertexEditor {
             .zip(document.model().streets())
             .enumerate()
         {
-            if s.config().tipo != CalleType::Conexion {
+            if s.config().tipo != CalleType::Conexion || p.roundabout.is_some() {
                 continue;
             }
             let centers = &geometry[street].centers;

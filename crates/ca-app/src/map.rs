@@ -16,6 +16,8 @@ pub struct MapFrame {
     pub structural_edit: bool,
     pub street_preview: Option<ca_core::streets::StreetDraft>,
     pub street_edit: Option<ca_core::streets::StreetEdit>,
+    pub roundabout_preview: Option<ca_core::streets::RoundaboutDraft>,
+    pub geometry_error: Option<ca_core::streets::StreetError>,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -28,6 +30,32 @@ pub struct CellPreview {
 impl MapFrame {
     /// Draw after the GPU callback so the target stays visible over the map.
     pub fn paint_preview(&self, painter: &egui::Painter) {
+        if let Some(ring) = self.roundabout_preview {
+            let screen = |p: [f64; 2]| {
+                self.rect.min
+                    + egui::vec2(
+                        (p[0] as f32 - self.view.origin[0]) * self.rect.width() / self.view.span[0],
+                        (p[1] as f32 - self.view.origin[1]) * self.rect.height()
+                            / self.view.span[1],
+                    )
+            };
+            let center = screen(ring.center);
+            let scale = self.rect.width() / self.view.span[0];
+            for radius in [ring.inner_radius, ring.inner_radius + 1.0] {
+                painter.circle_stroke(
+                    center,
+                    radius as f32 * scale,
+                    egui::Stroke::new(1.5_f32, egui::Color32::YELLOW),
+                );
+            }
+            painter.text(
+                center,
+                egui::Align2::CENTER_CENTER,
+                ring.cells().to_string(),
+                egui::FontId::proportional(16.0),
+                egui::Color32::WHITE,
+            );
+        }
         if let Some(draft) = self.street_preview {
             let corners = draft.corners().map(|p| {
                 self.rect.min
@@ -69,11 +97,14 @@ pub struct MapInteraction {
     touch_gesture: bool,
     vertices: crate::vertices::VertexEditor,
     drawing: bool,
+    roundabout_drawing: bool,
     draw_start: Option<[f64; 2]>,
     drawing_gesture: bool,
     selected: Option<usize>,
     sorted: Vec<usize>,
     street_sizes: Vec<Vec<usize>>,
+    roundabouts: Vec<Option<ca_core::streets::RoundaboutDraft>>,
+    radius_drag: Option<(usize, ca_core::streets::RoundaboutDraft)>,
 }
 
 impl MapInteraction {
@@ -90,6 +121,7 @@ impl MapInteraction {
             touch_gesture: false,
             vertices: Default::default(),
             drawing: false,
+            roundabout_drawing: false,
             draw_start: None,
             drawing_gesture: false,
             selected: None,
@@ -98,6 +130,8 @@ impl MapInteraction {
                 .iter()
                 .map(|s| s.centers.iter().map(Vec::len).collect())
                 .collect(),
+            roundabouts: Vec::new(),
+            radius_drag: None,
         }
     }
 
@@ -107,7 +141,14 @@ impl MapInteraction {
 
     pub fn set_drawing(&mut self, drawing: bool) {
         self.drawing = drawing;
+        self.roundabout_drawing = false;
         self.draw_start = None;
+        self.radius_drag = None;
+    }
+
+    pub fn set_roundabout_drawing(&mut self, drawing: bool) {
+        self.set_drawing(drawing);
+        self.roundabout_drawing = drawing;
     }
 
     pub fn drawing(&self) -> bool {
@@ -123,11 +164,23 @@ impl MapInteraction {
     pub fn show_tools(&mut self, ui: &mut egui::Ui, shell: &crate::shell::Shell) {
         let mut drawing = self.drawing;
         if ui
-            .selectable_label(drawing, shell.tr("streetDrawing.button", &[]))
+            .selectable_label(
+                drawing && !self.roundabout_drawing,
+                shell.tr("streetDrawing.button", &[]),
+            )
             .clicked()
         {
-            drawing = !drawing;
+            drawing = !drawing || self.roundabout_drawing;
             self.set_drawing(drawing);
+        }
+        if ui
+            .selectable_label(
+                self.roundabout_drawing,
+                shell.tr("roundaboutDrawing.button", &[]),
+            )
+            .clicked()
+        {
+            self.set_roundabout_drawing(!self.roundabout_drawing);
         }
     }
 
@@ -159,6 +212,14 @@ impl MapInteraction {
         let Some(lanes) = self.street_sizes.get(street) else {
             return;
         };
+        if let Some(ring) = self.roundabouts.get(street).copied().flatten() {
+            let point = camera.world_to_screen(radius_handle(ring));
+            painter.circle_filled(
+                rect.min + egui::vec2(point[0], point[1]),
+                6.0,
+                egui::Color32::YELLOW,
+            );
+        }
         for (lane, &length) in lanes.iter().enumerate() {
             for index in 0..length {
                 if let Some(corners) = self.index.cell_corners(CellRef {
@@ -197,6 +258,18 @@ impl MapInteraction {
         geometry.translate(shift);
         self.names = document.layout().iter().map(|p| p.name.clone()).collect();
         self.sorted = crate::streets::sorted_streets(document);
+        self.roundabouts = document
+            .layout()
+            .iter()
+            .map(|p| {
+                p.roundabout.map(|mut ring| {
+                    for (i, value) in shift.iter().enumerate() {
+                        ring.center[i] += *value as f64;
+                    }
+                    ring
+                })
+            })
+            .collect();
         self.street_sizes = geometry
             .streets
             .iter()
@@ -260,12 +333,52 @@ impl MapInteraction {
         let pointer = ui.input(|i| i.pointer.clone());
         let mut street_edit = None;
         let mut street_preview = None;
+        let mut roundabout_preview = None;
+        let mut geometry_error = None;
         let was_drawing = self.drawing_gesture;
         if self.vertices.active()
             || ui.input(|i| i.key_pressed(egui::Key::Escape) || i.multi_touch().is_some())
         {
             self.drawing = false;
+            self.roundabout_drawing = false;
             self.draw_start = None;
+            self.radius_drag = None;
+        }
+        if !self.drawing
+            && !self.vertices.active()
+            && response.contains_pointer()
+            && pointer.primary_pressed()
+            && let Some(pos) = pointer.interact_pos().filter(|p| rect.contains(*p))
+            && let Some(street) = self.selected
+            && let Some(ring) = self.roundabouts.get(street).copied().flatten()
+        {
+            let point = camera.world_to_screen(radius_handle(ring));
+            if pos.distance(rect.min + egui::vec2(point[0], point[1])) <= 10.0 {
+                self.radius_drag = Some((street, ring));
+                self.drawing_gesture = true;
+            }
+        }
+        if let Some((street, ring)) = self.radius_drag
+            && let Some(pos) = pointer.interact_pos()
+        {
+            let point = camera.screen_to_world((pos - rect.min).into());
+            let radius = (point[0] as f64 - ring.center[0]).hypot(point[1] as f64 - ring.center[1]);
+            match ca_core::streets::RoundaboutDraft::new(ring.center, radius, ring.start_angle) {
+                Ok(draft) => {
+                    roundabout_preview = Some(draft);
+                    if pointer.primary_released() && rect.contains(pos) {
+                        street_edit = Some(ca_core::streets::StreetEdit::Update(
+                            street,
+                            ca_core::streets::StreetChange::Radius(radius),
+                        ));
+                    }
+                }
+                Err(error) => geometry_error = Some(error),
+            }
+            if pointer.primary_released() {
+                self.radius_drag = None;
+                roundabout_preview = None;
+            }
         }
         if self.drawing && !self.vertices.active() {
             if response.contains_pointer()
@@ -283,20 +396,31 @@ impl MapInteraction {
             if let Some(start) = self.draw_start
                 && let Some(pos) = pointer.interact_pos()
             {
-                street_preview = ca_core::streets::StreetDraft::between(
-                    start,
-                    camera
-                        .screen_to_world((pos - rect.min).into())
-                        .map(f64::from),
-                );
+                let end = camera
+                    .screen_to_world((pos - rect.min).into())
+                    .map(f64::from);
+                if self.roundabout_drawing {
+                    match ca_core::streets::RoundaboutDraft::between(start, end) {
+                        Ok(draft) => roundabout_preview = Some(draft),
+                        Err(error) => geometry_error = Some(error),
+                    }
+                } else {
+                    street_preview = ca_core::streets::StreetDraft::between(start, end);
+                }
                 if pointer.primary_released() {
                     if rect.contains(pos) {
-                        street_edit = street_preview.map(ca_core::streets::StreetEdit::Draw);
+                        street_edit = if self.roundabout_drawing {
+                            roundabout_preview.map(ca_core::streets::StreetEdit::DrawRoundabout)
+                        } else {
+                            street_preview.map(ca_core::streets::StreetEdit::Draw)
+                        };
                     }
                     self.draw_start = None;
                     street_preview = None;
+                    roundabout_preview = None;
                     if street_edit.is_some() {
                         self.drawing = false;
+                        self.roundabout_drawing = false;
                     }
                 }
             }
@@ -307,7 +431,11 @@ impl MapInteraction {
         {
             street_edit = self.selected.map(ca_core::streets::StreetEdit::Delete);
         }
-        let blocks_pan = self.vertices.blocks_pan() || self.draw_start.is_some() || was_drawing;
+        let blocks_pan = self.vertices.blocks_pan()
+            || self.draw_start.is_some()
+            || self.radius_drag.is_some()
+            || was_drawing
+            || self.drawing_gesture;
         // Response::drag_delta reads the context; do not call it under input's lock.
         let drag_delta = response.drag_delta();
         ui.input(|input| {
@@ -406,9 +534,21 @@ impl MapInteraction {
             preview,
             vertex_edit,
             vertex_mode: self.vertices.active(),
-            structural_edit: self.vertices.active() || self.draw_start.is_some(),
+            structural_edit: self.vertices.active()
+                || self.draw_start.is_some()
+                || self.radius_drag.is_some(),
             street_preview,
             street_edit,
+            roundabout_preview,
+            geometry_error,
         }
     }
+}
+
+fn radius_handle(ring: ca_core::streets::RoundaboutDraft) -> [f32; 2] {
+    let angle = ring.start_angle.to_radians();
+    [
+        (ring.center[0] + ring.inner_radius * angle.cos()) as f32,
+        (ring.center[1] + ring.inner_radius * angle.sin()) as f32,
+    ]
 }

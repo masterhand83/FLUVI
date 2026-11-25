@@ -1,4 +1,43 @@
-//! Straight street drafts in cell-sized world units.
+//! Street drafts in cell-sized world units.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct RoundaboutDraft {
+    pub center: [f64; 2],
+    pub inner_radius: f64,
+    pub start_angle: f64,
+}
+
+impl RoundaboutDraft {
+    pub fn new(center: [f64; 2], inner_radius: f64, start_angle: f64) -> Result<Self, StreetError> {
+        let draft = Self {
+            center,
+            inner_radius,
+            start_angle,
+        };
+        if !center
+            .into_iter()
+            .all(|v| v.is_finite() && v.abs() <= 200_000.0)
+            || !inner_radius.is_finite()
+            || inner_radius <= 0.0
+            || !start_angle.is_finite()
+            || start_angle.abs() > 1_000_000.0
+            || !(3..=2500).contains(&draft.cells())
+        {
+            return Err(StreetError("roundaboutDrawing.invalid"));
+        }
+        Ok(draft)
+    }
+
+    pub fn between(center: [f64; 2], end: [f64; 2]) -> Result<Self, StreetError> {
+        let dx = end[0] - center[0];
+        let dy = end[1] - center[1];
+        Self::new(center, dx.hypot(dy), dy.atan2(dx).to_degrees())
+    }
+
+    pub fn cells(&self) -> usize {
+        (std::f64::consts::TAU * (self.inner_radius + 0.5)).round() as usize
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct StreetDraft {
     pub origin: [f64; 2],
@@ -42,12 +81,15 @@ impl StreetDraft {
 #[derive(Clone, Debug, PartialEq)]
 pub enum StreetEdit {
     Draw(StreetDraft),
+    DrawRoundabout(RoundaboutDraft),
     Delete(usize),
     Update(usize, StreetChange),
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum StreetChange {
+    /// Inner radius in cell-sized world units.
+    Radius(f64),
     Dimensions {
         lanes: usize,
         length: usize,
@@ -82,6 +124,9 @@ impl StreetError {
 impl StreetChange {
     pub fn validate(&self, config: &crate::traffic::CalleConfig) -> Result<(), StreetError> {
         let key = match self {
+            Self::Radius(v) if RoundaboutDraft::new([0.0; 2], *v, 0.0).is_err() => {
+                "roundaboutDrawing.invalid"
+            }
             Self::Name(name) if name.trim().is_empty() => "streetInspector.errors.name",
             Self::Dimensions { lanes, .. } if !(1..=10).contains(lanes) => {
                 "streetInspector.errors.lanes"
@@ -109,6 +154,11 @@ impl StreetChange {
         };
         Err(StreetError(key))
     }
+}
+
+/// Nearest sector center, with clockwise tie breaking, as in v1.
+pub(crate) fn angular_index(index: usize, old: usize, new: usize) -> usize {
+    (((index as f64 + 0.5) * new as f64 / old as f64 - 0.5 + new as f64).round() as usize) % new
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

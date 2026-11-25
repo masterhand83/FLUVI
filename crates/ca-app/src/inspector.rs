@@ -67,7 +67,10 @@ impl Field {
             Self::Name => p.name.clone(),
             Self::X => (p.origin[0] * 5.0).to_string(),
             Self::Y => (p.origin[1] * 5.0).to_string(),
-            Self::Angle => p.angle_degrees.to_string(),
+            Self::Angle => p
+                .roundabout
+                .map_or(p.angle_degrees, |r| r.start_angle)
+                .to_string(),
             Self::Length => c.tamano.to_string(),
             Self::Lanes => c.carriles.to_string(),
             Self::Generation => c.generation_probability.to_string(),
@@ -177,6 +180,9 @@ impl StreetInspector {
                             .num_columns(2)
                             .show(ui, |ui| {
                                 for field in Field::ALL {
+                                    if p.roundabout.is_some() && field == Field::Generation {
+                                        continue;
+                                    }
                                     let id = egui::Id::new(("street-field", field));
                                     let index = field as usize;
                                     if !ctx.memory(|m| m.has_focus(id))
@@ -185,6 +191,11 @@ impl StreetInspector {
                                         self.values[index] = field.current(document, street);
                                     }
                                     ui.label(shell.tr(field.key(), &[]));
+                                    if p.roundabout.is_some() && field == Field::Length {
+                                        ui.label(c.tamano.to_string());
+                                        ui.end_row();
+                                        continue;
+                                    }
                                     let response = ui.add(
                                         egui::TextEdit::singleline(&mut self.values[index])
                                             .id(id)
@@ -220,19 +231,30 @@ impl StreetInspector {
                                     }
                                     ui.end_row();
                                 }
+                                if let Some(ring) = p.roundabout {
+                                    ui.label(shell.tr("roundaboutDrawing.radius", &[]));
+                                    ui.label((ring.inner_radius * 5.0).to_string());
+                                    ui.end_row();
+                                }
                                 ui.label(shell.tr("streetInspector.type", &[]));
                                 let mut tipo = c.tipo;
-                                egui::ComboBox::from_id_salt("street-type")
-                                    .selected_text(type_label(shell, tipo))
-                                    .show_ui(ui, |ui| {
-                                        for t in [
-                                            CalleType::Generador,
-                                            CalleType::Conexion,
-                                            CalleType::Devorador,
-                                        ] {
-                                            ui.selectable_value(&mut tipo, t, type_label(shell, t));
-                                        }
-                                    });
+                                ui.add_enabled_ui(p.roundabout.is_none(), |ui| {
+                                    egui::ComboBox::from_id_salt("street-type")
+                                        .selected_text(type_label(shell, tipo))
+                                        .show_ui(ui, |ui| {
+                                            for t in [
+                                                CalleType::Generador,
+                                                CalleType::Conexion,
+                                                CalleType::Devorador,
+                                            ] {
+                                                ui.selectable_value(
+                                                    &mut tipo,
+                                                    t,
+                                                    type_label(shell, t),
+                                                );
+                                            }
+                                        });
+                                });
                                 if tipo != c.tipo {
                                     changes.push(StreetChange::Type(tipo));
                                 }
@@ -240,6 +262,16 @@ impl StreetInspector {
                             });
                         ui.separator();
                         ui.small(shell.tr("streetInspector.dimensionHint", &[]));
+                        let forward = if p.roundabout.is_some() {
+                            "roundaboutDrawing.clockwise"
+                        } else {
+                            "streetInspector.forward"
+                        };
+                        let reverse = if p.roundabout.is_some() {
+                            "roundaboutDrawing.counterclockwise"
+                        } else {
+                            "streetInspector.reverse"
+                        };
                         for lane in 0..c.carriles {
                             ui.push_id(lane, |ui| {
                                 ui.label(shell.tr(
@@ -251,9 +283,9 @@ impl StreetInspector {
                                 egui::ComboBox::from_id_salt("direction")
                                     .selected_text(shell.tr(
                                         if direction == LaneDirection::Forward {
-                                            "streetInspector.forward"
+                                            forward
                                         } else {
-                                            "streetInspector.reverse"
+                                            reverse
                                         },
                                         &[],
                                     ))
@@ -261,16 +293,19 @@ impl StreetInspector {
                                         ui.selectable_value(
                                             &mut direction,
                                             LaneDirection::Forward,
-                                            shell.tr("streetInspector.forward", &[]),
+                                            shell.tr(forward, &[]),
                                         );
                                         ui.selectable_value(
                                             &mut direction,
                                             LaneDirection::Reverse,
-                                            shell.tr("streetInspector.reverse", &[]),
+                                            shell.tr(reverse, &[]),
                                         );
                                     });
                                 if direction != old {
                                     changes.push(StreetChange::Direction { lane, direction });
+                                }
+                                if p.roundabout.is_some() {
+                                    return;
                                 }
                                 let old = c.lane_generation_enabled.get(lane) != Some(&Some(false));
                                 let mut enabled = old;

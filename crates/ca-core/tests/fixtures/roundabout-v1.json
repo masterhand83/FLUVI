@@ -1,0 +1,25 @@
+{
+  "version": "1.0",
+  "nombre": "Roundabout compatibility",
+  "calles": [
+    {
+      "nombre": "Ring",
+      "tamano": 9,
+      "tipo": "conexion",
+      "x": 100,
+      "y": 200,
+      "angulo": 30,
+      "probabilidadGeneracion": 0,
+      "carriles": 2,
+      "laneDirections": [1, -1],
+      "laneGenerationEnabled": [true, true],
+      "probabilidadSaltoDeCarril": 0,
+      "vertices": [],
+      "esCurva": false,
+      "geometryType": "roundabout",
+      "innerRadius": 5,
+      "startAngle": 30
+    }
+  ],
+  "conexiones": []
+}

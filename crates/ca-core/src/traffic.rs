@@ -26,6 +26,7 @@ pub enum VehicleAction {
 /// Lane metadata can be shorter than `carriles`. Missing values use v1 defaults.
 #[derive(Clone, Debug, PartialEq)]
 pub struct CalleConfig {
+    pub periodic: bool,
     pub carriles: usize,
     pub tamano: usize,
     pub tipo: CalleType,
@@ -38,6 +39,7 @@ pub struct CalleConfig {
 impl CalleConfig {
     pub fn new(carriles: usize, tamano: usize, tipo: CalleType) -> Self {
         Self {
+            periodic: false,
             carriles,
             tamano,
             tipo,
@@ -71,6 +73,7 @@ pub struct Calle {
     waiting: Vec<bool>,
     destinations: Vec<usize>,
     reserved: Vec<bool>,
+    outgoing: Vec<bool>,
 }
 
 impl Calle {
@@ -104,6 +107,7 @@ impl Calle {
             waiting: vec![false; size],
             destinations: vec![usize::MAX; size],
             reserved: vec![false; size],
+            outgoing: vec![false; size],
             cells,
         })
     }
@@ -123,6 +127,20 @@ impl Calle {
         config.lane_generation_enabled.resize(lanes, Some(true));
         let mut resized = Self::new(config, vec![0; lanes * length]).expect("validated dimensions");
         for lane in 0..lanes.min(self.config.carriles) {
+            if self.config.periodic {
+                for index in 0..self.config.tamano {
+                    let old = lane * self.config.tamano + index;
+                    let new = lane * length
+                        + crate::streets::angular_index(index, self.config.tamano, length);
+                    if self.cells[old] != 0 {
+                        resized.cells[new] = self.cells[old];
+                    }
+                    if self.waiting[old] {
+                        resized.waiting[new] = true;
+                    }
+                }
+                continue;
+            }
             let count = length.min(self.config.tamano);
             let old = lane * self.config.tamano;
             let new = lane * length;
@@ -176,14 +194,19 @@ impl Calle {
         self.reserved.fill(false);
         for lane in 0..self.config.carriles {
             let direction = self.lane_direction(lane);
-            for index in 1..size - 1 {
+            let margin = usize::from(!self.config.periodic);
+            for index in margin..size - margin {
                 let source = lane * size + index;
                 if !(1..=6).contains(&self.cells[source]) || self.waiting[source] {
                     continue;
                 }
-                let ahead = |offset| match direction {
-                    LaneDirection::Forward => index.checked_add(offset).filter(|&i| i < size),
-                    LaneDirection::Reverse => index.checked_sub(offset),
+                let ahead = |offset| match (self.config.periodic, direction) {
+                    (true, LaneDirection::Forward) => Some((index + offset) % size),
+                    (true, LaneDirection::Reverse) => Some((index + size - offset % size) % size),
+                    (false, LaneDirection::Forward) => {
+                        index.checked_add(offset).filter(|&i| i < size)
+                    }
+                    (false, LaneDirection::Reverse) => index.checked_sub(offset),
                 };
                 let obstructed = (1..=3)
                     .filter_map(ahead)
@@ -243,9 +266,17 @@ impl Calle {
             // V1 holds the arrival and forward neighbors for the street update,
             // but leaves the vacated source free to receive an upstream vehicle.
             self.waiting[target] = true;
-            let next_target = match self.lane_direction(target / size) {
-                LaneDirection::Forward => (target % size + 1 < size).then_some(target + 1),
-                LaneDirection::Reverse => (target % size).checked_sub(1).map(|_| target - 1),
+            let next_target = match (self.config.periodic, self.lane_direction(target / size)) {
+                (true, LaneDirection::Forward) => {
+                    Some(target / size * size + (target % size + 1) % size)
+                }
+                (true, LaneDirection::Reverse) => {
+                    Some(target / size * size + (target % size + size - 1) % size)
+                }
+                (false, LaneDirection::Forward) => (target % size + 1 < size).then_some(target + 1),
+                (false, LaneDirection::Reverse) => {
+                    (target % size).checked_sub(1).map(|_| target - 1)
+                }
             };
             if let Some(next_target) = next_target {
                 self.waiting[next_target] = true;
@@ -281,6 +312,31 @@ impl Calle {
     pub fn update(&mut self) {
         let size = self.config.tamano;
         self.next.copy_from_slice(&self.cells);
+        if self.config.periodic {
+            for lane in 0..self.config.carriles {
+                let start = lane * size;
+                for index in 0..size {
+                    let source = start + index;
+                    let next = match self.lane_direction(lane) {
+                        LaneDirection::Forward => (index + 1) % size,
+                        LaneDirection::Reverse => (index + size - 1) % size,
+                    };
+                    let destination = start + next;
+                    if (1..=6).contains(&self.cells[source])
+                        && !self.outgoing[source]
+                        && !self.waiting[source]
+                        && !self.waiting[destination]
+                        && self.cells[destination] == 0
+                    {
+                        self.next[source] = 0;
+                        self.next[destination] = self.cells[source];
+                    }
+                }
+            }
+            self.waiting.fill(false);
+            std::mem::swap(&mut self.cells, &mut self.next);
+            return;
+        }
         for lane in 0..self.config.carriles {
             if size > 1 {
                 let reverse = self.lane_direction(lane) == LaneDirection::Reverse;
@@ -360,10 +416,17 @@ pub struct TrafficModel {
 
 impl TrafficModel {
     pub(crate) fn resize_street(&mut self, street: usize, lanes: usize, length: usize) {
+        let old = self.streets[street].config.tamano;
+        if self.streets[street].config.periodic {
+            for connection in &mut self.connections {
+                connection.remap_roundabout(street, old, length);
+            }
+        }
         self.streets[street].resize(lanes, length);
         self.connections.retain_mut(|connection| {
             connection.retain_mappings(|m| m.fits_resized_street(street, lanes, length))
         });
+        self.refresh_outgoing();
     }
 
     pub(crate) fn street_config_mut(&mut self, street: usize) -> &mut CalleConfig {
@@ -450,6 +513,7 @@ impl TrafficModel {
             connection.remap_after_deletion(street);
         }
         self.streets.remove(street);
+        self.refresh_outgoing();
         // Waiting marks belong to the old topology.
         for street in &mut self.streets {
             street.waiting.fill(false);

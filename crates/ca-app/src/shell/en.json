@@ -1,4 +1,9 @@
 {
+  "roundaboutDrawing.button": "Draw Roundabout",
+  "roundaboutDrawing.invalid": "Use a positive inner radius that gives 3 to 2500 cells.",
+  "roundaboutDrawing.radius": "Inner radius",
+  "roundaboutDrawing.clockwise": "Clockwise (+1)",
+  "roundaboutDrawing.counterclockwise": "Counterclockwise (−1)",
   "streetInspector.title": "Street inspector",
   "streetInspector.dimensionHint": "Press Enter, leave the field, or Resume to apply length and lanes.",
   "streetInspector.name": "Name",

@@ -137,6 +137,9 @@ impl TrafficScene {
                         arrow: 0,
                     });
                 }
+                if document.layout()[id].roundabout.is_some() {
+                    continue;
+                }
                 for (index, distance) in [(0, -1.5), (centers.len() - 1, 1.5)] {
                     let axis = axes[id][lane][index];
                     tiles.push(TrafficTile {

@@ -1,6 +1,68 @@
 use ca_gpu::TrafficScene;
 
 #[test]
+fn roundabout_display_uses_circular_centers_and_publishes_wrapped_traffic() {
+    use ca_core::{
+        camera::WorldView,
+        cell_index::CellRef,
+        map_json::MapDocument,
+        streets::{StreetChange, StreetEdit},
+    };
+    let map = MapDocument::parse(
+        r#"{"calles":[{
+        "nombre":"Ring","tipo":"conexion","geometryType":"roundabout",
+        "innerRadius":5,"startAngle":-20,"tamano":9,"probabilidadSaltoDeCarril":0
+    }]}"#,
+    )
+    .unwrap();
+    let mut scene = TrafficScene::from_document(&map);
+    scene.toggle_vehicle(
+        CellRef {
+            street: 0,
+            lane: 0,
+            index: 8,
+        },
+        true,
+    );
+    scene.tick();
+    assert_eq!(scene.cells(), [1, 0, 0, 0, 0, 0, 0, 0, 0]);
+    let shift = scene.shift();
+    let center = scene.geometry()[0].centers[0][0];
+    assert!((center[0] - shift[0] - 1.5).abs() < 0.00001);
+    assert!((center[1] - shift[1]).abs() < 0.00001);
+    let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor::from_env_or_default());
+    let adapter = pollster::block_on(instance.request_adapter(&Default::default())).unwrap();
+    let (device, queue) = pollster::block_on(adapter.request_device(&Default::default())).unwrap();
+    let display = ca_gpu::TrafficDisplay::new(&device, &scene, wgpu::TextureFormat::Rgba8Unorm);
+    display.set_view(
+        &queue,
+        WorldView {
+            origin: [shift[0] - 10.0, shift[1] - 7.0],
+            span: [36.0, 14.0],
+        },
+    );
+    let bytes = render_display(&device, &queue, &display);
+    assert!(
+        pixel(&bytes, 11.5, 7.0)[0] > 230,
+        "wrapped vehicle at sector zero"
+    );
+    assert!(
+        pixel(&bytes, 10.0, 7.0)[0] < 10,
+        "roundabout center is empty"
+    );
+    assert!(
+        pixel(&bytes, 11.5, 5.25)[0] < 10,
+        "closed streets have no external endpoint arrows"
+    );
+    assert!(scene.edit_streets(StreetEdit::Update(0, StreetChange::Radius(2.0))));
+    assert_eq!(scene.shift(), shift);
+    assert_eq!(
+        scene.cells(),
+        [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    );
+}
+
+#[test]
 fn topology_edits_keep_live_cells_and_display_coordinates() {
     use ca_core::{
         cell_index::CellRef,

@@ -64,6 +64,7 @@ pub struct StreetPlacement {
     pub angle_degrees: f64,
     pub curved: bool,
     pub vertices: Vec<Vertex>,
+    pub roundabout: Option<crate::streets::RoundaboutDraft>,
 }
 
 impl MapDocument {
@@ -100,6 +101,10 @@ impl MapDocument {
         use crate::streets::StreetEvent;
         self.validate_street_edit(&edit)?;
         match edit {
+            crate::streets::StreetEdit::DrawRoundabout(draft) => {
+                let candidate = self.new_roundabout(draft)?;
+                Ok(StreetEvent::Drawn(self.insert_street(candidate)))
+            }
             crate::streets::StreetEdit::Draw(draft) => Ok(StreetEvent::Drawn(
                 self.draw_street(draft)
                     .map_err(|_| StreetError("streetDrawing.invalid"))?,
@@ -112,6 +117,17 @@ impl MapDocument {
             }
             crate::streets::StreetEdit::Update(street, change) => {
                 match change {
+                    StreetChange::Radius(radius) => {
+                        let mut ring = self.layout[street].roundabout.expect("validated ring");
+                        ring.inner_radius = radius;
+                        self.reconcile_dimensions(
+                            street,
+                            self.model.streets()[street].config().carriles,
+                            ring.cells(),
+                        );
+                        self.layout[street].roundabout = Some(ring);
+                        self.data["calles"][street]["innerRadius"] = json!(radius * 5.0);
+                    }
                     crate::streets::StreetChange::Dimensions { lanes, length } => {
                         self.reconcile_dimensions(street, lanes, length);
                     }
@@ -131,11 +147,18 @@ impl MapDocument {
                         self.layout[street].name = name;
                     }
                     StreetChange::Origin(origin) => {
+                        if let Some(ring) = &mut self.layout[street].roundabout {
+                            ring.center = origin;
+                        }
                         self.layout[street].origin = origin;
                         self.data["calles"][street]["x"] = json!(origin[0] * 5.0);
                         self.data["calles"][street]["y"] = json!(origin[1] * 5.0);
                     }
                     StreetChange::Angle(angle) => {
+                        if let Some(ring) = &mut self.layout[street].roundabout {
+                            ring.start_angle = angle;
+                            self.data["calles"][street]["startAngle"] = json!(angle);
+                        }
                         self.layout[street].angle_degrees = angle;
                         self.data["calles"][street]["angulo"] = json!(angle);
                     }
@@ -171,6 +194,9 @@ impl MapDocument {
         edit: &crate::streets::StreetEdit,
     ) -> Result<(), StreetError> {
         match edit {
+            crate::streets::StreetEdit::DrawRoundabout(draft) => {
+                self.new_roundabout(*draft)?;
+            }
             crate::streets::StreetEdit::Draw(draft) => {
                 self.new_street(*draft)
                     .map_err(|_| StreetError("streetDrawing.invalid"))?;
@@ -188,7 +214,35 @@ impl MapDocument {
                     .ok_or(StreetError("streetDrawing.invalid"))?
                     .config();
                 change.validate(old)?;
-                if let StreetChange::Dimensions { lanes, length } = change {
+                let ring = self.layout[*street].roundabout;
+                match change {
+                    StreetChange::Radius(_) if ring.is_none() => {
+                        return Err(StreetError("roundaboutDrawing.invalid"));
+                    }
+                    StreetChange::Dimensions { length, .. }
+                        if ring.is_some() && *length != old.tamano =>
+                    {
+                        return Err(StreetError("roundaboutDrawing.invalid"));
+                    }
+                    StreetChange::Type(tipo) if ring.is_some() && *tipo != CalleType::Conexion => {
+                        return Err(StreetError("roundaboutDrawing.invalid"));
+                    }
+                    _ => {}
+                }
+                let size = match change {
+                    StreetChange::Radius(radius) => Some((
+                        old.carriles,
+                        crate::streets::RoundaboutDraft::new(
+                            self.layout[*street].origin,
+                            *radius,
+                            0.0,
+                        )?
+                        .cells(),
+                    )),
+                    StreetChange::Dimensions { lanes, length } => Some((*lanes, *length)),
+                    _ => None,
+                };
+                if let Some((lanes, length)) = size {
                     let total: usize = self.model.streets().iter().map(|s| s.cells().len()).sum();
                     if total - old.carriles * old.tamano + lanes * length > 1_000_000 {
                         return Err(StreetError("streetInspector.errors.capacity"));
@@ -201,6 +255,28 @@ impl MapDocument {
 
     /// Central reconciliation boundary. Later ports add parking and scenario state here.
     fn reconcile_dimensions(&mut self, street: usize, lanes: usize, length: usize) {
+        let old = self.model.streets()[street].config();
+        if old.periodic {
+            let old_length = old.tamano;
+            for link in self.data["conexiones"]
+                .as_array_mut()
+                .expect("validated links")
+            {
+                let source = link["origenIdx"].as_u64() == Some(street as u64);
+                let destination = link["destinoIdx"].as_u64() == Some(street as u64);
+                for row in link["detalles"].as_array_mut().expect("validated rows") {
+                    for (key, applies) in [("posOrigen", source), ("posDestino", destination)] {
+                        if applies && let Some(index) = row[key].as_u64() {
+                            row[key] = json!(crate::streets::angular_index(
+                                index as usize,
+                                old_length,
+                                length
+                            ));
+                        }
+                    }
+                }
+            }
+        }
         self.model.resize_street(street, lanes, length);
         let road = &mut self.data["calles"][street];
         road["carriles"] = json!(lanes);
@@ -239,14 +315,10 @@ impl MapDocument {
         if total.saturating_add(draft.cells) > 1_000_000 {
             return Err(MapError);
         }
-        let mut n = 1;
-        while self.layout.iter().any(|p| p.name == format!("Street {n}")) {
-            n += 1;
-        }
         // Reuse the file validator for this street only, never reparse the map.
         Self::parse(
             &json!({"calles": [{
-                "nombre": format!("Street {n}"), "tipo": "conexion",
+                "nombre": self.next_street_name(), "tipo": "conexion",
                 "tamano": draft.cells, "carriles": 1,
                 "x": draft.origin[0] * 5.0, "y": draft.origin[1] * 5.0,
                 "angulo": draft.angle_degrees, "probabilidadSaltoDeCarril": 0.02
@@ -255,8 +327,39 @@ impl MapDocument {
         )
     }
 
+    fn new_roundabout(&self, draft: crate::streets::RoundaboutDraft) -> Result<Self, StreetError> {
+        crate::streets::RoundaboutDraft::new(draft.center, draft.inner_radius, draft.start_angle)?;
+        let total: usize = self.model.streets().iter().map(|s| s.cells().len()).sum();
+        if total.saturating_add(draft.cells()) > 1_000_000 {
+            return Err(StreetError("streetInspector.errors.capacity"));
+        }
+        Self::parse(
+            &json!({"calles":[{
+                "nombre":self.next_street_name(), "tipo":"conexion", "geometryType":"roundabout",
+                "x":draft.center[0] * 5.0, "y":draft.center[1] * 5.0,
+                "innerRadius":draft.inner_radius * 5.0, "startAngle":draft.start_angle,
+                "angulo":draft.start_angle, "tamano":draft.cells(), "carriles":1,
+                "probabilidadSaltoDeCarril":0.02
+            }]})
+            .to_string(),
+        )
+        .map_err(|_| StreetError("roundaboutDrawing.invalid"))
+    }
+
     pub fn draw_street(&mut self, draft: crate::streets::StreetDraft) -> Result<usize, MapError> {
-        let mut candidate = self.new_street(draft)?;
+        let candidate = self.new_street(draft)?;
+        Ok(self.insert_street(candidate))
+    }
+
+    fn next_street_name(&self) -> String {
+        let mut n = 1;
+        while self.layout.iter().any(|p| p.name == format!("Street {n}")) {
+            n += 1;
+        }
+        format!("Street {n}")
+    }
+
+    fn insert_street(&mut self, mut candidate: Self) -> usize {
         let id = self.layout.len();
         self.model.add_street(candidate.model.streets()[0].clone());
         self.layout.push(candidate.layout.remove(0));
@@ -264,7 +367,7 @@ impl MapDocument {
             .as_array_mut()
             .expect("validated roads")
             .push(candidate.data["calles"][0].take());
-        Ok(id)
+        id
     }
 
     pub fn campus() -> Self {
@@ -409,9 +512,29 @@ impl MapDocument {
                 _ => return Err(MapError),
             };
             layout.push(StreetPlacement {
+                roundabout: if road["geometryType"] == "roundabout" {
+                    let draft = crate::streets::RoundaboutDraft::new(
+                        [number(&road["x"])? / 5.0, number(&road["y"])? / 5.0],
+                        number(&road["innerRadius"])? / 5.0,
+                        number(&road["startAngle"])?,
+                    )
+                    .map_err(|_| MapError)?;
+                    if tipo != CalleType::Conexion || draft.cells() != length {
+                        return Err(MapError);
+                    }
+                    Some(draft)
+                } else {
+                    None
+                },
                 name: road["nombre"].as_str().ok_or(MapError)?.to_owned(),
                 origin: [number(&road["x"])? / 5.0, number(&road["y"])? / 5.0],
-                angle_degrees: number(&road["angulo"])?,
+                angle_degrees: number(
+                    &road[if road["geometryType"] == "roundabout" {
+                        "startAngle"
+                    } else {
+                        "angulo"
+                    }],
+                )?,
                 curved: road["esCurva"].as_bool().ok_or(MapError)?,
                 vertices: {
                     let saved = road["vertices"].as_array().ok_or(MapError)?;
@@ -445,6 +568,7 @@ impl MapDocument {
                 },
             });
             let mut config = CalleConfig::new(lanes, length, tipo);
+            config.periodic = road["geometryType"] == "roundabout";
             config.generation_probability = number(&road["probabilidadGeneracion"])?;
             config.lane_change_probability = number(&road["probabilidadSaltoDeCarril"])?;
             // Match v1: only -1 reverses a lane, only false disables generation.

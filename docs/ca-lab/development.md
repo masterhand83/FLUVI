@@ -148,13 +148,35 @@ Focused checks: `cargo test -p ca-core --test street_inspector`,
 `cargo test -p ca-app --test street_inspector --test control_panel`, and
 `cargo test -p ca-gpu --test traffic`.
 
+### Roundabout streets
+
+Use Draw Roundabout, then drag from the center to the inner radius. The live
+preview shows the derived cell count. Invalid geometry shows a translated
+reason. Escape cancels. Select a roundabout and drag its yellow inner-radius
+handle to resize it; the inspector shows read-only radius and cell count.
+Lane directions select clockwise (+1) or counterclockwise (-1) travel.
+
+`RoundaboutDraft` owns validation and the v1 sector-count formula in cell units.
+`StreetPlacement::cells` supplies circular cell centers and tangent axes for
+both input and GPU display. `CalleConfig::periodic` selects a snapshot exclusion
+update with wrapping in each lane. The dimension reconciler maps vehicles,
+waiting cells, and link endpoints to the nearest sector angle when radius changes.
+Roundabout links can use every physical cell, including the seam on reverse lanes.
+The map codec validates and preserves center, radius, start angle, and geometry
+type. Creation and resize use the existing ordered street edit queue and pause
+boundary; Resume ends the active gesture.
+
+Focused checks: `cargo test -p ca-core --test roundabouts`,
+`cargo test -p ca-app --test map_interaction --test street_inspector`, and
+`cargo test -p ca-gpu --test traffic`.
+
 ### Map files and session replacement
 
 Use `ca-core::map_json::MapDocument` to validate map JSON before replacing
 the current session. Read roads before links. Keep unowned JSON fields for
 later ports; omit language preferences. Save map configuration without live
 vehicles, as in v1. Display straight streets and legacy vertex curves; keep
-Bezier and roundabout fields for their later geometry ports.
+Bezier fields for their later geometry port.
 
 Keep each saved v1 probabilistic link as a `Connection::ProbabilityTrial`.
 Test its probability independently at its original place in registration order.

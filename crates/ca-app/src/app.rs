@@ -348,6 +348,11 @@ impl App {
                 draft.origin[i] -= self.map_shift[i] as f64;
             }
         }
+        if let StreetEdit::DrawRoundabout(draft) = &mut edit {
+            for i in 0..2 {
+                draft.center[i] -= self.map_shift[i] as f64;
+            }
+        }
         // Validate before enqueueing. A rejected/full queue must not change the UI document.
         if let Err(error) = self
             .session
@@ -508,6 +513,15 @@ impl eframe::App for App {
                 .show(ui, self.shell.preferences().cell_detection);
             if map.structural_edit {
                 self.edit_pause.begin(&mut self.playing);
+            }
+            if let Some(error) = map.geometry_error {
+                ui.painter().text(
+                    map.rect.left_top() + egui::vec2(12.0, 12.0),
+                    egui::Align2::LEFT_TOP,
+                    ca_app::inspector::geometry_error_message(&self.shell, error),
+                    egui::FontId::proportional(14.0),
+                    egui::Color32::RED,
+                );
             }
             if let Some(edit) = map.street_edit.clone() {
                 self.edit_streets(edit);

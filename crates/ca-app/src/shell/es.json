@@ -1,4 +1,9 @@
 {
+  "roundaboutDrawing.button": "Dibujar glorieta",
+  "roundaboutDrawing.invalid": "Usa un radio interior positivo que dé entre 3 y 2500 celdas.",
+  "roundaboutDrawing.radius": "Radio interior",
+  "roundaboutDrawing.clockwise": "Horario (+1)",
+  "roundaboutDrawing.counterclockwise": "Antihorario (−1)",
   "streetInspector.title": "Inspector de calle",
   "streetInspector.dimensionHint": "Pulse Intro, salga del campo o Reanudar para aplicar longitud y carriles.",
   "streetInspector.name": "Nombre",

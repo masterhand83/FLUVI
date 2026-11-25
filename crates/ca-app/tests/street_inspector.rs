@@ -5,6 +5,34 @@ use ca_core::{
 };
 use eframe::egui::{self, Event, Modifiers, PointerButton};
 
+#[test]
+fn roundabout_cell_count_and_radius_are_read_only() {
+    let document = MapDocument::parse(
+        r#"{"calles":[{
+        "nombre":"Ring","tipo":"conexion","geometryType":"roundabout",
+        "x":100,"y":200,"innerRadius":5,"startAngle":30,"angulo":30,
+        "tamano":9,"carriles":2
+    }]}"#,
+    )
+    .unwrap();
+    let ctx = egui::Context::default();
+    let mut inspector = StreetInspector::default();
+    frame(&mut inspector, &ctx, &document, vec![]);
+    let (output, _) = frame(&mut inspector, &ctx, &document, vec![]);
+    text_rect(&output, "Radio interior");
+    for value in ["9", "5"] {
+        assert!(click_text(&mut inspector, &ctx, &document, value).is_empty());
+        let (_, edits) = frame_all(
+            &mut inspector,
+            &ctx,
+            &document,
+            vec![Event::Text("99".into())],
+        );
+        assert!(edits.is_empty());
+    }
+    assert!(inspector.finish(&ctx, &document).unwrap().is_none());
+}
+
 fn frame(
     inspector: &mut StreetInspector,
     ctx: &egui::Context,

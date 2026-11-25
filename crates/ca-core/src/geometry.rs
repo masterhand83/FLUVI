@@ -27,7 +27,7 @@ pub fn initialize_vertices(length: usize) -> Vec<Vertex> {
 
 impl StreetPlacement {
     pub fn set_vertex_offset(&mut self, vertex: usize, offset: f64) -> bool {
-        if !offset.is_finite() || vertex >= self.vertices.len() {
+        if self.roundabout.is_some() || !offset.is_finite() || vertex >= self.vertices.len() {
             return false;
         }
         let mut offset = offset.clamp(-90.0, 90.0);
@@ -73,6 +73,21 @@ impl StreetPlacement {
     pub fn write_cells(&self, centers: &mut [Vec<[f32; 2]>], axes: &mut [Vec<[f32; 2]>]) {
         let lanes = centers.len();
         let length = centers[0].len();
+        if let Some(ring) = self.roundabout {
+            for lane in 0..lanes {
+                let radius = ring.inner_radius + lane as f64 + 0.5;
+                for index in 0..length {
+                    let angle = ring.start_angle.to_radians()
+                        + std::f64::consts::TAU * (index as f64 + 0.5) / length as f64;
+                    centers[lane][index] = [
+                        (ring.center[0] + radius * angle.cos()) as f32,
+                        (ring.center[1] + radius * angle.sin()) as f32,
+                    ];
+                    axes[lane][index] = [-angle.sin() as f32, angle.cos() as f32];
+                }
+            }
+            return;
+        }
         let mut prefix = self.origin;
         for index in 0..length {
             let rad = -self.angle_at(index).to_radians();

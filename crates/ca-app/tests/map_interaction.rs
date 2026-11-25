@@ -2,6 +2,112 @@ use ca_app::map::MapInteraction;
 use eframe::egui;
 
 #[test]
+fn roundabout_drag_previews_radius_and_commits_without_panning() {
+    let ctx = egui::Context::default();
+    let mut map = MapInteraction::new([30.0, 20.0], &[], vec![]);
+    frame(&ctx, &mut map, vec![], false);
+    map.set_roundabout_drawing(true);
+    let camera = map.camera().unwrap();
+    let a = camera.world_to_screen([10.0, 10.0]);
+    let b = camera.world_to_screen([12.0, 10.0]);
+    let start = egui::pos2(a[0], a[1]);
+    let end = egui::pos2(b[0], b[1]);
+    let button = |pos, pressed| egui::Event::PointerButton {
+        pos,
+        pressed,
+        button: egui::PointerButton::Primary,
+        modifiers: egui::Modifiers::NONE,
+    };
+    frame(
+        &ctx,
+        &mut map,
+        vec![egui::Event::PointerMoved(start), button(start, true)],
+        false,
+    );
+    let before = map.camera().unwrap().view();
+    let invalid = frame(&ctx, &mut map, vec![], false);
+    assert!(invalid.geometry_error.is_some());
+    let preview = frame(&ctx, &mut map, vec![egui::Event::PointerMoved(end)], false);
+    assert_eq!(preview.view, before);
+    assert_eq!(preview.roundabout_preview.unwrap().cells(), 16);
+    assert!((preview.roundabout_preview.unwrap().inner_radius - 2.0).abs() < 0.00001);
+    let committed = frame(&ctx, &mut map, vec![button(end, false)], false);
+    assert!(matches!(
+        committed.street_edit,
+        Some(ca_core::streets::StreetEdit::DrawRoundabout(_))
+    ));
+    assert!(committed.clicked.is_none());
+    assert!(!map.drawing());
+}
+
+#[test]
+fn selected_roundabout_radial_handle_resizes_and_escape_cancels() {
+    use ca_core::{
+        map_json::MapDocument,
+        streets::{RoundaboutDraft, StreetChange, StreetEdit},
+    };
+    let ctx = egui::Context::default();
+    let mut document = MapDocument::empty();
+    document
+        .edit_streets(StreetEdit::DrawRoundabout(
+            RoundaboutDraft::new([10.0, 10.0], 2.0, 0.0).unwrap(),
+        ))
+        .unwrap();
+    let mut map = MapInteraction::new([30.0, 20.0], &document.geometry(), vec!["Ring".into()]);
+    map.configure(&document, [0.0; 2]);
+    map.select(Some(0));
+    frame(&ctx, &mut map, vec![], false);
+    let a = map.camera().unwrap().world_to_screen([12.0, 10.0]);
+    let b = map.camera().unwrap().world_to_screen([14.0, 10.0]);
+    let start = egui::pos2(a[0], a[1]);
+    let end = egui::pos2(b[0], b[1]);
+    let button = |pos, pressed| egui::Event::PointerButton {
+        pos,
+        pressed,
+        button: egui::PointerButton::Primary,
+        modifiers: egui::Modifiers::NONE,
+    };
+    let before = map.camera().unwrap().view();
+    for cancel in [true, false] {
+        let started = frame(
+            &ctx,
+            &mut map,
+            vec![egui::Event::PointerMoved(start), button(start, true)],
+            false,
+        );
+        assert!(started.structural_edit);
+        let preview = frame(&ctx, &mut map, vec![egui::Event::PointerMoved(end)], false);
+        assert_eq!(preview.view, before);
+        assert!((preview.roundabout_preview.unwrap().inner_radius - 4.0).abs() < 0.00001);
+        if cancel {
+            frame(
+                &ctx,
+                &mut map,
+                vec![egui::Event::Key {
+                    key: egui::Key::Escape,
+                    physical_key: None,
+                    pressed: true,
+                    repeat: false,
+                    modifiers: egui::Modifiers::NONE,
+                }],
+                false,
+            );
+        }
+        let released = frame(&ctx, &mut map, vec![button(end, false)], false);
+        if cancel {
+            assert!(released.street_edit.is_none());
+        } else {
+            let Some(StreetEdit::Update(0, StreetChange::Radius(radius))) = released.street_edit
+            else {
+                panic!("radius edit");
+            };
+            assert!((radius - 4.0).abs() < 0.00001);
+        }
+        assert!(released.clicked.is_none());
+    }
+}
+
+#[test]
 fn drawing_previews_quantized_cells_cancels_and_commits_without_panning() {
     let ctx = egui::Context::default();
     let mut map = MapInteraction::new([30.0, 20.0], &[], vec![]);

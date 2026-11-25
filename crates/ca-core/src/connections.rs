@@ -70,6 +70,37 @@ enum Registration {
 }
 
 impl Connection {
+    // Probability exits hold only after an occupied-destination trial has set
+    // waiting. Disabled merge rows and inert self-links do not hold traffic.
+    fn holding_exits(&self) -> impl Iterator<Item = &Mapping> {
+        let (single, merge): (Option<&Mapping>, &[MergeRow]) = match self {
+            Self::Lineal(row) => (Some(row), &[]),
+            Self::Incorporacion(rows) => (None, rows),
+            _ => (None, &[]),
+        };
+        single
+            .into_iter()
+            .chain(merge.iter().filter(|r| r.enabled).map(|r| &r.mapping))
+    }
+
+    pub(crate) fn remap_roundabout(&mut self, street: usize, old: usize, new: usize) {
+        let remap = |m: &mut Mapping| {
+            if m.source_street == street && m.source_cell >= 0 {
+                m.source_cell =
+                    crate::streets::angular_index(m.source_cell as usize, old, new) as isize;
+            }
+            if m.destination_street == street {
+                m.destination_cell = crate::streets::angular_index(m.destination_cell, old, new);
+            }
+        };
+        match self {
+            Self::Lineal(m) => remap(m),
+            Self::ProbabilityTrial(r) => remap(&mut r.mapping),
+            Self::Incorporacion(rows) => rows.iter_mut().for_each(|r| remap(&mut r.mapping)),
+            Self::Probabilistica(rows) => rows.iter_mut().for_each(|r| remap(&mut r.mapping)),
+        }
+    }
+
     pub(crate) fn retain_mappings(&mut self, keep: impl Fn(&Mapping) -> bool) -> bool {
         match self {
             Self::Lineal(m) => keep(m),
@@ -188,9 +219,11 @@ impl TrafficModel {
         }
         if check_direction
             && ((source.lane_direction(row.source_lane) == LaneDirection::Reverse
+                && !source.config.periodic
                 && cell == source.config.tamano - 1
                 && source.config.tamano > 1)
                 || (destination.lane_direction(row.destination_lane) == LaneDirection::Reverse
+                    && !destination.config.periodic
                     && row.destination_cell == 0
                     && destination.config.tamano > 1))
         {
@@ -275,8 +308,35 @@ impl TrafficModel {
                 return Err(ConnectionError::Duplicate);
             }
         }
+        for row in connection.holding_exits() {
+            let source = &mut self.streets[row.source_street];
+            let index = row.source_index(source);
+            if row.source_street != row.destination_street
+                || index != row.destination_lane * source.config.tamano + row.destination_cell
+            {
+                source.outgoing[index] = true;
+            }
+        }
         self.connections.push(connection);
         Ok(())
+    }
+
+    /// Rebuild only after topology changes, never during traffic updates.
+    pub(crate) fn refresh_outgoing(&mut self) {
+        for street in &mut self.streets {
+            street.outgoing.fill(false);
+        }
+        for connection in &self.connections {
+            for row in connection.holding_exits() {
+                let source = &mut self.streets[row.source_street];
+                let index = row.source_index(source);
+                if row.source_street != row.destination_street
+                    || index != row.destination_lane * source.config.tamano + row.destination_cell
+                {
+                    source.outgoing[index] = true;
+                }
+            }
+        }
     }
 
     /// Endpoints in the supplied geometry's world frame, in registration order.
