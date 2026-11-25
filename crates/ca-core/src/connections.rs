@@ -47,6 +47,9 @@ pub struct WeightedRow {
 pub enum Connection {
     Lineal(Mapping),
     Incorporacion(Vec<MergeRow>),
+    /// A v1 saved link: one independent probability trial at this point in
+    /// registration order, not one destination in a weighted split.
+    ProbabilityTrial(WeightedRow),
     /// All rows share a source. Finite weights in 0..=1 must sum to one.
     Probabilistica(Vec<WeightedRow>),
 }
@@ -56,6 +59,7 @@ impl Connection {
     pub fn mappings(&self) -> impl Iterator<Item = &Mapping> {
         let (single, merge, split): (Option<&Mapping>, &[MergeRow], &[WeightedRow]) = match self {
             Self::Lineal(row) => (Some(row), &[], &[]),
+            Self::ProbabilityTrial(row) => (Some(&row.mapping), &[], &[]),
             Self::Incorporacion(rows) => (None, rows, &[]),
             Self::Probabilistica(rows) => (None, &[], rows),
         };
@@ -80,6 +84,8 @@ pub enum ConnectionError {
     Weights,
     #[error("split rows must share a source")]
     SplitSource,
+    #[error("probability must be finite and in 0..=1")]
+    Probability,
 }
 
 impl ConnectionError {
@@ -92,6 +98,7 @@ impl ConnectionError {
             Self::NoActiveRows => "connections.noActiveRows",
             Self::Weights => "connections.weights",
             Self::SplitSource => "connections.splitSource",
+            Self::Probability => "connections.probability",
         }
     }
 }
@@ -136,6 +143,11 @@ impl TrafficModel {
 
     pub fn add_connection(&mut self, connection: Connection) -> Result<(), ConnectionError> {
         match &connection {
+            Connection::ProbabilityTrial(row)
+                if !row.weight.is_finite() || !(0.0..=1.0).contains(&row.weight) =>
+            {
+                return Err(ConnectionError::Probability);
+            }
             Connection::Incorporacion(rows) if !rows.iter().any(|r| r.enabled) => {
                 return Err(ConnectionError::NoActiveRows);
             }
@@ -188,6 +200,14 @@ impl TrafficModel {
         for connection in &self.connections {
             match connection {
                 Connection::Lineal(row) => transfer(&mut self.streets, row),
+                Connection::ProbabilityTrial(row) => {
+                    let source = &self.streets[row.mapping.source_street];
+                    if (1..=6).contains(&source.cells[row.mapping.source_index(source)])
+                        && crate::random::unit(&mut self.random_state) < row.weight
+                    {
+                        transfer(&mut self.streets, &row.mapping);
+                    }
+                }
                 Connection::Incorporacion(rows) => {
                     for row in rows.iter().filter(|r| r.enabled) {
                         transfer(&mut self.streets, &row.mapping);

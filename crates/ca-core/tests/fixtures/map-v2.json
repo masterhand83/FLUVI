@@ -71,6 +71,34 @@
       ],
       "origenIdx": 1,
       "tipo": "INCORPORACION"
+    },
+    {
+      "destinoIdx": 1,
+      "detalles": [
+        {
+          "carrilDestino": 0,
+          "carrilOrigen": 0,
+          "posDestino": 2,
+          "posOrigen": 2,
+          "probabilidad": 0.5
+        }
+      ],
+      "origenIdx": 0,
+      "tipo": "PROBABILISTICA"
+    },
+    {
+      "destinoIdx": 1,
+      "detalles": [
+        {
+          "carrilDestino": 0,
+          "carrilOrigen": 0,
+          "posDestino": 3,
+          "posOrigen": 2,
+          "probabilidad": 0.5
+        }
+      ],
+      "origenIdx": 0,
+      "tipo": "PROBABILISTICA"
     }
   ],
   "configuracionTiempo": {
@@ -267,7 +295,7 @@
     "usarPerfiles": true
   },
   "edificios": [],
-  "fecha": "2026-11-25T04:55:13.366Z",
+  "fecha": "2026-11-25T05:09:17.312Z",
   "imagenReferencia": null,
   "lluviaAleatoria": {
     "probabilidad": 10

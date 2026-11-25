@@ -15,7 +15,7 @@ fn real_v1_fixture_preserves_streets_lanes_and_links() {
         map.model().streets()[1].lane_direction(1),
         LaneDirection::Reverse
     );
-    assert_eq!(map.model().connections().len(), 2);
+    assert_eq!(map.model().connections().len(), 4);
     let saved = map.to_json();
     let reloaded = MapDocument::parse(&saved).unwrap();
     assert_eq!(reloaded.to_json(), saved);
@@ -27,30 +27,51 @@ fn real_v1_fixture_preserves_streets_lanes_and_links() {
 }
 
 #[test]
-fn split_destinations_in_separate_v1_links_keep_registration_order() {
+fn v1_probability_trials_keep_their_individual_weights_and_registration_order() {
     let mut input: serde_json::Value =
         serde_json::from_str(include_str!("fixtures/map-v1.json")).unwrap();
     input["conexiones"] = json!([
         {"origenIdx": 0, "destinoIdx": 1, "tipo": "PROBABILISTICA", "detalles": [
-            {"carrilOrigen": 0, "carrilDestino": 0, "posOrigen": -1, "posDestino": 0, "probabilidad": 0.25}
+            {"carrilOrigen": 0, "carrilDestino": 0, "posOrigen": -1, "posDestino": 0, "probabilidad": 0}
         ]},
-        {"origenIdx": 1, "destinoIdx": 0, "tipo": "LINEAL", "detalles": [
-            {"carrilOrigen": 1, "carrilDestino": 1, "posOrigen": 0, "posDestino": 5}
+        {"origenIdx": 0, "destinoIdx": 1, "tipo": "LINEAL", "detalles": [
+            {"carrilOrigen": 0, "carrilDestino": 0, "posOrigen": -1, "posDestino": 1}
         ]},
-        {"origenIdx": 0, "destinoIdx": 0, "tipo": "PROBABILISTICA", "detalles": [
-            {"carrilOrigen": 0, "carrilDestino": 0, "posOrigen": 5, "posDestino": 0, "probabilidad": 0.75}
+        {"origenIdx": 0, "destinoIdx": 1, "tipo": "PROBABILISTICA", "detalles": [
+            {"carrilOrigen": 0, "carrilDestino": 0, "posOrigen": 5, "posDestino": 2, "probabilidad": 1}
         ]}
     ]);
     let map = MapDocument::parse(&input.to_string()).unwrap();
-    use ca_core::connections::Connection;
-    assert!(
-        matches!(&map.model().connections()[0], Connection::Probabilistica(rows)
-        if rows.len() == 2 && rows[0].weight == 0.25 && rows[1].weight == 0.75)
+    assert_eq!(map.model().connections().len(), 3);
+    let mut model = map.model().clone();
+    assert!(model.toggle_vehicle(ca_core::cell_index::CellRef {
+        street: 0,
+        lane: 0,
+        index: 5
+    }));
+    model.transfer_connections();
+    // V1: the first trial (0) declines, the middle link transfers, and the
+    // last trial (1) sees no vehicle. Grouping trials changes this outcome.
+    assert_eq!(model.streets()[1].cells()[..3], [0, 1, 0]);
+    assert_eq!(
+        MapDocument::parse(&map.to_json())
+            .unwrap()
+            .model()
+            .connections(),
+        map.model().connections()
     );
-    assert!(matches!(
-        &map.model().connections()[1],
-        Connection::Lineal(_)
-    ));
+}
+
+#[test]
+fn a_single_v1_probability_trial_does_not_need_split_weights() {
+    let mut input: serde_json::Value =
+        serde_json::from_str(include_str!("fixtures/map-v1.json")).unwrap();
+    input["conexiones"] = json!([{
+        "origenIdx": 0, "destinoIdx": 1, "tipo": "PROBABILISTICA",
+        "detalles": [{"carrilOrigen": 0, "carrilDestino": 0, "probabilidad": 0.5}]
+    }]);
+    let map = MapDocument::parse(&input.to_string()).unwrap();
+    assert_eq!(map.model().connections().len(), 1);
 }
 
 #[test]

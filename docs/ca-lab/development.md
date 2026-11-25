@@ -100,6 +100,11 @@ later ports; omit language preferences. Save map configuration without live
 vehicles, as in v1. For this ticket, display straight streets; keep saved curve
 fields for the later geometry ports.
 
+Keep each saved v1 probabilistic link as a `Connection::ProbabilityTrial`.
+Test its probability independently at its original place in registration order.
+Use `Connection::Probabilistica` only for v2 weighted splits; do not group
+imported v1 links into that type.
+
 Register each feature's reset in `ca-app::map_session::MapSession`.
 Use the `Pause`, `Tools`, and `Features` phases in that order. Keep session
 display settings outside feature resets. When adding load support, restore

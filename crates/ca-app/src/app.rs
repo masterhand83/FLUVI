@@ -177,9 +177,7 @@ impl App {
     fn controls(&mut self, ctx: &egui::Context) {
         egui::TopBottomPanel::top("controls").show(ctx, |ui| {
             ui.horizontal_wrapped(|ui| {
-                let name = self.session.as_ref().expect("session").document().data()["nombre"]
-                    .as_str()
-                    .unwrap_or_default();
+                let name = self.session.as_ref().expect("session").document().name();
                 ui.label(if name.is_empty() {
                     self.shell.tr("mapFiles.untitled", &[])
                 } else {

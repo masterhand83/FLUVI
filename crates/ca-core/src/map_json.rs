@@ -19,6 +19,15 @@ impl MapError {
 pub struct MapDocument {
     data: Value,
     model: TrafficModel,
+    layout: Vec<StreetPlacement>,
+}
+
+/// Display metadata in cell-sized world units, in the model's street order.
+#[derive(Clone, Debug)]
+pub struct StreetPlacement {
+    pub name: String,
+    pub origin: [f32; 2],
+    pub angle_radians: f32,
 }
 
 impl MapDocument {
@@ -41,7 +50,10 @@ impl MapDocument {
             "detalles": [{"carrilOrigen": m.source_lane, "carrilDestino": m.destination_lane,
                 "posOrigen": m.source_cell, "posDestino": m.destination_cell, "probabilidad": 1.0}]
         })).collect();
-        Self::parse(&json!({"version": "1.0", "nombre": "Demo", "calles": roads, "conexiones": links, "edificios": []}).to_string()).expect("demo map")
+        let mut document = Self::parse(&json!({"version": "1.0", "nombre": "Demo", "calles": roads, "conexiones": links, "edificios": []}).to_string()).expect("demo map");
+        // The demo alone starts with seeded traffic. Map files omit vehicles.
+        document.model = model;
+        document
     }
 
     pub fn empty() -> Self {
@@ -66,6 +78,7 @@ impl MapDocument {
             .and_then(Value::as_array_mut)
             .ok_or(MapError)?;
         let mut streets = Vec::with_capacity(roads.len());
+        let mut layout = Vec::with_capacity(roads.len());
         let mut total_cells = 0usize;
         for road in roads {
             let object = road.as_object_mut().ok_or(MapError)?;
@@ -111,6 +124,14 @@ impl MapDocument {
                 "devorador" => CalleType::Devorador,
                 _ => return Err(MapError),
             };
+            layout.push(StreetPlacement {
+                name: road["nombre"].as_str().ok_or(MapError)?.to_owned(),
+                origin: [
+                    (number(&road["x"])? / 5.0) as f32,
+                    (number(&road["y"])? / 5.0) as f32,
+                ],
+                angle_radians: number(&road["angulo"])?.to_radians() as f32,
+            });
             let mut config = CalleConfig::new(lanes, length, tipo);
             config.generation_probability = number(&road["probabilidadGeneracion"])?;
             config.lane_change_probability = number(&road["probabilidadSaltoDeCarril"])?;
@@ -184,27 +205,10 @@ impl MapDocument {
                         enabled: detail["enabled"] != false,
                     }),
                     "PROBABILISTICA" => {
-                        let source_street = model.streets().get(source).ok_or(MapError)?;
-                        let cell = mapping
-                            .effective_source_cell(source_street)
-                            .ok_or(MapError)?;
-                        let group = connections.iter().position(|connection| {
-                            let Connection::Probabilistica(rows) = connection else {
-                                return false;
-                            };
-                            let first = rows[0].mapping;
-                            first.source_street == source
-                                && first.source_lane == mapping.source_lane
-                                && first.effective_source_cell(source_street) == Some(cell)
-                        });
-                        let row = WeightedRow { mapping, weight };
-                        if let Some(index) = group {
-                            if let Connection::Probabilistica(rows) = &mut connections[index] {
-                                rows.push(row);
-                            }
-                        } else {
-                            connections.push(Connection::Probabilistica(vec![row]));
-                        }
+                        connections.push(Connection::ProbabilityTrial(WeightedRow {
+                            mapping,
+                            weight,
+                        }))
                     }
                     _ => return Err(MapError),
                 }
@@ -216,14 +220,21 @@ impl MapDocument {
         for connection in connections {
             model.add_connection(connection).map_err(|_| MapError)?;
         }
-        Ok(Self { data, model })
+        Ok(Self {
+            data,
+            model,
+            layout,
+        })
     }
 
     pub fn model(&self) -> &TrafficModel {
         &self.model
     }
-    pub fn data(&self) -> &Value {
-        &self.data
+    pub fn name(&self) -> &str {
+        self.data["nombre"].as_str().expect("validated name")
+    }
+    pub fn layout(&self) -> &[StreetPlacement] {
+        &self.layout
     }
     pub fn to_json(&self) -> String {
         serde_json::to_string_pretty(&self.data).expect("validated map")

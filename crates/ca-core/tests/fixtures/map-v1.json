@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "nombre": "Compatibility",
-  "fecha": "2026-11-25T04:55:13.366Z",
+  "fecha": "2026-11-25T05:09:17.312Z",
   "calles": [
     {
       "nombre": "Entrada",
@@ -72,6 +72,34 @@
           "posOrigen": 0,
           "posDestino": 5,
           "probabilidad": 1
+        }
+      ]
+    },
+    {
+      "origenIdx": 0,
+      "destinoIdx": 1,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": 2,
+          "posDestino": 2,
+          "probabilidad": 0.5
+        }
+      ]
+    },
+    {
+      "origenIdx": 0,
+      "destinoIdx": 1,
+      "tipo": "PROBABILISTICA",
+      "detalles": [
+        {
+          "carrilOrigen": 0,
+          "carrilDestino": 0,
+          "posOrigen": 2,
+          "posDestino": 3,
+          "probabilidad": 0.5
         }
       ]
     }

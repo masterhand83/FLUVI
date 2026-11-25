@@ -31,67 +31,25 @@ pub struct TrafficScene {
 
 impl TrafficScene {
     pub fn demo() -> Self {
-        let model = TrafficModel::demo();
-        let mut lanes = Vec::with_capacity(6);
-        let mut offset = 0;
-        for (street_index, street) in model.streets().iter().enumerate() {
-            for lane in 0..street.config().carriles {
-                lanes.push(TrafficLane {
-                    origin: [2.0, 2.0 + street_index as f32 * 4.0 + lane as f32],
-                    offset,
-                    length: street.config().tamano as u32,
-                    direction: u32::from(street.lane_direction(lane) == LaneDirection::Forward),
-                    street_type: match street.config().tipo {
-                        CalleType::Generador => 0,
-                        CalleType::Conexion => 1,
-                        CalleType::Devorador => 2,
-                    },
-                    axis: [1.0, 0.0],
-                });
-                offset += street.config().tamano as u32;
-            }
-        }
-        let mut scene = Self {
-            model,
-            lanes,
-            cells: vec![0; offset as usize],
-            edited: false,
-            names: ["Generador", "Conexion", "Devorador"]
-                .map(String::from)
-                .to_vec(),
-            extent: [36, 14],
-        };
-        scene.pack();
-        scene
+        Self::from_document(&ca_core::map_json::MapDocument::demo())
     }
 
-    /// v1 world positions use five units per cell. Only the display is shifted
-    /// to positive coordinates; the saved document keeps its original positions.
+    /// Shift only the display to positive coordinates. The document retains
+    /// the map's original world positions.
     pub fn from_document(document: &ca_core::map_json::MapDocument) -> Self {
         let model = document.model().clone();
         let mut lanes = Vec::new();
         let mut names = Vec::new();
         let mut offset = 0;
-        let mut minimum = [0.0f32; 2];
-        let mut maximum = [1.0f32; 2];
-        for (street, road) in model.streets().iter().zip(
-            document.data()["calles"]
-                .as_array()
-                .expect("validated roads"),
-        ) {
-            names.push(road["nombre"].as_str().expect("validated name").to_owned());
-            let angle = road["angulo"]
-                .as_f64()
-                .expect("validated angle")
-                .to_radians() as f32;
-            let axis = [angle.cos(), angle.sin()];
+        let mut minimum = [f32::INFINITY; 2];
+        let mut maximum = [f32::NEG_INFINITY; 2];
+        for (street, placement) in model.streets().iter().zip(document.layout()) {
+            names.push(placement.name.clone());
+            let axis = [placement.angle_radians.cos(), placement.angle_radians.sin()];
             let normal = [-axis[1], axis[0]];
-            let origin = [
-                road["x"].as_f64().expect("validated x") as f32 / 5.0,
-                road["y"].as_f64().expect("validated y") as f32 / 5.0,
-            ];
             for lane in 0..street.config().carriles {
-                let position = std::array::from_fn(|i| origin[i] + normal[i] * lane as f32);
+                let position =
+                    std::array::from_fn(|i| placement.origin[i] + normal[i] * lane as f32);
                 for x in [0.0, street.config().tamano as f32] {
                     for y in [0.0, 1.0] {
                         for i in 0..2 {
@@ -115,6 +73,10 @@ impl TrafficScene {
                 });
                 offset += street.config().tamano as u32;
             }
+        }
+        if lanes.is_empty() {
+            minimum = [0.0; 2];
+            maximum = [1.0; 2];
         }
         for lane in &mut lanes {
             for (i, min) in minimum.iter().enumerate() {

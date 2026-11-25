@@ -88,6 +88,7 @@ fn connection_validation_reasons_have_translations_in_both_languages() {
             ConnectionError::NoActiveRows,
             ConnectionError::Weights,
             ConnectionError::SplitSource,
+            ConnectionError::Probability,
         ] {
             let key = reason.translation_key();
             let message = translator.tr(key, &[]);
