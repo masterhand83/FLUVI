@@ -27,7 +27,11 @@ pub fn initialize_vertices(length: usize) -> Vec<Vertex> {
 
 impl StreetPlacement {
     pub fn set_vertex_offset(&mut self, vertex: usize, offset: f64) -> bool {
-        if self.roundabout.is_some() || !offset.is_finite() || vertex >= self.vertices.len() {
+        if self.bezier.is_some()
+            || self.roundabout.is_some()
+            || !offset.is_finite()
+            || vertex >= self.vertices.len()
+        {
             return false;
         }
         let mut offset = offset.clamp(-90.0, 90.0);
@@ -73,6 +77,14 @@ impl StreetPlacement {
     pub fn write_cells(&self, centers: &mut [Vec<[f32; 2]>], axes: &mut [Vec<[f32; 2]>]) {
         let lanes = centers.len();
         let length = centers[0].len();
+        if let Some(curve) = &self.bezier {
+            for lane in 0..lanes {
+                for index in 0..length {
+                    (centers[lane][index], axes[lane][index]) = curve.cell(lane, lanes, index);
+                }
+            }
+            return;
+        }
         if let Some(ring) = self.roundabout {
             for lane in 0..lanes {
                 let radius = ring.inner_radius + lane as f64 + 0.5;

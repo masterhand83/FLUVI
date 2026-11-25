@@ -88,6 +88,7 @@ pub enum StreetEdit {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum StreetChange {
+    Bezier(crate::bezier::BezierChange),
     /// Inner radius in cell-sized world units.
     Radius(f64),
     Dimensions {

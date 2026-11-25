@@ -2,6 +2,90 @@ use ca_app::map::MapInteraction;
 use eframe::egui;
 
 #[test]
+fn bezier_controls_drag_without_panning_and_delete_keeps_the_street() {
+    use ca_core::{
+        bezier::{BezierChange, CurvePoint},
+        map_json::MapDocument,
+        streets::{StreetChange, StreetEdit},
+    };
+    let mut document = MapDocument::parse(
+        r#"{"calles":[{
+        "nombre":"Curve","tipo":"conexion","tamano":10,"x":25,"y":25
+    }]}"#,
+    )
+    .unwrap();
+    document
+        .edit_streets(StreetEdit::Update(
+            0,
+            StreetChange::Bezier(BezierChange::Convert),
+        ))
+        .unwrap();
+    let ctx = egui::Context::default();
+    let mut map = MapInteraction::new([30.0, 20.0], &document.geometry(), vec!["Curve".into()]);
+    map.configure(&document, [0.0; 2]);
+    map.select(Some(0));
+    frame(&ctx, &mut map, vec![], false);
+    let screen = |p: [f32; 2]| {
+        let p = map.camera().unwrap().world_to_screen(p);
+        egui::pos2(p[0], p[1])
+    };
+    let start = screen([10.0, 5.0]);
+    let end = screen([10.0, 8.0]);
+    let button = |pos, pressed| egui::Event::PointerButton {
+        pos,
+        pressed,
+        button: egui::PointerButton::Primary,
+        modifiers: egui::Modifiers::NONE,
+    };
+    let before = map.camera().unwrap().view();
+    let pressed = frame(
+        &ctx,
+        &mut map,
+        vec![egui::Event::PointerMoved(start), button(start, true)],
+        false,
+    );
+    assert!(pressed.structural_edit);
+    frame(&ctx, &mut map, vec![egui::Event::PointerMoved(end)], false);
+    let released = frame(&ctx, &mut map, vec![button(end, false)], false);
+    assert_eq!(released.view, before);
+    assert!(released.clicked.is_none());
+    let Some(StreetEdit::Update(
+        0,
+        StreetChange::Bezier(BezierChange::Move(CurvePoint::Control(0, 0), point)),
+    )) = released.street_edit
+    else {
+        panic!("expected control edit");
+    };
+    assert!((point[0] - 10.0).abs() < 0.00001 && (point[1] - 8.0).abs() < 0.00001);
+    let deleted = frame(
+        &ctx,
+        &mut map,
+        vec![egui::Event::Key {
+            key: egui::Key::Delete,
+            physical_key: None,
+            pressed: true,
+            repeat: false,
+            modifiers: egui::Modifiers::NONE,
+        }],
+        false,
+    );
+    assert_eq!(
+        deleted.street_edit,
+        Some(StreetEdit::Update(
+            0,
+            StreetChange::Bezier(BezierChange::Remove(CurvePoint::Control(0, 0)))
+        ))
+    );
+    document.edit_streets(deleted.street_edit.unwrap()).unwrap();
+    assert_eq!(document.layout().len(), 1);
+    assert!(
+        document.layout()[0].bezier.as_ref().unwrap().sections()[0]
+            .controls
+            .is_empty()
+    );
+}
+
+#[test]
 fn roundabout_drag_previews_radius_and_commits_without_panning() {
     let ctx = egui::Context::default();
     let mut map = MapInteraction::new([30.0, 20.0], &[], vec![]);

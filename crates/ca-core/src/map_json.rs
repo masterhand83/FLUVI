@@ -59,6 +59,7 @@ impl MapGeometry {
 /// Display metadata in cell-sized world units, in the model's street order.
 #[derive(Clone, Debug)]
 pub struct StreetPlacement {
+    pub bezier: Option<crate::bezier::BezierCurve>,
     pub name: String,
     pub origin: [f64; 2],
     pub angle_degrees: f64,
@@ -99,7 +100,7 @@ impl MapDocument {
         edit: crate::streets::StreetEdit,
     ) -> Result<crate::streets::StreetEvent, StreetError> {
         use crate::streets::StreetEvent;
-        self.validate_street_edit(&edit)?;
+        let curve = self.prepare_street_edit(&edit)?;
         match edit {
             crate::streets::StreetEdit::DrawRoundabout(draft) => {
                 let candidate = self.new_roundabout(draft)?;
@@ -117,6 +118,7 @@ impl MapDocument {
             }
             crate::streets::StreetEdit::Update(street, change) => {
                 match change {
+                    StreetChange::Bezier(_) => {}
                     StreetChange::Radius(radius) => {
                         let mut ring = self.layout[street].roundabout.expect("validated ring");
                         ring.inner_radius = radius;
@@ -184,6 +186,15 @@ impl MapDocument {
                         self.data["calles"][street]["laneGenerationEnabled"][lane] = json!(enabled);
                     }
                 }
+                if let Some(curve) = curve {
+                    let lanes = self.model.streets()[street].config().carriles;
+                    self.reconcile_dimensions(street, lanes, curve.cell_count());
+                    curve.write_json(&mut self.data["calles"][street]);
+                    self.layout[street].origin = curve.start();
+                    self.layout[street].curved = true;
+                    self.layout[street].vertices.clear();
+                    self.layout[street].bezier = Some(curve);
+                }
                 Ok(StreetEvent::Updated(street))
             }
         }
@@ -193,6 +204,14 @@ impl MapDocument {
         &self,
         edit: &crate::streets::StreetEdit,
     ) -> Result<(), StreetError> {
+        self.prepare_street_edit(edit).map(|_| ())
+    }
+
+    fn prepare_street_edit(
+        &self,
+        edit: &crate::streets::StreetEdit,
+    ) -> Result<Option<crate::bezier::BezierCurve>, StreetError> {
+        let mut prepared_curve = None;
         match edit {
             crate::streets::StreetEdit::DrawRoundabout(draft) => {
                 self.new_roundabout(*draft)?;
@@ -214,6 +233,18 @@ impl MapDocument {
                     .ok_or(StreetError("streetDrawing.invalid"))?
                     .config();
                 change.validate(old)?;
+                if let Some(curve) = self.curve_candidate(*street, change)? {
+                    let lanes = match change {
+                        StreetChange::Dimensions { lanes, .. } => *lanes,
+                        _ => old.carriles,
+                    };
+                    let cells = curve.validate(lanes)?;
+                    let total: usize = self.model.streets().iter().map(|s| s.cells().len()).sum();
+                    if total - old.carriles * old.tamano + lanes * cells > 1_000_000 {
+                        return Err(StreetError("streetInspector.errors.capacity"));
+                    }
+                    prepared_curve = Some(curve);
+                }
                 let ring = self.layout[*street].roundabout;
                 match change {
                     StreetChange::Radius(_) if ring.is_none() => {
@@ -250,7 +281,62 @@ impl MapDocument {
                 }
             }
         }
-        Ok(())
+        Ok(prepared_curve)
+    }
+
+    fn curve_candidate(
+        &self,
+        street: usize,
+        change: &StreetChange,
+    ) -> Result<Option<crate::bezier::BezierCurve>, StreetError> {
+        use crate::bezier::{BezierChange, BezierCurve, Section};
+        let placement = &self.layout[street];
+        let config = self.model.streets()[street].config();
+        let invalid = StreetError("bezier.invalidControls");
+        if let StreetChange::Bezier(BezierChange::Convert) = change {
+            if placement.bezier.is_some() || placement.roundabout.is_some() || placement.curved {
+                return Err(invalid);
+            }
+            let angle = -placement.angle_degrees.to_radians();
+            let end = [
+                placement.origin[0] + angle.cos() * config.tamano as f64,
+                placement.origin[1] + angle.sin() * config.tamano as f64,
+            ];
+            return BezierCurve::new(
+                placement.origin,
+                vec![Section {
+                    controls: vec![std::array::from_fn(|i| {
+                        (placement.origin[i] + end[i]) / 2.0
+                    })],
+                    end,
+                }],
+            )
+            .map(Some);
+        }
+        let Some(curve) = &placement.bezier else {
+            return if matches!(change, StreetChange::Bezier(_)) {
+                Err(invalid)
+            } else {
+                Ok(None)
+            };
+        };
+        match change {
+            StreetChange::Bezier(edit) => curve.changed(edit).map(Some),
+            StreetChange::Origin(origin) => curve.transformed(*origin, 0.0).map(Some),
+            StreetChange::Angle(angle) => curve
+                .transformed(
+                    placement.origin,
+                    -(angle - placement.angle_degrees).to_radians(),
+                )
+                .map(Some),
+            StreetChange::Dimensions { length, .. } => {
+                if *length != config.tamano {
+                    return Err(invalid);
+                }
+                Ok(Some(curve.clone()))
+            }
+            _ => Ok(None),
+        }
     }
 
     /// Central reconciliation boundary. Later ports add parking and scenario state here.
@@ -485,9 +571,25 @@ impl MapDocument {
                 return Err(MapError);
             }
             let lanes = integer(&road["carriles"])?;
-            let length = integer(&road["tamano"])?;
+            let mut length = integer(&road["tamano"])?;
             if !(1..=10).contains(&lanes) || !(1..=2500).contains(&length) {
                 return Err(MapError);
+            }
+            let bezier = crate::bezier::from_json(road).map_err(|_| MapError)?;
+            if let Some(curve) = &bezier {
+                if road["geometryType"] == "roundabout" {
+                    return Err(MapError);
+                }
+                let cells = curve.validate(lanes).map_err(|_| MapError)?;
+                // v1 reconciles old segmented files after its seam-rounding pass.
+                if cells != length && !road["bezierSegments"].is_array() {
+                    return Err(MapError);
+                }
+                length = cells;
+                road["tamano"] = json!(cells);
+                road["vertices"] = json!([]);
+                road["esCurva"] = json!(true);
+                road["bezierGeometry"] = json!(true);
             }
             total_cells += lanes * length;
             // Bound allocation from untrusted input (before allocating cell buffers).
@@ -512,6 +614,7 @@ impl MapDocument {
                 _ => return Err(MapError),
             };
             layout.push(StreetPlacement {
+                bezier,
                 roundabout: if road["geometryType"] == "roundabout" {
                     let draft = crate::streets::RoundaboutDraft::new(
                         [number(&road["x"])? / 5.0, number(&road["y"])? / 5.0],
@@ -560,6 +663,7 @@ impl MapDocument {
                         && tipo == CalleType::Conexion
                         && road.get("geometryType").is_none()
                         && road.get("bezierControls").is_none()
+                        && road.get("bezierSegments").is_none()
                     {
                         initialize_vertices(length)
                     } else {

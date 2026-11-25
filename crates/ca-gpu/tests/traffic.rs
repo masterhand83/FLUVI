@@ -1,6 +1,55 @@
 use ca_gpu::TrafficScene;
 
 #[test]
+fn bezier_display_uses_the_v1_curve_not_the_straight_footprint() {
+    use ca_core::{camera::WorldView, cell_index::CellRef, map_json::MapDocument};
+    let fixtures: Vec<serde_json::Value> =
+        serde_json::from_str(include_str!("../../ca-core/tests/fixtures/bezier-v1.json")).unwrap();
+    let document =
+        MapDocument::parse(&serde_json::json!({"calles":[fixtures[0]["street"]]}).to_string())
+            .unwrap();
+    let mut scene = TrafficScene::from_document(&document);
+    let point = &fixtures[0]["centers"][0][11];
+    let expected = [
+        point[0].as_f64().unwrap() as f32,
+        point[1].as_f64().unwrap() as f32,
+    ];
+    for (axis, value) in expected.iter().enumerate() {
+        assert!(
+            (scene.geometry()[0].centers[0][11][axis] - scene.shift()[axis] - value).abs() < 0.0001
+        );
+    }
+    scene.toggle_vehicle(
+        CellRef {
+            street: 0,
+            lane: 0,
+            index: 11,
+        },
+        true,
+    );
+    let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor::from_env_or_default());
+    let adapter = pollster::block_on(instance.request_adapter(&Default::default())).unwrap();
+    let (device, queue) = pollster::block_on(adapter.request_device(&Default::default())).unwrap();
+    let display = ca_gpu::TrafficDisplay::new(&device, &scene, wgpu::TextureFormat::Rgba8Unorm);
+    display.set_view(
+        &queue,
+        WorldView {
+            origin: scene.shift(),
+            span: [36.0, 14.0],
+        },
+    );
+    let bytes = render_display(&device, &queue, &display);
+    assert!(
+        pixel(&bytes, expected[0], expected[1])[0] > 230,
+        "vehicle is on the curve"
+    );
+    assert!(
+        pixel(&bytes, 12.0, 4.0)[0] < 10,
+        "old straight footprint is empty"
+    );
+}
+
+#[test]
 fn roundabout_display_uses_circular_centers_and_publishes_wrapped_traffic() {
     use ca_core::{
         camera::WorldView,

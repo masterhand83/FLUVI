@@ -170,13 +170,41 @@ Focused checks: `cargo test -p ca-core --test roundabouts`,
 `cargo test -p ca-app --test map_interaction --test street_inspector`, and
 `cargo test -p ca-gpu --test traffic`.
 
+### Bézier streets
+
+Select a straight street and use Convert to Bézier in its inspector. Select a
+section's control or anchor to add a control or split that section. Splitting uses
+exact De Casteljau subdivision. Select a point in the inspector or on the map;
+drag its map handle to change its world position. Release commits the edit.
+Escape cancels an active drag. Curve strength scales the controls' perpendicular
+deviation from each section's chord. Invalid edits keep the previous geometry.
+Delete (Supr) removes a selected control or intermediate anchor, not the street.
+The start and final endpoint cannot be removed.
+
+`ca-core::bezier::BezierCurve` owns immutable sections and a shared sampled
+geometry cache. Cell centers use arc distance and centered lane offsets, matching
+v1. Display-only cubic rounding at non-collinear section seams does not change
+saved anchors. The same oriented cells feed the GPU and the map hit index.
+Validation rejects nonlocal lane overlap with a stable translated reason.
+
+`StreetChange::Bezier` uses the existing ordered edit queue, pause boundary, and
+dimension reconciler. Length follows arc length and is read-only in the inspector.
+Origin and angle edits transform all curve points. The codec retains v1's
+`bezierGeometry`, `bezierControls`, `endX/endY`, optional `bezierSegments`, and empty
+`vertices`. `scripts/generate-bezier-fixtures.mjs` records independent v1 cell
+coordinates for compatibility tests.
+
+Focused checks: `cargo test -p ca-core --test bezier`,
+`cargo test -p ca-app --test street_inspector --test map_interaction`, and
+`cargo test -p ca-gpu --test traffic`.
+
 ### Map files and session replacement
 
 Use `ca-core::map_json::MapDocument` to validate map JSON before replacing
 the current session. Read roads before links. Keep unowned JSON fields for
 later ports; omit language preferences. Save map configuration without live
-vehicles, as in v1. Display straight streets and legacy vertex curves; keep
-Bezier fields for their later geometry port.
+vehicles, as in v1. Display straight streets, legacy vertex curves, roundabouts,
+and Bézier streets.
 
 Keep each saved v1 probabilistic link as a `Connection::ProbabilityTrial`.
 Test its probability independently at its original place in registration order.

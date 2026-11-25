@@ -474,6 +474,8 @@ impl eframe::App for App {
         self.controls(ctx);
         self.control_panel(ctx);
         let selected = self.map.as_ref().and_then(MapInteraction::selected);
+        self.inspector
+            .set_curve_point(self.map.as_ref().and_then(MapInteraction::curve_point));
         let inspector = self.inspector.show(
             ctx,
             self.session.as_ref().expect("session").document(),
@@ -482,6 +484,9 @@ impl eframe::App for App {
         );
         if inspector.editing {
             self.edit_pause.begin(&mut self.playing);
+        }
+        if let Some(map) = &mut self.map {
+            map.set_curve_point(self.inspector.curve_point());
         }
         if inspector.closed
             && let Some(map) = &mut self.map

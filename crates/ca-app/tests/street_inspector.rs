@@ -6,6 +6,84 @@ use ca_core::{
 use eframe::egui::{self, Event, Modifiers, PointerButton};
 
 #[test]
+fn inspector_converts_a_street_to_bezier_and_translates_overlap_errors() {
+    use ca_core::bezier::BezierChange;
+    let ctx = egui::Context::default();
+    let mut inspector = StreetInspector::default();
+    let document =
+        MapDocument::parse(r#"{"calles":[{"nombre":"A","tipo":"conexion","tamano":10}]}"#).unwrap();
+    frame(&mut inspector, &ctx, &document, vec![]);
+    frame(&mut inspector, &ctx, &document, vec![]);
+    let edits = click_text(&mut inspector, &ctx, &document, "Convertir a Bézier");
+    assert_eq!(
+        edits,
+        [StreetEdit::Update(
+            0,
+            StreetChange::Bezier(BezierChange::Convert)
+        )]
+    );
+    let shell = Shell::load(None);
+    let message = ca_app::inspector::geometry_error_message(
+        &shell,
+        ca_core::streets::StreetError("bezier.overlap"),
+    );
+    assert_eq!(
+        message,
+        "La curva superpone carriles. Reduzca la curvatura o mueva los puntos."
+    );
+}
+
+#[test]
+fn inspector_can_add_an_anchor_and_remove_the_selected_curve_point() {
+    use ca_core::bezier::{BezierChange, CurvePoint};
+    let ctx = egui::Context::default();
+    let mut inspector = StreetInspector::default();
+    let mut document =
+        MapDocument::parse(r#"{"calles":[{"nombre":"A","tipo":"conexion","tamano":10}]}"#).unwrap();
+    document
+        .edit_streets(StreetEdit::Update(
+            0,
+            StreetChange::Bezier(BezierChange::Convert),
+        ))
+        .unwrap();
+    frame(&mut inspector, &ctx, &document, vec![]);
+    frame(&mut inspector, &ctx, &document, vec![]);
+    let edits = click_text(&mut inspector, &ctx, &document, "Dividir tramo");
+    assert_eq!(
+        edits,
+        [StreetEdit::Update(
+            0,
+            StreetChange::Bezier(BezierChange::Split(0, 0.5))
+        )]
+    );
+    for edit in edits {
+        document.edit_streets(edit).unwrap();
+    }
+    assert_eq!(inspector.curve_point(), Some(CurvePoint::Anchor(0)));
+    let edits = click_text(&mut inspector, &ctx, &document, "Eliminar punto");
+    assert_eq!(
+        edits,
+        [StreetEdit::Update(
+            0,
+            StreetChange::Bezier(BezierChange::Remove(CurvePoint::Anchor(0)))
+        )]
+    );
+    for edit in edits {
+        document.edit_streets(edit).unwrap();
+    }
+    assert_eq!(document.layout().len(), 1);
+    assert_eq!(
+        document.layout()[0]
+            .bezier
+            .as_ref()
+            .unwrap()
+            .sections()
+            .len(),
+        1
+    );
+}
+
+#[test]
 fn roundabout_cell_count_and_radius_are_read_only() {
     let document = MapDocument::parse(
         r#"{"calles":[{

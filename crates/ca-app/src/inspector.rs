@@ -1,6 +1,7 @@
 //! Immediate street fields. Validation belongs to the document, not the widgets.
 use crate::shell::Shell;
 use ca_core::{
+    bezier::{BezierChange, CurvePoint},
     map_json::MapDocument,
     streets::{StreetChange, StreetEdit, StreetError},
     traffic::{CalleType, LaneDirection},
@@ -13,6 +14,7 @@ pub struct StreetInspector {
     values: [String; 8],
     error: Option<StreetError>,
     dimension_field: Option<Field>,
+    curve_point: Option<CurvePoint>,
 }
 
 #[derive(Default)]
@@ -107,6 +109,12 @@ pub fn geometry_error_message(shell: &Shell, reason: StreetError) -> String {
 }
 
 impl StreetInspector {
+    pub fn curve_point(&self) -> Option<CurvePoint> {
+        self.curve_point
+    }
+    pub fn set_curve_point(&mut self, point: Option<CurvePoint>) {
+        self.curve_point = point;
+    }
     pub fn finish(
         &mut self,
         ctx: &egui::Context,
@@ -154,6 +162,7 @@ impl StreetInspector {
             self.error = None;
             self.values = Default::default();
             self.dimension_field = None;
+            self.curve_point = None;
         }
         let Some(street) = selected.filter(|&id| id < document.layout().len()) else {
             return result;
@@ -191,7 +200,9 @@ impl StreetInspector {
                                         self.values[index] = field.current(document, street);
                                     }
                                     ui.label(shell.tr(field.key(), &[]));
-                                    if p.roundabout.is_some() && field == Field::Length {
+                                    if (p.roundabout.is_some() || p.bezier.is_some())
+                                        && field == Field::Length
+                                    {
                                         ui.label(c.tamano.to_string());
                                         ui.end_row();
                                         continue;
@@ -261,6 +272,15 @@ impl StreetInspector {
                                 ui.end_row();
                             });
                         ui.separator();
+                        if p.roundabout.is_none() {
+                            if let Some(curve) = &p.bezier {
+                                self.curve_controls(ui, shell, curve, &mut changes);
+                            } else if !p.curved
+                                && ui.button(shell.tr("bezier.convert", &[])).clicked()
+                            {
+                                changes.push(StreetChange::Bezier(BezierChange::Convert));
+                            }
+                        }
                         ui.small(shell.tr("streetInspector.dimensionHint", &[]));
                         let forward = if p.roundabout.is_some() {
                             "roundaboutDrawing.clockwise"
@@ -341,6 +361,110 @@ impl StreetInspector {
         }
         result.closed = !open;
         result
+    }
+
+    fn curve_controls(
+        &mut self,
+        ui: &mut egui::Ui,
+        shell: &Shell,
+        curve: &ca_core::bezier::BezierCurve,
+        changes: &mut Vec<StreetChange>,
+    ) {
+        let mut strength = curve.strength() * 100.0;
+        ui.horizontal(|ui| {
+            ui.label(shell.tr("bezier.strength", &[]));
+            if ui
+                .add(
+                    egui::DragValue::new(&mut strength)
+                        .range(0.0..=1000.0)
+                        .speed(1.0)
+                        .suffix("%"),
+                )
+                .changed()
+            {
+                changes.push(StreetChange::Bezier(BezierChange::Strength(
+                    strength / 100.0,
+                )));
+            }
+        });
+        ui.small(shell.tr("bezier.dragHint", &[]));
+        let selected_section = match self.curve_point {
+            Some(CurvePoint::Control(i, _) | CurvePoint::Anchor(i)) => i,
+            _ => 0,
+        }
+        .min(curve.sections().len() - 1);
+        for (i, s) in curve.sections().iter().enumerate() {
+            ui.horizontal_wrapped(|ui| {
+                for (point, key, number) in (i == 0)
+                    .then_some((CurvePoint::Start, "bezier.start", String::new()))
+                    .into_iter()
+                    .chain([(
+                        CurvePoint::Anchor(i),
+                        if i + 1 == curve.sections().len() {
+                            "bezier.end"
+                        } else {
+                            "bezier.anchor"
+                        },
+                        (i + 1).to_string(),
+                    )])
+                    .chain(s.controls.iter().enumerate().map(|(j, _)| {
+                        (
+                            CurvePoint::Control(i, j),
+                            "bezier.control",
+                            format!("{}.{}", i + 1, j + 1),
+                        )
+                    }))
+                {
+                    if ui
+                        .selectable_label(
+                            self.curve_point == Some(point),
+                            shell.tr(key, &[("number", &number)]),
+                        )
+                        .clicked()
+                    {
+                        self.curve_point = Some(point);
+                    }
+                }
+            });
+        }
+        ui.horizontal_wrapped(|ui| {
+            if ui.button(shell.tr("bezier.split", &[])).clicked() {
+                changes.push(StreetChange::Bezier(BezierChange::Split(
+                    selected_section,
+                    0.5,
+                )));
+                self.curve_point = Some(CurvePoint::Anchor(selected_section));
+            }
+            if ui.button(shell.tr("bezier.addControl", &[])).clicked() {
+                changes.push(StreetChange::Bezier(BezierChange::AddControl(
+                    selected_section,
+                )));
+                self.curve_point = Some(CurvePoint::Control(
+                    selected_section,
+                    curve.sections()[selected_section].controls.len(),
+                ));
+            }
+            let removable = self.curve_point.filter(|point| match point {
+                CurvePoint::Control(i, j) => curve
+                    .sections()
+                    .get(*i)
+                    .is_some_and(|s| *j < s.controls.len()),
+                CurvePoint::Anchor(i) => i + 1 < curve.sections().len(),
+                CurvePoint::Start => false,
+            });
+            if ui
+                .add_enabled(
+                    removable.is_some(),
+                    egui::Button::new(shell.tr("bezier.remove", &[])),
+                )
+                .clicked()
+            {
+                changes.push(StreetChange::Bezier(BezierChange::Remove(
+                    removable.expect("selected point"),
+                )));
+                self.curve_point = None;
+            }
+        });
     }
 }
 

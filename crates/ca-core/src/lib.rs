@@ -1,5 +1,6 @@
 //! Headless CPU traffic model and rules.
 
+pub mod bezier;
 pub mod camera;
 pub mod cell_index;
 pub mod geometry;
