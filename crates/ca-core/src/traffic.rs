@@ -362,12 +362,7 @@ impl TrafficModel {
     pub(crate) fn resize_street(&mut self, street: usize, lanes: usize, length: usize) {
         self.streets[street].resize(lanes, length);
         self.connections.retain_mut(|connection| {
-            connection.retain_mappings(|m| {
-                (m.source_street != street
-                    || (m.source_lane < lanes && m.source_cell < length as isize))
-                    && (m.destination_street != street
-                        || (m.destination_lane < lanes && m.destination_cell < length))
-            })
+            connection.retain_mappings(|m| m.fits_resized_street(street, lanes, length))
         });
     }
 

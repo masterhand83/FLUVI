@@ -120,6 +120,8 @@ and `cargo test -p ca-gpu --test traffic`.
 
 Select a street on the map or in Street Settings to open its floating inspector.
 Fields apply immediately. X/Y use the saved map's units (five units per cell).
+Length and lane count commit on Enter, focus loss, or Resume so a partial typed
+number cannot remove traffic or lane settings.
 Probabilities are fractions from 0 to 1. Invalid input shows a translated reason
 and does not change the model. Each lane has a direction and generation switch.
 
@@ -129,6 +131,9 @@ physical cells and lane settings, adds forward/enabled lanes, and removes only
 out-of-range link rows. A direction edit retains cell and vehicle positions and
 publishes `StreetEvent::LaneDirectionsChanged`. Saved links that now oppose a
 lane direction remain in the document.
+Resizing can make a saved `-1` endpoint equivalent to an explicit endpoint, or
+make a link point to its own cell. Keep these saved rows and their settings;
+new connection registration remains strict, and self-transfers are inert.
 
 Structural edits pause traffic and block manual steps. Resume ends focused
 inspector edits and map gestures before traffic runs again. Closing the inspector

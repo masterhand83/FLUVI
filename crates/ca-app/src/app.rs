@@ -215,11 +215,23 @@ impl App {
                         if self.playing {
                             self.playing = false;
                         } else {
-                            self.inspector.finish(ctx);
-                            if let Some(map) = &mut self.map {
-                                map.finish_edits();
+                            let finished = self
+                                .inspector
+                                .finish(ctx, self.session.as_ref().expect("session").document());
+                            match finished {
+                                Ok(edit) => {
+                                    if edit.is_none_or(|edit| self.edit_streets(edit)) {
+                                        if let Some(map) = &mut self.map {
+                                            map.finish_edits();
+                                        }
+                                        self.edit_pause.resume(&mut self.playing);
+                                    }
+                                }
+                                Err(error) => self.shell.notify(
+                                    ca_app::shell::Severity::Warning,
+                                    ca_app::inspector::geometry_error_message(&self.shell, error),
+                                ),
                             }
-                            self.edit_pause.resume(&mut self.playing);
                         }
                     }
                     if ui
@@ -329,7 +341,7 @@ impl App {
         }
     }
 
-    fn edit_streets(&mut self, mut edit: ca_core::streets::StreetEdit) {
+    fn edit_streets(&mut self, mut edit: ca_core::streets::StreetEdit) -> bool {
         use ca_core::streets::StreetEdit;
         if let StreetEdit::Draw(draft) = &mut edit {
             for i in 0..2 {
@@ -348,14 +360,14 @@ impl App {
                 ca_app::shell::Severity::Warning,
                 ca_app::inspector::geometry_error_message(&self.shell, error),
             );
-            return;
+            return false;
         }
         if !self.commands.edit(Edit::Street(edit.clone())) {
             self.shell.notify(
                 ca_app::shell::Severity::Warning,
                 self.shell.tr("shell.cellEditBusy", &[]),
             );
-            return;
+            return false;
         }
         let session = self.session.as_mut().expect("session");
         let event = session.edit_streets(edit).expect("validated street edit");
@@ -385,6 +397,7 @@ impl App {
             self.shell
                 .notify(ca_app::shell::Severity::Success, self.shell.tr(key, &[]));
         }
+        true
     }
 
     fn map_files(&mut self, ctx: &egui::Context) {
@@ -462,6 +475,9 @@ impl eframe::App for App {
             selected,
             &self.shell,
         );
+        if inspector.editing {
+            self.edit_pause.begin(&mut self.playing);
+        }
         if inspector.closed
             && let Some(map) = &mut self.map
         {
@@ -490,7 +506,7 @@ impl eframe::App for App {
                 .as_mut()
                 .expect("map installed with render resources")
                 .show(ui, self.shell.preferences().cell_detection);
-            if map.vertex_mode {
+            if map.structural_edit {
                 self.edit_pause.begin(&mut self.playing);
             }
             if let Some(edit) = map.street_edit.clone() {

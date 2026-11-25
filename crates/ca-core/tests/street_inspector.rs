@@ -5,6 +5,40 @@ use ca_core::{
 };
 
 #[test]
+fn resize_keeps_new_endpoint_aliases_and_self_links_saveable() {
+    let mut map = MapDocument::parse(r#"{
+        "calles":[{"nombre":"A","tipo":"conexion","tamano":6},{"nombre":"B","tipo":"devorador","tamano":6}],
+        "conexiones":[
+            {"origenIdx":0,"destinoIdx":1,"tipo":"PROBABILISTICA","detalles":[{"carrilOrigen":0,"carrilDestino":0,"posOrigen":3,"probabilidad":0.2}]},
+            {"origenIdx":0,"destinoIdx":1,"tipo":"PROBABILISTICA","detalles":[{"carrilOrigen":0,"carrilDestino":0,"posOrigen":-1,"probabilidad":0.8}]},
+            {"origenIdx":0,"destinoIdx":0,"tipo":"LINEAL","detalles":[{"carrilOrigen":0,"carrilDestino":0,"posOrigen":-1,"posDestino":3}]}]
+    }"#).unwrap();
+    map.edit_streets(StreetEdit::Update(
+        0,
+        StreetChange::Dimensions {
+            lanes: 1,
+            length: 4,
+        },
+    ))
+    .unwrap();
+    let loaded = MapDocument::parse(&map.to_json()).unwrap();
+    assert_eq!(loaded.model().connections(), map.model().connections());
+    assert_eq!(loaded.model().connections().len(), 3);
+    // The retained self-link is inert, not an artificial waiting condition.
+    let mut self_only = MapDocument::parse(r#"{
+        "calles":[{"nombre":"A","tipo":"conexion","tamano":4}],
+        "conexiones":[{"origenIdx":0,"destinoIdx":0,"tipo":"LINEAL","detalles":[{"carrilOrigen":0,"carrilDestino":0,"posOrigen":-1,"posDestino":3}]}]
+    }"#).unwrap();
+    self_only.model_mut().toggle_vehicle(CellRef {
+        street: 0,
+        lane: 0,
+        index: 3,
+    });
+    self_only.model_mut().tick();
+    assert_eq!(self_only.model().streets()[0].cells(), [0, 0, 0, 0]);
+}
+
+#[test]
 fn shrinking_lanes_keeps_disabled_surviving_merge_rows_saveable() {
     let mut map = MapDocument::parse(r#"{
         "calles":[{"nombre":"A","tipo":"conexion","tamano":4,"carriles":2},{"nombre":"B","tipo":"devorador","tamano":4}],

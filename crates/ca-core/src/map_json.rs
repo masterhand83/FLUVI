@@ -222,16 +222,13 @@ impl MapDocument {
             .as_array_mut()
             .expect("validated links")
             .retain_mut(|link| {
-                let source = link["origenIdx"].as_u64() == Some(street as u64);
-                let destination = link["destinoIdx"].as_u64() == Some(street as u64);
+                let source = integer(&link["origenIdx"]).expect("validated source");
+                let destination = integer(&link["destinoIdx"]).expect("validated destination");
                 let rows = link["detalles"].as_array_mut().expect("validated rows");
                 rows.retain(|r| {
-                    (!source
-                        || (r["carrilOrigen"].as_u64().unwrap() < lanes as u64
-                            && r["posOrigen"].as_i64().unwrap() < length as i64))
-                        && (!destination
-                            || (r["carrilDestino"].as_u64().unwrap() < lanes as u64
-                                && r["posDestino"].as_u64().unwrap() < length as u64))
+                    parse_mapping(source, destination, r)
+                        .expect("validated mapping")
+                        .fits_resized_street(street, lanes, length)
                 });
                 !rows.is_empty()
             });
@@ -498,17 +495,7 @@ impl MapDocument {
                 object.entry("posOrigen").or_insert(json!(-1));
                 object.entry("posDestino").or_insert(json!(0));
                 object.entry("probabilidad").or_insert(json!(1.0));
-                let mapping = Mapping {
-                    source_street: source,
-                    destination_street: destination,
-                    source_lane: integer(&detail["carrilOrigen"])?,
-                    destination_lane: integer(&detail["carrilDestino"])?,
-                    source_cell: detail["posOrigen"]
-                        .as_i64()
-                        .and_then(|v| isize::try_from(v).ok())
-                        .ok_or(MapError)?,
-                    destination_cell: integer(&detail["posDestino"])?,
-                };
+                let mapping = parse_mapping(source, destination, detail)?;
                 let weight = number(&detail["probabilidad"])?;
                 if !(0.0..=1.0).contains(&weight) {
                     return Err(MapError);
@@ -569,6 +556,20 @@ fn integer(value: &Value) -> Result<usize, MapError> {
         .as_u64()
         .and_then(|n| usize::try_from(n).ok())
         .ok_or(MapError)
+}
+
+fn parse_mapping(source: usize, destination: usize, detail: &Value) -> Result<Mapping, MapError> {
+    Ok(Mapping {
+        source_street: source,
+        destination_street: destination,
+        source_lane: integer(&detail["carrilOrigen"])?,
+        destination_lane: integer(&detail["carrilDestino"])?,
+        source_cell: detail["posOrigen"]
+            .as_i64()
+            .and_then(|v| isize::try_from(v).ok())
+            .ok_or(MapError)?,
+        destination_cell: integer(&detail["posDestino"])?,
+    })
 }
 fn number(value: &Value) -> Result<f64, MapError> {
     value.as_f64().filter(|n| n.is_finite()).ok_or(MapError)

@@ -13,6 +13,7 @@ pub struct MapFrame {
     pub preview: Option<CellPreview>,
     pub vertex_edit: Option<crate::vertices::VertexEdit>,
     pub vertex_mode: bool,
+    pub structural_edit: bool,
     pub street_preview: Option<ca_core::streets::StreetDraft>,
     pub street_edit: Option<ca_core::streets::StreetEdit>,
 }
@@ -405,6 +406,7 @@ impl MapInteraction {
             preview,
             vertex_edit,
             vertex_mode: self.vertices.active(),
+            structural_edit: self.vertices.active() || self.draw_start.is_some(),
             street_preview,
             street_edit,
         }

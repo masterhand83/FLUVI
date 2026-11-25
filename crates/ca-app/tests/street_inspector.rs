@@ -42,6 +42,143 @@ fn text_rect(output: &egui::FullOutput, text: &str) -> egui::Rect {
 }
 
 #[test]
+fn typing_ten_lanes_does_not_apply_the_destructive_one_lane_prefix() {
+    let mut document = MapDocument::parse(
+        r#"{"calles":[{
+        "nombre":"North","tipo":"generador","tamano":6,"carriles":2,
+        "laneDirections":[1,-1],"laneGenerationEnabled":[true,false]
+    }]}"#,
+    )
+    .unwrap();
+    document
+        .model_mut()
+        .toggle_vehicle(ca_core::cell_index::CellRef {
+            street: 0,
+            lane: 1,
+            index: 1,
+        });
+    let ctx = egui::Context::default();
+    let mut inspector = StreetInspector::default();
+    frame(&mut inspector, &ctx, &document, vec![]);
+    let (output, _) = frame(&mut inspector, &ctx, &document, vec![]);
+    let pos = text_rect(&output, "2").center();
+    for pressed in [true, false] {
+        frame(
+            &mut inspector,
+            &ctx,
+            &document,
+            vec![
+                Event::PointerMoved(pos),
+                Event::PointerButton {
+                    pos,
+                    button: PointerButton::Primary,
+                    pressed,
+                    modifiers: Modifiers::NONE,
+                },
+            ],
+        );
+    }
+    for events in [
+        vec![
+            Event::Key {
+                key: egui::Key::A,
+                physical_key: None,
+                pressed: true,
+                repeat: false,
+                modifiers: Modifiers::COMMAND,
+            },
+            Event::Text("1".into()),
+        ],
+        vec![Event::Text("0".into())],
+    ] {
+        assert_eq!(frame(&mut inspector, &ctx, &document, events).1, None);
+    }
+    let (_, edit) = frame(
+        &mut inspector,
+        &ctx,
+        &document,
+        vec![Event::Key {
+            key: egui::Key::Enter,
+            physical_key: None,
+            pressed: true,
+            repeat: false,
+            modifiers: Modifiers::NONE,
+        }],
+    );
+    assert_eq!(
+        edit,
+        Some(StreetEdit::Update(
+            0,
+            StreetChange::Dimensions {
+                lanes: 10,
+                length: 6
+            }
+        ))
+    );
+    document.edit_streets(edit.unwrap()).unwrap();
+    assert_eq!(
+        document.model().streets()[0].lane_direction(1),
+        ca_core::traffic::LaneDirection::Reverse
+    );
+    assert_eq!(
+        document.model().streets()[0]
+            .config()
+            .lane_generation_enabled[1],
+        Some(false)
+    );
+    assert_eq!(document.model().streets()[0].cells()[7], 1);
+
+    // Resume commits a complete focused dimension before ending the edit.
+    let (output, _) = frame(&mut inspector, &ctx, &document, vec![]);
+    let pos = text_rect(&output, "6").center();
+    for pressed in [true, false] {
+        frame(
+            &mut inspector,
+            &ctx,
+            &document,
+            vec![
+                Event::PointerMoved(pos),
+                Event::PointerButton {
+                    pos,
+                    button: PointerButton::Primary,
+                    pressed,
+                    modifiers: Modifiers::NONE,
+                },
+            ],
+        );
+    }
+    assert_eq!(
+        frame(
+            &mut inspector,
+            &ctx,
+            &document,
+            vec![
+                Event::Key {
+                    key: egui::Key::A,
+                    physical_key: None,
+                    pressed: true,
+                    repeat: false,
+                    modifiers: Modifiers::COMMAND
+                },
+                Event::Text("8".into()),
+            ]
+        )
+        .1,
+        None
+    );
+    assert_eq!(
+        inspector.finish(&ctx, &document).unwrap(),
+        Some(StreetEdit::Update(
+            0,
+            StreetChange::Dimensions {
+                lanes: 10,
+                length: 8
+            }
+        ))
+    );
+}
+
+#[test]
 fn invalid_length_shows_a_translated_reason_and_keeps_the_document() {
     let document =
         MapDocument::parse(r#"{"calles":[{"nombre":"North","tipo":"conexion","tamano":6}]}"#)

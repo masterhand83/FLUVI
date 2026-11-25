@@ -1,5 +1,6 @@
 {
   "streetInspector.title": "Inspector de calle",
+  "streetInspector.dimensionHint": "Pulse Intro, salga del campo o Reanudar para aplicar longitud y carriles.",
   "streetInspector.name": "Nombre",
   "streetInspector.x": "X",
   "streetInspector.y": "Y",

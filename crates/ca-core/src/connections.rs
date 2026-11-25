@@ -13,6 +13,15 @@ pub struct Mapping {
 }
 
 impl Mapping {
+    pub(crate) fn fits_resized_street(&self, street: usize, lanes: usize, length: usize) -> bool {
+        (self.source_street != street
+            || (self.source_lane < lanes
+                && self.source_cell >= -1
+                && self.source_cell < length as isize))
+            && (self.destination_street != street
+                || (self.destination_lane < lanes && self.destination_cell < length))
+    }
+
     fn source_index(&self, street: &Calle) -> usize {
         self.source_lane * street.config.tamano
             + self
@@ -52,6 +61,12 @@ pub enum Connection {
     ProbabilityTrial(WeightedRow),
     /// All rows share a source. Finite weights in 0..=1 must sum to one.
     Probabilistica(Vec<WeightedRow>),
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Registration {
+    New,
+    Saved,
 }
 
 impl Connection {
@@ -188,7 +203,7 @@ impl TrafficModel {
     }
 
     pub fn add_connection(&mut self, connection: Connection) -> Result<(), ConnectionError> {
-        self.register_connection(connection, true)
+        self.register_connection(connection, Registration::New)
     }
 
     /// Saved links remain editable after a lane direction change.
@@ -196,23 +211,22 @@ impl TrafficModel {
         &mut self,
         connection: Connection,
     ) -> Result<(), ConnectionError> {
-        self.register_connection(connection, false)
+        self.register_connection(connection, Registration::Saved)
     }
 
     fn register_connection(
         &mut self,
         connection: Connection,
-        check_direction: bool,
+        policy: Registration,
     ) -> Result<(), ConnectionError> {
+        let strict = policy == Registration::New;
         match &connection {
             Connection::ProbabilityTrial(row)
                 if !row.weight.is_finite() || !(0.0..=1.0).contains(&row.weight) =>
             {
                 return Err(ConnectionError::Probability);
             }
-            Connection::Incorporacion(rows)
-                if check_direction && !rows.iter().any(|r| r.enabled) =>
-            {
+            Connection::Incorporacion(rows) if strict && !rows.iter().any(|r| r.enabled) => {
                 return Err(ConnectionError::NoActiveRows);
             }
             Connection::Probabilistica(rows) => {
@@ -227,10 +241,9 @@ impl TrafficModel {
                 let first = &rows[0].mapping;
                 for row in rows {
                     let m = &row.mapping;
-                    self.resolve(m, check_direction)?;
+                    self.resolve(m, strict)?;
                     if m.source_street != first.source_street
-                        || self.resolve(m, check_direction)?.0
-                            != self.resolve(first, check_direction)?.0
+                        || self.resolve(m, strict)?.0 != self.resolve(first, strict)?.0
                     {
                         return Err(ConnectionError::SplitSource);
                     }
@@ -239,15 +252,19 @@ impl TrafficModel {
             _ => {}
         }
         for (index, row) in connection.mappings().enumerate() {
-            let resolved = self.resolve(row, check_direction)?;
+            let resolved = self.resolve(row, strict)?;
             let duplicate = |other: &Mapping| {
                 row.source_street == other.source_street
                     && row.destination_street == other.destination_street
                     && self
                         .resolve(other, false)
                         .is_ok_and(|pair| pair == resolved)
+                    // A resize can make distinct saved source forms equivalent.
+                    && (strict || row.source_cell == other.source_cell)
             };
-            if (row.source_street == row.destination_street && resolved.0 == resolved.1)
+            if (row.source_street == row.destination_street
+                && resolved.0 == resolved.1
+                && (strict || row.source_cell != -1))
                 || connection.mappings().take(index).any(duplicate)
                 || self
                     .connections
@@ -326,6 +343,11 @@ impl TrafficModel {
 fn transfer(streets: &mut [Calle], row: &Mapping) {
     let source = &streets[row.source_street];
     let source_cell = row.source_index(source);
+    if row.source_street == row.destination_street
+        && source_cell == row.destination_lane * source.config.tamano + row.destination_cell
+    {
+        return;
+    }
     let value = source.cells[source_cell];
     if !(1..=6).contains(&value) {
         return;

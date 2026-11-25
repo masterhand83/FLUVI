@@ -18,12 +18,13 @@ fn drawing_previews_quantized_cells_cancels_and_commits_without_panning() {
         button: egui::PointerButton::Primary,
         modifiers: egui::Modifiers::NONE,
     };
-    frame(
+    let started = frame(
         &ctx,
         &mut map,
         vec![egui::Event::PointerMoved(start), button(start, true)],
         false,
     );
+    assert!(started.structural_edit);
     let before = map.camera().unwrap().view();
     let preview = frame(&ctx, &mut map, vec![egui::Event::PointerMoved(end)], false);
     assert_eq!(preview.view, before);

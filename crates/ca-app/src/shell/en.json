@@ -1,5 +1,6 @@
 {
   "streetInspector.title": "Street inspector",
+  "streetInspector.dimensionHint": "Press Enter, leave the field, or Resume to apply length and lanes.",
   "streetInspector.name": "Name",
   "streetInspector.x": "X",
   "streetInspector.y": "Y",
