@@ -1,5 +1,70 @@
 # FLUVI - Vehicular Traffic Flow Simulator
 
+## CA Lab — offline native Rust scaffold
+
+The root Cargo workspace contains a separate native Conway simulator. It does
+not change the web application below. It uses stable Rust (edition 2024), egui
+with wgpu, WGSL kernels, and a Polars analysis worker. All direct external
+dependency versions are pinned in `Cargo.toml`; `Cargo.lock` fixes the resolution.
+
+```sh
+cargo run -p ca-app
+cargo dev edit
+cargo ci
+cargo dev delivery
+cargo dev release
+cargo smoke
+cargo dev status
+```
+
+Install the development tools with `cargo install --locked cargo-nextest` and
+`cargo install --locked bacon`. Linux needs a graphics driver and the normal
+X11/Wayland development libraries. The built app needs no network connection.
+The first build downloads crates; use `cargo fetch` before an offline build.
+Builds use one job to limit RAM use. Development builds use optimization level 1
+for both workspace crates and dependencies, with debug symbols disabled.
+Release and profiling settings retain full optimization.
+`cargo build --profile profiling` adds release optimization with debug symbols.
+
+For the normal edit loop, use `cargo check --workspace --all-targets` or
+`bacon check`. Run focused tests for the changed crate, then `cargo ci` and
+`cargo smoke` before delivery. Build release only for delivery or performance
+measurements. Preserve `target/`: routine `cargo clean` removes reusable work.
+Changing profiles causes a one-time cache rebuild; a faster check does not
+measure full-build speed or simulation performance.
+The staged commands require Python 3 and save logs/status under `.verification/`.
+The Cargo driver has no app dependencies. See
+[`docs/ca-lab/development.md`](docs/ca-lab/development.md) for stage selection,
+background progress, cancellation, and direct script use in automation.
+
+Controls: Play/Pause, single Step while paused, Reset to the current seed,
+Randomize, simulation rate, and brush radius. Drag left to paint; drag right to
+erase. The circular brush includes integer cell centers within its radius and
+clips at the grid boundary. Simulation wraps at both edges. F12 toggles puffin.
+Profiling collection is off until F12 is pressed. Puffin uses its own internal
+locks while enabled; simulation state uses owned callback resources and channels.
+The display uses direct storage-buffer lookup with nearest-neighbor scaling.
+There is no display readback.
+
+The population chart retains samples from the last 1,024 generations. Statistics
+use samples from the last 64 generations, with sample standard deviation
+(`ddof = 1`); fewer than two observations have no standard deviation.
+Readback occurs once per generation batch. At rates above the frame rate,
+intermediate populations are not sampled or invented. Busy staging buffers
+and full channels drop samples rather than block the UI. Resets start a new
+epoch so late GPU/worker results cannot enter a new history.
+The smoke summary reports the latest completed population readback and its
+generation; it can lag the simulation because readback never waits for the GPU.
+
+Logging supports `RUST_LOG`, for example:
+`RUST_LOG=ca_app=debug,wgpu=warn,naga=warn cargo run -p ca-app`.
+wgpu's built-in environment helpers accept `WGPU_BACKEND`, `WGPU_VALIDATION`,
+`WGPU_DEBUG`, and `WGPU_GPU_BASED_VALIDATION`. Debug builds enable validation
+and debug labels by default. See
+[`docs/ca-lab/development.md`](docs/ca-lab/development.md) for RenderDoc instructions.
+
+---
+
 ![FLUVI](main/src/assets/logos/logo_horizontal.png)
 
 **[Live Demo](https://fluvi.netlify.app)** · **[Research Paper](https://www.comunidad.escom.ipn.mx/genaro/Papers/Thesis_files/FLUVI.pdf)** · [Report Bug](mailto:simuladordetraficoescomipn@gmail.com)

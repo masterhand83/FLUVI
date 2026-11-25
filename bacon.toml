@@ -1,0 +1,18 @@
+default_job = "clippy"
+
+[jobs.check]
+command = ["cargo", "check", "--workspace", "--all-targets"]
+need_stdout = false
+
+[jobs.clippy]
+command = ["cargo", "lint"]
+need_stdout = false
+
+[jobs.test]
+command = ["cargo", "t"]
+need_stdout = true
+
+[jobs.run]
+command = ["cargo", "run", "-p", "ca-app"]
+need_stdout = true
+on_change_strategy = "kill_then_restart"

@@ -1,0 +1,9 @@
+[build]
+jobs = 1
+
+[alias]
+lint = "clippy --workspace --all-targets -- -D warnings"
+t = "nextest run --workspace"
+ci = "run --quiet -p ca-dev -- ci"
+dev = "run --quiet -p ca-dev --"
+smoke = "run -p ca-app -- --smoke-frames 180"

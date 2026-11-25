@@ -1,0 +1,14 @@
+[package]
+name = "ca-analysis"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+ca-core.workspace = true
+polars.workspace = true
+crossbeam-channel.workspace = true
+thiserror.workspace = true
+
+[lints]
+workspace = true

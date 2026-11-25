@@ -1,0 +1,19 @@
+[package]
+name = "ca-gpu"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+ca-core.workspace = true
+wgpu.workspace = true
+bytemuck.workspace = true
+crossbeam-channel.workspace = true
+puffin.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+pollster.workspace = true
+
+[lints]
+workspace = true

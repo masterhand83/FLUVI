@@ -1,4 +1,18 @@
+# Rust build output (workspace and standalone crates)
+target/
+
+# Rust formatter backups and LLVM profiling output
+**/*.rs.bk
+*.profraw
+*.profdata
+
+# Keep Cargo.lock tracked for reproducible application builds.
+
+# Local verification output
+/.verification/
+
 # Logs
+__pycache__/
 logs
 *.log
 npm-debug.log*

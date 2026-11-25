@@ -6,7 +6,7 @@ For work involving `apps/v1/`, read `docs/v1/application-map.md` **before search
 
 Never write tautological tests. Check required behavior with expected results that are independent of the implementation.
 
-Run focused tests with `pnpm test`, filtering to the affected modules, files, or use cases rather than running the entire test suite by default.
+For web apps, run focused tests with `pnpm test`, filtering to the affected modules, files, or use cases rather than running the entire test suite by default.
 
 `pnpm --filter v1 test` is the fast default: it runs unit checks plus the metrics, analyzer-localization, and camera browser specs. `pnpm --filter v1 test:fast` is an alias. Run the affected feature spec directly when changing that feature. Use `pnpm --filter v1 test:full` before shipping browser-sensitive changes; it runs the serial browser suite plus i18next status while excluding the flaky `export-timestamps` spec and Python analyzer compatibility check. Run those with `pnpm --filter v1 test:quarantine` when changing their features; the Python check needs pandas/matplotlib or `uv`.
 
@@ -18,3 +18,10 @@ Run focused tests with `pnpm test`, filtering to the affected modules, files, or
 ## Communication
 
 Use ASD-STE100 Simplified Technical English in all responses.
+
+## CA Lab navigation
+
+For Rust crates, the root Cargo configuration, or CA Lab development tooling,
+read `docs/ca-lab/development.md` before building or running verification.
+Crate architecture rules are scoped in `crates/AGENTS.md`. Dependency versions
+are authoritative in root `Cargo.toml`; avoid copying version lists into instructions.
