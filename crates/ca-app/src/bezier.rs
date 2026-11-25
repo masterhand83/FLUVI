@@ -250,6 +250,7 @@ impl CurveEditor {
             return result;
         }
         if pointer.primary_pressed()
+            && !ui.input(|i| i.modifiers.ctrl)
             && owns_pointer
             && let Some(pos) = pointer.interact_pos().filter(|p| rect.contains(*p))
         {

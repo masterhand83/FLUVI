@@ -49,7 +49,7 @@
   "streetDrawing.drawn": "Street drawn.",
   "streetDrawing.deleted": "Street deleted.",
   "streetDrawing.invalid": "Cannot draw this street. Check the map limits.",
-  "vertices.mode": "Vertex edit (Z) — select a street and drag a yellow handle",
+  "vertices.mode": "Vertex edit (Z) — Ctrl+click a street, then drag a yellow handle",
   "mapFiles.open": "Open Map",
   "mapFiles.save": "Save Map",
   "mapFiles.new": "New Map",
@@ -117,7 +117,7 @@
   "transport.globalGeneration": "Global generation",
   "transport.generationProbability": "Generation probability",
   "shell.instructions": "Instructions",
-  "shell.instructionsBody": "Use Pause to stop traffic. Advance one step runs one full cycle while paused. Speed changes cycles per second. F12 opens the profiler.",
+  "shell.instructionsBody": "Ctrl+click a street to select it. Normal clicks edit cells without changing the selection. Use Pause to stop traffic. Advance one step runs one full cycle while paused. Speed changes cycles per second. F12 opens the profiler.",
   "shell.demo": "Fixed demo network",
   "shell.legend": "Top: generador. Middle: conexion. Bottom: devorador.\nEach pair: → then ←. White / black: special cell 7.",
   "shell.profiler": "F12: profiler"

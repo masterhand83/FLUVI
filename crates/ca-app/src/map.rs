@@ -318,7 +318,7 @@ impl MapInteraction {
 
     pub fn paint_vertices(&self, painter: &egui::Painter, rect: egui::Rect) {
         if let Some(camera) = &self.camera {
-            self.vertices.paint(painter, rect, camera);
+            self.vertices.paint(painter, rect, camera, self.selected);
             self.curves.paint(painter, rect, camera, self.selected);
         }
     }
@@ -332,6 +332,7 @@ impl MapInteraction {
     pub fn show(&mut self, ui: &mut egui::Ui, detect: bool) -> MapFrame {
         let rect = ui.available_rect_before_wrap();
         let response = ui.allocate_rect(rect, egui::Sense::click_and_drag());
+        let selecting = ui.input(|i| i.modifiers.ctrl);
         let viewport = [rect.width().max(1.0), rect.height().max(1.0)];
         let camera = self
             .camera
@@ -348,7 +349,7 @@ impl MapInteraction {
             .map(|c| c.street);
         let vertex_edit =
             self.vertices
-                .input(ui, rect, camera, street_hit, response.contains_pointer());
+                .input(ui, rect, camera, self.selected, response.contains_pointer());
         let pointer = ui.input(|i| i.pointer.clone());
         let curve_input = self.curves.input(
             ui,
@@ -376,6 +377,7 @@ impl MapInteraction {
         }
         if !self.drawing
             && !self.vertices.active()
+            && !selecting
             && response.contains_pointer()
             && pointer.primary_pressed()
             && let Some(pos) = pointer.interact_pos().filter(|p| rect.contains(*p))
@@ -412,6 +414,7 @@ impl MapInteraction {
         }
         if self.drawing && !self.vertices.active() {
             if response.contains_pointer()
+                && !selecting
                 && pointer.primary_pressed()
                 && street_hit.is_none()
                 && let Some(pos) = pointer.interact_pos().filter(|p| rect.contains(*p))
@@ -535,10 +538,12 @@ impl MapInteraction {
                 self.index
                     .hit_test(camera.screen_to_world((pos - rect.min).into()))
             });
-        if response.clicked() && !self.vertices.active() && !was_drawing && !curve_input.handled {
+        if response.clicked() && selecting && !was_drawing && !curve_input.handled {
             self.selected = hit.map(|c| c.street);
+            self.curves.select(self.selected, None);
         }
         let clicked = (response.clicked()
+            && !selecting
             && !self.vertices.active()
             && !was_drawing
             && !self.drawing

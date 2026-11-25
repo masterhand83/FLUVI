@@ -2,6 +2,182 @@ use ca_app::map::MapInteraction;
 use eframe::egui;
 
 #[test]
+fn ctrl_click_clears_selection_without_starting_either_drawing_tool() {
+    let document = ca_core::map_json::MapDocument::parse(
+        r#"{"calles":[
+        {"nombre":"A","tipo":"conexion","tamano":6}
+    ]}"#,
+    )
+    .unwrap();
+    for roundabout in [false, true] {
+        let ctx = egui::Context::default();
+        let mut map = MapInteraction::new([20.0, 12.0], &document.geometry(), vec!["A".into()]);
+        map.configure(&document, [0.0; 2]);
+        map.select(Some(0));
+        if roundabout {
+            map.set_roundabout_drawing(true);
+        } else {
+            map.set_drawing(true);
+        }
+        frame(&ctx, &mut map, vec![], false);
+        let p = map.camera().unwrap().world_to_screen([12.0, 8.0]);
+        let pos = egui::pos2(p[0], p[1]);
+        for pressed in [true, false] {
+            let result = frame(
+                &ctx,
+                &mut map,
+                vec![
+                    egui::Event::PointerMoved(pos),
+                    egui::Event::PointerButton {
+                        pos,
+                        pressed,
+                        button: egui::PointerButton::Primary,
+                        modifiers: egui::Modifiers::CTRL,
+                    },
+                ],
+                false,
+            );
+            assert!(!result.structural_edit);
+            assert!(result.street_preview.is_none() && result.roundabout_preview.is_none());
+            assert!(result.street_edit.is_none() && result.clicked.is_none());
+        }
+        assert_eq!(map.selected(), None);
+        assert!(map.drawing(), "selection must not cancel the drawing tool");
+    }
+}
+
+#[test]
+fn ctrl_click_on_selected_geometry_handles_does_not_start_an_edit() {
+    use ca_core::{
+        bezier::BezierChange,
+        map_json::MapDocument,
+        streets::{StreetChange, StreetEdit},
+    };
+    let mut curve = MapDocument::parse(
+        r#"{"calles":[{
+        "nombre":"Curve","tipo":"conexion","tamano":10,"x":25,"y":25
+    }]}"#,
+    )
+    .unwrap();
+    curve
+        .edit_streets(StreetEdit::Update(
+            0,
+            StreetChange::Bezier(BezierChange::Convert),
+        ))
+        .unwrap();
+    let ring = MapDocument::parse(
+        r#"{"calles":[{
+        "nombre":"Ring","tipo":"conexion","geometryType":"roundabout","tamano":16,
+        "x":50,"y":50,"innerRadius":10,"startAngle":0
+    }]}"#,
+    )
+    .unwrap();
+    for (document, point) in [(curve, [10.0, 5.0]), (ring, [12.0, 10.0])] {
+        let ctx = egui::Context::default();
+        let mut map =
+            MapInteraction::new([30.0, 20.0], &document.geometry(), vec!["Street".into()]);
+        map.configure(&document, [0.0; 2]);
+        map.select(Some(0));
+        frame(&ctx, &mut map, vec![], false);
+        let p = map.camera().unwrap().world_to_screen(point);
+        let pos = egui::pos2(p[0], p[1]);
+        for pressed in [true, false] {
+            let result = frame(
+                &ctx,
+                &mut map,
+                vec![
+                    egui::Event::PointerMoved(pos),
+                    egui::Event::PointerButton {
+                        pos,
+                        pressed,
+                        button: egui::PointerButton::Primary,
+                        modifiers: egui::Modifiers::CTRL,
+                    },
+                ],
+                false,
+            );
+            assert!(!result.structural_edit);
+            assert!(result.street_edit.is_none());
+            assert!(result.clicked.is_none());
+            assert!(result.bezier_preview.is_none());
+        }
+    }
+}
+
+#[test]
+fn only_ctrl_click_changes_the_map_street_selection_and_never_edits_a_cell() {
+    use ca_core::{cell_index::CellRef, map_json::MapDocument};
+    let document = MapDocument::parse(
+        r#"{"calles":[
+        {"nombre":"A","tipo":"conexion","tamano":6},
+        {"nombre":"B","tipo":"conexion","tamano":6,"y":20}
+    ]}"#,
+    )
+    .unwrap();
+    let ctx = egui::Context::default();
+    let mut map = MapInteraction::new(
+        [20.0, 12.0],
+        &document.geometry(),
+        vec!["A".into(), "B".into()],
+    );
+    map.configure(&document, [0.0; 2]);
+    frame(&ctx, &mut map, vec![], false);
+    let screen = |p: [f32; 2]| {
+        let p = map.camera().unwrap().world_to_screen(p);
+        egui::pos2(p[0], p[1])
+    };
+    let a = screen([2.5, 0.5]);
+    let b = screen([2.5, 4.5]);
+    let empty = screen([12.0, 8.0]);
+    for (pos, ctrl, selected, clicked) in [
+        (
+            a,
+            false,
+            None,
+            Some(CellRef {
+                street: 0,
+                lane: 0,
+                index: 2,
+            }),
+        ),
+        (a, true, Some(0), None),
+        (
+            b,
+            false,
+            Some(0),
+            Some(CellRef {
+                street: 1,
+                lane: 0,
+                index: 2,
+            }),
+        ),
+        (empty, false, Some(0), None),
+        (b, true, Some(1), None),
+        (empty, true, None, None),
+    ] {
+        let button = |pressed| egui::Event::PointerButton {
+            pos,
+            pressed,
+            button: egui::PointerButton::Primary,
+            modifiers: egui::Modifiers {
+                ctrl,
+                ..Default::default()
+            },
+        };
+        frame(
+            &ctx,
+            &mut map,
+            vec![egui::Event::PointerMoved(pos), button(true)],
+            false,
+        );
+        let released = frame(&ctx, &mut map, vec![button(false)], false);
+        assert_eq!(map.selected(), selected);
+        assert_eq!(released.clicked, clicked);
+        assert!(released.street_edit.is_none());
+    }
+}
+
+#[test]
 fn unsampleable_candidates_keep_live_red_guides_without_changing_the_map() {
     use ca_core::map_json::MapDocument;
     let controls: Vec<_> = (1..=32)
@@ -527,7 +703,7 @@ fn deletion_uses_selection_and_refreshes_physical_cell_picks() {
         pos,
         pressed,
         button: egui::PointerButton::Primary,
-        modifiers: egui::Modifiers::NONE,
+        modifiers: egui::Modifiers::CTRL,
     };
     frame(
         &ctx,
@@ -681,6 +857,16 @@ fn painted_frame(
     events: Vec<egui::Event>,
     detect: bool,
 ) -> (ca_app::map::MapFrame, egui::FullOutput) {
+    let modifiers = events
+        .iter()
+        .rev()
+        .find_map(|event| match event {
+            egui::Event::PointerButton { modifiers, .. } | egui::Event::Key { modifiers, .. } => {
+                Some(*modifiers)
+            }
+            _ => None,
+        })
+        .unwrap_or_default();
     let mut result = None;
     let output = ctx.run(
         egui::RawInput {
@@ -689,6 +875,7 @@ fn painted_frame(
                 egui::vec2(720.0, 280.0),
             )),
             events,
+            modifiers,
             ..Default::default()
         },
         |ctx| {
@@ -741,15 +928,40 @@ fn z_mode_drag_reshapes_a_street_without_panning_or_placing_a_vehicle() {
         button: egui::PointerButton::Primary,
         modifiers: egui::Modifiers::NONE,
     };
-    // Select the street, then start a second gesture on its middle handle.
+    let select = |pressed| egui::Event::PointerButton {
+        pos: start,
+        pressed,
+        button: egui::PointerButton::Primary,
+        modifiers: egui::Modifiers::CTRL,
+    };
     frame(
         &ctx,
         &mut map,
         vec![egui::Event::PointerMoved(start), button(start, true)],
         false,
     );
+    let (plain, output) = painted_frame(&ctx, &mut map, vec![button(start, false)], false);
+    assert_eq!(map.selected(), None);
     assert!(
-        frame(&ctx, &mut map, vec![button(start, false)], false)
+        plain.clicked.is_none(),
+        "vertex mode never edits vehicle cells"
+    );
+    assert!(
+        !output
+            .shapes
+            .iter()
+            .any(|s| matches!(&s.shape, egui::Shape::Circle(_))),
+        "a normal click must not select the vertex editor's street"
+    );
+    // Ctrl+click selects the street; an ordinary drag then moves its handle.
+    frame(
+        &ctx,
+        &mut map,
+        vec![egui::Event::PointerMoved(start), select(true)],
+        false,
+    );
+    assert!(
+        frame(&ctx, &mut map, vec![select(false)], false)
             .clicked
             .is_none()
     );
@@ -827,13 +1039,19 @@ fn a_floating_window_cannot_start_a_vertex_drag_below_it() {
         button: egui::PointerButton::Primary,
         modifiers: egui::Modifiers::NONE,
     };
+    let select = |pressed| egui::Event::PointerButton {
+        pos: start,
+        pressed,
+        button: egui::PointerButton::Primary,
+        modifiers: egui::Modifiers::CTRL,
+    };
     frame(
         &ctx,
         &mut map,
-        vec![egui::Event::PointerMoved(start), button(start, true)],
+        vec![egui::Event::PointerMoved(start), select(true)],
         false,
     );
-    frame(&ctx, &mut map, vec![button(start, false)], false);
+    frame(&ctx, &mut map, vec![select(false)], false);
     let before = map.camera().unwrap().view();
     for events in [
         vec![],

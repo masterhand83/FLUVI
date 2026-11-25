@@ -112,6 +112,13 @@ Topology edits use the ordered render edit queue. They rebuild display buffers,
 not the simulation session: surviving traffic, tick count, and display shift stay
 unchanged. New and Open still use the full replacement boundary below.
 
+On the map, Ctrl+click selects a street without editing its cell. Ctrl+click on
+empty space clears selection, even while a drawing tool is active. Normal clicks
+edit cells and retain the current street selection. Selected geometry handles
+still use normal drags; Ctrl+click
+does not start a handle gesture. The street selector and automatic selection
+after drawing remain available.
+
 Focused checks: `cargo test -p ca-core --test street_editing`,
 `cargo test -p ca-app --test map_interaction --test street_lists --test map_session`,
 and `cargo test -p ca-gpu --test traffic`.
@@ -258,7 +265,7 @@ vertices beyond a resized street's last cell: they still control interpolation.
 Initialize missing legacy connection-street vertices at 0, every 10 cells,
 and the last cell.
 
-Press Z to pause and enter vertex mode. Select a street, then drag a yellow
+Press Z to pause and enter vertex mode. Ctrl+click a street, then drag a yellow
 handle. Press Z again to leave the mode. Check the translated badge while
 the mode is active. Ignore Z in text fields. Route each edit through the
 ordered edit channel; keep vehicles and links when rebuilding display geometry.

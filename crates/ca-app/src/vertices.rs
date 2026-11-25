@@ -18,7 +18,6 @@ struct Handle {
 #[derive(Default)]
 pub struct VertexEditor {
     active: bool,
-    selected: Option<usize>,
     handles: Vec<Handle>,
     drag: Option<(usize, egui::Pos2, VertexEdit, f64)>,
 }
@@ -71,7 +70,7 @@ impl VertexEditor {
         ui: &egui::Ui,
         rect: egui::Rect,
         camera: &Camera,
-        hit: Option<usize>,
+        selected: Option<usize>,
         owns_pointer: bool,
     ) -> Option<VertexEdit> {
         let toggle = ui.input(|i| {
@@ -94,13 +93,14 @@ impl VertexEditor {
         let pointer = ui.input(|i| i.pointer.clone());
         if owns_pointer
             && pointer.primary_pressed()
+            && !ui.input(|i| i.modifiers.ctrl)
             && let Some(pos) = pointer.interact_pos().filter(|p| rect.contains(*p))
         {
             let candidate = self
                 .handles
                 .iter()
                 .enumerate()
-                .filter(|(_, h)| Some(h.edit.street) == self.selected)
+                .filter(|(_, h)| Some(h.edit.street) == selected)
                 .map(|(i, h)| {
                     let p = camera.world_to_screen(h.point);
                     (i, pos.distance(rect.min + egui::vec2(p[0], p[1])))
@@ -109,8 +109,6 @@ impl VertexEditor {
                 .min_by(|a, b| a.1.total_cmp(&b.1));
             if let Some((i, _)) = candidate {
                 self.drag = Some((i, pos, self.handles[i].edit, self.handles[i].angle));
-            } else {
-                self.selected = hit;
             }
         }
         let edit = self.drag.and_then(|(_, start, original, angle)| {
@@ -137,14 +135,20 @@ impl VertexEditor {
         self.active
     }
 
-    pub fn paint(&self, painter: &egui::Painter, rect: egui::Rect, camera: &Camera) {
+    pub fn paint(
+        &self,
+        painter: &egui::Painter,
+        rect: egui::Rect,
+        camera: &Camera,
+        selected: Option<usize>,
+    ) {
         if !self.active {
             return;
         }
         for handle in self
             .handles
             .iter()
-            .filter(|h| Some(h.edit.street) == self.selected)
+            .filter(|h| Some(h.edit.street) == selected)
         {
             let point = camera.world_to_screen(handle.point);
             painter.circle_filled(
