@@ -20,6 +20,7 @@ impl MapError {
 
 #[derive(Clone, Debug)]
 pub struct MapDocument {
+    time: Box<crate::virtual_time::VirtualTime>,
     edit_session: Option<Box<StreetSnapshot>>,
     data: Value,
     model: TrafficModel,
@@ -953,7 +954,10 @@ impl MapDocument {
                 .map_err(|_| MapError)?;
         }
         let zones = parse_zones(root.get("backgroundAreas"))?;
+        let time = crate::virtual_time::VirtualTime::from_json(&data["configuracionTiempo"])
+            .ok_or(MapError)?;
         Ok(Self {
+            time: Box::new(time),
             edit_session: None,
             data,
             model,
@@ -964,6 +968,39 @@ impl MapDocument {
 
     pub fn model(&self) -> &TrafficModel {
         &self.model
+    }
+
+    pub fn time(&self) -> &crate::virtual_time::VirtualTime {
+        &self.time
+    }
+
+    /// Profile is sampled before generation; the clock advances after traffic.
+    pub fn tick(&mut self) {
+        self.model
+            .set_hourly_multiplier(self.time.multiplier())
+            .expect("validated profiles");
+        self.model.tick();
+        self.time.advance();
+    }
+
+    pub fn set_time(&mut self, time: crate::virtual_time::VirtualTime) {
+        *self.time = time;
+    }
+
+    /// Scenario reset is not map replacement and does not execute a traffic tick.
+    pub fn reset_scenario_time(&mut self, clock: crate::virtual_time::Clock) {
+        self.model.clear_vehicles();
+        self.time.clock = clock;
+    }
+
+    /// Older maps omit the switch. Resolve it before replacing the live session.
+    pub fn inherit_profile_switch(&mut self, current: bool) {
+        if self.data["configuracionTiempo"]
+            .get("usarPerfiles")
+            .is_none()
+        {
+            self.time.enabled = current;
+        }
     }
 
     /// Register one street-pair link atomically in both traffic and map data.
@@ -1136,7 +1173,21 @@ impl MapDocument {
         &self.layout
     }
     pub fn to_json(&self) -> String {
-        serde_json::to_string_pretty(&self.data).expect("validated map")
+        let mut data = self.data.clone();
+        if !data["configuracionTiempo"].is_object() {
+            data["configuracionTiempo"] = serde_json::json!({});
+        }
+        data["configuracionTiempo"]
+            .as_object_mut()
+            .expect("time object")
+            .extend(
+                self.time
+                    .to_json()
+                    .as_object()
+                    .expect("time object")
+                    .clone(),
+            );
+        serde_json::to_string_pretty(&data).expect("validated map")
     }
 }
 

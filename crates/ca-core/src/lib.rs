@@ -8,5 +8,6 @@ pub mod map_json;
 mod random;
 pub mod streets;
 pub mod traffic;
+pub mod virtual_time;
 pub use traffic::connections;
 mod traffic_rules;

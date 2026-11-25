@@ -295,6 +295,11 @@ fn demo_has_physical_lane_positions_and_both_directions() {
 #[test]
 fn completed_ticks_pack_the_cpu_model_without_changing_physical_indices() {
     let mut scene = TrafficScene::demo();
+    // This test isolates packing from hourly profiles. The clock/profile tests
+    // independently cover generation with profiles enabled.
+    let mut profiles = ca_core::virtual_time::VirtualTime::default();
+    profiles.enabled = false;
+    scene.set_profiles(profiles);
     let mut oracle = ca_core::traffic::TrafficModel::demo();
     for _ in 0..120 {
         scene.tick();

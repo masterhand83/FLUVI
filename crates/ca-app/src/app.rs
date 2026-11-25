@@ -27,6 +27,9 @@ struct Startup {
 }
 
 pub struct App {
+    time: ca_core::virtual_time::VirtualTime,
+    time_dialogs: ca_app::time::TimeDialogs,
+    time_labels: ca_app::time::TimeLabels,
     events: Receiver<Event>,
     commands: Commands,
     callback: egui::PaintCallback,
@@ -76,6 +79,7 @@ impl App {
         let mut session = MapSession::new(MapDocument::campus());
         session.register_reset(ResetPhase::Pause, |app: &mut Self| app.playing = false);
         session.register_reset(ResetPhase::Tools, |app| {
+            app.time_dialogs = Default::default();
             app.map = None;
             app.inspector = Default::default();
             app.edit_pause = Default::default();
@@ -95,7 +99,16 @@ impl App {
                 ..Default::default()
             };
         });
+        session.register_scenario_reset(|app| {
+            app.progress.generation = 0;
+            app.progress.population = 0;
+            app.progress.fps = 0.0;
+        });
+        let time = session.document().time().clone();
         Ok(Self {
+            time,
+            time_dialogs: Default::default(),
+            time_labels: Default::default(),
             events,
             commands,
             callback: egui_wgpu::Callback::new_paint_callback(egui::Rect::NOTHING, PaintCallback),
@@ -320,6 +333,13 @@ impl App {
         }
         .show(ctx, &mut self.shell);
         match action {
+            Some(PanelAction::ScenarioTime) => {
+                self.time_dialogs.open_time(self.progress.clock);
+            }
+            Some(PanelAction::Profiles) => {
+                self.time.clock = self.progress.clock;
+                self.time_dialogs.open_profiles(&self.time);
+            }
             Some(PanelAction::NewConnection) => {
                 self.prepare_connection_edit();
                 self.connection_draft.start_form();
@@ -412,6 +432,11 @@ impl App {
     }
 
     fn start_file(&mut self, save: bool, ctx: &egui::Context) {
+        self.time.clock = self.progress.clock;
+        self.session
+            .as_mut()
+            .expect("session")
+            .set_time(self.time.clone());
         let text = save.then(|| self.session.as_ref().expect("session").document().to_json());
         match map_files::start(
             text,
@@ -433,7 +458,9 @@ impl App {
         }
     }
 
-    fn replace_map(&mut self, document: MapDocument) {
+    fn replace_map(&mut self, mut document: MapDocument) {
+        document.inherit_profile_switch(self.time.enabled);
+        let time = document.time().clone();
         let scene = TrafficScene::from_document(&document);
         let mut map = MapInteraction::new(
             scene.extent().map(|v| v as f32),
@@ -454,6 +481,9 @@ impl App {
         let mut session = self.session.take().expect("session");
         session.replace(true, document, self);
         self.session = Some(session);
+        // Feature/info-bar reset must finish before restoring the saved clock.
+        self.progress.clock = time.clock;
+        self.time = time;
         self.map = Some(map);
         self.map_shift = shift;
         self.background = background;
@@ -462,6 +492,51 @@ impl App {
         } else {
             self.connections = Some(ca_app::connections::ConnectionOverlays::new(arrows));
         }
+    }
+
+    fn time_dialogs(&mut self, ctx: &egui::Context) {
+        use ca_app::time::TimeAction;
+        let street_session_active = self
+            .session
+            .as_ref()
+            .expect("session")
+            .document()
+            .editing_street()
+            .is_some();
+        let Some(action) = self
+            .time_dialogs
+            .show(ctx, &self.shell, street_session_active)
+        else {
+            return;
+        };
+        let edit = match &action {
+            TimeAction::Scenario(clock) => Edit::ScenarioTime(*clock),
+            TimeAction::Profiles(time) => Edit::Profiles(time.clone()),
+        };
+        if !self.commands.edit(edit) {
+            self.shell.notify(
+                ca_app::shell::Severity::Warning,
+                self.shell.tr("shell.cellEditBusy", &[]),
+            );
+            return;
+        }
+        match action {
+            TimeAction::Scenario(clock) => {
+                let mut session = self.session.take().expect("session");
+                session.reset_scenario_time(clock, self);
+                self.session = Some(session);
+                self.time.clock = clock;
+                self.progress.clock = clock;
+            }
+            TimeAction::Profiles(time) => {
+                self.time.apply_profiles(&time);
+                self.session
+                    .as_mut()
+                    .expect("session")
+                    .set_time(self.time.clone());
+            }
+        }
+        self.time_dialogs.accepted();
     }
 
     fn edit_streets(&mut self, mut edit: ca_core::streets::StreetEdit) -> bool {
@@ -699,6 +774,7 @@ impl eframe::App for App {
         }
         self.controls(ctx);
         self.control_panel(ctx);
+        self.time_dialogs(ctx);
         egui::TopBottomPanel::bottom("status").show(ctx, |ui| {
             ui.label(format!(
                 "{} {}  |  {}  |  {} {:.1}  |  {}",
@@ -712,6 +788,15 @@ impl eframe::App for App {
                 if self.playing { self.progress.fps } else { 0.0 },
                 self.adapter,
             ));
+            self.time.clock = self.progress.clock;
+            self.time_labels.refresh(&self.time, &self.shell);
+            ui.horizontal_wrapped(|ui| {
+                ui.label(&self.time_labels.clock);
+                ui.label(&self.time_labels.multiplier);
+                if let Some(forecast) = &self.time_labels.forecast {
+                    ui.label(forecast);
+                }
+            });
         });
         egui::CentralPanel::default().show(ctx, |ui| {
             if ctx.input(|i| i.key_pressed(egui::Key::Escape)) {

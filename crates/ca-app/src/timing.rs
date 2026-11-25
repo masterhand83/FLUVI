@@ -45,6 +45,13 @@ impl Default for TickControl {
 }
 
 impl TickControl {
+    pub fn reset(&mut self, step_ticket: u64, playing: bool) {
+        *self = Self {
+            step_ticket,
+            playing,
+            ..Self::default()
+        };
+    }
     pub fn advance(
         &mut self,
         elapsed: Duration,

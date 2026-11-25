@@ -10,6 +10,36 @@ struct State {
 }
 
 #[test]
+fn scenario_resets_only_registered_traffic_features_and_restores_clock_last() {
+    use ca_core::virtual_time::Clock;
+    let mut session = MapSession::<State>::new(MapDocument::demo());
+    session.register_reset(ResetPhase::Pause, |s| s.playing = false);
+    session.register_reset(ResetPhase::Tools, |s| s.draft = false);
+    session.register_scenario_reset(|s| s.steps.push("metrics"));
+    session.register_scenario_reset(|s| s.steps.push("parking"));
+    let mut state = State {
+        playing: true,
+        draft: true,
+        labels: true,
+        ..Default::default()
+    };
+    let before: serde_json::Value = serde_json::from_str(&session.document().to_json()).unwrap();
+    let clock = Clock::new(0, 0, 0, 0).unwrap();
+    session.reset_scenario_time(clock, &mut state);
+    assert!(state.playing && state.draft && state.labels);
+    assert_eq!(state.steps, ["metrics", "parking"]);
+    assert_eq!(session.document().time().clock, clock);
+    let after: serde_json::Value = serde_json::from_str(&session.document().to_json()).unwrap();
+    for key in ["calles", "conexiones", "edificios"] {
+        assert_eq!(before[key], after[key]);
+    }
+    for street in session.document().model().streets() {
+        assert_eq!(street.cells()[18], 7);
+        assert!(!street.cells().iter().any(|n| (1..=6).contains(n)));
+    }
+}
+
+#[test]
 fn accepted_street_edits_notify_registered_features_only_after_cleanup() {
     use ca_app::streets::StreetEvent;
     use ca_core::streets::{StreetDraft, StreetEdit};

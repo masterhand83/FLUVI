@@ -14,5 +14,6 @@ mod preview;
 pub mod shell;
 pub mod street_dialog;
 pub mod streets;
+pub mod time;
 pub mod transport;
 pub mod vertices;

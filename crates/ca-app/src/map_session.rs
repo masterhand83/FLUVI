@@ -15,6 +15,7 @@ pub struct MapSession<S> {
     document: MapDocument,
     resets: Vec<ResetStep<S>>,
     street_listeners: Vec<StreetListener>,
+    scenario_resets: Vec<fn(&mut S)>,
 }
 
 impl<S> MapSession<S> {
@@ -23,6 +24,7 @@ impl<S> MapSession<S> {
             document,
             resets: Vec::new(),
             street_listeners: Vec::new(),
+            scenario_resets: Vec::new(),
         }
     }
 
@@ -34,6 +36,22 @@ impl<S> MapSession<S> {
 
     pub fn document(&self) -> &MapDocument {
         &self.document
+    }
+
+    pub fn set_time(&mut self, time: ca_core::virtual_time::VirtualTime) {
+        self.document.set_time(time);
+    }
+
+    /// Feature owners register metrics and parking resets here, not map resets.
+    pub fn register_scenario_reset(&mut self, reset: fn(&mut S)) {
+        self.scenario_resets.push(reset);
+    }
+
+    pub fn reset_scenario_time(&mut self, clock: ca_core::virtual_time::Clock, state: &mut S) {
+        for reset in &self.scenario_resets {
+            reset(state);
+        }
+        self.document.reset_scenario_time(clock);
     }
 
     pub fn add_connection(

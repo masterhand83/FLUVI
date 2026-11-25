@@ -11,6 +11,7 @@ use crate::timing::TickControl;
 
 #[derive(Clone, Copy, Default)]
 pub struct Progress {
+    pub clock: ca_core::virtual_time::Clock,
     pub frames: u64,
     pub generation: u64,
     pub population: u32,
@@ -35,6 +36,8 @@ pub struct Paint {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Edit {
+    ScenarioTime(ca_core::virtual_time::Clock),
+    Profiles(Box<ca_core::virtual_time::VirtualTime>),
     Connection(ca_core::connections::Connection),
     ReplaceConnection(usize, ca_core::connections::Connection),
     DeleteConnection(usize),
@@ -188,8 +191,20 @@ impl Resources {
             .set_generation_override(request.generation_override)
             .expect("UI probability is in 0..=1");
         let mut edited = false;
+        let mut reset_time = false;
         while let Ok(edit) = self.requests.edits.try_recv() {
             edited |= match edit {
+                Edit::Profiles(time) => {
+                    self.scene.set_profiles(*time);
+                    false
+                }
+                Edit::ScenarioTime(clock) => {
+                    self.scene.reset_scenario_time(clock);
+                    self.progress.generation = 0;
+                    self.ticks.reset(request.step_ticket, request.playing);
+                    reset_time = true;
+                    true
+                }
                 Edit::ReplaceConnection(index, connection) => {
                     self.scene
                         .replace_connection(index, connection)
@@ -238,9 +253,12 @@ impl Resources {
         let now = Instant::now();
         let elapsed = now.duration_since(self.last_tick);
         self.last_tick = now;
-        let steps = self
-            .ticks
-            .advance(elapsed, request.rate, request.playing, request.step_ticket);
+        let steps = if reset_time {
+            0
+        } else {
+            self.ticks
+                .advance(elapsed, request.rate, request.playing, request.step_ticket)
+        };
         {
             puffin::profile_scope!("traffic full ticks");
             for _ in 0..steps {
@@ -250,11 +268,12 @@ impl Resources {
                 self.ticks.completed(1);
             }
         }
-        if steps > 0 || published || (edited && !request.playing) {
+        if steps > 0 || published || reset_time || (edited && !request.playing) {
             self.display.upload(queue, &self.scene);
             self.progress.population = self.scene.population();
         }
         self.progress.fps = self.ticks.fps();
+        self.progress.clock = self.scene.time().clock;
         self.progress.frames += 1;
         self.window_frames += 1;
         let frame_elapsed = now.duration_since(self.frame_window).as_secs_f64();
@@ -301,6 +320,72 @@ impl CallbackTrait for PaintCallback {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn scenario_time_command_preserves_map_blockers_and_pause_without_a_tick() {
+        use ca_core::{map_json::MapDocument, virtual_time::Clock};
+        let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor::from_env_or_default());
+        let adapter = pollster::block_on(instance.request_adapter(&Default::default())).unwrap();
+        let (device, queue) =
+            pollster::block_on(adapter.request_device(&Default::default())).unwrap();
+        let document = MapDocument::demo();
+        let scene = TrafficScene::from_document(&document);
+        let geometry = scene.geometry();
+        let format = wgpu::TextureFormat::Rgba8Unorm;
+        let display = TrafficDisplay::new(&device, &scene, format);
+        let (commands, requests) = command_channel();
+        let (events, results) = bounded(2);
+        let mut resources = Resources::new(scene, display, events, requests, format);
+        let state = Paint {
+            playing: false,
+            rate: 10.0,
+            step_ticket: 1,
+            generation_override: Some(1.0),
+            excluded_street: None,
+            view: WorldView {
+                origin: [0.0; 2],
+                span: [20.0; 2],
+            },
+        };
+        assert!(commands.send(state, None));
+        resources.prepare(&device, &queue);
+        let Event::Progress(first) = results.try_recv().unwrap();
+        assert_eq!(first.generation, 1);
+        assert_eq!(first.clock.parts(), [1, 7, 0, 2]);
+        let clock = Clock::new(6, 23, 59, 58).unwrap();
+        assert!(commands.edit(Edit::ScenarioTime(clock)));
+        resources.prepare(&device, &queue);
+        let Event::Progress(reset) = results.try_recv().unwrap();
+        assert_eq!(reset.generation, 0);
+        assert_eq!(reset.population, 0);
+        assert_eq!(reset.clock, clock);
+        assert_eq!(resources.scene.geometry(), geometry);
+        for street in 0..3 {
+            assert_eq!(
+                resources.scene.cells()[street * 64 + 18],
+                7,
+                "blocker stays"
+            );
+        }
+        resources.prepare(&device, &queue);
+        let Event::Progress(still_paused) = results.try_recv().unwrap();
+        assert_eq!(
+            still_paused.generation, 0,
+            "an old manual ticket must not replay"
+        );
+        assert_eq!(still_paused.clock, clock);
+        assert!(commands.send(
+            Paint {
+                step_ticket: 2,
+                ..state
+            },
+            None
+        ));
+        resources.prepare(&device, &queue);
+        let Event::Progress(next) = results.try_recv().unwrap();
+        assert_eq!(next.generation, 1);
+        assert_eq!(next.clock.parts(), [0, 0, 0, 0]);
+    }
 
     #[test]
     fn replacing_a_session_discards_old_edits_and_resets_the_render_owned_simulation() {

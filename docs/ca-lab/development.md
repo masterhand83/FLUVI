@@ -60,8 +60,8 @@ settings. Clear and Random Fill share the ordered cell-edit queue. Paused edits
 publish before painting; running edits publish at the next completed tick.
 Both actions preserve special cells. Global generation replaces the generator's
 stored probability before the hourly multiplier and respects disabled lanes.
-It never edits the stored street configuration. Until clock/profile support is
-ported, the model's hourly multiplier defaults to 1.
+It never edits the stored street configuration. The virtual clock supplies the
+hourly multiplier before generation.
 
 Focused checks: `cargo test -p ca-core --test transport`,
 `cargo test -p ca-app --test transport_controls --bin ca-app`, and
@@ -336,6 +336,39 @@ streets.
 
 Focused checks: `cargo test -p ca-app --test map_interaction` and
 `cargo test -p ca-core --test street_inspector`.
+
+### Virtual clock and hourly profiles
+
+Tools → Set Scenario Date and Time opens a weekday/time draft with a localized
+preview. Apply uses the ordered render edit queue, clears vehicles and waiting
+flags, resets generation and FPS, and installs the clock without a tick. It keeps
+the map, blockers, generation settings, and pause state. Later metrics and parking
+features register their UI resets with `MapSession::register_scenario_reset` and
+extend `MapDocument::reset_scenario_time` for render-owned model state.
+
+`ca-core::virtual_time` owns Sunday-based weekdays, the v1 default profiles, and
+the fixed two seconds per completed tick. `MapDocument::tick` samples the current
+hour before generation, then advances time after traffic. Manual steps use the
+same path. Forecasts find the first change greater than 0.3 across the actual
+weekly calendar; disabled profiles supply 1 and no forecast.
+
+Tools → Hourly Traffic Profiles edits a separate 7 × 24 draft. Dot-decimal values
+must be in 0–3. Presets, copy-to-all, and selected/weekday/weekend/all default
+restoration do not change live profiles until Apply. Escape or Close discards
+the draft. A full command queue retains the draft with a warning.
+Starting a street edit session closes time/profile drafts, so Cancel cannot
+restore old vehicles after a scenario reset. Info-bar labels are cached until
+the clock, profiles, or language changes.
+
+The map codec reads and writes v1's `configuracionTiempo`, including zeros and
+`usarPerfiles`. It also reads the older `multiplicadoresPorHora` array. Maps without
+a switch retain the current switch. New/Open restore the clock after feature and
+info-bar reset. UI day names come from the catalogs; `Clock::export_timestamp`
+always returns the Spanish day and numeric 24-hour time.
+
+Focused checks: `cargo test -p ca-core --test virtual_time --test map_json`,
+`cargo test -p ca-app --test time_dialogs --test map_session`, and
+`cargo test -p ca-app --bin ca-app scenario_time_command`.
 
 ### Map files and session replacement
 

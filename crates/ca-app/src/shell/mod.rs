@@ -74,6 +74,10 @@ impl Shell {
         &self.preferences
     }
 
+    pub fn translator(&self) -> &Translator {
+        &self.translator
+    }
+
     pub fn tr(&self, key: &str, params: &[(&str, &str)]) -> String {
         self.translator.tr(key, params)
     }

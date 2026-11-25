@@ -190,7 +190,22 @@ impl TrafficScene {
     }
 
     pub fn tick(&mut self) {
-        self.document.model_mut().tick();
+        self.document.tick();
+        self.pack();
+    }
+
+    pub fn time(&self) -> &ca_core::virtual_time::VirtualTime {
+        self.document.time()
+    }
+
+    pub fn set_profiles(&mut self, settings: ca_core::virtual_time::VirtualTime) {
+        let mut time = self.document.time().clone();
+        time.apply_profiles(&settings);
+        self.document.set_time(time);
+    }
+
+    pub fn reset_scenario_time(&mut self, clock: ca_core::virtual_time::Clock) {
+        self.document.reset_scenario_time(clock);
         self.pack();
     }
 
