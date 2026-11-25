@@ -1,9 +1,11 @@
 //! CPU traffic state packed once per completed batch for direct GPU display.
 use bytemuck::{Pod, Zeroable};
+use ca_core::camera::WorldView;
+use ca_core::cell_index::{CellRef, StreetGeometry};
 use ca_core::traffic::{CalleType, LaneDirection, TrafficModel};
 use wgpu::util::DeviceExt;
 
-use crate::{Dimensions, entry};
+use crate::{ViewUniform, entry};
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Pod, Zeroable)]
@@ -22,6 +24,7 @@ pub struct TrafficScene {
     model: TrafficModel,
     lanes: Vec<TrafficLane>,
     cells: Vec<u32>,
+    edited: bool,
 }
 
 impl TrafficScene {
@@ -50,6 +53,7 @@ impl TrafficScene {
             model,
             lanes,
             cells: vec![0; offset as usize],
+            edited: false,
         };
         scene.pack();
         scene
@@ -64,11 +68,68 @@ impl TrafficScene {
         ) {
             *target = u32::from(*value);
         }
+        self.edited = false;
     }
 
     pub fn tick(&mut self) {
         self.model.tick();
         self.pack();
+    }
+
+    /// Paused changes are packed before this frame is painted. Running changes
+    /// remain in the model until the next completed tick packs the display.
+    pub fn toggle_vehicle(&mut self, cell: CellRef, paused: bool) -> bool {
+        if !self.model.toggle_vehicle(cell) {
+            return false;
+        }
+        self.edited = true;
+        if paused {
+            self.pack();
+        }
+        true
+    }
+
+    /// Flush edits if the user pauses before a pending simulation tick.
+    /// Returns whether the display buffer needs an upload.
+    pub fn publish_edits(&mut self) -> bool {
+        if !self.edited {
+            return false;
+        }
+        self.pack();
+        true
+    }
+
+    /// Layout export for interaction tools; never rebuilt on traffic ticks.
+    pub fn geometry(&self) -> Vec<StreetGeometry> {
+        let mut lanes = self.lanes.iter();
+        self.model
+            .streets()
+            .iter()
+            .enumerate()
+            .map(|(id, street)| StreetGeometry {
+                id,
+                centers: (0..street.config().carriles)
+                    .map(|_| {
+                        let lane = lanes.next().expect("one layout per model lane");
+                        (0..lane.length)
+                            .map(|i| {
+                                [
+                                    lane.origin[0] as f32 + i as f32 + 0.5,
+                                    lane.origin[1] as f32 + 0.5,
+                                ]
+                            })
+                            .collect()
+                    })
+                    .collect(),
+            })
+            .collect()
+    }
+
+    pub fn street_names(&self) -> Vec<String> {
+        // Tracer-map names are data, not translated UI labels.
+        ["Generador", "Conexion", "Devorador"]
+            .map(String::from)
+            .to_vec()
     }
 
     pub fn lanes(&self) -> &[TrafficLane] {
@@ -91,6 +152,7 @@ impl TrafficScene {
 
 pub struct TrafficDisplay {
     state: wgpu::Buffer,
+    view: wgpu::Buffer,
     group: wgpu::BindGroup,
     pipeline: wgpu::RenderPipeline,
 }
@@ -110,12 +172,11 @@ impl TrafficDisplay {
         let [width, height] = scene.extent();
         let dims = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("traffic view dimensions"),
-            contents: bytemuck::bytes_of(&Dimensions {
-                width,
-                height,
-                padding: [0; 2],
+            contents: bytemuck::bytes_of(&ViewUniform {
+                origin: [0.0; 2],
+                span: [width as f32, height as f32],
             }),
-            usage: wgpu::BufferUsages::UNIFORM,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         });
         let fragment = wgpu::ShaderStages::FRAGMENT;
         let read = wgpu::BufferBindingType::Storage { read_only: true };
@@ -181,6 +242,7 @@ impl TrafficDisplay {
         });
         Self {
             state,
+            view: dims,
             group,
             pipeline,
         }
@@ -188,6 +250,17 @@ impl TrafficDisplay {
 
     pub fn upload(&self, queue: &wgpu::Queue, scene: &TrafficScene) {
         queue.write_buffer(&self.state, 0, bytemuck::cast_slice(scene.cells()));
+    }
+
+    pub fn set_view(&self, queue: &wgpu::Queue, view: WorldView) {
+        queue.write_buffer(
+            &self.view,
+            0,
+            bytemuck::bytes_of(&ViewUniform {
+                origin: view.origin,
+                span: view.span,
+            }),
+        );
     }
 
     pub fn paint(&self, pass: &mut wgpu::RenderPass<'_>) {

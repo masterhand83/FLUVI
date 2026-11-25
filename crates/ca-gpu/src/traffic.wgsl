@@ -1,9 +1,9 @@
-struct Dimensions { width: u32, height: u32, padding: vec2<u32> }
+struct WorldView { origin: vec2<f32>, span: vec2<f32> }
 struct Lane {
     origin: vec2<u32>, offset: u32, length: u32,
     direction: u32, street_type: u32, padding: vec2<u32>
 }
-@group(0) @binding(0) var<uniform> dims: Dimensions;
+@group(0) @binding(0) var<uniform> view: WorldView;
 @group(0) @binding(1) var<storage, read> cells: array<u32>;
 @group(0) @binding(2) var<storage, read> lanes: array<Lane>;
 struct Vertex { @builtin(position) position: vec4<f32>, @location(0) uv: vec2<f32> }
@@ -31,7 +31,7 @@ fn vehicle_colour(value: u32) -> vec3<f32> {
 
 @fragment
 fn fs_main(in: Vertex) -> @location(0) vec4<f32> {
-    let p = in.uv * vec2<f32>(f32(dims.width), f32(dims.height));
+    let p = view.origin + in.uv * view.span;
     var colour = vec3<f32>(0.018, 0.025, 0.04);
     for (var i = 0u; i < arrayLength(&lanes); i++) {
         let lane = lanes[i];

@@ -3,7 +3,10 @@ use ca_gpu::{TrafficDisplay, TrafficScene};
 use crossbeam_channel::{Receiver, Sender, TryRecvError, bounded};
 use eframe::egui;
 
-use crate::render::{Event, Paint, PaintCallback, Progress, Resources};
+use crate::render::{
+    Commands, Event, Paint, PaintCallback, Progress, Requests, Resources, command_channel,
+};
+use ca_app::map::MapInteraction;
 use ca_app::shell::{Shell, config_path};
 
 pub struct Report {
@@ -15,15 +18,15 @@ pub struct Report {
 struct Startup {
     render: egui_wgpu::RenderState,
     events: Sender<Event>,
-    requests: Receiver<Paint>,
+    requests: Requests,
     ready: Option<Receiver<(TrafficScene, TrafficDisplay)>>,
 }
 
 pub struct App {
     events: Receiver<Event>,
-    commands: Sender<Paint>,
+    commands: Commands,
     callback: egui::PaintCallback,
-    view_aspect: f32,
+    map: Option<MapInteraction>,
     report_tx: Sender<Report>,
     progress: Progress,
     adapter: String,
@@ -51,12 +54,12 @@ impl App {
         tracing::info!(?info, surface_format = ?render.target_format, "CA Lab GPU");
         let adapter = format!("{} ({:?})", info.name, info.backend);
         let (tx, events) = bounded(2);
-        let (commands, requests) = bounded(2);
+        let (commands, requests) = command_channel();
         Ok(Self {
             events,
             commands,
             callback: egui_wgpu::Callback::new_paint_callback(egui::Rect::NOTHING, PaintCallback),
-            view_aspect: 1.0,
+            map: None,
             report_tx,
             progress: Progress::default(),
             adapter,
@@ -89,7 +92,11 @@ impl App {
             match ready.try_recv() {
                 Ok((scene, display)) => {
                     let [width, height] = scene.extent();
-                    self.view_aspect = width as f32 / height as f32;
+                    self.map = Some(MapInteraction::new(
+                        [width as f32, height as f32],
+                        &scene.geometry(),
+                        scene.street_names(),
+                    ));
                     // Setup-only framework lock; frame work uses owned resources.
                     startup
                         .render
@@ -210,23 +217,25 @@ impl eframe::App for App {
             ));
         });
         egui::CentralPanel::default().show(ctx, |ui| {
-            let available = ui.available_rect_before_wrap();
-            let width = available
-                .width()
-                .min(available.height() * self.view_aspect)
-                .max(1.0);
-            let rect = egui::Rect::from_center_size(
-                available.center(),
-                egui::vec2(width, width / self.view_aspect),
-            );
-            ui.allocate_rect(rect, egui::Sense::hover());
-            let _ = self.commands.try_send(Paint {
+            let map = self
+                .map
+                .as_mut()
+                .expect("map installed with render resources")
+                .show(ui, self.shell.preferences().cell_detection);
+            let request = Paint {
                 playing: self.playing,
                 rate: self.rate,
                 step_ticket: self.step_ticket,
-            });
+                view: map.view,
+            };
+            if !self.commands.send(request, map.clicked) {
+                self.shell.notify(
+                    ca_app::shell::Severity::Warning,
+                    self.shell.tr("shell.cellEditBusy", &[]),
+                );
+            }
             let mut callback = self.callback.clone();
-            callback.rect = rect;
+            callback.rect = map.rect;
             ui.painter().add(callback);
         });
         self.shell.overlays(ctx);

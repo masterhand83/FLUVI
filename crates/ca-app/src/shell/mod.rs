@@ -244,6 +244,23 @@ mod tests {
     }
 
     #[test]
+    fn cell_detection_toggle_survives_restart() {
+        let path =
+            std::env::temp_dir().join(format!("fluvi-shell-{}-detection.json", std::process::id()));
+        let _ = std::fs::remove_file(&path);
+        let mut shell = Shell::load(Some(path.clone()));
+        assert!(!shell.preferences().cell_detection);
+        let ctx = eframe::egui::Context::default();
+        frame(&mut shell, &ctx, vec![]);
+        let output = frame(&mut shell, &ctx, vec![]);
+        let toggle = text_rect(&output, &shell.tr("settings.cellDetection.label", &[])).unwrap();
+        click(&mut shell, &ctx, toggle);
+        assert!(shell.preferences().cell_detection);
+        assert!(Shell::load(Some(path.clone())).preferences().cell_detection);
+        std::fs::remove_file(path).unwrap();
+    }
+
+    #[test]
     fn language_change_is_saved_but_session_translation_stays_fixed() {
         let path =
             std::env::temp_dir().join(format!("fluvi-shell-{}-language.json", std::process::id()));

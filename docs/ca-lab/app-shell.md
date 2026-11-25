@@ -42,7 +42,7 @@ file before replacing the old file.
 The translator is fixed when the shell starts. Changing the language saves
 the next-start preference and shows a notice in the current language. It does
 not change active text, play/pause, speed, step requests, or traffic state.
-Cell detection is stored for later map interaction features.
+Cell detection controls map-cell hover text. It does not disable cell clicks.
 
 ## Startup and verification
 

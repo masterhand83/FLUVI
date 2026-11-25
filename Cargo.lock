@@ -254,6 +254,7 @@ name = "ca-app"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "ca-core",
  "ca-gpu",
  "crossbeam-channel",
  "eframe",

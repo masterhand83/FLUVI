@@ -6,6 +6,7 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
+ca-core.workspace = true
 ca-gpu.workspace = true
 eframe.workspace = true
 egui.workspace = true

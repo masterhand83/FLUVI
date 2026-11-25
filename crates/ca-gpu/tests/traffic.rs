@@ -1,6 +1,61 @@
 use ca_gpu::TrafficScene;
 
 #[test]
+fn cell_edits_publish_immediately_when_paused_and_at_next_tick_when_running() {
+    use ca_core::cell_index::CellRef;
+    let cell = CellRef {
+        street: 1,
+        lane: 0,
+        index: 8,
+    };
+    let mut scene = TrafficScene::demo();
+    assert!(scene.toggle_vehicle(cell, true));
+    assert_eq!(scene.cells()[72], 1);
+    assert!(scene.toggle_vehicle(cell, true));
+    assert_eq!(scene.cells()[72], 0);
+    assert!(scene.toggle_vehicle(cell, false));
+    assert_eq!(scene.cells()[72], 0, "running edit waits for the next tick");
+    scene.tick();
+    assert_eq!(
+        scene.cells()[73],
+        1,
+        "edited car participates in the next tick"
+    );
+    assert!(!scene.toggle_vehicle(CellRef { street: 99, ..cell }, true));
+    assert!(
+        !scene.toggle_vehicle(
+            CellRef {
+                street: 0,
+                lane: 0,
+                index: 18
+            },
+            true
+        ),
+        "special cells are not vehicles"
+    );
+}
+
+#[test]
+fn pausing_before_next_tick_publishes_pending_edits_without_advancing_traffic() {
+    let mut scene = TrafficScene::demo();
+    scene.toggle_vehicle(
+        ca_core::cell_index::CellRef {
+            street: 1,
+            lane: 0,
+            index: 8,
+        },
+        false,
+    );
+    assert_eq!(scene.cells()[72], 0);
+    assert!(scene.publish_edits());
+    assert_eq!(scene.cells()[72], 1);
+    assert!(
+        !scene.publish_edits(),
+        "unchanged paused frames need no upload"
+    );
+}
+
+#[test]
 fn demo_has_physical_lane_positions_and_both_directions() {
     let scene = TrafficScene::demo();
     let lanes = scene.lanes();
@@ -53,6 +108,96 @@ fn storage_buffer_display_matches_known_vehicle_colours_and_lane_arrows() {
     let (device, queue) = pollster::block_on(adapter.request_device(&Default::default())).unwrap();
     let scene = TrafficScene::demo();
     let display = ca_gpu::TrafficDisplay::new(&device, &scene, wgpu::TextureFormat::Rgba8Unorm);
+    let bytes = render_display(&device, &queue, &display);
+    let pixel = |x, y| pixel(&bytes, x, y);
+    // Known initial positions and palette, independent of the packing algorithm.
+    for (x, y, expected) in [
+        (7.5, 2.5, [242, 46, 43, 255]),
+        (16.5, 2.5, [255, 166, 20, 255]),
+        (25.5, 2.5, [242, 230, 38, 255]),
+        (7.5, 3.5, [31, 217, 89, 255]),
+        (16.5, 3.5, [26, 153, 255, 255]),
+        (25.5, 3.5, [204, 64, 242, 255]),
+    ] {
+        let actual = pixel(x, y);
+        for channel in 0..4 {
+            assert!(
+                actual[channel].abs_diff(expected[channel]) <= 1,
+                "{x},{y}: {actual:?}"
+            );
+        }
+    }
+    assert!(pixel(20.25, 2.6)[0] > 230, "special cell white body");
+    assert!(pixel(20.5, 2.5)[0] < 20, "special cell diagonal");
+    assert!(pixel(1.3, 2.61)[0] > 150);
+    assert!(pixel(0.7, 2.61)[0] < 20);
+    assert!(pixel(0.7, 3.61)[0] > 150);
+    assert!(pixel(1.3, 3.61)[0] < 20);
+    assert!(pixel(7.5, 4.5)[0] < 20, "gap between streets");
+}
+
+#[test]
+fn transformed_display_shows_paused_edits_in_the_first_paint_and_running_edits_after_tick() {
+    use ca_core::{camera::WorldView, cell_index::CellRef};
+    let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor::from_env_or_default());
+    let adapter = match pollster::block_on(instance.request_adapter(&Default::default())) {
+        Ok(adapter) => adapter,
+        Err(error) => {
+            eprintln!("SKIP GPU display test: no adapter: {error}");
+            return;
+        }
+    };
+    let (device, queue) = pollster::block_on(adapter.request_device(&Default::default())).unwrap();
+    let mut scene = TrafficScene::demo();
+    let display = ca_gpu::TrafficDisplay::new(&device, &scene, wgpu::TextureFormat::Rgba8Unorm);
+    display.set_view(
+        &queue,
+        WorldView {
+            origin: [6.0, 1.0],
+            span: [18.0, 7.0],
+        },
+    );
+    // World (7.5, 2.5) maps to screen (3, 3) in the test's 36 x 14 units.
+    let bytes = render_display(&device, &queue, &display);
+    assert!(pixel(&bytes, 3.0, 3.0)[0] > 230);
+    let cell = CellRef {
+        street: 0,
+        lane: 0,
+        index: 5,
+    };
+    scene.toggle_vehicle(cell, true);
+    display.upload(&queue, &scene);
+    let bytes = render_display(&device, &queue, &display);
+    assert!(
+        pixel(&bytes, 3.0, 3.0)[0] < 30,
+        "paused removal appears in first paint"
+    );
+    scene.toggle_vehicle(cell, false);
+    display.upload(&queue, &scene);
+    let bytes = render_display(&device, &queue, &display);
+    assert!(
+        pixel(&bytes, 3.0, 3.0)[0] < 30,
+        "running edit is not packed yet"
+    );
+    scene.tick();
+    display.upload(&queue, &scene);
+    let bytes = render_display(&device, &queue, &display);
+    assert!(
+        pixel(&bytes, 5.0, 3.0)[0] > 230,
+        "car advances to physical cell 6"
+    );
+}
+
+fn pixel(bytes: &[u8], x: f32, y: f32) -> [u8; 4] {
+    let offset = (((y * 32.0) as u32 * 1152 + (x * 32.0) as u32) * 4) as usize;
+    bytes[offset..offset + 4].try_into().unwrap()
+}
+
+fn render_display(
+    device: &wgpu::Device,
+    queue: &wgpu::Queue,
+    display: &ca_gpu::TrafficDisplay,
+) -> Vec<u8> {
     // 32 pixels per world cell. Row bytes are a multiple of 256.
     let size = wgpu::Extent3d {
         width: 1152,
@@ -112,34 +257,5 @@ fn storage_buffer_display_matches_known_vehicle_colours_and_lane_arrows() {
     });
     device.poll(wgpu::PollType::wait_indefinitely()).unwrap();
     rx.recv().unwrap().unwrap();
-    let bytes = output.slice(..).get_mapped_range();
-    let pixel = |x: f32, y: f32| {
-        let offset = (((y * 32.0) as u32 * size.width + (x * 32.0) as u32) * 4) as usize;
-        <[u8; 4]>::try_from(&bytes[offset..offset + 4]).unwrap()
-    };
-    // Known initial positions and palette, independent of the packing algorithm.
-    for (x, y, expected) in [
-        (7.5, 2.5, [242, 46, 43, 255]),
-        (16.5, 2.5, [255, 166, 20, 255]),
-        (25.5, 2.5, [242, 230, 38, 255]),
-        (7.5, 3.5, [31, 217, 89, 255]),
-        (16.5, 3.5, [26, 153, 255, 255]),
-        (25.5, 3.5, [204, 64, 242, 255]),
-    ] {
-        let actual = pixel(x, y);
-        for channel in 0..4 {
-            assert!(
-                actual[channel].abs_diff(expected[channel]) <= 1,
-                "{x},{y}: {actual:?}"
-            );
-        }
-    }
-    assert!(pixel(20.25, 2.6)[0] > 230, "special cell white body");
-    assert!(pixel(20.5, 2.5)[0] < 20, "special cell diagonal");
-    // Right arrow head in the forward lane, left arrow head in reverse.
-    assert!(pixel(1.3, 2.61)[0] > 150);
-    assert!(pixel(0.7, 2.61)[0] < 20);
-    assert!(pixel(0.7, 3.61)[0] > 150);
-    assert!(pixel(1.3, 3.61)[0] < 20);
-    assert!(pixel(7.5, 4.5)[0] < 20, "gap between streets");
+    output.slice(..).get_mapped_range().to_vec()
 }

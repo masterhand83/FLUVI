@@ -6,12 +6,11 @@ pub use traffic::{TrafficDisplay, TrafficLane, TrafficScene};
 
 #[repr(C)]
 #[derive(Clone, Copy, Pod, Zeroable)]
-struct Dimensions {
-    width: u32,
-    height: u32,
-    padding: [u32; 2],
+struct ViewUniform {
+    origin: [f32; 2],
+    span: [f32; 2],
 }
-const _: () = assert!(size_of::<Dimensions>() == 16);
+const _: () = assert!(size_of::<ViewUniform>() == 16);
 
 fn entry(
     binding: u32,
@@ -37,8 +36,9 @@ mod layout_tests {
 
     #[test]
     fn shader_facing_layouts_match_wgsl() {
-        assert_eq!(size_of::<Dimensions>(), 16);
-        assert_eq!(offset_of!(Dimensions, padding), 8);
+        assert_eq!(size_of::<ViewUniform>(), 16);
+        assert_eq!(offset_of!(ViewUniform, origin), 0);
+        assert_eq!(offset_of!(ViewUniform, span), 8);
         assert_eq!(size_of::<TrafficLane>(), 32);
         assert_eq!(offset_of!(TrafficLane, origin), 0);
         assert_eq!(offset_of!(TrafficLane, offset), 8);

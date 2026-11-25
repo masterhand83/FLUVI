@@ -1,7 +1,8 @@
 use std::time::Instant;
 
+use ca_core::{camera::WorldView, cell_index::CellRef};
 use ca_gpu::{TrafficDisplay, TrafficScene};
-use crossbeam_channel::{Receiver, Sender};
+use crossbeam_channel::{Receiver, Sender, TrySendError, bounded};
 use eframe::{egui, wgpu};
 use egui_wgpu::{CallbackResources, CallbackTrait, ScreenDescriptor};
 
@@ -25,15 +26,53 @@ pub struct Paint {
     pub playing: bool,
     pub rate: f64,
     pub step_ticket: u64,
+    pub view: WorldView,
 }
 
 pub struct PaintCallback;
+
+/// Only view/control state is coalesced. Cell edits retain FIFO order.
+pub struct Commands {
+    state: Sender<Paint>,
+    stale_state: Receiver<Paint>,
+    edits: Sender<CellRef>,
+}
+
+pub struct Requests {
+    state: Receiver<Paint>,
+    edits: Receiver<CellRef>,
+}
+
+pub fn command_channel() -> (Commands, Requests) {
+    let (state_tx, state) = bounded(1);
+    let (edits_tx, edits) = bounded(32);
+    (
+        Commands {
+            state: state_tx,
+            stale_state: state.clone(),
+            edits: edits_tx,
+        },
+        Requests { state, edits },
+    )
+}
+
+impl Commands {
+    /// Returns false if the edit queue is full/closed. The caller must report it.
+    pub fn send(&self, state: Paint, edit: Option<CellRef>) -> bool {
+        if let Err(TrySendError::Full(state)) = self.state.try_send(state) {
+            // Single state producer; the consumer can only empty this slot.
+            let _ = self.stale_state.try_recv();
+            let _ = self.state.try_send(state);
+        }
+        edit.is_none_or(|cell| self.edits.try_send(cell).is_ok())
+    }
+}
 
 pub struct Resources {
     scene: TrafficScene,
     display: TrafficDisplay,
     events: Sender<Event>,
-    commands: Receiver<Paint>,
+    requests: Requests,
     request: Paint,
     ticks: TickControl,
     last_tick: Instant,
@@ -45,18 +84,23 @@ impl Resources {
         scene: TrafficScene,
         display: TrafficDisplay,
         events: Sender<Event>,
-        commands: Receiver<Paint>,
+        requests: Requests,
     ) -> Self {
         let population = scene.population();
+        let span = scene.extent().map(|v| v as f32);
         Self {
             scene,
             display,
             events,
-            commands,
+            requests,
             request: Paint {
                 playing: true,
                 rate: 10.0,
                 step_ticket: 0,
+                view: WorldView {
+                    origin: [0.0; 2],
+                    span,
+                },
             },
             ticks: TickControl::default(),
             last_tick: Instant::now(),
@@ -68,13 +112,19 @@ impl Resources {
     }
 
     fn prepare(&mut self, queue: &wgpu::Queue) {
-        while let Ok(request) = self.commands.try_recv() {
+        if let Ok(request) = self.requests.state.try_recv() {
             self.request = request;
         }
+        let request = self.request;
+        let mut edited = false;
+        while let Ok(cell) = self.requests.edits.try_recv() {
+            edited |= self.scene.toggle_vehicle(cell, !request.playing);
+        }
+        let published = !request.playing && self.scene.publish_edits();
+        self.display.set_view(queue, request.view);
         let now = Instant::now();
         let elapsed = now.duration_since(self.last_tick);
         self.last_tick = now;
-        let request = self.request;
         let steps = self
             .ticks
             .advance(elapsed, request.rate, request.playing, request.step_ticket);
@@ -87,7 +137,7 @@ impl Resources {
                 self.ticks.completed(1);
             }
         }
-        if steps > 0 {
+        if steps > 0 || published || (edited && !request.playing) {
             self.display.upload(queue, &self.scene);
             self.progress.population = self.scene.population();
         }
@@ -124,5 +174,57 @@ impl CallbackTrait for PaintCallback {
             .expect("traffic resources were installed at startup")
             .display
             .paint(pass);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn view_updates_coalesce_but_clicks_remain_ordered_and_queue_full_is_reported() {
+        let (commands, requests) = command_channel();
+        let state = Paint {
+            playing: false,
+            rate: 10.0,
+            step_ticket: 0,
+            view: WorldView {
+                origin: [0.0; 2],
+                span: [36.0, 14.0],
+            },
+        };
+        for index in 0..32 {
+            assert!(commands.send(
+                Paint {
+                    step_ticket: index as u64,
+                    ..state
+                },
+                Some(CellRef {
+                    street: 0,
+                    lane: 1,
+                    index
+                })
+            ));
+        }
+        assert_eq!(requests.state.try_recv().unwrap().step_ticket, 31);
+        assert!(!commands.send(
+            state,
+            Some(CellRef {
+                street: 0,
+                lane: 1,
+                index: 99
+            })
+        ));
+        for index in 0..32 {
+            assert_eq!(
+                requests.edits.try_recv().unwrap(),
+                CellRef {
+                    street: 0,
+                    lane: 1,
+                    index
+                }
+            );
+        }
+        assert!(requests.edits.try_recv().is_err());
     }
 }

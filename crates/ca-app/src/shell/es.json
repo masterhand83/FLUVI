@@ -42,6 +42,7 @@
   "shell.vehicles_other": "{{count}} vehículos",
   "shell.preferencesWarning": "No se pudieron leer algunas preferencias. Se usaron los valores predeterminados.",
   "shell.saveError": "No se pudieron guardar las preferencias: {{reason}}",
+  "shell.cellEditBusy": "La cola de edición de celdas está llena. Espera al siguiente fotograma y vuelve a hacer clic.",
   "shell.instructions": "Instrucciones",
   "shell.instructionsBody": "Usa Pausar para detener el tráfico. Avanzar un paso ejecuta un ciclo completo cuando está en pausa. Velocidad cambia los ciclos por segundo. F12 abre el perfilador.",
   "shell.demo": "Red de demostración fija",

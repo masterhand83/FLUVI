@@ -18,6 +18,35 @@ must not block shutdown. Analysis must remain off the UI/render thread.
 
 The native [app shell](app-shell.md) owns localization and saved UI preferences.
 
+### Camera and cell interaction
+
+`ca-core::camera::Camera` owns the world/local-screen transform, cursor-anchored
+zoom, resize, and pan limits. `WorldView` is the same origin/span sent to the GPU
+shader. Screen points are relative to the map panel, not the native window.
+Zoom is limited to 0.25–32 times the fitted scale. Pan limits retain a visible
+strip of the map bounds; limits take priority over cursor anchoring.
+
+`ca-core::cell_index::CellIndex` indexes lane-major physical cell centers.
+Geometry owners call `sync` after geometry edits or map replacement. The full
+coordinate signature rebuilds only changed streets, independent of traffic
+values. `find_nearest` retains v1's strict one-cell radius and street/lane/index
+tie order. `nearby_streets` returns topmost-first candidates. The current
+`hit_test` uses axis-aligned cell footprints, matching the tracer-map renderer;
+later curved geometry must supply its own footprint check.
+
+`ca-app::map::MapInteraction` handles mouse drag, wheel zoom, pixel-trackpad pan,
+Ctrl-scroll/trackpad pinch zoom, single-touch drag, and two-finger pan/pinch.
+The saved cell-detection setting controls `Name : index` hover text, not clicks.
+The reusable frame callback reads bounded channels: latest view/control state
+and a separate ordered cell-edit queue. A full edit queue gives a warning rather
+than silently discarding a click. Paused edits upload before that frame's paint;
+running edits enter the CPU model and display on the next completed tick.
+Pausing before that tick publishes the edit without advancing traffic.
+
+Focused checks: `cargo test -p ca-core --test camera --test cell_index`,
+`cargo test -p ca-app --test map_interaction`, and
+`cargo test -p ca-gpu --test traffic`.
+
 Use `cargo dev edit` or `bacon check` for compiler feedback. Run focused tests,
 for example `cargo nextest run -p ca-core`, when behavior changes. `bacon` still
 defaults to Clippy; its check/test/run jobs remain available.

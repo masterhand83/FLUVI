@@ -243,6 +243,23 @@ impl TrafficModel {
         &self.streets
     }
 
+    /// Toggle a physical cell without changing special cells or the RNG sequence.
+    pub fn toggle_vehicle(&mut self, cell: crate::cell_index::CellRef) -> bool {
+        let Some(street) = self.streets.get_mut(cell.street) else {
+            return false;
+        };
+        if cell.lane >= street.config.carriles || cell.index >= street.config.tamano {
+            return false;
+        }
+        let value = &mut street.cells[cell.lane * street.config.tamano + cell.index];
+        match *value {
+            0 => *value = 1,
+            1..=6 => *value = 0,
+            _ => return false,
+        }
+        true
+    }
+
     pub fn tick(&mut self) {
         self.tick_with_hook(|_, _| {});
     }
