@@ -1,0 +1,254 @@
+//! Traffic CA for ordinary streets, with physical (not travel-relative) indices.
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum CalleType {
+    Generador,
+    Conexion,
+    Devorador,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum LaneDirection {
+    Forward,
+    Reverse,
+}
+
+/// Lane metadata can be shorter than `carriles`. Missing values use v1 defaults.
+#[derive(Clone, Debug)]
+pub struct CalleConfig {
+    pub carriles: usize,
+    pub tamano: usize,
+    pub tipo: CalleType,
+    pub generation_probability: f64,
+    pub lane_change_probability: f64,
+    pub lane_directions: Vec<Option<LaneDirection>>,
+    pub lane_generation_enabled: Vec<Option<bool>>,
+}
+
+impl CalleConfig {
+    pub fn new(carriles: usize, tamano: usize, tipo: CalleType) -> Self {
+        Self {
+            carriles,
+            tamano,
+            tipo,
+            generation_probability: 0.0,
+            lane_change_probability: 0.0,
+            lane_directions: Vec::new(),
+            lane_generation_enabled: Vec::new(),
+        }
+    }
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum TrafficError {
+    #[error("street dimensions must be nonzero and their product must fit in usize")]
+    Dimensions,
+    #[error("cell data must contain carriles * tamano values in 0..=7")]
+    Cells,
+    #[error("probabilities must be finite and in 0..=1")]
+    Probability,
+    #[error("lane metadata must not exceed carriles")]
+    Lanes,
+}
+
+#[derive(Clone, Debug)]
+pub struct Calle {
+    config: CalleConfig,
+    cells: Vec<u8>,
+    next: Vec<u8>,
+}
+
+impl Calle {
+    /// Cells are lane-major, with physical indices `0..tamano` in each lane.
+    pub fn new(config: CalleConfig, cells: Vec<u8>) -> Result<Self, TrafficError> {
+        let size = config
+            .carriles
+            .checked_mul(config.tamano)
+            .filter(|&size| size > 0)
+            .ok_or(TrafficError::Dimensions)?;
+        if cells.len() != size || cells.iter().any(|&value| value > 7) {
+            return Err(TrafficError::Cells);
+        }
+        if [
+            config.generation_probability,
+            config.lane_change_probability,
+        ]
+        .iter()
+        .any(|p| !p.is_finite() || !(0.0..=1.0).contains(p))
+        {
+            return Err(TrafficError::Probability);
+        }
+        if config.lane_directions.len() > config.carriles
+            || config.lane_generation_enabled.len() > config.carriles
+        {
+            return Err(TrafficError::Lanes);
+        }
+        Ok(Self {
+            config,
+            next: cells.clone(),
+            cells,
+        })
+    }
+
+    pub fn config(&self) -> &CalleConfig {
+        &self.config
+    }
+
+    pub fn cells(&self) -> &[u8] {
+        &self.cells
+    }
+
+    /// Panics if `lane` is out of bounds.
+    pub fn lane_direction(&self, lane: usize) -> LaneDirection {
+        assert!(lane < self.config.carriles);
+        self.config
+            .lane_directions
+            .get(lane)
+            .copied()
+            .flatten()
+            .unwrap_or(LaneDirection::Forward)
+    }
+
+    pub fn entry_cell(&self, lane: usize) -> usize {
+        match self.lane_direction(lane) {
+            LaneDirection::Forward => 0,
+            LaneDirection::Reverse => self.config.tamano - 1,
+        }
+    }
+
+    pub fn exit_cell(&self, lane: usize) -> usize {
+        self.config.tamano - 1 - self.entry_cell(lane)
+    }
+
+    /// Snapshot update with open, empty boundaries. No allocations per update.
+    pub fn update(&mut self) {
+        let size = self.config.tamano;
+        self.next.copy_from_slice(&self.cells);
+        for lane in 0..self.config.carriles {
+            if size > 1 {
+                let reverse = self.lane_direction(lane) == LaneDirection::Reverse;
+                let start = lane * size;
+                for i in 0..size {
+                    let left = i.checked_sub(1).map(|p| self.cells[start + p]).unwrap_or(0);
+                    let right = if i + 1 < size {
+                        self.cells[start + i + 1]
+                    } else {
+                        0
+                    };
+                    let center = self.cells[start + i];
+                    let (upstream, downstream) = if reverse {
+                        (right, left)
+                    } else {
+                        (left, right)
+                    };
+                    self.next[start + i] = match rule(upstream, center, downstream) {
+                        Some(result) if result > 0 && center > 0 => center,
+                        Some(result) => result,
+                        None => center,
+                    };
+                }
+            }
+            if self.config.tipo == CalleType::Devorador {
+                let exit = lane * size + self.exit_cell(lane);
+                if (1..=6).contains(&self.next[exit]) {
+                    self.next[exit] = 0;
+                }
+            }
+        }
+        std::mem::swap(&mut self.cells, &mut self.next);
+    }
+}
+
+/// Raw v1 table lookup. Missing neighborhoods are not rules with result zero.
+pub fn rule(upstream: u8, center: u8, downstream: u8) -> Option<u8> {
+    if upstream > 7 || center > 7 || downstream > 7 {
+        return None;
+    }
+    crate::traffic_rules::RULES
+        [usize::from(upstream) * 64 + usize::from(center) * 8 + usize::from(downstream)]
+}
+
+/// Hooks run after each phase. Only Generation and StreetUpdate do work for now.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TickPhase {
+    Generation,
+    ConnectionTransfers,
+    LaneChanges,
+    StreetUpdate,
+    Rain,
+    Clock,
+    Metrics,
+}
+
+#[derive(Clone, Debug)]
+pub struct TrafficModel {
+    streets: Vec<Calle>,
+    random_state: u64,
+}
+
+impl TrafficModel {
+    pub fn new(streets: Vec<Calle>, seed: u64) -> Self {
+        Self {
+            streets,
+            random_state: seed,
+        }
+    }
+
+    pub fn streets(&self) -> &[Calle] {
+        &self.streets
+    }
+
+    pub fn tick(&mut self) {
+        self.tick_with_hook(|_, _| {});
+    }
+
+    /// Observe phase completion without changing the snapshot or RNG sequence.
+    /// Connection transfers, lane changes, rain, clock and metrics are no-ops.
+    pub fn tick_with_hook(&mut self, mut hook: impl FnMut(TickPhase, &[Calle])) {
+        for phase in [
+            TickPhase::Generation,
+            TickPhase::ConnectionTransfers,
+            TickPhase::LaneChanges,
+            TickPhase::StreetUpdate,
+            TickPhase::Rain,
+            TickPhase::Clock,
+            TickPhase::Metrics,
+        ] {
+            match phase {
+                TickPhase::Generation => self.generate(),
+                TickPhase::StreetUpdate => self.streets.iter_mut().for_each(Calle::update),
+                _ => {}
+            }
+            hook(phase, &self.streets);
+        }
+    }
+
+    fn generate(&mut self) {
+        // Hourly multiplier is fixed at 1 until clock/profile support is ported.
+        for street in &mut self.streets {
+            if street.config.tipo != CalleType::Generador {
+                continue;
+            }
+            for lane in 0..street.config.carriles {
+                if street.config.lane_generation_enabled.get(lane) == Some(&Some(false)) {
+                    continue;
+                }
+                let entry = lane * street.config.tamano + street.entry_cell(lane);
+                if street.cells[entry] == 0
+                    && random_unit(&mut self.random_state) < street.config.generation_probability
+                {
+                    street.cells[entry] = (random_unit(&mut self.random_state) * 6.0) as u8 + 1;
+                }
+            }
+        }
+    }
+}
+
+fn random_unit(state: &mut u64) -> f64 {
+    // SplitMix64, as in Grid::seeded; use the high 53 bits for a value in [0, 1).
+    *state = state.wrapping_add(0x9e3779b97f4a7c15);
+    let mut z = *state;
+    z = (z ^ (z >> 30)).wrapping_mul(0xbf58476d1ce4e5b9);
+    z = (z ^ (z >> 27)).wrapping_mul(0x94d049bb133111eb);
+    ((z ^ (z >> 31)) >> 11) as f64 / (1_u64 << 53) as f64
+}

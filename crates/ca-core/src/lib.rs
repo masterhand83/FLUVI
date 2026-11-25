@@ -1,4 +1,7 @@
-//! Pure, toroidal Conway reference model. Coordinates increase right and down.
+//! Headless CPU reference models. Conway coordinates increase right and down.
+
+pub mod traffic;
+mod traffic_rules;
 
 #[derive(Debug, thiserror::Error)]
 pub enum GridError {
