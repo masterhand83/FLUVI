@@ -684,9 +684,9 @@ impl eframe::App for App {
                     self.map.as_mut().expect("map").select(None);
                 }
             }
-            if let Some(street) = map.connection_pick {
+            if let Some(cell) = map.connection_pick {
                 self.connection_draft
-                    .pick(street, self.session.as_ref().expect("session").document());
+                    .pick_cell(cell, self.session.as_ref().expect("session").document());
             }
             if let Some(edit) = map.street_edit.clone() {
                 self.edit_streets(edit);
@@ -745,6 +745,7 @@ impl eframe::App for App {
                 ui.painter(),
                 map.rect,
                 &self.connection_draft,
+                self.session.as_ref().expect("session").document(),
             );
             self.map
                 .as_ref()

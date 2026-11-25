@@ -335,7 +335,7 @@ impl TrafficScene {
     }
 
     /// World-space arrow endpoints, built on topology edits, never per tick.
-    pub fn connection_arrows(&self) -> Vec<[[f32; 2]; 2]> {
+    pub fn connection_arrows(&self) -> Vec<ca_core::connections::ConnectionArrow> {
         self.document.model().connection_arrows(&self.geometry)
     }
 

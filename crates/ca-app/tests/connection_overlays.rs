@@ -97,3 +97,71 @@ fn connection_validation_reasons_have_translations_in_both_languages() {
         }
     }
 }
+
+#[test]
+fn saved_connection_arrows_keep_their_type_colors_after_map_load() {
+    use ca_core::{
+        connections::{Connection, Mapping, MergeRow, WeightedRow},
+        map_json::MapDocument,
+    };
+    let mut doc = MapDocument::parse(
+        r#"{"calles":[
+        {"nombre":"A","tipo":"conexion","tamano":4,"x":25,"y":25},
+        {"nombre":"B","tipo":"conexion","tamano":4,"x":75,"y":75}
+    ]}"#,
+    )
+    .unwrap();
+    let row = |source_cell, destination_cell| Mapping {
+        source_street: 0,
+        source_lane: 0,
+        source_cell,
+        destination_street: 1,
+        destination_lane: 0,
+        destination_cell,
+    };
+    doc.add_connection(Connection::Lineal(row(3, 0))).unwrap();
+    doc.add_connection(Connection::Incorporacion(vec![MergeRow {
+        mapping: row(2, 0),
+        enabled: true,
+    }]))
+    .unwrap();
+    doc.add_connection(Connection::Probabilistica(vec![
+        WeightedRow {
+            mapping: row(1, 1),
+            weight: 0.6,
+        },
+        WeightedRow {
+            mapping: row(1, 2),
+            weight: 0.4,
+        },
+    ]))
+    .unwrap();
+    let loaded = MapDocument::parse(&doc.to_json()).unwrap();
+    let scene = TrafficScene::from_document(&loaded);
+    let overlays = ConnectionOverlays::new(scene.connection_arrows());
+    let ctx = egui::Context::default();
+    let output = ctx.run(egui::RawInput::default(), |ctx| {
+        egui::CentralPanel::default().show(ctx, |ui| {
+            overlays.paint(
+                ui.painter(),
+                WorldView {
+                    origin: [0.0; 2],
+                    span: [25.0; 2],
+                },
+                ui.max_rect(),
+            );
+        });
+    });
+    let colors: Vec<_> = output
+        .shapes
+        .iter()
+        .filter_map(|s| match s.shape {
+            egui::Shape::LineSegment { stroke, .. } => Some(stroke.color),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(colors.len(), 12);
+    assert_eq!(&colors[0..3], &[egui::Color32::from_rgb(34, 197, 94); 3]);
+    assert_eq!(&colors[3..6], &[egui::Color32::from_rgb(249, 115, 22); 3]);
+    assert_eq!(&colors[6..12], &[egui::Color32::from_rgb(168, 85, 247); 6]);
+}

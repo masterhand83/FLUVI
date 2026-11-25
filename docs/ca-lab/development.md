@@ -96,18 +96,28 @@ Focused checks: `cargo test -p ca-core --test connections` and
 ### Map-first connection drafts
 
 Use Tools → Create Connection, then click the source and destination streets.
-The fixed panel at the map's top-left edits a separate draft. Linear links have
-one mapping, merges have one switch per source lane, and weighted splits share
-one source with editable destinations and fractional weights. Lane numbers start
+The fixed panel at the map's top-left edits a separate draft. Select the type
+before or after picking streets. Linear links are green, incorporation links
+are orange, and probabilistic links are purple, in both previews and saved arrows.
+Linear links fix their cells at the source lane exit and target lane entry;
+both lanes are editable. Incorporation rows fix only the source exit; each row's
+source lane, target lane, and target cell are editable. Probabilistic links share
+one source with editable destinations and probabilities entered as percentages
+from 0 to 100, totalling 100. The traffic model and map JSON retain fractions.
+Lane numbers start
 at 1; physical cell numbers start at 0. Source −1 means the last physical cell.
 Defaults follow each lane's directional exit and entry, including roundabouts.
 
 `ca-app::connection_draft::ConnectionDraft` owns draft rows and validation.
 Disabled merge rows are absent from preview, validation, and the committed link.
-Invalid weights and duplicate mappings disable Save with a translated reason.
+Invalid probabilities and duplicate mappings disable Save with a translated reason.
 Cancel, Escape, bulk selection, another drawing tool, and map replacement discard
 the draft without changing live connections. Draft picking takes priority over
 cell edits, geometry handles, and camera pan.
+The source marker follows hovered lanes before the first pick. After the source
+pick, an unfinished arrow follows the pointer and snaps to eligible target cells.
+Hover does not commit a pick. Lane and cell fields update the preview while input
+still has focus, without waiting for Enter or focus loss.
 
 Save validates through `TrafficModel::validate_connection`, then uses the ordered
 render edit queue and `MapDocument::add_connection`. A full queue leaves the draft

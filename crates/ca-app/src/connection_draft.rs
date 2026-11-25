@@ -1,6 +1,7 @@
 //! Map-first connection editor. No live model changes until its candidate is saved.
 use crate::shell::Shell;
 use ca_core::{
+    cell_index::CellRef,
     connections::{Connection, ConnectionError, Mapping, MergeRow, WeightedRow},
     map_json::MapDocument,
     traffic::LaneDirection,
@@ -18,14 +19,23 @@ pub enum DraftKind {
 pub struct DraftRow {
     pub mapping: Mapping,
     pub enabled: bool,
-    pub weight: String,
+    pub probability: String,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PickPreview {
+    Source(CellRef),
+    Link {
+        source: CellRef,
+        target: Option<CellRef>,
+    },
 }
 
 #[derive(Default)]
 pub struct ConnectionDraft {
     active: bool,
-    source: Option<usize>,
-    destination: Option<usize>,
+    source: Option<CellRef>,
+    destination: Option<CellRef>,
     kind: DraftKind,
     rows: Vec<DraftRow>,
 }
@@ -50,25 +60,107 @@ impl ConnectionDraft {
         self.active && self.destination.is_none()
     }
 
+    pub fn color(&self) -> egui::Color32 {
+        self.kind.color()
+    }
+
+    /// A map guide is separate from the editable rows and cannot finish a pick.
+    pub fn preview_pick(
+        &self,
+        hovered: Option<CellRef>,
+        document: &MapDocument,
+    ) -> Option<PickPreview> {
+        if !self.picking() {
+            return None;
+        }
+        let hovered = hovered.filter(|&cell| valid_cell(cell, document));
+        let source = self.source.or(hovered)?;
+        let source = if self.kind == DraftKind::Probabilistica {
+            source
+        } else {
+            CellRef {
+                index: directional_cell(
+                    &document.model().streets()[source.street],
+                    source.lane,
+                    true,
+                ),
+                ..source
+            }
+        };
+        if self.source.is_none() {
+            return Some(PickPreview::Source(source));
+        }
+        let target = hovered.map(|cell| {
+            if self.kind == DraftKind::Lineal {
+                CellRef {
+                    index: directional_cell(
+                        &document.model().streets()[cell.street],
+                        cell.lane,
+                        false,
+                    ),
+                    ..cell
+                }
+            } else {
+                cell
+            }
+        });
+        Some(PickPreview::Link { source, target })
+    }
+
     pub fn rows_mut(&mut self) -> &mut [DraftRow] {
         &mut self.rows
     }
 
-    pub fn preview_mappings(&self) -> impl Iterator<Item = &Mapping> {
+    pub fn preview_mappings<'a>(
+        &'a self,
+        document: &'a MapDocument,
+    ) -> impl Iterator<Item = Mapping> + 'a {
         self.rows
             .iter()
             .filter(|r| self.kind != DraftKind::Incorporacion || r.enabled)
-            .map(|r| &r.mapping)
+            .map(|r| self.normalized_mapping(r.mapping, document))
+    }
+
+    fn normalized_mapping(&self, mut mapping: Mapping, document: &MapDocument) -> Mapping {
+        let streets = document.model().streets();
+        if matches!(self.kind, DraftKind::Lineal | DraftKind::Incorporacion)
+            && let Some(source) = streets.get(mapping.source_street)
+            && mapping.source_lane < source.config().carriles
+        {
+            mapping.source_cell = directional_cell(source, mapping.source_lane, true) as isize;
+        }
+        if self.kind == DraftKind::Lineal
+            && let Some(destination) = streets.get(mapping.destination_street)
+            && mapping.destination_lane < destination.config().carriles
+        {
+            mapping.destination_cell =
+                directional_cell(destination, mapping.destination_lane, false);
+        }
+        mapping
     }
 
     pub fn pick(&mut self, street: usize, document: &MapDocument) {
-        if !self.active || street >= document.model().streets().len() {
+        let Some(road) = document.model().streets().get(street) else {
+            return;
+        };
+        self.pick_cell(
+            CellRef {
+                street,
+                lane: 0,
+                index: directional_cell(road, 0, self.source.is_none()),
+            },
+            document,
+        );
+    }
+
+    pub fn pick_cell(&mut self, cell: CellRef, document: &MapDocument) {
+        if !self.active || !valid_cell(cell, document) {
             return;
         }
         if self.source.is_none() {
-            self.source = Some(street);
+            self.source = Some(cell);
         } else if self.destination.is_none() {
-            self.destination = Some(street);
+            self.destination = Some(cell);
             self.reset_rows(document);
         }
     }
@@ -84,8 +176,8 @@ impl ConnectionDraft {
             return;
         };
         let streets = document.model().streets();
-        let from = &streets[source];
-        let to = &streets[destination];
+        let from = &streets[source.street];
+        let to = &streets[destination.street];
         let count = match self.kind {
             DraftKind::Lineal => 1,
             DraftKind::Incorporacion => from.config().carriles,
@@ -95,30 +187,37 @@ impl ConnectionDraft {
             let source_lane = if self.kind == DraftKind::Incorporacion {
                 lane
             } else {
-                0
+                source.lane
             };
-            let destination_lane = lane.min(to.config().carriles - 1);
+            let selected_target = match self.kind {
+                DraftKind::Lineal => true,
+                DraftKind::Incorporacion => lane == source.lane,
+                DraftKind::Probabilistica => lane == destination.lane,
+            };
+            let destination_lane = if selected_target {
+                destination.lane
+            } else {
+                lane.min(to.config().carriles - 1)
+            };
             self.rows.push(DraftRow {
                 mapping: Mapping {
-                    source_street: source,
+                    source_street: source.street,
                     source_lane,
-                    source_cell: if from.lane_direction(source_lane) == LaneDirection::Reverse {
-                        0
+                    source_cell: if self.kind == DraftKind::Probabilistica {
+                        source.index
                     } else {
-                        from.config().tamano as isize - 1
-                    },
-                    destination_street: destination,
+                        directional_cell(from, source_lane, true)
+                    } as isize,
+                    destination_street: destination.street,
                     destination_lane,
-                    destination_cell: if to.lane_direction(destination_lane)
-                        == LaneDirection::Reverse
-                    {
-                        to.config().tamano - 1
+                    destination_cell: if selected_target && self.kind != DraftKind::Lineal {
+                        destination.index
                     } else {
-                        0
+                        directional_cell(to, destination_lane, false)
                     },
                 },
                 enabled: true,
-                weight: (1.0 / count as f64).to_string(),
+                probability: (100.0 / count as f64).to_string(),
             });
         }
     }
@@ -129,13 +228,15 @@ impl ConnectionDraft {
             return Err(ConnectionError::InvalidMapping);
         }
         let connection = match self.kind {
-            DraftKind::Lineal => Connection::Lineal(self.rows[0].mapping),
+            DraftKind::Lineal => {
+                Connection::Lineal(self.normalized_mapping(self.rows[0].mapping, document))
+            }
             DraftKind::Incorporacion => Connection::Incorporacion(
                 self.rows
                     .iter()
                     .filter(|r| r.enabled)
                     .map(|r| MergeRow {
-                        mapping: r.mapping,
+                        mapping: self.normalized_mapping(r.mapping, document),
                         enabled: true,
                     })
                     .collect(),
@@ -146,7 +247,11 @@ impl ConnectionDraft {
                     .map(|r| {
                         Ok(WeightedRow {
                             mapping: r.mapping,
-                            weight: r.weight.parse().map_err(|_| ConnectionError::Weights)?,
+                            weight: r
+                                .probability
+                                .parse::<f64>()
+                                .map_err(|_| ConnectionError::Weights)?
+                                / 100.0,
                         })
                     })
                     .collect::<Result<_, ConnectionError>>()?,
@@ -196,33 +301,45 @@ impl ConnectionDraft {
                     ui.label(format!(
                         "{}: {}",
                         shell.tr("connectionDraft.source", &[]),
-                        document.layout()[source].name
+                        document.layout()[source.street].name
                     ));
+                }
+                let old = self.kind;
+                egui::ComboBox::from_id_salt("connection-kind")
+                    .selected_text(
+                        egui::RichText::new(shell.tr(self.kind.key(), &[])).color(self.color()),
+                    )
+                    .show_ui(ui, |ui| {
+                        for kind in [
+                            DraftKind::Lineal,
+                            DraftKind::Incorporacion,
+                            DraftKind::Probabilistica,
+                        ] {
+                            ui.selectable_value(
+                                &mut self.kind,
+                                kind,
+                                egui::RichText::new(shell.tr(kind.key(), &[])).color(kind.color()),
+                            );
+                        }
+                    });
+                if self.kind != old {
+                    self.reset_rows(document);
                 }
                 if let (Some(source), Some(destination)) = (self.source, self.destination) {
                     ui.label(format!(
                         "{}: {}",
                         shell.tr("connectionDraft.destination", &[]),
-                        document.layout()[destination].name
+                        document.layout()[destination.street].name
                     ));
-                    let old = self.kind;
-                    egui::ComboBox::from_id_salt("connection-kind")
-                        .selected_text(shell.tr(self.kind.key(), &[]))
-                        .show_ui(ui, |ui| {
-                            for kind in [
-                                DraftKind::Lineal,
-                                DraftKind::Incorporacion,
-                                DraftKind::Probabilistica,
-                            ] {
-                                ui.selectable_value(
-                                    &mut self.kind,
-                                    kind,
-                                    shell.tr(kind.key(), &[]),
-                                );
-                            }
-                        });
-                    if self.kind != old {
-                        self.reset_rows(document);
+                    if self.kind != DraftKind::Probabilistica {
+                        ui.small(shell.tr(
+                            if self.kind == DraftKind::Lineal {
+                                "connectionDraft.linearHint"
+                            } else {
+                                "connectionDraft.incorporationHint"
+                            },
+                            &[],
+                        ));
                     }
                     ui.small(shell.tr("connectionDraft.indexHint", &[]));
                     egui::ScrollArea::vertical()
@@ -245,32 +362,34 @@ impl ConnectionDraft {
                                             endpoint(
                                                 ui,
                                                 shell,
-                                                "connectionDraft.source",
-                                                &streets[source],
+                                                &streets[source.street],
                                                 &mut row.mapping.source_lane,
                                                 &mut row.mapping.source_cell,
                                                 true,
-                                                self.kind != DraftKind::Incorporacion,
+                                                self.kind != DraftKind::Probabilistica,
                                             );
                                         }
                                         let mut cell = row.mapping.destination_cell as isize;
                                         endpoint(
                                             ui,
                                             shell,
-                                            "connectionDraft.destination",
-                                            &streets[destination],
+                                            &streets[destination.street],
                                             &mut row.mapping.destination_lane,
                                             &mut cell,
                                             false,
-                                            true,
+                                            self.kind == DraftKind::Lineal,
                                         );
                                         row.mapping.destination_cell = cell as usize;
                                         if self.kind == DraftKind::Probabilistica {
                                             ui.horizontal(|ui| {
-                                                ui.label(shell.tr("connectionDraft.weight", &[]));
+                                                ui.label(
+                                                    shell.tr("connectionDraft.probability", &[]),
+                                                );
                                                 ui.add(
-                                                    egui::TextEdit::singleline(&mut row.weight)
-                                                        .desired_width(65.0),
+                                                    egui::TextEdit::singleline(
+                                                        &mut row.probability,
+                                                    )
+                                                    .desired_width(65.0),
                                                 );
                                                 if ui
                                                     .small_button(
@@ -306,7 +425,7 @@ impl ConnectionDraft {
                                 self.rows.push(DraftRow {
                                     mapping: self.rows[0].mapping,
                                     enabled: true,
-                                    weight: "0".into(),
+                                    probability: "0".into(),
                                 });
                             }
                         }
@@ -335,6 +454,13 @@ impl ConnectionDraft {
 }
 
 impl DraftKind {
+    fn color(self) -> egui::Color32 {
+        crate::connections::connection_color(match self {
+            Self::Lineal => ca_core::connections::ConnectionKind::Linear,
+            Self::Incorporacion => ca_core::connections::ConnectionKind::Incorporation,
+            Self::Probabilistica => ca_core::connections::ConnectionKind::Probabilistic,
+        })
+    }
     fn key(self) -> &'static str {
         match self {
             Self::Lineal => "connectionDraft.lineal",
@@ -344,41 +470,64 @@ impl DraftKind {
     }
 }
 
-#[allow(clippy::too_many_arguments)]
 fn endpoint(
     ui: &mut egui::Ui,
     shell: &Shell,
-    label: &str,
     street: &ca_core::traffic::Calle,
     lane: &mut usize,
     cell: &mut isize,
     source: bool,
-    editable_lane: bool,
+    fixed_cell: bool,
 ) {
     ui.horizontal(|ui| {
-        ui.label(shell.tr(label, &[]));
+        ui.label(shell.tr(
+            if source {
+                "connectionDraft.source"
+            } else {
+                "connectionDraft.destination"
+            },
+            &[],
+        ));
         let mut number = *lane + 1;
         let changed = ui
-            .add_enabled(
-                editable_lane,
+            .add(
                 egui::DragValue::new(&mut number)
                     .range(1..=street.config().carriles)
-                    .prefix(shell.tr("connectionDraft.lane", &[])),
+                    .prefix(shell.tr("connectionDraft.lane", &[]))
+                    .update_while_editing(true),
             )
             .changed();
         *lane = number - 1;
-        if changed {
-            let reverse = street.lane_direction(*lane) == LaneDirection::Reverse;
-            *cell = if source != reverse {
-                street.config().tamano as isize - 1
-            } else {
-                0
-            };
+        if changed || fixed_cell {
+            *cell = directional_cell(street, *lane, source) as isize;
         }
-        ui.add(
-            egui::DragValue::new(cell)
-                .range(if source { -1 } else { 0 }..=street.config().tamano as isize - 1)
-                .prefix(shell.tr("connectionDraft.cell", &[])),
-        );
+        if fixed_cell {
+            ui.label(format!("{}{cell}", shell.tr("connectionDraft.cell", &[])));
+        } else {
+            ui.add(
+                egui::DragValue::new(cell)
+                    .range(if source { -1 } else { 0 }..=street.config().tamano as isize - 1)
+                    .prefix(shell.tr("connectionDraft.cell", &[]))
+                    .update_while_editing(true),
+            );
+        }
     });
+}
+
+fn directional_cell(street: &ca_core::traffic::Calle, lane: usize, source: bool) -> usize {
+    if source != (street.lane_direction(lane) == LaneDirection::Reverse) {
+        street.config().tamano - 1
+    } else {
+        0
+    }
+}
+
+fn valid_cell(cell: CellRef, document: &MapDocument) -> bool {
+    document
+        .model()
+        .streets()
+        .get(cell.street)
+        .is_some_and(|street| {
+            cell.lane < street.config().carriles && cell.index < street.config().tamano
+        })
 }

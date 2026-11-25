@@ -7,7 +7,7 @@ use ca_core::{
 use eframe::egui;
 
 pub struct MapFrame {
-    pub connection_pick: Option<usize>,
+    pub connection_pick: Option<CellRef>,
     pub bulk_started: bool,
     pub bulk_rect: Option<egui::Rect>,
     pub rect: egui::Rect,
@@ -372,10 +372,16 @@ impl MapInteraction {
         painter: &egui::Painter,
         rect: egui::Rect,
         draft: &crate::connection_draft::ConnectionDraft,
+        document: &ca_core::map_json::MapDocument,
     ) {
         let Some(camera) = &self.camera else { return };
         let painter = painter.with_clip_rect(rect);
-        for row in draft.preview_mappings() {
+        let color = draft.color();
+        let screen = |point| {
+            let point = camera.world_to_screen(point);
+            rect.min + egui::vec2(point[0], point[1])
+        };
+        for row in draft.preview_mappings(document) {
             let source = if row.source_cell == -1 {
                 self.street_sizes
                     .get(row.source_street)
@@ -400,18 +406,43 @@ impl MapInteraction {
             }) else {
                 continue;
             };
-            let screen = |point| {
-                let point = camera.world_to_screen(point);
-                rect.min + egui::vec2(point[0], point[1])
-            };
             let start = screen(source);
             let end = screen(destination);
-            painter.arrow(
-                start,
-                end - start,
-                egui::Stroke::new(2.5_f32, egui::Color32::YELLOW),
-            );
-            painter.circle_filled(start, 3.0, egui::Color32::YELLOW);
+            painter.arrow(start, end - start, egui::Stroke::new(2.5_f32, color));
+            painter.circle_filled(start, 3.0, color);
+        }
+        if draft.picking()
+            && let Some(pointer) = painter
+                .ctx()
+                .pointer_hover_pos()
+                .filter(|p| rect.contains(*p))
+        {
+            let hovered = self
+                .index
+                .hit_test(camera.screen_to_world((pointer - rect.min).into()));
+            match draft.preview_pick(hovered, document) {
+                Some(crate::connection_draft::PickPreview::Source(source)) => {
+                    if let Some(source) = self.index.cell_center(source) {
+                        painter.circle_stroke(
+                            screen(source),
+                            5.0,
+                            egui::Stroke::new(2.5_f32, color),
+                        );
+                    }
+                }
+                Some(crate::connection_draft::PickPreview::Link { source, target }) => {
+                    if let Some(source) = self.index.cell_center(source) {
+                        let start = screen(source);
+                        let end = target
+                            .and_then(|cell| self.index.cell_center(cell))
+                            .map(screen)
+                            .unwrap_or(pointer);
+                        painter.arrow(start, end - start, egui::Stroke::new(2.5_f32, color));
+                        painter.circle_filled(start, 3.0, color);
+                    }
+                }
+                None => {}
+            }
         }
     }
 
@@ -520,7 +551,15 @@ impl MapInteraction {
             .map(|c| c.street);
         if self.connection_picking {
             return MapFrame {
-                connection_pick: response.clicked().then_some(street_hit).flatten(),
+                connection_pick: response
+                    .clicked()
+                    .then(|| {
+                        pointer.interact_pos().and_then(|p| {
+                            self.index
+                                .hit_test(camera.screen_to_world((p - rect.min).into()))
+                        })
+                    })
+                    .flatten(),
                 bulk_started: false,
                 bulk_rect: None,
                 rect,

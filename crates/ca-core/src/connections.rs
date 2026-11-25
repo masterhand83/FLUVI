@@ -63,6 +63,19 @@ pub enum Connection {
     Probabilistica(Vec<WeightedRow>),
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ConnectionKind {
+    Linear,
+    Incorporation,
+    Probabilistic,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct ConnectionArrow {
+    pub endpoints: [[f32; 2]; 2],
+    pub kind: ConnectionKind,
+}
+
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Registration {
     New,
@@ -70,6 +83,13 @@ enum Registration {
 }
 
 impl Connection {
+    pub fn kind(&self) -> ConnectionKind {
+        match self {
+            Self::Lineal(_) => ConnectionKind::Linear,
+            Self::Incorporacion(_) => ConnectionKind::Incorporation,
+            Self::ProbabilityTrial(_) | Self::Probabilistica(_) => ConnectionKind::Probabilistic,
+        }
+    }
     // Probability exits hold only after an occupied-destination trial has set
     // waiting. Disabled merge rows and inert self-links do not hold traffic.
     fn holding_exits(&self) -> impl Iterator<Item = &Mapping> {
@@ -358,19 +378,26 @@ impl TrafficModel {
     pub fn connection_arrows(
         &self,
         geometry: &[crate::cell_index::StreetGeometry],
-    ) -> Vec<[[f32; 2]; 2]> {
+    ) -> Vec<ConnectionArrow> {
         self.connections
             .iter()
-            .flat_map(Connection::mappings)
-            .map(|row| {
+            .flat_map(|connection| {
+                connection
+                    .mappings()
+                    .map(move |row| (connection.kind(), row))
+            })
+            .map(|(kind, row)| {
                 let source = row
                     .effective_source_cell(&self.streets[row.source_street])
                     .expect("registered source");
-                [
-                    geometry[row.source_street].centers[row.source_lane][source],
-                    geometry[row.destination_street].centers[row.destination_lane]
-                        [row.destination_cell],
-                ]
+                ConnectionArrow {
+                    kind,
+                    endpoints: [
+                        geometry[row.source_street].centers[row.source_lane][source],
+                        geometry[row.destination_street].centers[row.destination_lane]
+                            [row.destination_cell],
+                    ],
+                }
             })
             .collect()
     }
