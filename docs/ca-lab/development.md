@@ -521,6 +521,31 @@ v1 oracle. Focused checks: `cargo test -p ca-core -p ca-app -p ca-gpu --test met
 `cargo test -p ca-app --test map_interaction --test control_panel`, and
 `cargo test -p ca-app --bin ca-app scenario_time_command`.
 
+### Density heatmap
+
+Use Metrics → Density Heatmap for a live view of every street, independent of
+the metric road selection. Vehicle colors show the vehicle count divided by
+physical cells in a centered five-cell window in the same lane. Ordinary ends
+clip the window. Roundabouts wrap without counting any physical cell twice.
+Empty cells stay dark and obstacles stay neutral grey; both count only in the
+denominator.
+
+`ca-core::heatmap` owns density and physical-cell snapshots.
+`TrafficScene::heatmap_snapshot` uses retained display geometry and live CPU
+traffic, without GPU readback. The dialog requests snapshots through bounded,
+non-blocking channels at most five times per second, only while open.
+Two shared snapshot buffers are allocated at startup or topology reset. The
+renderer updates only an exclusively owned buffer and skips a sample if both
+are still in use. Snapshot delivery does not allocate in the render callback.
+Map replacement closes the dialog and releases its texture.
+
+`ca-app::heatmap::render_offscreen` returns an aspect-fitted `egui::ColorImage`
+within both requested size limits, capped at 4096 pixels per axis. A zero limit
+returns an empty image. `HeatmapDialog::render_offscreen` uses the same renderer
+without changing the dialog, its snapshot, or its texture.
+
+Focused checks: `cargo test -p ca-core -p ca-app --test heatmap`.
+
 ### Disruptions, rain, and instant flood
 
 The Scenarios section owns lane-block, flood, and obstacle paint modes. Select

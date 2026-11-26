@@ -8,6 +8,7 @@ pub mod connection_draft;
 pub mod connections;
 pub mod control_panel;
 mod handles;
+pub mod heatmap;
 pub mod inspector;
 pub mod map;
 pub mod map_files;

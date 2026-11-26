@@ -89,6 +89,8 @@ impl CallbackTrait for BackgroundCallback {
 
 /// Only view/control state is coalesced. Cell edits retain FIFO order.
 pub struct Commands {
+    heatmap_request: Sender<()>,
+    heatmaps: Receiver<std::sync::Arc<ca_core::heatmap::Snapshot>>,
     metrics: Receiver<ca_app::metrics::Packet>,
     scenario_results: Receiver<ScenarioResult>,
     parking_results: Receiver<(usize, Result<(), ca_core::parking::ParkingError>)>,
@@ -102,6 +104,8 @@ pub struct Commands {
 }
 
 pub struct Requests {
+    heatmap_request: Receiver<()>,
+    heatmaps: Sender<std::sync::Arc<ca_core::heatmap::Snapshot>>,
     metrics: Sender<ca_app::metrics::Packet>,
     scenario_results: Sender<ScenarioResult>,
     parking_results: Sender<(usize, Result<(), ca_core::parking::ParkingError>)>,
@@ -113,6 +117,8 @@ pub struct Requests {
 }
 
 pub fn command_channel() -> (Commands, Requests) {
+    let (heatmap_request_tx, heatmap_request) = bounded(1);
+    let (heatmap_tx, heatmaps) = bounded(1);
     let (metrics_tx, metrics) = bounded(128);
     let (scenario_results_tx, scenario_results) = bounded(32);
     let (parking_results_tx, parking_results) = bounded(32);
@@ -123,6 +129,8 @@ pub fn command_channel() -> (Commands, Requests) {
     let (replacement_tx, replacement) = bounded(1);
     (
         Commands {
+            heatmap_request: heatmap_request_tx,
+            heatmaps,
             metrics,
             scenario_results,
             parking_results,
@@ -135,6 +143,8 @@ pub fn command_channel() -> (Commands, Requests) {
             replacement: replacement_tx,
         },
         Requests {
+            heatmap_request,
+            heatmaps: heatmap_tx,
             metrics: metrics_tx,
             scenario_results: scenario_results_tx,
             parking_results: parking_results_tx,
@@ -148,6 +158,16 @@ pub fn command_channel() -> (Commands, Requests) {
 }
 
 impl Commands {
+    pub fn request_heatmap(&self) {
+        let _ = self.heatmap_request.try_send(());
+    }
+
+    pub fn heatmap_updates(
+        &self,
+    ) -> impl Iterator<Item = std::sync::Arc<ca_core::heatmap::Snapshot>> + '_ {
+        self.heatmaps.try_iter()
+    }
+
     pub fn metric_updates(&self) -> impl Iterator<Item = ca_app::metrics::Packet> + '_ {
         self.metrics.try_iter()
     }
@@ -169,6 +189,7 @@ impl Commands {
         }
     }
     pub fn replace(&self, scene: TrafficScene) -> bool {
+        self.heatmaps.try_iter().for_each(drop);
         self.replacement.try_send(scene).is_ok()
     }
     /// Returns false if the edit queue is full/closed. The caller must report it.
@@ -424,6 +445,13 @@ impl Resources {
         let _ = self.events.try_send(Event::Progress(self.progress));
         self.metric_delivery
             .publish(self.scene.metrics(), &self.requests.metrics);
+        // Transfer a reusable snapshot only on request. A slow UI skips a sample.
+        if self.requests.heatmap_request.try_recv().is_ok()
+            && self.requests.heatmaps.is_empty()
+            && let Some(snapshot) = self.scene.heatmap_snapshot()
+        {
+            let _ = self.requests.heatmaps.try_send(snapshot);
+        }
         // Bounded, non-blocking display telemetry; retry on the next frame.
         // Rotate the first item so even large maps cannot starve later buildings.
         let count = self.scene.parking_occupancies().count();

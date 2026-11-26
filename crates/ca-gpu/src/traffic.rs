@@ -33,6 +33,7 @@ struct TrafficTile {
 const _: () = assert!(size_of::<TrafficTile>() == 32);
 
 pub struct TrafficScene {
+    heatmaps: [std::sync::Arc<ca_core::heatmap::Snapshot>; 2],
     metrics: ca_core::metrics::Metrics,
     lanes: Vec<TrafficLane>,
     cells: Vec<u32>,
@@ -51,6 +52,17 @@ pub struct TrafficScene {
 }
 
 impl TrafficScene {
+    /// Reuse startup/topology storage. A slow UI skips a sample, never blocks or allocates.
+    pub fn heatmap_snapshot(&mut self) -> Option<std::sync::Arc<ca_core::heatmap::Snapshot>> {
+        for buffer in &mut self.heatmaps {
+            if let Some(snapshot) = std::sync::Arc::get_mut(buffer) {
+                snapshot.refresh(self.document.model().streets(), &self.geometry, &self.axes);
+                return Some(std::sync::Arc::clone(buffer));
+            }
+        }
+        None
+    }
+
     pub fn configure_parking(
         &mut self,
         building: usize,
@@ -193,6 +205,13 @@ impl TrafficScene {
             lane_start += street.centers.len();
         }
         let mut scene = Self {
+            heatmaps: std::array::from_fn(|_| {
+                std::sync::Arc::new(ca_core::heatmap::Snapshot::from_geometry(
+                    model.streets(),
+                    &geometry,
+                    &axes,
+                ))
+            }),
             metrics: ca_core::metrics::Metrics::new(model.streets()),
             lanes,
             names,

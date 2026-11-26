@@ -6,6 +6,7 @@ pub mod camera;
 pub mod cell_index;
 pub use traffic::disruptions;
 pub mod geometry;
+pub mod heatmap;
 pub mod map_json;
 pub mod metrics;
 mod random;

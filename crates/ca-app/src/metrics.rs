@@ -108,6 +108,7 @@ impl Metric {
 }
 
 pub enum Action {
+    Heatmap,
     Checklist,
     Map,
 }
@@ -171,6 +172,9 @@ impl MetricsPanel {
 
     pub fn show(&mut self, ui: &mut egui::Ui, shell: &Shell) -> Option<Action> {
         let mut action = None;
+        if ui.button(shell.tr("heatmap.title", &[])).clicked() {
+            action = Some(Action::Heatmap);
+        }
         if ui.button(shell.tr("metrics.selectRoads", &[])).clicked() {
             action = Some(Action::Checklist);
         }

@@ -27,6 +27,8 @@ struct Startup {
 }
 
 pub struct App {
+    heatmap: ca_app::heatmap::HeatmapDialog,
+    next_heatmap: std::time::Instant,
     metrics: ca_app::metrics::MetricsPanel,
     scenario_exchange: ca_app::scenario_library::ScenarioExchange,
     scenarios: ca_app::scenarios::ScenarioControls,
@@ -312,6 +314,7 @@ impl App {
             }
         });
         session.register_reset(ResetPhase::Features, |app| {
+            app.heatmap = Default::default();
             app.metrics = Default::default();
             app.scenarios = Default::default();
             app.transport = TransportControls::default();
@@ -330,6 +333,8 @@ impl App {
         });
         let time = session.document().time().clone();
         Ok(Self {
+            heatmap: Default::default(),
+            next_heatmap: std::time::Instant::now(),
             metrics: Default::default(),
             scenario_exchange: Default::default(),
             scenarios: Default::default(),
@@ -380,6 +385,11 @@ impl App {
     }
 
     fn handle_messages(&mut self) {
+        for frame in self.commands.heatmap_updates() {
+            if self.heatmap.is_open() {
+                self.heatmap.receive(frame);
+            }
+        }
         for packet in self.commands.metric_updates() {
             self.metrics.receive(packet);
         }
@@ -613,6 +623,10 @@ impl App {
         }
         match action {
             Some(PanelAction::Metrics(action)) => match action {
+                ca_app::metrics::Action::Heatmap => {
+                    self.heatmap.open();
+                    self.next_heatmap = std::time::Instant::now();
+                }
                 ca_app::metrics::Action::Checklist => self.metrics.open_checklist(),
                 ca_app::metrics::Action::Map => {
                     if !self.metrics.picking {
@@ -1160,6 +1174,11 @@ impl eframe::App for App {
         self.controls(ctx);
         self.control_panel(ctx);
         self.time_dialogs(ctx);
+        if self.heatmap.is_open() && std::time::Instant::now() >= self.next_heatmap {
+            self.commands.request_heatmap();
+            self.next_heatmap = std::time::Instant::now() + std::time::Duration::from_millis(200);
+        }
+        self.heatmap.show(ctx, &self.shell);
         if let Some(included) = self.metrics.dialog(
             ctx,
             self.session.as_ref().expect("session").document(),
