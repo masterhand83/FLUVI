@@ -546,6 +546,27 @@ without changing the dialog, its snapshot, or its texture.
 
 Focused checks: `cargo test -p ca-core -p ca-app --test heatmap`.
 
+Use Metrics → Vehicle Heat on Main Map for the optional square vehicle display.
+It starts off, is session-only, and stays unchanged across map and scenario-time
+resets. It uses the same local density rules on all streets. It changes neither
+vehicle classes nor obstacle textures, road arrows, simulation state, or metrics.
+
+`TrafficDisplay::paint_styled` selects one of two pipelines compiled at startup
+or topology reset. The normal pipeline compiles out heat calculations. The heat
+vertex shader reads up to five physical cells per vertex invocation only for
+vehicle tiles, then sends a flat color to the fragment shader. A tile uses six
+vertices, so its window can be evaluated six times. Density is not calculated
+per pixel.
+Static lane bounds use 16 bytes per lane; existing 32-byte tile instances retain
+their size, with the lane ID packed above the arrow bit. Both modes share traffic
+uploads, geometry, and draw ranges. The coalesced view/control channel changes display mode
+without allocating resources or repacking traffic.
+
+GPU image checks: `cargo test -p ca-gpu --test vehicle_heat`.
+For the manual timestamp benchmark, run
+`cargo test -p ca-gpu --test vehicle_heat benchmark_vehicle_styles -- --ignored --nocapture`.
+See [campus-performance.md](campus-performance.md) for results and measurement limits.
+
 ### Disruptions, rain, and instant flood
 
 The Scenarios section owns lane-block, flood, and obstacle paint modes. Select

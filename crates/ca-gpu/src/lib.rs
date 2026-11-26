@@ -6,7 +6,7 @@ mod buildings;
 pub use background::triangulate as triangulate_polygon;
 pub use buildings::building_zone;
 mod traffic;
-pub use traffic::{TrafficDisplay, TrafficLane, TrafficScene};
+pub use traffic::{TrafficDisplay, TrafficLane, TrafficScene, VehicleStyle};
 
 #[repr(C)]
 #[derive(Clone, Copy, Pod, Zeroable)]

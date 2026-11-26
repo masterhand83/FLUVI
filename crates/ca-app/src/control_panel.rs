@@ -24,6 +24,7 @@ pub enum PanelAction {
 }
 
 pub struct ControlPanel<'a> {
+    pub vehicle_heat: bool,
     pub metrics: &'a mut crate::metrics::MetricsPanel,
     pub document: &'a MapDocument,
     pub map: Option<&'a mut MapInteraction>,
@@ -44,6 +45,18 @@ impl ControlPanel<'_> {
                     && (section == "scenarios" || self.document.editing_street().is_none()),
                 |ui| match section {
                     "metrics" => {
+                        let mut heat = self.vehicle_heat;
+                        if ui
+                            .checkbox(&mut heat, shell.tr("heatmap.vehicleMode", &[]))
+                            .changed()
+                        {
+                            action = Some(PanelAction::Metrics(
+                                crate::metrics::Action::VehicleHeat(heat),
+                            ));
+                        }
+                        if heat {
+                            ui.label(shell.tr("heatmap.legend", &[]));
+                        }
                         if let Some(value) = self.metrics.show(ui, shell) {
                             action = Some(PanelAction::Metrics(value));
                         }

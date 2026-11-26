@@ -36,3 +36,34 @@ The driver reported an unavailable optional Vulkan validation layer and an
 initial suboptimal presentation warning. The app completed the run without
 a wgpu validation error. This measurement covers the fitted startup view,
 not every zoom level or street-edit workload.
+
+## Optional vehicle heat mode
+
+Run the GPU timestamp comparison:
+
+```sh
+cargo test -p ca-gpu --test vehicle_heat benchmark_vehicle_styles -- --ignored --nocapture
+```
+
+Recorded locally on 2026-11-26, on the same AMD integrated GPU and Mesa 25.2.8
+Vulkan driver. Development profile, 1152 × 448 offscreen target, fitted view,
+50% random vehicle fill. After two warm-up rounds, twelve rounds alternate mode
+order and record 32 passes per mode: 384 measured samples per mode and workload.
+
+| Workload | Normal median | Heat median | Normal p95 | Heat p95 | Median added cost |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Campus, 8,425 cells | 39.8 µs | 59.1 µs | 165.4 µs | 196.4 µs | 19.3 µs (+48.6%) |
+| 128 two-lane streets, 65,536 cells | 226.3 µs | 409.2 µs | 277.0 µs | 445.8 µs | 182.9 µs (+80.8%) |
+
+These are GPU traffic-pass times, including target clear/store and lane arrows.
+They exclude simulation, UI, buildings, presentation, startup compilation, and
+CPU submission time. They are not full-app frame rates. Timestamp readback is
+test-only and occurs after each batch. The benchmark is not a timing gate in CI.
+Clock state and other GPU activity can change these numbers.
+
+The heat calculation has a real cost, but the measured median increase is about
+0.02 ms on the campus and 0.18 ms on the larger map. This is a small part of an
+8.33 ms frame budget at 120 Hz. This measurement does not guarantee unchanged
+frame rates on every map, adapter, viewport, or vehicle fill. The normal pipeline
+compiles out heat-window reads and calculations; both modes share the same cell
+uploads and draw calls.

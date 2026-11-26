@@ -109,6 +109,7 @@ impl Metric {
 
 pub enum Action {
     Heatmap,
+    VehicleHeat(bool),
     Checklist,
     Map,
 }

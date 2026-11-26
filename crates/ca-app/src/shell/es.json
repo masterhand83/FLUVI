@@ -1,5 +1,6 @@
 {
   "heatmap.title": "Mapa de calor de densidad",
+  "heatmap.vehicleMode": "Calor de vehículos en el mapa principal",
   "heatmap.legend": "Todas las calles · Densidad local: verde 0%, amarillo 50%, rojo 100% · Gris: obstáculos",
   "metrics.axis.time": "Tiempo simulado",
   "metrics.axis.percentage": "Porcentaje (%)",

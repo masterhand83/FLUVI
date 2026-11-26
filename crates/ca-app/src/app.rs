@@ -27,6 +27,7 @@ struct Startup {
 }
 
 pub struct App {
+    vehicle_heat: bool,
     heatmap: ca_app::heatmap::HeatmapDialog,
     next_heatmap: std::time::Instant,
     metrics: ca_app::metrics::MetricsPanel,
@@ -333,6 +334,7 @@ impl App {
         });
         let time = session.document().time().clone();
         Ok(Self {
+            vehicle_heat: false,
             heatmap: Default::default(),
             next_heatmap: std::time::Instant::now(),
             metrics: Default::default(),
@@ -589,6 +591,7 @@ impl App {
             self.scenarios.rain_probability,
         );
         let action = ControlPanel {
+            vehicle_heat: self.vehicle_heat,
             metrics: &mut self.metrics,
             document: self.session.as_ref().expect("session").document(),
             map: self.map.as_mut(),
@@ -626,6 +629,9 @@ impl App {
                 ca_app::metrics::Action::Heatmap => {
                     self.heatmap.open();
                     self.next_heatmap = std::time::Instant::now();
+                }
+                ca_app::metrics::Action::VehicleHeat(heat) => {
+                    self.vehicle_heat = heat;
                 }
                 ca_app::metrics::Action::Checklist => self.metrics.open_checklist(),
                 ca_app::metrics::Action::Map => {
@@ -1363,6 +1369,11 @@ impl eframe::App for App {
             self.street_forms(ctx);
             self.connection_form(ctx, map.rect);
             let request = Paint {
+                vehicle_style: if self.vehicle_heat {
+                    ca_gpu::VehicleStyle::Heat
+                } else {
+                    ca_gpu::VehicleStyle::Classes
+                },
                 playing: self.playing,
                 rate: self.rate,
                 step_ticket: self.step_ticket,

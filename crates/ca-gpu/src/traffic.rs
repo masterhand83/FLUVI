@@ -7,6 +7,29 @@ use wgpu::util::DeviceExt;
 
 use crate::{ViewUniform, entry};
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum VehicleStyle {
+    #[default]
+    Classes,
+    Heat,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Pod, Zeroable)]
+struct HeatLane {
+    offset: u32,
+    length: u32,
+    periodic: u32,
+    padding: u32,
+}
+const _: () = {
+    assert!(size_of::<HeatLane>() == 16);
+    assert!(std::mem::offset_of!(HeatLane, offset) == 0);
+    assert!(std::mem::offset_of!(HeatLane, length) == 4);
+    assert!(std::mem::offset_of!(HeatLane, periodic) == 8);
+    assert!(std::mem::offset_of!(HeatLane, padding) == 12);
+};
+
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Pod, Zeroable)]
 pub struct TrafficLane {
@@ -28,14 +51,17 @@ struct TrafficTile {
     offset: u32,
     street_type: u32,
     direction: u32,
-    arrow: u32,
+    /// Low bit marks an arrow. Upper bits index the static heat lane metadata.
+    lane_and_arrow: u32,
 }
 const _: () = assert!(size_of::<TrafficTile>() == 32);
+const _: () = assert!(std::mem::offset_of!(TrafficTile, lane_and_arrow) == 28);
 
 pub struct TrafficScene {
     heatmaps: [std::sync::Arc<ca_core::heatmap::Snapshot>; 2],
     metrics: ca_core::metrics::Metrics,
     lanes: Vec<TrafficLane>,
+    heat_lanes: Vec<HeatLane>,
     cells: Vec<u32>,
     edited: bool,
     names: Vec<String>,
@@ -103,6 +129,7 @@ impl TrafficScene {
         let mut geometry = snapshot.streets;
         let axes = snapshot.axes;
         let mut lanes = Vec::new();
+        let mut heat_lanes = Vec::new();
         let mut names = Vec::new();
         let mut offset = 0;
         let mut minimum = [f32::INFINITY; 2];
@@ -136,6 +163,12 @@ impl TrafficScene {
                         CalleType::Conexion => 1,
                         CalleType::Devorador => 2,
                     },
+                });
+                heat_lanes.push(HeatLane {
+                    offset,
+                    length: street.config().tamano as u32,
+                    periodic: u32::from(street.config().periodic),
+                    padding: 0,
                 });
                 offset += street.config().tamano as u32;
             }
@@ -182,7 +215,7 @@ impl TrafficScene {
                         offset: layout.offset + index as u32,
                         street_type: layout.street_type,
                         direction: layout.direction,
-                        arrow: 0,
+                        lane_and_arrow: ((lane_start + lane) as u32) << 1,
                     });
                 }
                 if document.layout()[id].roundabout.is_some() {
@@ -196,7 +229,7 @@ impl TrafficScene {
                         offset: 0,
                         street_type: layout.street_type,
                         direction: layout.direction,
-                        arrow: 1,
+                        lane_and_arrow: (((lane_start + lane) as u32) << 1) | 1,
                     });
                 }
             }
@@ -214,6 +247,7 @@ impl TrafficScene {
             }),
             metrics: ca_core::metrics::Metrics::new(model.streets()),
             lanes,
+            heat_lanes,
             names,
             extent: std::array::from_fn(|i| (maximum[i] - minimum[i] + 4.0).ceil() as u32),
             cells: vec![0; offset as usize],
@@ -515,6 +549,7 @@ pub struct TrafficDisplay {
     view: wgpu::Buffer,
     group: wgpu::BindGroup,
     pipeline: wgpu::RenderPipeline,
+    heat_pipeline: wgpu::RenderPipeline,
     instances: u32,
     street_instances: Vec<std::ops::Range<u32>>,
     layout: wgpu::Buffer,
@@ -542,6 +577,15 @@ impl TrafficDisplay {
             },
             usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
         });
+        let heat_lanes = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("static vehicle heat lane bounds"),
+            contents: if scene.heat_lanes.is_empty() {
+                &[0; 16]
+            } else {
+                bytemuck::cast_slice(&scene.heat_lanes)
+            },
+            usage: wgpu::BufferUsages::STORAGE,
+        });
         let [width, height] = scene.extent();
         let dims = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("traffic view dimensions"),
@@ -559,6 +603,7 @@ impl TrafficDisplay {
                 entry(0, fragment, wgpu::BufferBindingType::Uniform),
                 entry(1, fragment, read),
                 entry(2, fragment, read),
+                entry(3, wgpu::ShaderStages::VERTEX, read),
             ],
         });
         let group = device.create_bind_group(&wgpu::BindGroupDescriptor {
@@ -577,6 +622,10 @@ impl TrafficDisplay {
                     binding: 2,
                     resource: lanes.as_entire_binding(),
                 },
+                wgpu::BindGroupEntry {
+                    binding: 3,
+                    resource: heat_lanes.as_entire_binding(),
+                },
             ],
         });
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
@@ -588,31 +637,46 @@ impl TrafficDisplay {
             bind_group_layouts: &[&layout],
             push_constant_ranges: &[],
         });
-        let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: Some("traffic display pipeline"),
-            layout: Some(&pipeline_layout),
-            vertex: wgpu::VertexState {
-                module: &shader,
-                entry_point: Some("vs_main"),
-                compilation_options: Default::default(),
-                buffers: &[],
-            },
-            fragment: Some(wgpu::FragmentState {
-                module: &shader,
-                entry_point: Some("fs_main"),
-                compilation_options: Default::default(),
-                targets: &[Some(wgpu::ColorTargetState {
-                    format,
-                    blend: None,
-                    write_mask: wgpu::ColorWrites::ALL,
-                })],
-            }),
-            primitive: Default::default(),
-            depth_stencil: None,
-            multisample: Default::default(),
-            multiview: None,
-            cache: None,
-        });
+        // Compile both at reset. The normal shader has no heat-window reads or math.
+        let create_pipeline = |heat: bool| {
+            device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+                label: Some(if heat {
+                    "vehicle heat display pipeline"
+                } else {
+                    "traffic display pipeline"
+                }),
+                layout: Some(&pipeline_layout),
+                vertex: wgpu::VertexState {
+                    module: &shader,
+                    entry_point: Some("vs_main"),
+                    compilation_options: wgpu::PipelineCompilationOptions {
+                        constants: &[("HEAT_MODE", f64::from(heat))],
+                        ..Default::default()
+                    },
+                    buffers: &[],
+                },
+                fragment: Some(wgpu::FragmentState {
+                    module: &shader,
+                    entry_point: Some("fs_main"),
+                    compilation_options: wgpu::PipelineCompilationOptions {
+                        constants: &[("HEAT_MODE", f64::from(heat))],
+                        ..Default::default()
+                    },
+                    targets: &[Some(wgpu::ColorTargetState {
+                        format,
+                        blend: None,
+                        write_mask: wgpu::ColorWrites::ALL,
+                    })],
+                }),
+                primitive: Default::default(),
+                depth_stencil: None,
+                multisample: Default::default(),
+                multiview: None,
+                cache: None,
+            })
+        };
+        let pipeline = create_pipeline(false);
+        let heat_pipeline = create_pipeline(true);
         Self {
             background: crate::background::BackgroundDisplay::new(
                 device,
@@ -637,6 +701,7 @@ impl TrafficDisplay {
             view: dims,
             group,
             pipeline,
+            heat_pipeline,
             instances: scene.tiles.len() as u32,
             street_instances: scene
                 .street_tiles
@@ -680,7 +745,20 @@ impl TrafficDisplay {
 
     /// Replace one street with a UI preview without editing or uploading the model.
     pub fn paint_excluding(&self, pass: &mut wgpu::RenderPass<'_>, street: Option<usize>) {
-        pass.set_pipeline(&self.pipeline);
+        self.paint_styled(pass, street, VehicleStyle::Classes);
+    }
+
+    /// Change only the display pipeline. Traffic buffers and draw ranges are shared.
+    pub fn paint_styled(
+        &self,
+        pass: &mut wgpu::RenderPass<'_>,
+        street: Option<usize>,
+        style: VehicleStyle,
+    ) {
+        pass.set_pipeline(match style {
+            VehicleStyle::Classes => &self.pipeline,
+            VehicleStyle::Heat => &self.heat_pipeline,
+        });
         pass.set_bind_group(0, &self.group, &[]);
         if let Some(range) = street.and_then(|s| self.street_instances.get(s)) {
             if range.start > 0 {

@@ -1,5 +1,6 @@
 {
   "heatmap.title": "Density heatmap",
+  "heatmap.vehicleMode": "Vehicle heat on main map",
   "heatmap.legend": "All streets · Local density: green 0%, yellow 50%, red 100% · Grey: obstacles",
   "metrics.axis.time": "Simulation time",
   "metrics.axis.percentage": "Percentage (%)",

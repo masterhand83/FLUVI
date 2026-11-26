@@ -31,6 +31,7 @@ pub enum ScenarioResult {
 /// UI commands are values. The callback owns the CPU model and GPU resources.
 #[derive(Clone, Copy)]
 pub struct Paint {
+    pub vehicle_style: ca_gpu::VehicleStyle,
     pub playing: bool,
     pub rate: f64,
     pub step_ticket: u64,
@@ -247,6 +248,7 @@ impl Resources {
                 step_ticket: 0,
                 generation_override: None,
                 excluded_street: None,
+                vehicle_style: Default::default(),
                 view: WorldView {
                     origin: [0.0; 2],
                     span,
@@ -496,9 +498,11 @@ impl CallbackTrait for PaintCallback {
         let resources = resources
             .get::<Resources>()
             .expect("traffic resources were installed at startup");
-        resources
-            .display
-            .paint_excluding(pass, resources.request.excluded_street);
+        resources.display.paint_styled(
+            pass,
+            resources.request.excluded_street,
+            resources.request.vehicle_style,
+        );
     }
 }
 
@@ -555,6 +559,7 @@ mod tests {
                 step_ticket: 1,
                 generation_override: Some(0.),
                 excluded_street: None,
+                vehicle_style: Default::default(),
                 view: WorldView {
                     origin: [0.; 2],
                     span: [20.; 2]
@@ -575,6 +580,7 @@ mod tests {
                 step_ticket: 2,
                 generation_override: Some(0.),
                 excluded_street: None,
+                vehicle_style: Default::default(),
                 view: WorldView {
                     origin: [0.; 2],
                     span: [20.; 2]
@@ -649,6 +655,7 @@ mod tests {
             step_ticket: 1,
             generation_override: Some(1.0),
             excluded_street: None,
+            vehicle_style: Default::default(),
             view: WorldView {
                 origin: [0.0; 2],
                 span: [20.0; 2],
@@ -732,6 +739,7 @@ mod tests {
             step_ticket: 0,
             generation_override: None,
             excluded_street: None,
+            vehicle_style: Default::default(),
             view: WorldView {
                 origin: [0.0; 2],
                 span: [36.0, 14.0],
@@ -786,6 +794,7 @@ mod tests {
             step_ticket: 0,
             generation_override: None,
             excluded_street: None,
+            vehicle_style: Default::default(),
             view: WorldView {
                 origin: [0.0; 2],
                 span: [36.0, 14.0],
@@ -857,6 +866,7 @@ mod tests {
             step_ticket: 0,
             generation_override: None,
             excluded_street: None,
+            vehicle_style: Default::default(),
             view: WorldView {
                 origin: [0.0; 2],
                 span: [25.0; 2],
@@ -973,6 +983,7 @@ mod tests {
                     step_ticket: 1,
                     generation_override: None,
                     excluded_street: None,
+                    vehicle_style: Default::default(),
                     view: WorldView {
                         origin: [0.0; 2],
                         span: [25.0; 2]
@@ -1036,6 +1047,7 @@ mod tests {
             step_ticket: 1,
             generation_override: None,
             excluded_street: None,
+            vehicle_style: Default::default(),
             view: WorldView {
                 origin: [0.0; 2],
                 span: [36.0, 14.0],
@@ -1171,6 +1183,7 @@ mod tests {
                                     view: frame.view,
                                     generation_override: None,
                                     excluded_street: None,
+                                    vehicle_style: Default::default(),
                                 },
                                 frame.clicked
                             ));
@@ -1354,6 +1367,7 @@ mod tests {
             step_ticket: 0,
             generation_override: None,
             excluded_street: None,
+            vehicle_style: Default::default(),
             view: WorldView {
                 origin: [0.; 2],
                 span: [20.; 2],
@@ -1435,6 +1449,7 @@ mod tests {
                 step_ticket: 0,
                 generation_override: None,
                 excluded_street: None,
+                vehicle_style: Default::default(),
                 view: WorldView {
                     origin: [0.; 2],
                     span: [20.; 2]
