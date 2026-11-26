@@ -2,6 +2,45 @@ use ca_app::map::MapInteraction;
 use eframe::egui;
 
 #[test]
+fn endpoint_picking_highlights_the_exact_lane_cell_and_does_not_edit_vehicles() {
+    use ca_core::cell_index::CellRef;
+    let document = ca_core::map_json::MapDocument::parse(
+        r#"{"calles":[{"nombre":"A","tipo":"conexion","tamano":12,"carriles":2,"x":25,"y":25,"angulo":30}]}"#,
+    ).unwrap();
+    let ctx = egui::Context::default();
+    let geometry = document.geometry();
+    let mut map = MapInteraction::new([30., 20.], &geometry, vec!["A".into()]);
+    map.configure(&document, [0.; 2]);
+    map.select(Some(0));
+    map.set_cell_picking(Some(ca_app::map::CellPickMode::Parking));
+    frame(&ctx, &mut map, vec![], false);
+    let pos = screen_position(&map, geometry[0].centers[1][3]);
+    let hover = frame(&ctx, &mut map, vec![egui::Event::PointerMoved(pos)], false);
+    let expected = CellRef {
+        street: 0,
+        lane: 1,
+        index: 3,
+    };
+    assert_eq!(hover.preview.unwrap().cell, expected);
+    assert!(hover.picked_cell.is_none() && hover.clicked.is_none());
+    let button = |pressed| egui::Event::PointerButton {
+        pos,
+        pressed,
+        button: egui::PointerButton::Primary,
+        modifiers: egui::Modifiers::SHIFT,
+    };
+    let pressed = frame(&ctx, &mut map, vec![button(true)], false);
+    assert!(
+        !pressed.bulk_started,
+        "Shift must not discard an active parking pick"
+    );
+    assert!(pressed.street_edit.is_none() && pressed.clicked.is_none());
+    let released = frame(&ctx, &mut map, vec![button(false)], false);
+    assert_eq!(released.picked_cell, Some(expected));
+    assert!(released.clicked.is_none() && released.street_edit.is_none());
+}
+
+#[test]
 fn session_rotation_has_a_live_preview_without_resizing_cells() {
     use ca_core::streets::{StreetChange, StreetEdit};
     let mut document = ca_core::map_json::MapDocument::parse(

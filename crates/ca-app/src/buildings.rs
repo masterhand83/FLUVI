@@ -55,6 +55,38 @@ pub struct BuildingEditor {
 }
 
 impl BuildingEditor {
+    pub fn parking_picking(&self) -> bool {
+        self.parking_form.picking().is_some()
+    }
+
+    /// A picked cell belongs to the parking draft, never to traffic or geometry.
+    pub fn parking_input(
+        &mut self,
+        ctx: &eframe::egui::Context,
+        frame: &crate::map::MapFrame,
+        document: &MapDocument,
+    ) -> bool {
+        let active = self.parking_picking();
+        self.parking_form.cancel_pick_on_escape(ctx);
+        if !ctx.input(|i| i.focused) {
+            self.parking_form.cancel_pick();
+        } else if let Some(cell) = frame.picked_cell {
+            self.parking_form.pick_cell(cell, document);
+        }
+        active
+    }
+
+    pub fn paint_parking_pick(
+        &self,
+        painter: &eframe::egui::Painter,
+        frame: &crate::map::MapFrame,
+        document: &MapDocument,
+        shell: &crate::shell::Shell,
+    ) {
+        self.parking_form
+            .paint_pick(painter, frame, document, shell);
+    }
+
     pub fn sync_parking_form(&mut self, document: &MapDocument, revision: u64) {
         self.parking_form.select(document, self.selected, revision);
     }

@@ -6,7 +6,7 @@ use eframe::egui;
 use crate::render::{
     Commands, Edit, Event, Paint, PaintCallback, Progress, Requests, Resources, command_channel,
 };
-use ca_app::map::MapInteraction;
+use ca_app::map::{CellPickMode, MapInteraction};
 use ca_app::map_files::{self, FileResult};
 use ca_app::map_session::{MapSession, ResetPhase};
 use ca_app::shell::{Shell, config_path};
@@ -432,7 +432,7 @@ impl App {
                 self.prepare_connection_edit();
                 self.connection_draft.cancel();
                 if let Some(map) = &mut self.map {
-                    map.set_connection_picking(false);
+                    map.set_cell_picking(None);
                 }
                 self.buildings.upload_image(ctx, &self.shell, None);
             }
@@ -440,7 +440,7 @@ impl App {
                 self.prepare_connection_edit();
                 self.connection_draft.cancel();
                 if let Some(map) = &mut self.map {
-                    map.set_connection_picking(false);
+                    map.set_cell_picking(None);
                 }
                 self.buildings.start(tool);
             }
@@ -493,7 +493,7 @@ impl App {
                     self.inspector = Default::default();
                     self.street_dialog.close();
                     if let Some(map) = &mut self.map {
-                        map.set_connection_picking(true);
+                        map.set_cell_picking(Some(CellPickMode::Connection));
                     }
                 }
             }
@@ -533,7 +533,7 @@ impl App {
             map.finish_edits();
             map.clear_bulk();
             map.select(None);
-            map.set_connection_picking(true);
+            map.set_cell_picking(Some(CellPickMode::Connection));
         }
     }
 
@@ -936,7 +936,9 @@ impl eframe::App for App {
             if ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
                 self.connection_draft.cancel();
             }
-            let building_input = !self.connection_draft.active()
+            let parking_picking = self.buildings.parking_picking();
+            let building_input = !parking_picking
+                && !self.connection_draft.active()
                 && !self.map.as_ref().expect("map").drawing()
                 && self
                     .map
@@ -958,17 +960,30 @@ impl eframe::App for App {
             self.map
                 .as_mut()
                 .expect("map")
-                .set_connection_picking(self.connection_draft.active());
+                .set_cell_picking(if parking_picking {
+                    Some(CellPickMode::Parking)
+                } else {
+                    self.connection_draft
+                        .active()
+                        .then_some(CellPickMode::Connection)
+                });
             let map = self
                 .map
                 .as_mut()
                 .expect("map installed with render resources")
                 .show(ui, self.shell.preferences().cell_detection);
+            let parking_input = self.buildings.parking_input(
+                ctx,
+                &map,
+                self.session.as_ref().expect("session").document(),
+            );
             let building_edit = if map.bulk_started {
                 self.buildings.cancel();
                 self.buildings.select(None);
                 None
-            } else if !self.connection_draft.active() && !self.map.as_ref().expect("map").drawing()
+            } else if !parking_input
+                && !self.connection_draft.active()
+                && !self.map.as_ref().expect("map").drawing()
             {
                 self.buildings.input(
                     ui,
@@ -1021,7 +1036,7 @@ impl eframe::App for App {
                     self.map.as_mut().expect("map").select(None);
                 }
             }
-            if let Some(cell) = map.connection_pick {
+            if let Some(cell) = map.picked_cell.filter(|_| !parking_input) {
                 self.connection_draft
                     .pick_cell(cell, self.session.as_ref().expect("session").document());
             }
@@ -1122,6 +1137,12 @@ impl eframe::App for App {
                 connections.paint(ui.painter(), map.view, map.rect);
             }
             map.paint_preview(ui.painter());
+            self.buildings.paint_parking_pick(
+                ui.painter(),
+                &map,
+                self.session.as_ref().expect("session").document(),
+                &self.shell,
+            );
             self.map.as_ref().expect("map").paint_connection_draft(
                 ui.painter(),
                 map.rect,

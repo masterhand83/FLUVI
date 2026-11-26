@@ -7,6 +7,79 @@ use ca_core::{
 };
 
 #[test]
+fn parking_arrows_have_small_fixed_heads_and_distinct_high_contrast_endpoint_markers() {
+    use eframe::egui;
+    let mut map = MapDocument::demo();
+    let building = map
+        .add_building(Building::rectangle([400., 300.], [20.; 2]))
+        .unwrap();
+    map.configure_parking(
+        building,
+        Some(ParkingConfig::new(
+            10,
+            vec![ParkingPair {
+                entrance: CellRef {
+                    street: 0,
+                    lane: 0,
+                    index: 1,
+                },
+                exit: CellRef {
+                    street: 0,
+                    lane: 0,
+                    index: 5,
+                },
+            }],
+        )),
+    )
+    .unwrap();
+    let overlays = ParkingOverlays::from_document(&map, [0.; 2]);
+    let blue = egui::Color32::from_rgb(86, 180, 233);
+    let orange = egui::Color32::from_rgb(230, 159, 0);
+    for span in [100., 200.] {
+        let ctx = egui::Context::default();
+        let output = ctx.run(Default::default(), |ctx| {
+            let painter = ctx.layer_painter(egui::LayerId::background());
+            overlays.paint(
+                &painter,
+                egui::Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(800., 600.)),
+                ca_core::camera::WorldView {
+                    origin: [0.; 2],
+                    span: [span; 2],
+                },
+            );
+        });
+        let heads = output
+            .shapes
+            .iter()
+            .filter_map(|s| match &s.shape {
+                egui::Shape::LineSegment { points, stroke }
+                    if stroke.color == blue || stroke.color == orange =>
+                {
+                    let length = points[0].distance(points[1]);
+                    (length < 20.).then_some(length)
+                }
+                _ => None,
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(heads.len(), 4, "two small head segments per directed link");
+        assert!(
+            heads.iter().all(|length| (4. ..=7.).contains(length)),
+            "{heads:?}"
+        );
+        assert!(
+            output.shapes.iter().any(|s| matches!(&s.shape,
+            egui::Shape::Circle(circle) if circle.fill == blue)),
+            "entrances use circles"
+        );
+        assert!(
+            output.shapes.iter().any(|s| matches!(&s.shape,
+            egui::Shape::Rect(rect) if rect.fill == orange)),
+            "exits use squares"
+        );
+    }
+}
+
+#[test]
 fn only_functional_parking_has_outline_links_and_counter() {
     let mut map = MapDocument::demo();
     let mut artwork = Building::rectangle([50., 100.], [20., 30.]);
@@ -44,8 +117,8 @@ fn only_functional_parking_has_outline_links_and_counter() {
     assert_eq!(item.outline.len(), 4);
     assert_eq!(item.links.len(), 2);
     assert_eq!(item.counter(), "(3/12)");
-    assert_eq!(item.links[0][1], item.center);
-    assert_eq!(item.links[1][0], item.center);
+    assert_eq!(item.links[0].endpoints[1], item.center);
+    assert_eq!(item.links[1].endpoints[0], item.center);
     map.configure_parking(index, None).unwrap();
     assert!(
         ParkingOverlays::from_document(&map, [2., 3.])
@@ -88,13 +161,15 @@ fn vertex_edits_refresh_retained_parking_links() {
     )
     .unwrap();
     let mut session = MapSession::<()>::new(map);
-    let before = ParkingOverlays::from_document(session.document(), [0.; 2]).items[0].links[0][0];
+    let before =
+        ParkingOverlays::from_document(session.document(), [0.; 2]).items[0].links[0].endpoints[0];
     let mut editor = BuildingEditor::default();
     editor.sync_parking(session.document(), session.revision(), [0.; 2]);
     editor.set_parking_occupancy(building, 4);
     assert!(session.set_vertex_offset(street, vertex, 45.));
     editor.sync_parking(session.document(), session.revision(), [0.; 2]);
-    let after = ParkingOverlays::from_document(session.document(), [0.; 2]).items[0].links[0][0];
+    let after =
+        ParkingOverlays::from_document(session.document(), [0.; 2]).items[0].links[0].endpoints[0];
     assert_ne!(before, after);
     // Inspect the public painted output, not the editor's private cache.
     let context = eframe::egui::Context::default();

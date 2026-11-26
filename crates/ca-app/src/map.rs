@@ -6,8 +6,14 @@ use ca_core::{
 };
 use eframe::egui;
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum CellPickMode {
+    Connection,
+    Parking,
+}
+
 pub struct MapFrame {
-    pub connection_pick: Option<CellRef>,
+    pub picked_cell: Option<CellRef>,
     pub bulk_started: bool,
     pub bulk_rect: Option<egui::Rect>,
     pub rect: egui::Rect,
@@ -106,7 +112,7 @@ impl MapFrame {
 
 pub struct MapInteraction {
     building_input: bool,
-    connection_picking: bool,
+    cell_picking: Option<CellPickMode>,
     editing_street: Option<usize>,
     bulk_start: Option<[f32; 2]>,
     bulk_selected: Vec<usize>,
@@ -136,7 +142,7 @@ impl MapInteraction {
         let sorted = (0..names.len()).collect();
         Self {
             building_input: false,
-            connection_picking: false,
+            cell_picking: None,
             editing_street: None,
             bulk_start: None,
             bulk_selected: Vec::new(),
@@ -171,13 +177,13 @@ impl MapInteraction {
         self.building_input = active;
     }
 
-    pub fn set_connection_picking(&mut self, active: bool) {
-        if active && !self.connection_picking {
+    pub fn set_cell_picking(&mut self, mode: Option<CellPickMode>) {
+        if mode.is_some() && mode != self.cell_picking {
             self.finish_edits();
             self.clear_bulk();
             self.select(None);
         }
-        self.connection_picking = active;
+        self.cell_picking = mode;
     }
 
     pub fn set_drawing(&mut self, drawing: bool) {
@@ -470,6 +476,7 @@ impl MapInteraction {
         let response = ui.allocate_rect(rect, egui::Sense::click_and_drag());
         let pointer = ui.input(|i| i.pointer.clone());
         let bulk_started = !self.building_input
+            && self.cell_picking != Some(CellPickMode::Parking)
             && response.contains_pointer()
             && pointer.primary_pressed()
             && ui.input(|i| i.modifiers.shift);
@@ -537,7 +544,7 @@ impl MapInteraction {
                 rect.min + egui::vec2(p[0], p[1])
             };
             return MapFrame {
-                connection_pick: None,
+                picked_cell: None,
                 bulk_started,
                 bulk_rect: Some(egui::Rect::from_two_pos(screen(start), screen(end))),
                 rect,
@@ -563,23 +570,37 @@ impl MapInteraction {
                     .hit_test(camera.screen_to_world((p - rect.min).into()))
             })
             .map(|c| c.street);
-        if self.connection_picking || self.building_input {
+        if self.cell_picking.is_some() || self.building_input {
+            let hit = (!self.building_input && response.contains_pointer())
+                .then(|| pointer.hover_pos())
+                .flatten()
+                .and_then(|p| {
+                    self.index
+                        .hit_test(camera.screen_to_world((p - rect.min).into()))
+                });
+            let preview = hit.and_then(|cell| {
+                let corners = self.index.cell_corners(cell)?.map(|p| {
+                    let p = camera.world_to_screen(p);
+                    rect.min + egui::vec2(p[0], p[1])
+                });
+                Some(CellPreview {
+                    cell,
+                    rect: egui::Rect::from_points(&corners),
+                    corners,
+                })
+            });
+            if self.cell_picking.is_some() {
+                ui.ctx().set_cursor_icon(egui::CursorIcon::Crosshair);
+            }
             return MapFrame {
-                connection_pick: (!self.building_input && response.clicked())
-                    .then(|| {
-                        pointer.interact_pos().and_then(|p| {
-                            self.index
-                                .hit_test(camera.screen_to_world((p - rect.min).into()))
-                        })
-                    })
-                    .flatten(),
+                picked_cell: response.clicked().then_some(hit).flatten(),
                 bulk_started: false,
                 bulk_rect: None,
                 rect,
                 view: camera.view(),
                 clicked: None,
                 tooltip: None,
-                preview: None,
+                preview,
                 vertex_edit: None,
                 vertex_mode: false,
                 structural_edit: false,
@@ -823,7 +844,7 @@ impl MapInteraction {
             self.rejected_geometry = geometry_error;
         }
         MapFrame {
-            connection_pick: None,
+            picked_cell: None,
             bulk_started: false,
             bulk_rect: None,
             rect,

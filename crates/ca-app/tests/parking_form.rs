@@ -9,6 +9,70 @@ fn document() -> MapDocument {
 }
 
 #[test]
+fn map_picks_edit_only_the_target_endpoint_and_remain_draft_until_apply() {
+    use ca_app::{parking::EndpointKind, parking_form::ParkingForms};
+    use ca_core::{
+        cell_index::CellRef,
+        parking::{ParkingConfig, ParkingPair},
+    };
+    let mut map = document();
+    let original = ParkingConfig::new(
+        20,
+        vec![ParkingPair {
+            entrance: CellRef {
+                street: 0,
+                lane: 0,
+                index: 1,
+            },
+            exit: CellRef {
+                street: 0,
+                lane: 0,
+                index: 5,
+            },
+        }],
+    );
+    map.configure_parking(0, Some(original.clone())).unwrap();
+    let mut form = ParkingForms::default();
+    form.select(&map, Some(0), 0);
+    assert!(form.start_pick(0, EndpointKind::Entrance));
+    assert_eq!(form.picking(), Some(EndpointKind::Entrance));
+    let entrance = CellRef {
+        street: 0,
+        lane: 1,
+        index: 3,
+    };
+    assert!(form.pick_cell(entrance, &map));
+    assert_eq!(form.picking(), None);
+    let picked = form.candidate(&map).unwrap().1.unwrap();
+    assert_eq!(picked.pairs[0].entrance, entrance);
+    assert_eq!(picked.pairs[0].exit, original.pairs[0].exit);
+    assert!(form.take_request().is_none(), "picking is not Apply");
+    assert_eq!(map.model().parking(0).unwrap().config, original);
+    assert!(form.start_pick(0, EndpointKind::Exit));
+    form.cancel_pick();
+    assert_eq!(
+        form.candidate(&map).unwrap().1.unwrap(),
+        picked,
+        "cancel retains the edited draft"
+    );
+    assert!(
+        !form.pick_cell(original.pairs[0].exit, &map),
+        "idle clicks do not edit a draft"
+    );
+    assert!(form.start_pick(0, EndpointKind::Exit));
+    let exit = CellRef {
+        street: 0,
+        lane: 1,
+        index: 7,
+    };
+    assert!(form.pick_cell(exit, &map));
+    assert_eq!(form.candidate(&map).unwrap().1.unwrap().pairs[0].exit, exit);
+    assert!(form.start_pick(0, EndpointKind::Entrance));
+    form.select(&map, None, 0);
+    assert_eq!(form.picking(), None, "selection changes end picking");
+}
+
+#[test]
 fn incomplete_rows_keep_live_parking_and_complete_rows_convert_one_based_indices() {
     let mut map = document();
     let mut draft = ParkingDraft::new(&map, 0);

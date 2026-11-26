@@ -390,13 +390,29 @@ Apply saves the complete valid draft; Cancel, Close, and Escape discard it.
 Topology or selection changes discard stale draft addresses. Disabled parking
 releases endpoints and occupancy when applied.
 
+Each entrance/exit row has a Pick on Map button. Hover highlights the exact
+physical cell and shows its street and 1-based lane/cell numbers. A click fills
+only that draft endpoint; it cannot toggle traffic, move a building, or edit a
+street. Escape or Cancel Cell Pick ends picking without discarding the draft.
+Shift-click also selects a parking endpoint; it does not start bulk selection.
+`MapInteraction::set_cell_picking` uses separate Parking and Connection modes,
+so existing street-connection bulk-selection behavior remains unchanged.
+Apply remains disabled until the active pick ends. The inspector and dialog
+share this interaction. Selection, topology changes, and map replacement cancel
+stale picks.
+
+Entrance links and fields use blue with circle street markers. Exits use orange
+with square markers. These color-blind-safe colors have dark map halos; labels,
+marker shapes, and arrow direction do not depend on color alone. Arrowheads are
+five screen pixels long (smaller for short links), independent of zoom.
+
 Parking edits use the ordered render queue. The render-owned model checks live
 occupancy before acknowledging a capacity change; only an accepted change updates
 the UI document and retained overlays. A full queue or rejected change keeps the
 draft. While a change is in flight, other edits wait without a blocking read.
 
 Focused checks: `cargo test -p ca-core -p ca-app --test parking` and
-`cargo test -p ca-app --test parking_form`; render-queue checks:
+`cargo test -p ca-app --test parking_form --test parking_picking`; render-queue checks:
 `cargo test -p ca-app --bin ca-app parking`.
 
 ### Image buildings

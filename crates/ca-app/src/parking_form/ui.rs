@@ -1,4 +1,5 @@
 use super::*;
+use crate::parking::EndpointKind;
 use crate::shell::Shell;
 use eframe::egui;
 
@@ -11,9 +12,137 @@ pub struct ParkingForms {
     draft: Option<ParkingDraft>,
     dialog: bool,
     request: Option<ParkingRequest>,
+    pick: Option<(usize, EndpointKind)>,
 }
 
 impl ParkingForms {
+    /// Escape ends only the active cell pick. Other Escape behavior stays unchanged.
+    pub(crate) fn cancel_pick_on_escape(&mut self, ctx: &egui::Context) {
+        if self.pick.is_some()
+            && ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::Escape))
+        {
+            self.cancel_pick();
+        }
+    }
+
+    pub fn start_pick(&mut self, pair: usize, kind: EndpointKind) -> bool {
+        if !self
+            .draft
+            .as_ref()
+            .is_some_and(|d| d.enabled && pair < d.pairs.len())
+        {
+            return false;
+        }
+        self.pick = Some((pair, kind));
+        self.request = None;
+        true
+    }
+
+    pub fn picking(&self) -> Option<EndpointKind> {
+        self.pick.map(|(_, kind)| kind)
+    }
+
+    pub fn cancel_pick(&mut self) {
+        self.pick = None;
+    }
+
+    pub fn pick_cell(&mut self, cell: CellRef, document: &MapDocument) -> bool {
+        let Some((pair, kind)) = self.pick else {
+            return false;
+        };
+        if !document
+            .model()
+            .streets()
+            .get(cell.street)
+            .is_some_and(|s| cell.lane < s.config().carriles && cell.index < s.config().tamano)
+        {
+            return false;
+        }
+        let Some(pair) = self
+            .draft
+            .as_mut()
+            .filter(|d| d.enabled)
+            .and_then(|d| d.pairs.get_mut(pair))
+        else {
+            self.cancel_pick();
+            return false;
+        };
+        let endpoint = match kind {
+            EndpointKind::Entrance => &mut pair.entrance,
+            EndpointKind::Exit => &mut pair.exit,
+        };
+        *endpoint = EndpointDraft::from_cell(cell);
+        self.cancel_pick();
+        true
+    }
+
+    pub fn candidate(&self, document: &MapDocument) -> Result<ParkingRequest, ParkingError> {
+        let building = self
+            .target
+            .ok_or(ParkingError("parking.validation.buildingRequired"))?
+            .0;
+        let draft = self
+            .draft
+            .as_ref()
+            .ok_or(ParkingError("parking.validation.buildingRequired"))?;
+        Ok((building, draft.candidate(document, building)?))
+    }
+
+    pub(crate) fn paint_pick(
+        &self,
+        painter: &egui::Painter,
+        frame: &crate::map::MapFrame,
+        document: &MapDocument,
+        shell: &Shell,
+    ) {
+        let Some(kind) = self.picking() else { return };
+        let painter = painter.with_clip_rect(frame.rect);
+        let text = if let Some(preview) = frame.preview {
+            painter.add(egui::Shape::convex_polygon(
+                preview.corners.to_vec(),
+                kind.color().gamma_multiply(0.2),
+                egui::Stroke::new(4_f32, egui::Color32::BLACK),
+            ));
+            for index in 0..4 {
+                painter.line_segment(
+                    [preview.corners[index], preview.corners[(index + 1) % 4]],
+                    egui::Stroke::new(2_f32, kind.color()),
+                );
+            }
+            kind.paint_marker(&painter, preview.rect.center());
+            let cell = preview.cell;
+            let Some(street) = document.layout().get(cell.street) else {
+                return;
+            };
+            format!(
+                "{} {}: {}",
+                kind.symbol(),
+                shell.tr(kind.label_key(), &[]),
+                shell.tr(
+                    "parking.ui.pickCell",
+                    &[
+                        ("street", &street.name),
+                        ("lane", &(cell.lane + 1).to_string()),
+                        ("cell", &(cell.index + 1).to_string()),
+                    ]
+                )
+            )
+        } else {
+            shell.tr(kind.pick_hint_key(), &[])
+        };
+        let galley = painter.layout_no_wrap(text, egui::FontId::proportional(14.), kind.color());
+        let position = frame.rect.left_top() + egui::vec2(10., 10.);
+        painter.rect_filled(
+            egui::Rect::from_min_size(
+                position - egui::vec2(5., 4.),
+                galley.size() + egui::vec2(10., 8.),
+            ),
+            3.,
+            egui::Color32::from_black_alpha(230),
+        );
+        painter.galley(position, galley, kind.color());
+    }
+
     /// A topology change discards stale physical addresses.
     pub fn select(&mut self, document: &MapDocument, building: Option<usize>, revision: u64) {
         let target = building
@@ -44,6 +173,7 @@ impl ParkingForms {
     }
 
     pub fn cancel(&mut self) {
+        self.cancel_pick();
         self.draft = None;
         self.dialog = false;
         self.request = None;
@@ -62,6 +192,7 @@ impl ParkingForms {
     }
 
     pub fn inspector(&mut self, ui: &mut egui::Ui, document: &MapDocument, shell: &Shell) {
+        self.cancel_pick_on_escape(ui.ctx());
         if self.dialog {
             return;
         }
@@ -75,6 +206,7 @@ impl ParkingForms {
     }
 
     pub fn show_dialog(&mut self, ctx: &egui::Context, document: &MapDocument, shell: &Shell) {
+        self.cancel_pick_on_escape(ctx);
         if !self.dialog {
             return;
         }
@@ -97,11 +229,21 @@ impl ParkingForms {
     }
 
     fn fields(&mut self, ui: &mut egui::Ui, document: &MapDocument, shell: &Shell) {
-        let Some((building, _)) = self.target else {
+        if self.target.is_none() {
             return;
-        };
+        }
         let Some(draft) = &mut self.draft else { return };
         ui.checkbox(&mut draft.enabled, shell.tr("parking.ui.enabled", &[]));
+        if !draft.enabled {
+            self.pick = None;
+        }
+        let mut new_pick = None;
+        if let Some((_, kind)) = self.pick {
+            ui.colored_label(kind.color(), shell.tr(kind.pick_hint_key(), &[]));
+            if ui.button(shell.tr("parking.ui.cancelPick", &[])).clicked() {
+                self.pick = None;
+            }
+        }
         if draft.enabled {
             ui.label(shell.tr("parking.ui.capacity", &[]));
             ui.add(egui::TextEdit::singleline(&mut draft.capacity).desired_width(80.));
@@ -123,13 +265,28 @@ impl ParkingForms {
                                 remove = Some(index);
                             }
                         });
-                        endpoint(ui, &mut pair.entrance, document, shell, "parking.ui.entry");
-                        endpoint(ui, &mut pair.exit, document, shell, "parking.ui.exit");
+                        for (endpoint, kind) in [
+                            (&mut pair.entrance, EndpointKind::Entrance),
+                            (&mut pair.exit, EndpointKind::Exit),
+                        ] {
+                            if endpoint_fields(
+                                ui,
+                                endpoint,
+                                document,
+                                shell,
+                                kind,
+                                self.pick == Some((index, kind)),
+                            ) {
+                                new_pick = Some((index, kind));
+                            }
+                        }
                     });
                 });
             }
             if let Some(index) = remove {
                 draft.pairs.remove(index);
+                self.pick = None;
+                new_pick = None;
             }
             if ui
                 .add_enabled(
@@ -141,22 +298,25 @@ impl ParkingForms {
                 draft.pairs.push(PairDraft::default());
             }
         }
-        let candidate = draft.candidate(document, building);
+        let candidate = self.candidate(document);
         if let Err(error) = &candidate {
             ui.colored_label(egui::Color32::RED, shell.tr(error.translation_key(), &[]));
         }
         if ui
             .add_enabled(
-                candidate.is_ok(),
+                candidate.is_ok() && self.pick.is_none() && new_pick.is_none(),
                 egui::Button::new(shell.tr("parking.ui.apply", &[])),
             )
             .clicked()
         {
-            self.request = Some((building, candidate.expect("validated draft")));
+            self.request = Some(candidate.expect("validated draft"));
         }
         if ui.button(shell.tr("buildings.cancel", &[])).clicked() {
             self.cancel();
             return;
+        }
+        if let Some((pair, kind)) = new_pick {
+            self.start_pick(pair, kind);
         }
         let draft = self.draft.as_mut().expect("draft remains open");
         if draft.enabled {
@@ -193,15 +353,31 @@ impl ParkingForms {
     }
 }
 
-fn endpoint(
+fn endpoint_fields(
     ui: &mut egui::Ui,
     endpoint: &mut EndpointDraft,
     document: &MapDocument,
     shell: &Shell,
-    key: &str,
-) {
-    ui.push_id(key, |ui| {
-        ui.label(shell.tr(key, &[]));
+    kind: EndpointKind,
+    picking: bool,
+) -> bool {
+    ui.push_id(kind.label_key(), |ui| {
+        ui.colored_label(
+            kind.color(),
+            format!("{} {}", kind.symbol(), shell.tr(kind.label_key(), &[])),
+        );
+        let pick = ui
+            .add(
+                egui::Button::new(shell.tr(
+                    match kind {
+                        EndpointKind::Entrance => "parking.ui.pickEntry",
+                        EndpointKind::Exit => "parking.ui.pickExit",
+                    },
+                    &[],
+                ))
+                .selected(picking),
+            )
+            .clicked();
         egui::ComboBox::from_id_salt("street")
             .selected_text(
                 endpoint
@@ -231,5 +407,7 @@ fn endpoint(
                 shell.tr("parking.ui.cell", &[])
             ));
         }
-    });
+        pick
+    })
+    .inner
 }

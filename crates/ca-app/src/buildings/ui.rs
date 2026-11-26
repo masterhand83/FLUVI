@@ -79,6 +79,9 @@ impl BuildingEditor {
         document: &MapDocument,
         shell: &mut Shell,
     ) {
+        if self.parking_picking() {
+            return;
+        }
         if let Some(index) = self.selected
             && !ctx.wants_keyboard_input()
             && self.delete_answer.is_none()
@@ -150,6 +153,9 @@ impl BuildingEditor {
         view: WorldView,
         shift: [f32; 2],
     ) -> Option<BuildingEdit> {
+        if self.parking_picking() {
+            return None;
+        }
         if ui.input(|i| {
             i.key_pressed(egui::Key::Escape)
                 || (!i.focused && self.image_job.is_none() && self.tool != Some(Tool::Image))
@@ -214,6 +220,7 @@ impl BuildingEditor {
         document: &MapDocument,
         shell: &mut Shell,
     ) -> Option<BuildingEdit> {
+        self.parking_form.cancel_pick_on_escape(ctx);
         if ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
             self.cancel();
             self.form = None;

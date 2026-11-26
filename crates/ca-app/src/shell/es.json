@@ -1,4 +1,10 @@
 {
+  "parking.ui.pickEntry": "Elegir entrada en mapa",
+  "parking.ui.pickExit": "Elegir salida en mapa",
+  "parking.ui.pickEntryHint": "Haz clic en la celda de entrada en el mapa. Esc cancela la selección.",
+  "parking.ui.pickExitHint": "Haz clic en la celda de salida en el mapa. Esc cancela la selección.",
+  "parking.ui.cancelPick": "Cancelar selección de celda",
+  "parking.ui.pickCell": "{{street}} · Carril {{lane}} · Celda {{cell}}",
   "parking.ui.title": "Estacionamiento",
   "parking.ui.applying": "Aplicando configuración de estacionamiento…",
   "parking.ui.dialog": "Configuración de estacionamiento",

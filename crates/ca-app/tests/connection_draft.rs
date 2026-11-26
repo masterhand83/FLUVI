@@ -275,7 +275,7 @@ fn connection_picking_blocks_cell_edits_geometry_handles_and_camera_pan() {
     let mut map = MapInteraction::new([30.0, 30.0], &doc.geometry(), vec!["A".into(), "B".into()]);
     map.configure(&doc, [0.0; 2]);
     map.select(Some(0));
-    map.set_connection_picking(true);
+    map.set_cell_picking(Some(ca_app::map::CellPickMode::Connection));
     let mut run = |events| {
         let mut frame = None;
         let _ = ctx.run(
@@ -311,7 +311,7 @@ fn connection_picking_blocks_cell_edits_geometry_handles_and_camera_pan() {
     run(vec![egui::Event::PointerMoved(pos), button(pos, true)]);
     let click = run(vec![button(pos, false)]);
     assert_eq!(
-        click.connection_pick,
+        click.picked_cell,
         Some(ca_core::cell_index::CellRef {
             street: 0,
             lane: 0,
@@ -686,7 +686,7 @@ fn unfinished_line_follows_the_pointer_over_empty_map_space() {
     let ctx = egui::Context::default();
     let mut map = MapInteraction::new([30.0; 2], &doc.geometry(), vec!["A".into(), "B".into()]);
     map.configure(&doc, [0.0; 2]);
-    map.set_connection_picking(true);
+    map.set_cell_picking(Some(ca_app::map::CellPickMode::Connection));
     let mut draft = ConnectionDraft::default();
     draft.start();
     draft.pick(0, &doc);
@@ -735,7 +735,7 @@ fn unfinished_line_follows_the_pointer_over_empty_map_space() {
             end.distance(pos) < 0.001,
             "the arrow must end at the live pointer"
         );
-        assert!(frame.connection_pick.is_none() && frame.clicked.is_none());
+        assert!(frame.picked_cell.is_none() && frame.clicked.is_none());
     }
     assert!(draft.picking());
     assert!(doc.model().connections().is_empty());
