@@ -1,4 +1,5 @@
 use super::{Analysis, Session};
+use crate::job_progress::{Progress, Stage};
 use crate::shell::{Language, Shell};
 use crossbeam_channel::Receiver;
 use egui::{self, TextureHandle};
@@ -10,10 +11,14 @@ pub struct AnalyzerDialog {
     pub session: Session,
     tab: usize,
     textures: Vec<TextureHandle>,
-    save: Option<Receiver<Result<(), String>>>,
+    save: Option<SaveJob>,
     save_error: bool,
     language: Option<Language>,
     revision: u64,
+}
+struct SaveJob {
+    result: Receiver<Result<(), String>>,
+    progress: Progress,
 }
 impl AnalyzerDialog {
     pub fn open(&mut self) {
@@ -44,7 +49,7 @@ impl AnalyzerDialog {
             self.revision = self.session.revision();
         }
         if let Some(save) = &self.save {
-            match save.try_recv() {
+            match save.result.try_recv() {
                 Ok(result) => {
                     self.save_error = result.is_err();
                     self.save = None;
@@ -68,9 +73,11 @@ impl AnalyzerDialog {
                 if ui.button(shell.tr("analyzer.open", &[])).clicked() {
                     load = true;
                 }
-                if self.session.is_busy() {
-                    ui.spinner();
-                    ui.label(shell.tr("analyzer.busy", &[]));
+                if let Some(progress) = self.session.progress() {
+                    progress.show(ui, shell);
+                }
+                if let Some(save) = &self.save {
+                    save.progress.snapshot().show(ui, shell);
                 }
                 if let Some(key) = self.session.error_key() {
                     ui.colored_label(egui::Color32::RED, shell.tr(key, &[]));
@@ -228,19 +235,24 @@ fn save_files(
     zip: bool,
     title: String,
     ctx: egui::Context,
-) -> std::io::Result<Receiver<Result<(), String>>> {
+) -> std::io::Result<SaveJob> {
     let (tx, rx) = crossbeam_channel::bounded(1);
+    let progress = Progress::default();
+    let worker_progress = progress.clone();
     std::thread::Builder::new()
         .name("fluvi-analysis-save".into())
         .spawn(move || {
             let result = (|| {
+                worker_progress.set(10, Stage::Packing);
                 let (name, bytes, extension) = if zip {
                     let mut archive = zip::ZipWriter::new(Cursor::new(Vec::new()));
-                    for (name, bytes) in files {
+                    let count = files.len();
+                    for (index, (name, bytes)) in files.into_iter().enumerate() {
                         archive
                             .start_file(name, zip::write::SimpleFileOptions::default())
                             .map_err(|e| e.to_string())?;
                         archive.write_all(&bytes).map_err(|e| e.to_string())?;
+                        worker_progress.set(10 + ((index + 1) * 70 / count) as u8, Stage::Packing);
                     }
                     (
                         "analisis_metricas.zip",
@@ -251,18 +263,24 @@ fn save_files(
                     let (name, bytes) = files.into_iter().next().ok_or("no plot")?;
                     (name, bytes, "png")
                 };
+                worker_progress.set(90, Stage::ChooseFile);
                 if let Some(path) = rfd::FileDialog::new()
                     .set_title(title)
                     .set_file_name(name)
                     .add_filter(extension, &[extension])
                     .save_file()
                 {
+                    worker_progress.set(95, Stage::Writing);
                     std::fs::write(path, bytes).map_err(|e| e.to_string())?;
+                    worker_progress.set(100, Stage::Ready);
                 }
                 Ok(())
             })();
             let _ = tx.try_send(result);
             ctx.request_repaint();
         })?;
-    Ok(rx)
+    Ok(SaveJob {
+        result: rx,
+        progress,
+    })
 }

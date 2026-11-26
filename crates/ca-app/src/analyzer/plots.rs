@@ -375,28 +375,34 @@ fn distributions(report: &Report, tr: &Translator) -> String {
     svg
 }
 
-pub(super) fn render(report: &Report, tr: &Translator) -> Result<Vec<Plot>, String> {
+pub(super) fn render_reporting(
+    report: &Report,
+    tr: &Translator,
+    mut completed: impl FnMut(usize),
+) -> Result<Vec<Plot>, String> {
     let mut options = usvg::Options::default();
     options.fontdb_mut().load_system_fonts();
     [
         (
             "analisis_temporal.png",
             "analyzer.temporal",
-            temporal(report, tr),
+            temporal as fn(&Report, &Translator) -> String,
         ),
         (
             "diagramas_fundamentales.png",
             "analyzer.fundamental",
-            fundamental(report, tr),
+            fundamental,
         ),
         (
             "distribuciones_correlaciones.png",
             "analyzer.distributions",
-            distributions(report, tr),
+            distributions,
         ),
     ]
     .into_iter()
-    .map(|(file_name, key, mut svg)| {
+    .enumerate()
+    .map(|(index, (file_name, key, draw))| {
+        let mut svg = draw(report, tr);
         svg.push_str("</svg>");
         let tree = usvg::Tree::from_str(&svg, &options).map_err(|_| "analyzer.error.plot")?;
         let mut pixmap = tiny_skia::Pixmap::new(1600, tree.size().height() as u32)
@@ -411,6 +417,7 @@ pub(super) fn render(report: &Report, tr: &Translator) -> Result<Vec<Plot>, Stri
             [1600, pixmap.height() as usize],
             pixmap.data(),
         );
+        completed(index + 1);
         Ok(Plot {
             file_name,
             key,

@@ -590,6 +590,9 @@ choice changes report text and image timestamps, not the seven legacy file names
 or the Spanish CSV/JSON format.
 Only one metric export runs at a time. A bounded request takes one coherent
 render-owned document and complete metric history after ordered edits and ticks.
+A small progress bar advances at completed work stages and images, not elapsed
+time or an ETA. It stays below 100% until the file write succeeds. The stage text
+also identifies snapshot waits and native file selection.
 This explicit user request may clone the history and map in the render callback.
 CPU image drawing, heatmap calculation, encoding, native dialogs, and file writes
 run on a worker. Map replacement drops requests still in the render queue.
@@ -673,6 +676,10 @@ The newest unsent request replaces the pending request. Workers skip cancelled
 queued requests, never wait to deliver replies, and exit when input closes.
 Changing language redraws plots on the worker without changing numeric tables.
 Native open/save dialogs and file access also run off the UI thread.
+The compact analyzer progress bar advances after numeric analysis and each of
+the three plots. A new request owns separate progress state, so cancelled jobs
+cannot update the visible bar. Close hides it. PNG/ZIP saves have their own
+progress bar, including native file selection and the final write.
 
 Regenerate the independent Python oracle with
 `scripts/generate-analyzer-fixtures.py`; its module docstring gives the pinned

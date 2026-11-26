@@ -13,6 +13,7 @@ pub mod graphics;
 mod handles;
 pub mod heatmap;
 pub mod inspector;
+pub mod job_progress;
 pub mod map;
 pub mod map_files;
 pub mod map_session;

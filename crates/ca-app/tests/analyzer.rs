@@ -41,6 +41,7 @@ fn headless_analysis_returns_the_same_numbers_and_three_translated_pngs() {
 #[test]
 fn closing_during_a_run_discards_the_result_even_after_reopening() {
     use ca_app::analyzer::{Analysis, Session};
+    use ca_app::job_progress::Stage;
     let (started, starts) = crossbeam_channel::bounded(1);
     let (release, releases) = crossbeam_channel::bounded(1);
     let mut session = Session::with_processor(move |content, format, language| {
@@ -59,10 +60,15 @@ fn closing_during_a_run_discards_the_result_even_after_reopening() {
     starts
         .recv_timeout(std::time::Duration::from_secs(10))
         .unwrap();
+    let progress = session.progress().unwrap();
+    assert_eq!(progress.percent, 10);
+    assert_eq!(progress.stage, Stage::Analyzing);
     session.close();
+    assert!(session.progress().is_none());
     release.send(()).unwrap();
     session.open();
     session.load(INPUT.into(), Format::Json, Language::English);
+    assert_eq!(session.progress().unwrap().percent, 0);
     session.poll();
     starts
         .recv_timeout(std::time::Duration::from_secs(10))
@@ -75,6 +81,7 @@ fn closing_during_a_run_discards_the_result_even_after_reopening() {
     release.send(()).unwrap();
     drive_until_idle(&mut session);
     assert_eq!(session.analysis().unwrap().language, Language::English);
+    assert!(session.progress().is_none());
 }
 
 #[test]
@@ -106,6 +113,7 @@ fn new_files_replace_running_and_queued_requests_without_showing_old_results() {
         Format::Json,
         Language::English,
     );
+    assert_eq!(session.progress().unwrap().percent, 0);
     session.poll();
     release.send(()).unwrap();
     let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
@@ -118,6 +126,11 @@ fn new_files_replace_running_and_queued_requests_without_showing_old_results() {
         );
         std::thread::yield_now();
     }
+    assert_eq!(
+        session.progress().unwrap().percent,
+        10,
+        "old progress appeared in the new job"
+    );
     release.send(()).unwrap();
     drive_until_idle(&mut session);
     assert!(session.error_key().is_none());
@@ -202,4 +215,49 @@ fn dialog_renders_the_error_and_escape_discards_it() {
     );
     assert!(!dialog.session.is_open());
     assert!(dialog.session.error_key().is_none());
+}
+
+#[test]
+fn dialog_shows_worker_percentage_and_translated_stage() {
+    use ca_app::{
+        analyzer::{Analysis, AnalyzerDialog, Session},
+        shell::Shell,
+    };
+    let (started, starts) = crossbeam_channel::bounded(1);
+    let (release, releases) = crossbeam_channel::bounded(1);
+    let mut dialog = AnalyzerDialog::default();
+    dialog.session = Session::with_processor(move |content, format, language| {
+        started.send(()).unwrap();
+        releases.recv().unwrap();
+        Ok(Analysis {
+            report: ca_analysis::analyze(content, format).unwrap(),
+            plots: vec![],
+            language,
+        })
+    })
+    .unwrap();
+    dialog.open();
+    dialog
+        .session
+        .load(INPUT.into(), Format::Json, Language::Spanish);
+    dialog.session.poll();
+    starts
+        .recv_timeout(std::time::Duration::from_secs(10))
+        .unwrap();
+    let ctx = egui::Context::default();
+    let shell = Shell::load(None);
+    let _ = ctx.run(Default::default(), |ctx| dialog.show(ctx, &shell));
+    let output = ctx.run(Default::default(), |ctx| dialog.show(ctx, &shell));
+    let labels = output
+        .shapes
+        .iter()
+        .filter_map(|shape| match &shape.shape {
+            egui::Shape::Text(t) => Some(t.galley.text()),
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+    assert!(labels.contains(&"10%"), "{labels:?}");
+    assert!(labels.contains(&"Analizando los datos…"), "{labels:?}");
+    dialog.close();
+    release.send(()).unwrap();
 }

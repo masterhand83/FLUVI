@@ -330,6 +330,16 @@ pub fn build_image_zip_with_options(
     included: usize,
     export: ImageOptions,
 ) -> Result<Vec<u8>, String> {
+    build_image_zip_reporting(history, document, included, export, |_| {})
+}
+
+pub(super) fn build_image_zip_reporting(
+    history: &[Point],
+    document: &MapDocument,
+    included: usize,
+    export: ImageOptions,
+    mut completed: impl FnMut(usize),
+) -> Result<Vec<u8>, String> {
     let mut options = usvg::Options::default();
     options.fontdb_mut().load_system_fonts();
     let tr = Translator::new(export.language);
@@ -337,11 +347,15 @@ pub fn build_image_zip_with_options(
     let mut zip = zip::ZipWriter::new(Cursor::new(Vec::new()));
     let options_zip =
         zip::write::SimpleFileOptions::default().compression_method(zip::CompressionMethod::Stored);
+    let mut done = 0;
     let mut add = |name, image: tiny_skia::Pixmap| -> Result<(), String> {
         zip.start_file(name, options_zip)
             .map_err(|e| e.to_string())?;
         zip.write_all(&png(&image, export.quality.samples())?)
-            .map_err(|e| e.to_string())
+            .map_err(|e| e.to_string())?;
+        done += 1;
+        completed(done);
+        Ok(())
     };
     for (name, metric) in CHARTS {
         add(

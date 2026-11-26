@@ -1,4 +1,5 @@
-use super::{Analysis, analyze_with_images};
+use super::{Analysis, analyze_with_progress};
+use crate::job_progress::{Progress, Snapshot, Stage};
 use crate::shell::Language;
 use ca_analysis::{Format, MAX_BYTES};
 use crossbeam_channel::{Receiver, Sender, TryRecvError, TrySendError, bounded};
@@ -21,6 +22,7 @@ struct Job {
     language: Language,
     active: Arc<AtomicBool>,
     result: Sender<Outcome>,
+    progress: Progress,
 }
 
 /// A single worker with one queued request. Each request has its own bounded
@@ -34,11 +36,12 @@ pub struct Session {
     error: Option<String>,
     opened: bool,
     revision: u64,
+    progress: Progress,
 }
 
 impl Default for Session {
     fn default() -> Self {
-        Self::with_processor(analyze_with_images).unwrap_or_else(|_| Self {
+        Self::with_progress_processor(analyze_with_progress).unwrap_or_else(|_| Self {
             worker: None,
             pending: None,
             receiving: None,
@@ -47,11 +50,13 @@ impl Default for Session {
             error: Some("analyzer.error.worker".into()),
             opened: false,
             revision: 0,
+            progress: Progress::default(),
         })
     }
 }
 
-fn file(title: String) -> Result<Option<(String, Format)>, String> {
+fn file(title: String, progress: &Progress) -> Result<Option<(String, Format)>, String> {
+    progress.set(0, Stage::ChooseFile);
     let Some(path) = rfd::FileDialog::new()
         .set_title(title)
         .add_filter("CSV / JSON", &["csv", "json"])
@@ -59,6 +64,7 @@ fn file(title: String) -> Result<Option<(String, Format)>, String> {
     else {
         return Ok(None);
     };
+    progress.set(5, Stage::Reading);
     let format = match path
         .extension()
         .and_then(|s| s.to_str())
@@ -87,6 +93,15 @@ impl Session {
     pub fn with_processor(
         processor: impl Fn(&str, Format, Language) -> Result<Analysis, String> + Send + 'static,
     ) -> std::io::Result<Self> {
+        Self::with_progress_processor(move |content, format, language, _| {
+            processor(content, format, language)
+        })
+    }
+    fn with_progress_processor(
+        processor: impl Fn(&str, Format, Language, &Progress) -> Result<Analysis, String>
+        + Send
+        + 'static,
+    ) -> std::io::Result<Self> {
         let (sender, jobs) = bounded::<Job>(1);
         std::thread::Builder::new()
             .name("fluvi-analyzer".into())
@@ -98,11 +113,13 @@ impl Session {
                     let outcome = (|| {
                         let source = match job.input {
                             Input::Content(content, format) => Some((content, format)),
-                            Input::Pick(title) => file(title)?,
+                            Input::Pick(title) => file(title, &job.progress)?,
                             Input::Replot(report) => {
-                                let plots = super::plots::render(
+                                job.progress.set(30, Stage::Images);
+                                let plots = super::plots::render_reporting(
                                     &report,
                                     &crate::shell::Translator::new(job.language),
+                                    |done| job.progress.set(30 + done as u8 * 20, Stage::Images),
                                 )?;
                                 return Ok(Some(Analysis {
                                     report: *report,
@@ -117,9 +134,13 @@ impl Session {
                         let Some((content, format)) = source else {
                             return Ok(None);
                         };
-                        processor(&content, format, job.language).map(Some)
+                        job.progress.set(10, Stage::Analyzing);
+                        processor(&content, format, job.language, &job.progress).map(Some)
                     })();
                     if job.active.load(Ordering::Acquire) {
+                        if matches!(outcome, Ok(Some(_))) {
+                            job.progress.set(100, Stage::Ready);
+                        }
                         let _ = job.result.try_send(outcome);
                     }
                 }
@@ -133,6 +154,7 @@ impl Session {
             error: None,
             opened: false,
             revision: 0,
+            progress: Progress::default(),
         })
     }
     pub fn open(&mut self) {
@@ -154,6 +176,7 @@ impl Session {
         self.receiving = None;
         self.analysis = None;
         self.error = None;
+        self.progress = Progress::default();
     }
     fn request(&mut self, input: Input, language: Language) {
         self.invalidate();
@@ -167,6 +190,7 @@ impl Session {
             language,
             active: active.clone(),
             result,
+            progress: self.progress.clone(),
         });
         self.active = Some(active);
         self.receiving = Some(receiving);
@@ -179,6 +203,9 @@ impl Session {
     }
     pub fn is_busy(&self) -> bool {
         self.pending.is_some() || self.receiving.is_some()
+    }
+    pub fn progress(&self) -> Option<Snapshot> {
+        self.is_busy().then(|| self.progress.snapshot())
     }
     pub fn analysis(&self) -> Option<&Analysis> {
         self.analysis.as_ref()

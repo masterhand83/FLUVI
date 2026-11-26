@@ -119,6 +119,7 @@ pub enum Action {
 #[derive(Default)]
 pub struct MetricsPanel {
     pub exporting: bool,
+    pub export_progress: Option<crate::job_progress::Snapshot>,
     history: Vec<Point>,
     included: Vec<bool>,
     order: Vec<usize>,
@@ -191,7 +192,9 @@ impl MetricsPanel {
                 action = Some(Action::Export(kind));
             }
         }
-        if self.exporting {
+        if let Some(progress) = self.export_progress {
+            progress.show(ui, shell);
+        } else if self.exporting {
             ui.label(shell.tr("metrics.export.busy", &[]));
         }
         if ui.button(shell.tr("heatmap.title", &[])).clicked() {

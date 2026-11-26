@@ -4,6 +4,37 @@ use ca_core::{
     virtual_time::{Clock, VirtualTime},
 };
 
+#[test]
+fn export_progress_stays_incomplete_when_the_snapshot_is_cancelled() {
+    use ca_app::{
+        capture::SaveResult,
+        job_progress::Stage,
+        metric_exports::{ImageOptions, Kind, start_save},
+    };
+    let (snapshot, job) = start_save(
+        Kind::Csv,
+        ImageOptions::default(),
+        "test".into(),
+        egui::Context::default(),
+    )
+    .unwrap();
+    let before = job.progress.snapshot();
+    assert_eq!(before.percent, 0);
+    assert_eq!(before.stage, Stage::Waiting);
+    // This ends the request before any native save dialog or file write.
+    drop(snapshot);
+    let result = job
+        .result
+        .recv_timeout(std::time::Duration::from_secs(5))
+        .unwrap();
+    assert!(matches!(result, SaveResult::Failed(_)));
+    assert_eq!(
+        job.progress.snapshot().percent,
+        0,
+        "cancelled work must not claim completion"
+    );
+}
+
 fn history() -> Vec<Point> {
     let data: serde_json::Value =
         serde_json::from_str(include_str!("fixtures/metric-exports/input.json")).unwrap();

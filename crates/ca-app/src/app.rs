@@ -1264,6 +1264,10 @@ impl eframe::App for App {
         }
         self.metrics.exporting =
             self.metric_export_job.is_some() || self.metric_export_dialog.is_open();
+        self.metrics.export_progress = self
+            .metric_export_job
+            .as_ref()
+            .map(|job| job.progress.snapshot());
         if let Some(job) = &self.capture_job {
             match job.result.try_recv() {
                 Ok(result) => {

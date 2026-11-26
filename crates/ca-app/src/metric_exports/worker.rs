@@ -1,7 +1,8 @@
 use super::{
-    Context, ImageOptions, Snapshot, build_csv, build_image_zip_with_options, standalone_json,
+    Context, ImageOptions, Snapshot, build_csv, images::build_image_zip_reporting, standalone_json,
 };
 use crate::capture::SaveResult;
+use crate::job_progress::{Progress, Stage};
 use crossbeam_channel::{Receiver, Sender, bounded};
 use eframe::egui;
 
@@ -24,6 +25,7 @@ impl Kind {
 
 pub struct SaveJob {
     pub result: Receiver<SaveResult>,
+    pub progress: Progress,
 }
 
 fn timestamp() -> String {
@@ -50,11 +52,14 @@ pub fn start_save(
 ) -> std::io::Result<(Sender<Snapshot>, SaveJob)> {
     let (snapshot, snapshots) = bounded::<Snapshot>(1);
     let (result_tx, result) = bounded(1);
+    let progress = Progress::default();
+    let worker_progress = progress.clone();
     std::thread::Builder::new()
         .name("fluvi-metric-export".into())
         .spawn(move || {
             let result = (|| {
                 let snapshot = snapshots.recv().map_err(|e| e.to_string())?;
+                worker_progress.set(10, Stage::Packing);
                 // This owned export can finish even if the live map is later replaced.
                 if snapshot.history.is_empty() {
                     return Err("metrics.export.empty".into());
@@ -81,11 +86,12 @@ pub fn start_save(
                         )
                     }
                     Kind::Images => (
-                        build_image_zip_with_options(
+                        build_image_zip_reporting(
                             &snapshot.history,
                             &snapshot.document,
                             snapshot.included,
                             options,
+                            |done| worker_progress.set(10 + done as u8 * 10, Stage::Images),
                         )?,
                         format!(
                             "metricas_imagenes_{}.zip",
@@ -94,6 +100,7 @@ pub fn start_save(
                         "zip",
                     ),
                 };
+                worker_progress.set(90, Stage::ChooseFile);
                 let Some(path) = rfd::FileDialog::new()
                     .set_title(title)
                     .add_filter(extension, &[extension])
@@ -102,12 +109,14 @@ pub fn start_save(
                 else {
                     return Ok(SaveResult::Cancelled);
                 };
+                worker_progress.set(95, Stage::Writing);
                 std::fs::write(path, bytes).map_err(|e| e.to_string())?;
+                worker_progress.set(100, Stage::Ready);
                 Ok(SaveResult::Saved)
             })()
             .unwrap_or_else(SaveResult::Failed);
             let _ = result_tx.try_send(result);
             repaint.request_repaint();
         })?;
-    Ok((snapshot, SaveJob { result }))
+    Ok((snapshot, SaveJob { result, progress }))
 }

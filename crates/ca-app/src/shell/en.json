@@ -1,4 +1,12 @@
 {
+  "progress.waiting": "Waiting to start…",
+  "progress.reading": "Reading the file…",
+  "progress.analyzing": "Analyzing the data…",
+  "progress.images": "Creating images…",
+  "progress.packing": "Preparing the export…",
+  "progress.chooseFile": "Choose a file…",
+  "progress.writing": "Saving the file…",
+  "progress.ready": "Complete",
   "analyzer.title": "Metrics analyzer",
   "analyzer.open": "Load CSV or JSON",
   "analyzer.busy": "Analyzing metrics…",

@@ -43,6 +43,39 @@ fn chart_points() -> MetricsPanel {
 }
 
 #[test]
+fn export_progress_is_compact_translated_and_removed_when_idle() {
+    use ca_app::job_progress::{Snapshot, Stage};
+    use eframe::egui;
+    let ctx = egui::Context::default();
+    let mut panel = MetricsPanel::default();
+    panel.exporting = true;
+    panel.export_progress = Some(Snapshot {
+        percent: 60,
+        stage: Stage::Images,
+    });
+    let output = chart_frame(&ctx, &mut panel, None);
+    let labels: Vec<_> = output
+        .shapes
+        .iter()
+        .filter_map(|s| match &s.shape {
+            egui::Shape::Text(t) => Some(t.galley.text()),
+            _ => None,
+        })
+        .collect();
+    assert!(labels.contains(&"60%"), "{labels:?}");
+    assert!(labels.contains(&"Creando imágenes…"), "{labels:?}");
+    panel.exporting = false;
+    panel.export_progress = None;
+    let output = chart_frame(&ctx, &mut panel, None);
+    assert!(
+        !output
+            .shapes
+            .iter()
+            .any(|s| matches!(&s.shape, egui::Shape::Text(t) if t.galley.text() == "60%"))
+    );
+}
+
+#[test]
 fn charts_show_titles_latest_values_labelled_axes_and_five_line_colours() {
     use eframe::egui;
     let ctx = egui::Context::default();
