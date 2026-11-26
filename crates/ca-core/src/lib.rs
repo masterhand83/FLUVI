@@ -8,6 +8,7 @@ pub use traffic::disruptions;
 pub mod geometry;
 pub mod map_json;
 mod random;
+pub mod scenario_json;
 pub mod streets;
 pub mod traffic;
 pub mod virtual_time;

@@ -522,6 +522,34 @@ Focused checks: `cargo test -p ca-core --test disruptions`,
 `cargo test -p ca-app --bin ca-app disruption_commands`, and
 `cargo test -p ca-gpu --test traffic scenario_`.
 
+### Scenario library and JSON exchange
+
+Scenarios → Scenario Library saves the current render-owned marks and rain
+probability, including rain-only setups. Load uses the ordered render queue and
+sets the active-name banner only after acceptance. It replaces disruptions, keeps
+unmarked vehicles and the clock, and always turns random rain off. Map Open also
+restores probability with rain off; older files default to 10%.
+
+`ca-core::scenario_json` validates v1 street identities, lengths, lane counts,
+physical addresses, and texture types before changing cells. Scenario exports use
+v1 keys and percentage units, without a language field or rain activation switch.
+`ca-app::scenario_library` runs library and native import/export I/O on a bounded
+worker. The library is `fluvi/scenarios.json` under the platform app data directory
+(`$XDG_DATA_HOME` or `~/.local/share` on Linux). Writes replace the file atomically;
+failed writes retain the previous library. Map replacement keeps the library but
+clears the active name and paint mode.
+
+Focused checks: `cargo test -p ca-core --test scenario_json`,
+`cargo test -p ca-app --test scenario_library`, and
+`cargo test -p ca-app --bin ca-app scenario_exchange_queue`.
+For independent v1 compatibility:
+
+```sh
+node scripts/check-scenario-json-compat.mjs --record
+cargo run -p ca-core --example scenario_round_trip > /tmp/opencode/scenario-v2.json
+node scripts/check-scenario-json-compat.mjs /tmp/opencode/scenario-v2.json
+```
+
 ### Map files and session replacement
 
 Use `ca-core::map_json::MapDocument` to validate map JSON before replacing

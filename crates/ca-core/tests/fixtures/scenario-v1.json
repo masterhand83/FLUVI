@@ -1,0 +1,79 @@
+{
+  "version": "1.0",
+  "id": "1795667183327",
+  "nombre": "Storm",
+  "descripcion": "v1 compatibility fixture",
+  "fechaCreacion": "2026-11-26T04:26:23.327Z",
+  "callesConfig": [
+    {
+      "id": "Entrada",
+      "nombre": "Entrada",
+      "tamano": 6,
+      "carriles": 2
+    },
+    {
+      "id": "Salida",
+      "nombre": "Salida",
+      "tamano": 6,
+      "carriles": 2
+    }
+  ],
+  "lluviaAleatoria": {
+    "probabilidad": 37
+  },
+  "celdasBloqueadas": [
+    {
+      "calleNombre": "Entrada",
+      "calleId": "Entrada",
+      "carril": 1,
+      "indice": 2,
+      "tipo": "inundacion",
+      "texture": "inundacion"
+    },
+    {
+      "calleNombre": "Salida",
+      "calleId": "Salida",
+      "carril": 0,
+      "indice": 0,
+      "tipo": "bloqueo",
+      "texture": null
+    },
+    {
+      "calleNombre": "Salida",
+      "calleId": "Salida",
+      "carril": 0,
+      "indice": 1,
+      "tipo": "obstaculo",
+      "texture": "bache"
+    },
+    {
+      "calleNombre": "Salida",
+      "calleId": "Salida",
+      "carril": 0,
+      "indice": 2,
+      "tipo": "obstaculo",
+      "texture": "trabajador"
+    },
+    {
+      "calleNombre": "Salida",
+      "calleId": "Salida",
+      "carril": 0,
+      "indice": 3,
+      "tipo": "obstaculo",
+      "texture": "arbol"
+    },
+    {
+      "calleNombre": "Salida",
+      "calleId": "Salida",
+      "carril": 0,
+      "indice": 4,
+      "tipo": "obstaculo",
+      "texture": "cono"
+    }
+  ],
+  "estadisticas": {
+    "totalBloqueos": 1,
+    "totalInundaciones": 1,
+    "totalObstaculos": 4
+  }
+}

@@ -27,6 +27,7 @@ struct Startup {
 }
 
 pub struct App {
+    scenario_exchange: ca_app::scenario_library::ScenarioExchange,
     scenarios: ca_app::scenarios::ScenarioControls,
     parking_pending: Option<ca_app::parking_form::ParkingRequest>,
     buildings: ca_app::buildings::BuildingEditor,
@@ -66,8 +67,110 @@ pub struct App {
 }
 
 impl App {
+    fn scenario_library(&mut self, ctx: &egui::Context) {
+        use crate::render::ScenarioResult;
+        use ca_app::scenario_library::{LibraryAction, LibraryResult};
+        if let Some(result) = self.scenario_exchange.poll(ctx) {
+            match result {
+                LibraryResult::Imported(scenario) => {
+                    match scenario.validate(self.session.as_ref().expect("session").document()) {
+                        Ok(()) => self.scenario_exchange.store(scenario, ctx),
+                        Err(error) => self.shell.notify(
+                            ca_app::shell::Severity::Error,
+                            self.shell.tr(error.translation_key(), &[]),
+                        ),
+                    }
+                }
+                LibraryResult::Failed(key) => self
+                    .shell
+                    .notify(ca_app::shell::Severity::Error, self.shell.tr(key, &[])),
+                LibraryResult::Exported => self.shell.notify(
+                    ca_app::shell::Severity::Success,
+                    self.shell.tr("scenarios.exported", &[]),
+                ),
+                _ => {}
+            }
+        }
+        for result in self.commands.scenario_results() {
+            self.scenario_exchange.capturing = false;
+            match result {
+                ScenarioResult::Captured(Ok(scenario)) => {
+                    self.scenario_exchange.store(scenario, ctx)
+                }
+                ScenarioResult::Loaded(Ok(scenario)) => {
+                    self.scenarios.loaded(&scenario);
+                    self.map.as_mut().expect("map").set_painting(false);
+                    self.session
+                        .as_mut()
+                        .expect("session")
+                        .set_rain_probability(scenario.probability());
+                }
+                ScenarioResult::Captured(Err(error)) | ScenarioResult::Loaded(Err(error)) => {
+                    self.shell.notify(
+                        ca_app::shell::Severity::Error,
+                        self.shell.tr(error.translation_key(), &[]),
+                    )
+                }
+            }
+        }
+        let ready = self.file_job.is_none()
+            && self.new_confirmation.is_none()
+            && self
+                .session
+                .as_ref()
+                .expect("session")
+                .document()
+                .editing_street()
+                .is_none()
+            && self.map.is_some();
+        let Some(action) = self.scenario_exchange.show(ctx, &self.shell, ready) else {
+            return;
+        };
+        let accepted = match action {
+            LibraryAction::Save(name) => {
+                let id = format!(
+                    "{}-{}",
+                    std::process::id(),
+                    std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .unwrap_or_default()
+                        .as_nanos()
+                );
+                self.commands.edit(Edit::CaptureScenario(name, id))
+            }
+            LibraryAction::Load(scenario) => {
+                match scenario.validate(self.session.as_ref().expect("session").document()) {
+                    Ok(()) => self.commands.edit(Edit::LoadScenario(Box::new(scenario))),
+                    Err(error) => {
+                        self.shell.notify(
+                            ca_app::shell::Severity::Error,
+                            self.shell.tr(error.translation_key(), &[]),
+                        );
+                        return;
+                    }
+                }
+            }
+            action => {
+                self.scenario_exchange.file_action(action, ctx, &self.shell);
+                return;
+            }
+        };
+        if accepted {
+            self.scenario_exchange.capturing = true;
+        } else {
+            self.shell.notify(
+                ca_app::shell::Severity::Warning,
+                self.shell.tr("shell.cellEditBusy", &[]),
+            );
+        }
+    }
+
     fn scenario_command(&mut self, command: ca_app::scenarios::ScenarioCommand) -> bool {
         use ca_app::scenarios::ScenarioCommand;
+        if command == ScenarioCommand::Library {
+            self.scenario_exchange.open = true;
+            return true;
+        }
         if !matches!(
             command,
             ScenarioCommand::Rain(..) | ScenarioCommand::Mode(None)
@@ -96,6 +199,7 @@ impl App {
             map.set_cell_picking(None);
         }
         let accepted = match command {
+            ScenarioCommand::Library => unreachable!(),
             ScenarioCommand::Mode(mode) => {
                 self.map.as_mut().expect("map").set_painting(mode.is_some());
                 true
@@ -212,6 +316,7 @@ impl App {
         });
         let time = session.document().time().clone();
         Ok(Self {
+            scenario_exchange: Default::default(),
             scenarios: Default::default(),
             parking_pending: None,
             buildings: Default::default(),
@@ -462,7 +567,9 @@ impl App {
             transport: &mut self.transport,
             scenarios: &mut self.scenarios,
             enabled: self.smoke_frames.is_none(),
-            files_ready: self.file_job.is_none() && self.new_confirmation.is_none(),
+            files_ready: self.file_job.is_none()
+                && self.new_confirmation.is_none()
+                && !self.scenario_exchange.busy(),
         }
         .show(ctx, &mut self.shell);
         if matches!(
@@ -624,6 +731,10 @@ impl App {
     }
 
     fn start_file(&mut self, save: bool, ctx: &egui::Context) {
+        self.session
+            .as_mut()
+            .expect("session")
+            .set_rain_probability(self.scenarios.rain_probability);
         self.time.clock = self.progress.clock;
         self.session
             .as_mut()
@@ -653,6 +764,7 @@ impl App {
     fn replace_map(&mut self, mut document: MapDocument) {
         document.inherit_profile_switch(self.time.enabled);
         let time = document.time().clone();
+        let rain_probability = document.model().rain().1;
         let scene = TrafficScene::from_document(&document);
         let mut map = MapInteraction::new(
             scene.extent().map(|v| v as f32),
@@ -673,6 +785,10 @@ impl App {
         let mut session = self.session.take().expect("session");
         session.replace(true, document, self);
         self.session = Some(session);
+        self.scenarios.rain_probability = rain_probability;
+        self.scenario_exchange.capturing = false;
+        self.scenario_exchange.open = false;
+        for _ in self.commands.scenario_results() {}
         // Feature/info-bar reset must finish before restoring the saved clock.
         self.progress.clock = time.clock;
         self.time = time;
@@ -847,6 +963,7 @@ impl App {
 
     fn map_files(&mut self, ctx: &egui::Context) {
         if self.file_job.is_none()
+            && !self.scenario_exchange.busy()
             && self.new_confirmation.is_none()
             && self.smoke_frames.is_none()
             && self
@@ -971,6 +1088,7 @@ impl eframe::App for App {
             return;
         }
         self.map_files(ctx);
+        self.scenario_library(ctx);
         if self.error.is_some() || self.smoke_frames.is_some_and(|n| self.progress.frames >= n) {
             ctx.send_viewport_cmd(egui::ViewportCommand::Close);
             return;

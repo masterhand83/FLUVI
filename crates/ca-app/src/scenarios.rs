@@ -5,12 +5,14 @@ use eframe::egui;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum ScenarioCommand {
+    Library,
     Mode(Option<Disruption>),
     Rain(bool, f64),
     Action(ScenarioAction),
 }
 
 pub struct ScenarioControls {
+    pub active_name: Option<String>,
     pub mode: Option<Disruption>,
     pub rain_active: bool,
     pub rain_probability: f64,
@@ -21,6 +23,7 @@ pub struct ScenarioControls {
 impl Default for ScenarioControls {
     fn default() -> Self {
         Self {
+            active_name: None,
             mode: None,
             rain_active: false,
             rain_probability: 0.1,
@@ -31,12 +34,27 @@ impl Default for ScenarioControls {
 }
 
 impl ScenarioControls {
+    pub fn loaded(&mut self, scenario: &ca_core::scenario_json::Scenario) {
+        self.active_name = Some(scenario.name().to_owned());
+        self.rain_active = false;
+        self.rain_probability = scenario.probability();
+        self.mode = None;
+    }
+
     pub fn raining(&self) -> bool {
         self.rain_active || self.mode == Some(Disruption::Flood)
     }
 
     pub fn show(&mut self, ui: &mut egui::Ui, shell: &Shell) -> Option<ScenarioCommand> {
         let mut command = None;
+        if let Some(name) = &self.active_name {
+            ui.group(|ui| {
+                ui.label(shell.tr("scenarios.active", &[("name", name)]));
+            });
+        }
+        if ui.button(shell.tr("scenarios.library", &[])).clicked() {
+            command = Some(ScenarioCommand::Library);
+        }
         for (mode, key) in [
             (Disruption::LaneBlock, "scenarios.laneBlock"),
             (Disruption::Flood, "scenarios.flood"),

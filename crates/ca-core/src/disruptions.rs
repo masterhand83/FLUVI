@@ -25,6 +25,17 @@ pub enum ScenarioAction {
 }
 
 impl TrafficModel {
+    pub fn rain(&self) -> (bool, f64) {
+        (self.rain, self.rain_probability)
+    }
+
+    pub(crate) fn set_scenario_cell(&mut self, cell: CellRef, mark: Disruption) {
+        let street = &mut self.streets[cell.street];
+        let offset = cell.lane * street.config.tamano + cell.index;
+        street.cells[offset] = 7;
+        street.marks[offset] = Some(mark);
+    }
+
     pub fn set_rain(&mut self, active: bool, probability: f64) -> Result<(), TrafficError> {
         if !probability.is_finite() || !(0.0..=1.0).contains(&probability) {
             return Err(TrafficError::Probability);

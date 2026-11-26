@@ -23,6 +23,11 @@ pub enum Event {
     Progress(Progress),
 }
 
+pub enum ScenarioResult {
+    Captured(Result<ca_core::scenario_json::Scenario, ca_core::scenario_json::ScenarioError>),
+    Loaded(Result<ca_core::scenario_json::Scenario, ca_core::scenario_json::ScenarioError>),
+}
+
 /// UI commands are values. The callback owns the CPU model and GPU resources.
 #[derive(Clone, Copy)]
 pub struct Paint {
@@ -36,6 +41,8 @@ pub struct Paint {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Edit {
+    CaptureScenario(String, String),
+    LoadScenario(Box<ca_core::scenario_json::Scenario>),
     Scenario(ca_core::disruptions::ScenarioAction),
     Rain(bool, f64),
     Parking(usize, Option<Box<ca_core::parking::ParkingConfig>>),
@@ -81,6 +88,7 @@ impl CallbackTrait for BackgroundCallback {
 
 /// Only view/control state is coalesced. Cell edits retain FIFO order.
 pub struct Commands {
+    scenario_results: Receiver<ScenarioResult>,
     parking_results: Receiver<(usize, Result<(), ca_core::parking::ParkingError>)>,
     parking: Receiver<(usize, usize)>,
     buildings: Sender<Vec<ca_core::map_json::BackgroundZone>>,
@@ -92,6 +100,7 @@ pub struct Commands {
 }
 
 pub struct Requests {
+    scenario_results: Sender<ScenarioResult>,
     parking_results: Sender<(usize, Result<(), ca_core::parking::ParkingError>)>,
     parking: Sender<(usize, usize)>,
     buildings: Receiver<Vec<ca_core::map_json::BackgroundZone>>,
@@ -101,6 +110,7 @@ pub struct Requests {
 }
 
 pub fn command_channel() -> (Commands, Requests) {
+    let (scenario_results_tx, scenario_results) = bounded(32);
     let (parking_results_tx, parking_results) = bounded(32);
     let (parking_tx, parking) = bounded(1024);
     let (building_tx, buildings) = bounded(1);
@@ -109,6 +119,7 @@ pub fn command_channel() -> (Commands, Requests) {
     let (replacement_tx, replacement) = bounded(1);
     (
         Commands {
+            scenario_results,
             parking_results,
             parking,
             buildings: building_tx,
@@ -119,6 +130,7 @@ pub fn command_channel() -> (Commands, Requests) {
             replacement: replacement_tx,
         },
         Requests {
+            scenario_results: scenario_results_tx,
             parking_results: parking_results_tx,
             parking: parking_tx,
             buildings,
@@ -130,6 +142,9 @@ pub fn command_channel() -> (Commands, Requests) {
 }
 
 impl Commands {
+    pub fn scenario_results(&self) -> impl Iterator<Item = ScenarioResult> + '_ {
+        self.scenario_results.try_iter()
+    }
     pub fn parking_results(
         &self,
     ) -> impl Iterator<Item = (usize, Result<(), ca_core::parking::ParkingError>)> + '_ {
@@ -242,6 +257,24 @@ impl Resources {
         let mut scenario_edited = false;
         while let Ok(edit) = self.requests.edits.try_recv() {
             edited |= match edit {
+                Edit::CaptureScenario(name, id) => {
+                    let result = self.scene.capture_scenario(&name, &id);
+                    let _ = self
+                        .requests
+                        .scenario_results
+                        .try_send(ScenarioResult::Captured(result));
+                    false
+                }
+                Edit::LoadScenario(scenario) => {
+                    let result = self.scene.load_scenario(&scenario).map(|()| *scenario);
+                    let changed = result.is_ok();
+                    let _ = self
+                        .requests
+                        .scenario_results
+                        .try_send(ScenarioResult::Loaded(result));
+                    scenario_edited |= changed;
+                    changed
+                }
                 Edit::Rain(active, probability) => {
                     self.scene
                         .set_rain(active, probability)
@@ -1311,6 +1344,67 @@ mod tests {
             0
         );
         assert_eq!(resources.progress.population, 1);
+        assert_eq!(resources.progress.generation, 0);
+    }
+
+    #[test]
+    fn scenario_exchange_queue_captures_live_marks_and_loads_without_a_tick() {
+        let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor::from_env_or_default());
+        let adapter = pollster::block_on(instance.request_adapter(&Default::default())).unwrap();
+        let (device, queue) =
+            pollster::block_on(adapter.request_device(&Default::default())).unwrap();
+        let document = ca_core::map_json::MapDocument::parse(include_str!(
+            "../../ca-core/tests/fixtures/map-v1.json"
+        ))
+        .unwrap();
+        let scene = TrafficScene::from_document(&document);
+        let format = wgpu::TextureFormat::Rgba8Unorm;
+        let display = TrafficDisplay::new(&device, &scene, format);
+        let (commands, requests) = command_channel();
+        let (events, _) = bounded(2);
+        let mut resources = Resources::new(scene, display, events, requests, format);
+        assert!(commands.send(
+            Paint {
+                playing: false,
+                rate: 10.,
+                step_ticket: 0,
+                generation_override: None,
+                excluded_street: None,
+                view: WorldView {
+                    origin: [0.; 2],
+                    span: [20.; 2]
+                }
+            },
+            None
+        ));
+        let scenario = ca_core::scenario_json::Scenario::parse(include_str!(
+            "../../ca-core/tests/fixtures/scenario-v1.json"
+        ))
+        .unwrap();
+        assert!(commands.edit(Edit::Rain(true, 1.)));
+        assert!(commands.edit(Edit::LoadScenario(Box::new(scenario))));
+        assert!(commands.edit(Edit::CaptureScenario("Live".into(), "live".into())));
+        resources.prepare(&device, &queue);
+        let results: Vec<_> = commands.scenario_results().collect();
+        let ScenarioResult::Loaded(Ok(loaded)) = &results[0] else {
+            panic!("load failed")
+        };
+        let ScenarioResult::Captured(Ok(saved)) = &results[1] else {
+            panic!("capture failed")
+        };
+        let mut controls = ca_app::scenarios::ScenarioControls::default();
+        controls.loaded(loaded);
+        assert_eq!(controls.active_name.as_deref(), Some("Storm"));
+        assert!(!controls.rain_active);
+        assert_eq!(controls.rain_probability, 0.37);
+        assert_eq!(
+            saved.to_value()["celdasBloqueadas"]
+                .as_array()
+                .unwrap()
+                .len(),
+            6
+        );
+        assert_eq!(resources.scene.cells()[8] & 255, 7);
         assert_eq!(resources.progress.generation, 0);
     }
 }

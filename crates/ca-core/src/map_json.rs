@@ -1100,6 +1100,12 @@ impl MapDocument {
                 .configure_parking(index, config)
                 .map_err(|_| MapError)?;
         }
+        let probability = crate::scenario_json::rain_probability(&document.data["lluviaAleatoria"])
+            .map_err(|_| MapError)?;
+        document
+            .model
+            .set_rain(false, probability)
+            .map_err(|_| MapError)?;
         Ok(document)
     }
 
@@ -1312,8 +1318,14 @@ impl MapDocument {
     pub fn layout(&self) -> &[StreetPlacement] {
         &self.layout
     }
+    pub(crate) fn street_id(&self, index: usize) -> &str {
+        self.data["calles"][index]["id"]
+            .as_str()
+            .unwrap_or(&self.layout[index].name)
+    }
     pub fn to_json(&self) -> String {
         let mut data = self.data.clone();
+        data["lluviaAleatoria"] = json!({"probabilidad": self.model.rain().1 * 100.});
         data["edificios"] = Value::Array(
             self.buildings
                 .iter()

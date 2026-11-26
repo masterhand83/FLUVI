@@ -238,6 +238,23 @@ impl TrafficScene {
         self.document.model_mut().set_rain(active, probability)
     }
 
+    pub fn capture_scenario(
+        &self,
+        name: &str,
+        id: &str,
+    ) -> Result<ca_core::scenario_json::Scenario, ca_core::scenario_json::ScenarioError> {
+        self.document.capture_scenario(name, id)
+    }
+
+    pub fn load_scenario(
+        &mut self,
+        scenario: &ca_core::scenario_json::Scenario,
+    ) -> Result<(), ca_core::scenario_json::ScenarioError> {
+        self.document.load_scenario(scenario)?;
+        self.edited = true;
+        Ok(())
+    }
+
     /// Apply ordered actions, then publish once at the frame boundary or next tick.
     pub fn disrupt(
         &mut self,

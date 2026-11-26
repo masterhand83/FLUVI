@@ -67,6 +67,13 @@ impl<S> MapSession<S> {
         self.document.set_time(time);
     }
 
+    pub fn set_rain_probability(&mut self, probability: f64) {
+        self.document
+            .model_mut()
+            .set_rain(false, probability)
+            .expect("UI probability");
+    }
+
     /// Feature owners register metrics and parking resets here, not map resets.
     pub fn register_scenario_reset(&mut self, reset: fn(&mut S)) {
         self.scenario_resets.push(reset);
