@@ -1,0 +1,10 @@
+{
+  "version": 1, "id": "rose-pine", "name": "Rosé Pine", "base": "dark",
+  "colors": {
+    "background": "#191724", "surface": "#1F1D2E", "input": "#151320",
+    "text": "#E0DEF4", "muted": "#A6A0BC", "border": "#524F67",
+    "widget": "#26233A", "hover": "#403D52", "active": "#524F67",
+    "accent": "#C4A7E7", "selection": "#403D52", "selection-text": "#E0DEF4",
+    "warning": "#F6C177", "error": "#EB6F92"
+  }
+}

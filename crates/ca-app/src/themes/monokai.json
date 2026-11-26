@@ -1,0 +1,10 @@
+{
+  "version": 1, "id": "monokai", "name": "Monokai", "base": "dark",
+  "colors": {
+    "background": "#272822", "surface": "#2D2E27", "input": "#1E1F1C",
+    "text": "#F8F8F2", "muted": "#B0B09A", "border": "#75715E",
+    "widget": "#3E3D32", "hover": "#49483E", "active": "#57584A",
+    "accent": "#A6E22E", "selection": "#49483E", "selection-text": "#F8F8F2",
+    "warning": "#E6DB74", "error": "#F92672"
+  }
+}

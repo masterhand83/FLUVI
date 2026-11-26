@@ -1299,6 +1299,7 @@ impl App {
 
 impl eframe::App for App {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        self.shell.update_fonts(ctx);
         self.shell.apply_theme(ctx);
         if let Some(startup) = self.startup.take() {
             if let Err(error) = self.initialize(ctx, startup) {

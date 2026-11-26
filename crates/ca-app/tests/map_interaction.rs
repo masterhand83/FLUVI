@@ -1949,7 +1949,7 @@ fn placement_preview_and_paused_click_share_the_cursor_target_in_an_offset_panel
     assert_eq!(clicked.clicked, Some(preview.cell));
     let mut scene = scene;
     assert!(scene.toggle_vehicle(clicked.clicked.unwrap(), true));
-    assert_eq!(scene.cells()[72], 1);
+    assert_eq!(scene.cells()[72] & 255, 1);
     assert!(show(vec![egui::Event::PointerGone]).preview.is_none());
 }
 

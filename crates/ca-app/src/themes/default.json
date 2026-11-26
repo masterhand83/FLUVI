@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "id": "default",
+  "name": "Default",
+  "base": "light",
+  "colors": {}
+}

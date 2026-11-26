@@ -57,6 +57,10 @@ pub struct Translator {
 }
 
 impl Translator {
+    pub(super) fn language(&self) -> Language {
+        self.language
+    }
+
     pub fn new(language: Language) -> Self {
         Self {
             language,

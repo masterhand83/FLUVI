@@ -1095,7 +1095,15 @@ mod tests {
         resources.prepare(&device, &queue);
         let Event::Progress(paused) = results.try_recv().unwrap();
         assert_eq!(paused.generation, 0);
-        assert_eq!(resources.scene.cells(), &[0, 0, 0, 1, 0, 0, 0, 0]);
+        assert_eq!(
+            resources
+                .scene
+                .cells()
+                .iter()
+                .map(|v| v & 255)
+                .collect::<Vec<_>>(),
+            [0, 0, 0, 1, 0, 0, 0, 0]
+        );
         assert_eq!(resources.scene.connection_arrows().len(), 1);
         assert!(commands.send(
             Paint {
@@ -1108,7 +1116,15 @@ mod tests {
         let Event::Progress(ticked) = results.try_recv().unwrap();
         assert_eq!(ticked.generation, 1);
         assert_eq!(ticked.population, 1);
-        assert_eq!(resources.scene.cells(), &[0, 0, 0, 0, 0, 1, 0, 0]);
+        assert_eq!(
+            resources
+                .scene
+                .cells()
+                .iter()
+                .map(|v| v & 255)
+                .collect::<Vec<_>>(),
+            [0, 0, 0, 0, 0, 1, 0, 0]
+        );
         // Replacement/deletion use the same ordered queue, without resetting traffic.
         let replacement = ca_core::connections::Connection::Lineal(ca_core::connections::Mapping {
             source_street: 0,
@@ -1122,13 +1138,29 @@ mod tests {
         resources.prepare(&device, &queue);
         let Event::Progress(replaced) = results.try_recv().unwrap();
         assert_eq!(replaced.generation, 1);
-        assert_eq!(resources.scene.cells(), &[0, 0, 0, 0, 0, 1, 0, 0]);
+        assert_eq!(
+            resources
+                .scene
+                .cells()
+                .iter()
+                .map(|v| v & 255)
+                .collect::<Vec<_>>(),
+            [0, 0, 0, 0, 0, 1, 0, 0]
+        );
         assert!(commands.edit(Edit::DeleteConnection(0)));
         resources.prepare(&device, &queue);
         let Event::Progress(deleted) = results.try_recv().unwrap();
         assert_eq!(deleted.generation, 1);
         assert_eq!(deleted.population, 1);
-        assert_eq!(resources.scene.cells(), &[0, 0, 0, 0, 0, 1, 0, 0]);
+        assert_eq!(
+            resources
+                .scene
+                .cells()
+                .iter()
+                .map(|v| v & 255)
+                .collect::<Vec<_>>(),
+            [0, 0, 0, 0, 0, 1, 0, 0]
+        );
         assert!(resources.scene.connection_arrows().is_empty());
     }
 
@@ -1209,7 +1241,12 @@ mod tests {
             assert_eq!(progress.generation, 1);
             assert_eq!(progress.population, if occupied { 2 } else { 1 });
             assert_eq!(
-                resources.scene.cells(),
+                resources
+                    .scene
+                    .cells()
+                    .iter()
+                    .map(|v| v & 255)
+                    .collect::<Vec<_>>(),
                 expected,
                 "{percentages:?}, occupied={occupied}"
             );
@@ -1286,7 +1323,15 @@ mod tests {
             "topology must not restart simulation time"
         );
         assert_eq!(edited.population, 1);
-        assert_eq!(resources.scene.cells(), [0, 1, 0, 0, 0]);
+        assert_eq!(
+            resources
+                .scene
+                .cells()
+                .iter()
+                .map(|v| v & 255)
+                .collect::<Vec<_>>(),
+            [0, 1, 0, 0, 0]
+        );
         assert!(commands.send(
             Paint {
                 step_ticket: 2,
@@ -1298,7 +1343,15 @@ mod tests {
         let Event::Progress(resumed) = results.try_recv().unwrap();
         assert_eq!(resumed.generation, 2);
         assert_eq!(resumed.population, 1);
-        assert_eq!(resources.scene.cells(), [0, 0, 1, 0, 0]);
+        assert_eq!(
+            resources
+                .scene
+                .cells()
+                .iter()
+                .map(|v| v & 255)
+                .collect::<Vec<_>>(),
+            [0, 0, 1, 0, 0]
+        );
     }
 
     #[test]
@@ -1506,8 +1559,8 @@ mod tests {
                 "concave notch exposes rectangular zone"
             );
             assert!(
-                center[0] > 220 && center[1] < 100 && center[2] < 100,
-                "cursor center must contain the created red vehicle at scale {pixels_per_point}: {center:?}"
+                center[0] > 150 && center[1] > 140 && center[2] < 80,
+                "cursor center must contain the seeded yellow vehicle at scale {pixels_per_point}: {center:?}"
             );
             // Measure the whole rendered vehicle, not only a pixel beneath the
             // cursor: an off-center rectangle could still cover that pixel.
@@ -1516,7 +1569,7 @@ mod tests {
                 for x in (470.0 * pixels_per_point) as u32..(510.0 * pixels_per_point) as u32 {
                     let index = (y * row_bytes + x * 4) as usize;
                     let colour = &bytes[index..index + 3];
-                    if colour[0] > 220 && colour[1] < 100 && colour[2] < 100 {
+                    if colour[0] > 150 && colour[1] > 140 && colour[2] < 80 {
                         bounds[0] = bounds[0].min(x);
                         bounds[1] = bounds[1].min(y);
                         bounds[2] = bounds[2].max(x);

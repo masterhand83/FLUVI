@@ -280,16 +280,22 @@ impl TrafficScene {
     }
 
     fn pack(&mut self) {
-        for (target, (value, mark)) in self.cells.iter_mut().zip(
-            self.document
-                .model()
-                .streets()
-                .iter()
-                .flat_map(|street| street.cells().iter().zip(street.disruptions())),
-        ) {
+        for (target, ((value, mark), appearance)) in
+            self.cells
+                .iter_mut()
+                .zip(self.document.model().streets().iter().flat_map(|street| {
+                    street
+                        .cells()
+                        .iter()
+                        .zip(street.disruptions())
+                        .zip(street.vehicle_appearances())
+                }))
+        {
             *target = u32::from(*value)
                 | if *value == 7 {
                     mark.map_or(0, |m| (m as u32) << 8)
+                } else if (1..=6).contains(value) {
+                    u32::from(*appearance) << 16
                 } else {
                     0
                 };
@@ -543,6 +549,7 @@ impl TrafficScene {
         &self.lanes
     }
 
+    /// Packed cells: traffic in bits 0..8, disruption in 8..16, appearance in 16..24.
     pub fn cells(&self) -> &[u32] {
         &self.cells
     }
@@ -553,7 +560,10 @@ impl TrafficScene {
 
     /// Value 7 is a special cell, not one of the six vehicle classes.
     pub fn population(&self) -> u32 {
-        self.cells.iter().filter(|&&v| (1..=6).contains(&v)).count() as u32
+        self.cells
+            .iter()
+            .filter(|&&v| (1..=6).contains(&(v & 255)))
+            .count() as u32
     }
 }
 

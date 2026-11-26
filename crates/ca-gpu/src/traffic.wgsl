@@ -14,6 +14,7 @@ struct Vertex {
     @location(0) uv: vec2<f32>,
     @location(1) @interpolate(flat) instance: u32,
     @location(2) @interpolate(flat) heat_colour: vec3<f32>,
+    @location(3) @interpolate(flat) appearance: u32,
 }
 fn heat_colour(tile: Tile) -> vec3<f32> {
     let lane = heat_lanes[tile.lane_and_arrow >> 1u];
@@ -52,10 +53,17 @@ fn vs_main(@builtin(vertex_index) index: u32, @builtin(instance_index) instance:
     out.uv = uv;
     out.instance = instance;
     out.heat_colour = vec3<f32>(0);
-    if HEAT_MODE && !arrow {
-        let value = cells[tile.offset] & 255u;
+    out.appearance = 0u;
+    if !arrow {
+        let packed = cells[tile.offset];
+        let value = packed & 255u;
         if value >= 1u && value <= 6u {
-            out.heat_colour = heat_colour(tile);
+            if HEAT_MODE {
+                out.heat_colour = heat_colour(tile);
+            } else {
+                out.appearance = packed >> 16u;
+                out.heat_colour = vehicle_colour((out.appearance-1u) % 6u + 1u);
+            }
         }
     }
     return out;
@@ -70,6 +78,37 @@ fn vehicle_colour(value: u32) -> vec3<f32> {
         case 6u: { return vec3<f32>(0.8,0.25,0.95); }
         default: { return vec3<f32>(0.95); }
     }
+}
+// Colourless top-view silhouettes, tinted from a creation-time ID.
+// Box tests only: no textures, extra geometry, or per-pixel random numbers.
+fn vehicle_pixel(uv: vec2<f32>, appearance: u32, tint: vec3<f32>, reverse: bool, road: vec3<f32>) -> vec3<f32> {
+    let x = select(uv.x, 1.0-uv.x, reverse);
+    let y = abs(uv.y-0.5);
+    if appearance <= 6u {
+        // Four tyres sit outside the tapered body. The front faces +X.
+        if y > 0.23 && y < 0.33 && (abs(x-0.27)<0.075 || abs(x-0.73)<0.075) {
+            return vec3<f32>(0.035);
+        }
+        if x < 0.09 || x > 0.91 || y > 0.28 || (x > 0.81 && y > 0.23) {
+            return road;
+        }
+        if x > 0.32 && x < 0.65 && y < 0.21 {
+            if x < 0.39 || x > 0.57 { return vec3<f32>(0.12,0.18,0.22); }
+            return tint * 0.75;
+        }
+        if x > 0.84 && y > 0.13 { return vec3<f32>(0.95); }
+        return tint;
+    }
+    // Narrow motorcycle: two tyres, tank, saddle, and front handlebars.
+    if (abs(x-0.19)<0.13 || abs(x-0.81)<0.13) && y < 0.065 {
+        return vec3<f32>(0.035);
+    }
+    if x > 0.67 && x < 0.73 && y < 0.24 { return vec3<f32>(0.65); }
+    if x > 0.29 && x < 0.70 && y < 0.125 {
+        if x < 0.46 { return vec3<f32>(0.09); }
+        return tint;
+    }
+    return road;
 }
 // Procedural obstacle textures stay sharp at every map zoom.
 // Mark IDs match Disruption's stable repr(u8), packed above the cell value.
@@ -137,7 +176,9 @@ fn fs_main(in: Vertex) -> @location(0) vec4<f32> {
         }
         return vec4<f32>(colour, 1);
     }
-    if value!=0u && x>0.1 && x<0.9 && y>0.16 && y<0.84 {
+    if value >= 1u && value <= 6u {
+        colour = vehicle_pixel(in.uv, in.appearance, in.heat_colour, tile.direction != 1u, colour);
+    } else if value!=0u && x>0.1 && x<0.9 && y>0.16 && y<0.84 {
         colour = vehicle_colour(value);
         if value==7u {
             if packed >> 8u != 0u { colour=disruption_colour(packed >> 8u, in.uv); }

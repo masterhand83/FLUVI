@@ -1,0 +1,10 @@
+{
+  "version": 1, "id": "retro", "name": "Retro", "base": "dark",
+  "colors": {
+    "background": "#000000", "surface": "#000000", "input": "#000000",
+    "text": "#00FF41", "muted": "#00B832", "border": "#008F24",
+    "widget": "#001A07", "hover": "#00330D", "active": "#004D14",
+    "accent": "#00FF41", "selection": "#005C18", "selection-text": "#A6FFBC",
+    "warning": "#A6FF00", "error": "#C0FFCC"
+  }
+}

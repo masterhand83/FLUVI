@@ -74,6 +74,9 @@ pub struct Calle {
     config: CalleConfig,
     cells: Vec<u8>,
     next: Vec<u8>,
+    appearances: Vec<u8>,
+    next_appearances: Vec<u8>,
+    appearance_random: u64,
     waiting: Vec<bool>,
     destinations: Vec<usize>,
     reserved: Vec<bool>,
@@ -110,7 +113,7 @@ impl Calle {
         {
             return Err(TrafficError::Lanes);
         }
-        Ok(Self {
+        let mut street = Self {
             config,
             next: cells.clone(),
             waiting: vec![false; size],
@@ -122,8 +125,17 @@ impl Calle {
             parking_endpoints: vec![None; size],
             has_parking: false,
             marks: vec![None; size],
+            appearances: vec![0; size],
+            next_appearances: vec![0; size],
+            appearance_random: 0x6a09_e667_f3bc_c909,
             cells,
-        })
+        };
+        for i in 0..size {
+            if (1..=6).contains(&street.cells[i]) {
+                street.appearances[i] = street.new_appearance();
+            }
+        }
+        Ok(street)
     }
 
     pub fn config(&self) -> &CalleConfig {
@@ -148,6 +160,7 @@ impl Calle {
                         + crate::streets::angular_index(index, self.config.tamano, length);
                     if self.cells[old] != 0 {
                         resized.cells[new] = self.cells[old];
+                        resized.appearances[new] = self.appearances[old];
                         resized.marks[new] = self.marks[old];
                     }
                     if self.waiting[old] {
@@ -160,14 +173,28 @@ impl Calle {
             let old = lane * self.config.tamano;
             let new = lane * length;
             resized.cells[new..new + count].copy_from_slice(&self.cells[old..old + count]);
+            resized.appearances[new..new + count]
+                .copy_from_slice(&self.appearances[old..old + count]);
             resized.marks[new..new + count].copy_from_slice(&self.marks[old..old + count]);
             resized.waiting[new..new + count].copy_from_slice(&self.waiting[old..old + count]);
         }
+        resized.appearance_random = self.appearance_random;
         *self = resized;
     }
 
     pub fn cells(&self) -> &[u8] {
         &self.cells
+    }
+
+    /// Visual-only IDs: 1..=6 are cars, 7..=12 motorcycles; each has six tints.
+    /// Non-vehicle cells can contain stale IDs; readers must check the cell value.
+    pub fn vehicle_appearances(&self) -> &[u8] {
+        &self.appearances
+    }
+
+    fn new_appearance(&mut self) -> u8 {
+        // Separate from traffic randomness so artwork cannot change CA decisions.
+        (crate::random::unit(&mut self.appearance_random) * 12.0) as u8 + 1
     }
 
     pub fn disruptions(&self) -> &[Option<disruptions::Disruption>] {
@@ -268,6 +295,7 @@ impl Calle {
             }
         }
         self.next.copy_from_slice(&self.cells);
+        self.next_appearances.copy_from_slice(&self.appearances);
         for (source, &target) in self.destinations.iter().enumerate() {
             if target == usize::MAX {
                 continue;
@@ -283,6 +311,7 @@ impl Calle {
             }
             self.next[source] = 0;
             self.next[target] = self.cells[source];
+            self.next_appearances[target] = self.appearances[source];
             // V1 holds the arrival and forward neighbors for the street update,
             // but leaves the vacated source free to receive an upstream vehicle.
             self.waiting[target] = true;
@@ -304,6 +333,7 @@ impl Calle {
             self.waiting[source / size * size + target % size] = true;
         }
         std::mem::swap(&mut self.cells, &mut self.next);
+        std::mem::swap(&mut self.appearances, &mut self.next_appearances);
     }
 
     fn generate(
@@ -324,6 +354,7 @@ impl Calle {
             let entry = lane * self.config.tamano + self.entry_cell(lane);
             if self.cells[entry] == 0 && crate::random::unit(random_state) < probability {
                 self.cells[entry] = (crate::random::unit(random_state) * 6.0) as u8 + 1;
+                self.appearances[entry] = self.new_appearance();
             }
         }
     }
@@ -332,11 +363,13 @@ impl Calle {
     pub fn update(&mut self) {
         let size = self.config.tamano;
         self.next.copy_from_slice(&self.cells);
+        self.next_appearances.copy_from_slice(&self.appearances);
         for i in 0..self.cells.len() {
             if self.consumed[i] {
                 self.next[i] = 0;
             } else if self.spawned[i] != 0 {
                 self.next[i] = self.spawned[i];
+                self.next_appearances[i] = self.new_appearance();
             }
         }
         if self.config.periodic {
@@ -360,6 +393,7 @@ impl Calle {
                     {
                         self.next[source] = 0;
                         self.next[destination] = self.cells[source];
+                        self.next_appearances[destination] = self.appearances[source];
                     }
                 }
             }
@@ -367,6 +401,7 @@ impl Calle {
             self.consumed.fill(false);
             self.spawned.fill(0);
             std::mem::swap(&mut self.cells, &mut self.next);
+            std::mem::swap(&mut self.appearances, &mut self.next_appearances);
             return;
         }
         for lane in 0..self.config.carriles {
@@ -406,6 +441,12 @@ impl Calle {
                         Some(result) => result,
                         None => center,
                     };
+                    if center == 0
+                        && (1..=6).contains(&self.next[start + i])
+                        && let Some(previous) = previous
+                    {
+                        self.next_appearances[start + i] = self.appearances[start + previous];
+                    }
                 }
             }
             if self.config.tipo == CalleType::Devorador {
@@ -419,6 +460,7 @@ impl Calle {
         self.consumed.fill(false);
         self.spawned.fill(0);
         std::mem::swap(&mut self.cells, &mut self.next);
+        std::mem::swap(&mut self.appearances, &mut self.next_appearances);
     }
 }
 
@@ -529,7 +571,11 @@ impl TrafficModel {
         model
     }
 
-    pub fn new(streets: Vec<Calle>, seed: u64) -> Self {
+    pub fn new(mut streets: Vec<Calle>, seed: u64) -> Self {
+        for (index, street) in streets.iter_mut().enumerate() {
+            // Give each street its own visual stream without consuming traffic RNG.
+            street.appearance_random ^= seed.wrapping_add(index as u64);
+        }
         Self {
             streets,
             parking: Vec::new(),
@@ -610,9 +656,11 @@ impl TrafficModel {
             return Err(TrafficError::Probability);
         }
         for street in &mut self.streets {
-            for cell in &mut street.cells {
-                if *cell == 0 && crate::random::unit(&mut self.random_state) < probability {
-                    *cell = (crate::random::unit(&mut self.random_state) * 6.0) as u8 + 1;
+            for i in 0..street.cells.len() {
+                if street.cells[i] == 0 && crate::random::unit(&mut self.random_state) < probability
+                {
+                    street.cells[i] = (crate::random::unit(&mut self.random_state) * 6.0) as u8 + 1;
+                    street.appearances[i] = street.new_appearance();
                 }
             }
         }
@@ -629,7 +677,11 @@ impl TrafficModel {
         }
         let value = &mut street.cells[cell.lane * street.config.tamano + cell.index];
         match *value {
-            0 => *value = 1,
+            0 => {
+                *value = 1;
+                let appearance = street.new_appearance();
+                street.appearances[cell.lane * street.config.tamano + cell.index] = appearance;
+            }
             1..=6 => *value = 0,
             7 => {
                 *value = 0;

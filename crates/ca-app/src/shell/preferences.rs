@@ -13,6 +13,9 @@ pub struct Preferences {
     pub panels_open: [bool; 7],
     pub cell_detection: bool,
     pub dark_mode: bool,
+    pub theme: String,
+    pub ui_font: String,
+    pub label_font: String,
     pub export_quality: ExportQuality,
 }
 
@@ -24,6 +27,9 @@ impl Default for Preferences {
             panels_open: [true, false, false, false, false, false, false],
             cell_detection: false,
             dark_mode: false,
+            theme: "default".into(),
+            ui_font: String::new(),
+            label_font: String::new(),
             export_quality: ExportQuality::Balance,
         }
     }
@@ -42,6 +48,28 @@ impl Preferences {
         };
         let mut prefs = defaults;
         let mut warning = false;
+        for (key, target) in [
+            ("ui_font", &mut prefs.ui_font),
+            ("label_font", &mut prefs.label_font),
+        ] {
+            if let Some(value) = object.get(key) {
+                if let Some(name) = value
+                    .as_str()
+                    .filter(|name| name.len() <= 256 && !name.chars().any(char::is_control))
+                {
+                    *target = name.into();
+                } else {
+                    warning = true;
+                }
+            }
+        }
+        if let Some(value) = object.get("theme") {
+            if let Some(theme) = value.as_str().filter(|theme| !theme.is_empty()) {
+                prefs.theme = theme.into();
+            } else {
+                warning = true;
+            }
+        }
         if let Some(value) = object.get("export_quality") {
             if let Some(quality) = value.as_str().and_then(ExportQuality::from_code) {
                 prefs.export_quality = quality;
@@ -95,6 +123,9 @@ impl Preferences {
             "panels_open": self.panels_open,
             "cell_detection": self.cell_detection,
             "dark_mode": self.dark_mode,
+            "theme": self.theme,
+            "ui_font": self.ui_font,
+            "label_font": self.label_font,
             "export_quality": self.export_quality.code(),
         });
         // Write beside the destination, then replace it. A partial write never

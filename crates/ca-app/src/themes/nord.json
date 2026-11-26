@@ -1,0 +1,10 @@
+{
+  "version": 1, "id": "nord", "name": "Nord", "base": "dark",
+  "colors": {
+    "background": "#2E3440", "surface": "#3B4252", "input": "#242933",
+    "text": "#ECEFF4", "muted": "#D8DEE9", "border": "#4C566A",
+    "widget": "#434C5E", "hover": "#4C566A", "active": "#5E6D83",
+    "accent": "#88C0D0", "selection": "#434C5E", "selection-text": "#ECEFF4",
+    "warning": "#EBCB8B", "error": "#BF616A"
+  }
+}

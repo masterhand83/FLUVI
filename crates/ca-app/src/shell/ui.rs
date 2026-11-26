@@ -1,4 +1,5 @@
 use super::{Language, Shell};
+use crate::icons::{self, Icon};
 use eframe::egui;
 use std::time::Duration;
 
@@ -12,6 +13,8 @@ impl Shell {
         ctx: &egui::Context,
         mut section_ui: impl FnMut(&str, &mut egui::Ui, &Shell),
     ) {
+        self.poll_theme_job();
+        self.update_fonts(ctx);
         self.apply_theme(ctx);
         let mut prefs = self.preferences().clone();
         if prefs.sidebar_visible {
@@ -40,32 +43,52 @@ impl Shell {
                         .max_height((ui.available_height() - 260.0).max(60.0))
                         .show(ui, |ui| {
                             for (index, section) in sections.iter().enumerate() {
-                                let arrow = if prefs.panels_open[index] {
-                                    "▼"
-                                } else {
-                                    "▶"
-                                };
                                 let title = self.tr(&format!("sidebar.heading.{section}"), &[]);
-                                if ui.button(format!("{arrow} {title}")).clicked() {
+                                if icons::section_button(
+                                    ui,
+                                    Icon::section(section).expect("sidebar section icon"),
+                                    prefs.panels_open[index],
+                                    title,
+                                )
+                                .clicked()
+                                {
                                     prefs.panels_open[index] = !prefs.panels_open[index];
                                 }
                                 if prefs.panels_open[index] && index == 0 {
                                     ui.label(self.tr("about.projectDescription", &[]));
-                                    if ui.button(self.tr("about.aboutButton", &[])).clicked() {
+                                    if icons::button(
+                                        ui,
+                                        Icon::Information,
+                                        self.tr("about.aboutButton", &[]),
+                                    )
+                                    .clicked()
+                                    {
                                         self.help = Some(false);
                                     }
-                                    if ui.button(self.tr("about.guideButton", &[])).clicked() {
+                                    if icons::button(
+                                        ui,
+                                        Icon::Guide,
+                                        self.tr("about.guideButton", &[]),
+                                    )
+                                    .clicked()
+                                    {
                                         self.help = Some(true);
                                     }
                                 }
                                 if prefs.panels_open[index] {
+                                    if *section == "customization" {
+                                        self.theme_ui(ui, &mut prefs);
+                                        ui.separator();
+                                        self.font_ui(ui, &mut prefs);
+                                        ui.separator();
+                                    }
                                     section_ui(section, ui, self);
                                 }
                                 ui.separator();
                             }
                         });
                     ui.separator();
-                    ui.heading(self.tr("sidebar.heading.settings", &[]));
+                    icons::heading(ui, Icon::Settings, self.tr("sidebar.heading.settings", &[]));
                     egui::ComboBox::from_label(self.tr("settings.language.label", &[]))
                         .selected_text(match prefs.language {
                             Language::Spanish => "Español",
@@ -76,11 +99,20 @@ impl Shell {
                             ui.selectable_value(&mut prefs.language, Language::English, "English");
                         });
                     ui.small(self.tr("settings.language.description", &[]));
-                    ui.checkbox(
+                    icons::checkbox(
+                        ui,
+                        Icon::CellDetection,
                         &mut prefs.cell_detection,
                         self.tr("settings.cellDetection.label", &[]),
                     );
-                    ui.checkbox(&mut prefs.dark_mode, self.tr("settings.darkMode.dark", &[]));
+                    ui.add_enabled_ui(prefs.theme == "default", |ui| {
+                        icons::checkbox(
+                            ui,
+                            Icon::DarkMode,
+                            &mut prefs.dark_mode,
+                            self.tr("settings.darkMode.dark", &[]),
+                        );
+                    });
                     if ui.button(self.tr("graphics.advanced", &[])).clicked() {
                         self.advanced_settings = true;
                     }
@@ -104,11 +136,13 @@ impl Shell {
 
     /// Apply saved visuals before the first widget of a frame.
     pub fn apply_theme(&self, ctx: &egui::Context) {
-        ctx.set_visuals(if self.preferences().dark_mode {
-            egui::Visuals::dark()
-        } else {
-            egui::Visuals::light()
-        });
+        self.fonts.apply(ctx);
+        let theme = self
+            .themes
+            .iter()
+            .find(|theme| theme.id == self.preferences().theme)
+            .unwrap_or(&self.themes[0]);
+        ctx.set_visuals(theme.visuals(self.preferences().dark_mode));
     }
 
     pub fn overlays(&mut self, ctx: &egui::Context) {
@@ -190,26 +224,8 @@ impl Shell {
         } else if let Some(instructions) = self.help {
             let mut close = false;
             let modal = egui::Modal::new("shell-help".into()).show(ctx, |ui| {
-                ui.set_max_width(460.0);
-                ui.heading(self.tr(
-                    if instructions {
-                        "shell.instructions"
-                    } else {
-                        "aboutModal.title"
-                    },
-                    &[],
-                ));
-                ui.label(self.tr(
-                    if instructions {
-                        "shell.instructionsBody"
-                    } else {
-                        "about.projectDescription"
-                    },
-                    &[],
-                ));
-                if !instructions {
-                    ui.label(format!("FLUVI {}", env!("CARGO_PKG_VERSION")));
-                }
+                ui.set_width((ctx.content_rect().width() - 48.0).clamp(120.0, 760.0));
+                self.help_ui(ui, instructions);
                 if ui.button(self.tr("common.close", &[])).clicked() {
                     close = true;
                 }

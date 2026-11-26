@@ -134,6 +134,10 @@ impl Labels {
         let painter = painter.with_clip_rect(rect);
         let streets = matches!(self.visibility, Visibility::Streets | Visibility::Both);
         let buildings = matches!(self.visibility, Visibility::Buildings | Visibility::Both);
+        let font = crate::shell::label_font(
+            painter.ctx(),
+            self.font_size as f32 / painter.ctx().pixels_per_point(),
+        );
         for (text, anchor) in self
             .streets
             .iter()
@@ -150,12 +154,7 @@ impl Labels {
                 );
             // Layout at the output pixel size, never scale a world-space bitmap.
             let ppp = painter.ctx().pixels_per_point();
-            let size = self.font_size as f32 / ppp;
-            let galley = painter.layout_no_wrap(
-                text.clone(),
-                egui::FontId::proportional(size),
-                egui::Color32::WHITE,
-            );
+            let galley = painter.layout_no_wrap(text.clone(), font.clone(), egui::Color32::WHITE);
             let rotation = egui::emath::Rot2::from_angle(anchor.angle);
             let half = galley.size() / 2.;
             let pos = center - rotation * half;

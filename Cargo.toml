@@ -16,6 +16,10 @@ csv = "=1.4.0"
 eframe = { version = "=0.33.3", default-features = false, features = ["wgpu", "default_fonts", "x11", "wayland"] }
 egui = "=0.33.3"
 egui-wgpu = "=0.33.3"
+fontdb = { version = "=0.24.0", default-features = false, features = ["fs", "fontconfig"] }
+ab_glyph = "=0.2.32"
+icondata_core = "=0.1.0"
+icondata_ri = "=0.1.0"
 wgpu = "=27.0.1"
 puffin = "=0.20.0"
 puffin_egui = "=0.30.0"

@@ -133,8 +133,8 @@ fn map_files_are_inside_the_constructor_section_not_a_top_toolbar() {
     };
     let open = text("Abrir mapa");
     assert!(open.left() < 400.0);
-    assert!(open.top() > text("▼ 🏗️ Constructor de Mapas").bottom());
-    assert!(open.bottom() < text("▶ ⚙️ Configuración de Calles").top());
+    assert!(open.top() > text("Constructor de Mapas").bottom());
+    assert!(open.bottom() < text("Configuración de Calles").top());
     text("Guardar mapa");
     text("Nuevo mapa");
     std::fs::remove_file(path).unwrap();

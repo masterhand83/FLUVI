@@ -219,6 +219,60 @@ fn heat_squares_use_clipped_same_lane_windows_and_keep_obstacles_unchanged() {
     );
 }
 
+#[test]
+fn colourless_vehicle_shapes_are_tinted_and_face_the_lane_direction() {
+    let mut document = MapDocument::parse(
+        r#"{"calles":[{"nombre":"Shapes","tipo":"conexion","tamano":30,"carriles":2,"x":5,"y":10,"laneDirections":[1,-1]}]}"#
+    ).unwrap();
+    document.model_mut().random_fill(1.0).unwrap();
+    let geometry = document.geometry_snapshot();
+    let scene = TrafficScene::from_document(&document);
+    let (device, queue) = device();
+    let display = TrafficDisplay::new(&device, &scene, wgpu::TextureFormat::Rgba8Unorm);
+    display.set_view(
+        &queue,
+        WorldView {
+            origin: scene.shift(),
+            span: [36., 14.],
+        },
+    );
+    let image = Target::new(&device).render(&device, &queue, &display, VehicleStyle::Classes);
+    let palette = [
+        [242, 46, 43],
+        [255, 166, 20],
+        [242, 230, 38],
+        [31, 217, 89],
+        [26, 153, 255],
+        [204, 64, 242],
+    ];
+    let mut shapes = [false; 2];
+    for lane in 0..2 {
+        for index in 0..30 {
+            let id = document.model().streets()[0].vehicle_appearances()[lane * 30 + index];
+            let motorcycle = id > 6;
+            shapes[usize::from(motorcycle)] = true;
+            let center = geometry.streets[0].centers[lane][index];
+            let direction = if lane == 0 { 1. } else { -1. };
+            // Independent landmark expectations, not a copy of the shader:
+            // coloured tank/bonnet ahead; clear road beside a motorcycle.
+            let front = if motorcycle { 0.08 } else { 0.25 };
+            assert_rgb(
+                pixel(&image, [center[0] + direction * front, center[1]]),
+                palette[usize::from((id - 1) % 6)],
+            );
+            assert_rgb(
+                pixel(&image, [center[0] - direction * 0.05, center[1] + 0.18]),
+                if motorcycle {
+                    [22, 26, 33]
+                } else {
+                    palette[usize::from((id - 1) % 6)].map(|v| (f32::from(v) * 0.75).round() as u8)
+                },
+            );
+        }
+    }
+    assert_eq!(shapes, [true, true]);
+}
+
 // Manual measurement, not a timing gate in CI. Query readback is test-only.
 // Alternate modes to limit clock/temperature bias. Measure GPU passes, not CPU
 // submit time or monitor refresh rate.

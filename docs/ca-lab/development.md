@@ -26,6 +26,10 @@ The native [app shell](app-shell.md) owns localization and saved UI preferences.
 Apply the saved theme before drawing the first widget of each frame. Charts
 use the current UI visuals. The theme stays in the native preferences file,
 not the map file.
+Customization selects portable JSON UI themes. Built-ins and custom files use
+the same schema. See [app-shell.md](app-shell.md#ui-themes) for import, export,
+the plugin directory, and color roles. Theme code stays in `ca-app::themes`;
+native exchange jobs stay in `shell::themes`, outside simulation/render state.
 
 `ca-core::map_background::MapBackground` owns the v1 sky palette and luminance
 shading. The live map, customization preview, and GPU capture use this model
@@ -542,6 +546,22 @@ v1 oracle. Focused checks: `cargo test -p ca-core -p ca-app -p ca-gpu --test met
 `cargo test -p ca-app --bin ca-app scenario_time_command`.
 
 ### Density heatmap
+
+Normal traffic uses colourless procedural car and motorcycle silhouettes, tinted
+with one of six colours. Each creation (generator, fill, click, or parking exit)
+chooses one of twelve shape/tint pairs using a street-local visual random stream.
+Traffic randomness and vehicle classes are unchanged. Loaded vehicles receive
+appearances when the street is built; appearances are live state, not map JSON.
+One byte per physical cell and a preallocated next-state byte buffer retain
+appearance through movement, lane changes, connections, and dimension changes.
+Non-vehicle cells can hold stale appearance bytes; always check the traffic value.
+GPU packing uses bits 16–23 of the existing 32-bit cell; bits 0–7 remain the
+traffic value and bits 8–15 remain the disruption mark. Draw calls, tile instances,
+and upload size are unchanged. Box tests in the shader draw the silhouettes with
+no image assets, texture samples, or per-frame random choices. Lane direction
+and cell tangent orient the front. Heat mode retains its square display.
+Focused checks: `cargo test -p ca-core --test vehicle_appearance` and
+`cargo test -p ca-gpu --test vehicle_heat --test traffic`.
 
 Use Metrics → Density Heatmap for a live view of every street, independent of
 the metric road selection. Vehicle colors show the vehicle count divided by

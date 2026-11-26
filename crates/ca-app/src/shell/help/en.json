@@ -1,0 +1,800 @@
+{
+  "information": {
+    "title": "ℹ About FLUVI",
+    "blocks": [
+      {
+        "kind": "heading",
+        "text": "FLUVI"
+      },
+      {
+        "kind": "paragraph",
+        "text": "Vehicular Flow Management System Simulator for Roads Near Academic Areas of IPN - ESCOM"
+      },
+      {
+        "kind": "heading",
+        "text": "1 Introduction"
+      },
+      {
+        "kind": "paragraph",
+        "text": "FLUVI is a vehicular traffic simulator based on cellular automata designed specifically to analyze and optimize vehicle flow on roads near academic areas of the Instituto Politécnico Nacional, focusing on the Escuela Superior de Cómputo (ESCOM)."
+      },
+      {
+        "kind": "paragraph",
+        "text": "The system can model complex urban traffic scenarios, including:"
+      },
+      {
+        "kind": "item",
+        "text": "Multiple interconnected lanes and streets"
+      },
+      {
+        "kind": "item",
+        "text": "Dynamic vehicle generation"
+      },
+      {
+        "kind": "item",
+        "text": "Lane changes with configurable probabilities"
+      },
+      {
+        "kind": "item",
+        "text": "Intersection detection and resolution"
+      },
+      {
+        "kind": "item",
+        "text": "Real-time visualization of traffic metrics"
+      },
+      {
+        "kind": "item",
+        "text": "Streets with customizable curves"
+      },
+      {
+        "kind": "paragraph",
+        "text": "This project arises from the need to understand and improve vehicular circulation in academic areas, allowing researchers and urban planners to simulate different scenarios before implementing changes to real infrastructure."
+      },
+      {
+        "kind": "heading",
+        "text": "2 Algorithms"
+      },
+      {
+        "kind": "heading",
+        "text": "Rule 184 of Cellular Automata"
+      },
+      {
+        "kind": "paragraph",
+        "text": "FLUVI implements a modified version of Rule 184, a one-dimensional cellular automaton that efficiently simulates traffic flow."
+      },
+      {
+        "kind": "heading",
+        "text": "What is Rule 184?"
+      },
+      {
+        "kind": "paragraph",
+        "text": "Rule 184 is a cellular automaton that models vehicular traffic where each cell can be empty (0) or occupied by a vehicle (1). Vehicles move forward if the next cell is empty, creating a natural traffic flow."
+      },
+      {
+        "kind": "heading",
+        "text": "Basic Operation of Rule 184"
+      },
+      {
+        "kind": "row",
+        "text": "Left  |  Center  |  Right  |  →  |  New State (Center)"
+      },
+      {
+        "kind": "row",
+        "text": "1  |  1  |  1  |  →  |  1"
+      },
+      {
+        "kind": "row",
+        "text": "1  |  1  |  0  |  →  |  0"
+      },
+      {
+        "kind": "row",
+        "text": "1  |  0  |  1  |  →  |  1"
+      },
+      {
+        "kind": "row",
+        "text": "1  |  0  |  0  |  →  |  0"
+      },
+      {
+        "kind": "row",
+        "text": "0  |  1  |  1  |  →  |  1"
+      },
+      {
+        "kind": "row",
+        "text": "0  |  1  |  0  |  →  |  1"
+      },
+      {
+        "kind": "row",
+        "text": "0  |  0  |  1  |  →  |  0"
+      },
+      {
+        "kind": "row",
+        "text": "0  |  0  |  0  |  →  |  0"
+      },
+      {
+        "kind": "heading",
+        "text": "Modifications Implemented in FLUVI"
+      },
+      {
+        "kind": "paragraph",
+        "text": "We have adapted and extended the classic Rule 184 to support more complex and realistic traffic scenarios:"
+      },
+      {
+        "kind": "heading",
+        "text": "1 Multi-lane"
+      },
+      {
+        "kind": "paragraph",
+        "text": "We expand the one-dimensional rule to a system of multiple lanes, allowing vehicles to change lanes based on configurable probabilities."
+      },
+      {
+        "kind": "heading",
+        "text": "2 Waiting Cells"
+      },
+      {
+        "kind": "paragraph",
+        "text": "We introduce the concept of waiting cells to handle temporary blockages (such as intersections or congested connections), preventing collisions."
+      },
+      {
+        "kind": "heading",
+        "text": "3 Street Connections"
+      },
+      {
+        "kind": "paragraph",
+        "text": "We implement three types of connections: linear (1-to-1), incorporation (N-to-1) and probabilistic (1-to-N with distribution)."
+      },
+      {
+        "kind": "heading",
+        "text": "4 Intersection Resolution"
+      },
+      {
+        "kind": "paragraph",
+        "text": "We add an alternating priority system to resolve conflicts at intersections, simulating traffic lights or right-of-way rules."
+      },
+      {
+        "kind": "heading",
+        "text": "5 X-Crossing Prevention"
+      },
+      {
+        "kind": "paragraph",
+        "text": "We implement logic to prevent crossed lane changes (X pattern) where two adjacent vehicles attempt to swap lanes simultaneously."
+      },
+      {
+        "kind": "heading",
+        "text": "6 Curved Streets"
+      },
+      {
+        "kind": "paragraph",
+        "text": "We extend the model to non-linear geometries through a vertex system with angular interpolation for streets with curves."
+      },
+      {
+        "kind": "heading",
+        "text": "Result"
+      },
+      {
+        "kind": "paragraph",
+        "text": "These modifications make it possible to simulate complex urban traffic scenarios while maintaining the computational efficiency of cellular automata, with real-time updates and support for thousands of simultaneous vehicles."
+      },
+      {
+        "kind": "heading",
+        "text": "3 File Format"
+      },
+      {
+        "kind": "paragraph",
+        "text": "FLUVI uses JSON format to save and load complete simulations."
+      },
+      {
+        "kind": "heading",
+        "text": "JSON file structure:"
+      },
+      {
+        "kind": "code",
+        "text": "{\n  \"version\": \"1.0\",\n  \"nombre\": \"Nombre de la Simulación\",\n  \"fecha\": \"2024-01-01T12:00:00.000Z\",\n  \"calles\": [\n    {\n      \"nombre\": \"Calle Principal\",\n      \"tamano\": 100,\n      \"tipo\": \"CONEXION\",\n      \"carriles\": 3,\n      \"x\": 500,\n      \"y\": 300,\n      \"angulo\": 0,\n      \"probabilidadGeneracion\": 0.5,\n      \"probabilidadSaltoDeCarril\": 0.02,\n      \"esCurva\": false,\n      \"vertices\": []\n    }\n  ],\n  \"conexiones\": [\n    {\n      \"tipo\": \"LINEAL\",\n      \"origen\": \"Calle1\",\n      \"destino\": \"Calle2\",\n      \"carrilOrigen\": 0,\n      \"carrilDestino\": 0\n    }\n  ],\n  \"edificios\": [\n    {\n      \"label\": \"ESCOM\",\n      \"x\": 1000,\n      \"y\": 500,\n      \"width\": 200,\n      \"height\": 150\n    }\n  ]\n}"
+      },
+      {
+        "kind": "paragraph",
+        "text": "Tip: You can export your current simulation using the \"Save Simulation\" button in the Map Constructor."
+      },
+      {
+        "kind": "heading",
+        "text": "4 Warnings"
+      },
+      {
+        "kind": "paragraph",
+        "text": "Some known issues and current limitations of the system:"
+      },
+      {
+        "kind": "item",
+        "text": "Performance in very large simulations: Simulations with more than 50 long streets may experience FPS drops."
+      },
+      {
+        "kind": "item",
+        "text": "Collisions on very sharp curves: Extreme curvatures (±40°) can occasionally produce visual overlaps."
+      },
+      {
+        "kind": "item",
+        "text": "Compatibility with older browsers: Requires ES6+ and Canvas API support."
+      },
+      {
+        "kind": "paragraph",
+        "text": "Note: We are continuously working on improvements and fixes. If you find any problem, please report it to the development team."
+      },
+      {
+        "kind": "heading",
+        "text": "5 Credits"
+      },
+      {
+        "kind": "heading",
+        "text": "Development Team"
+      },
+      {
+        "kind": "heading",
+        "text": "Connor Urbano Mendoza"
+      },
+      {
+        "kind": "paragraph",
+        "text": "soyconnor@outlook.com"
+      },
+      {
+        "kind": "paragraph",
+        "text": "Developer"
+      },
+      {
+        "kind": "heading",
+        "text": "Luis Gael Molina Figueroa"
+      },
+      {
+        "kind": "paragraph",
+        "text": "luisgaelmf@gmail.com"
+      },
+      {
+        "kind": "paragraph",
+        "text": "Developer"
+      },
+      {
+        "kind": "heading",
+        "text": "Denisse Márquez Morales"
+      },
+      {
+        "kind": "paragraph",
+        "text": "denissemarquez2704@gmail.com"
+      },
+      {
+        "kind": "paragraph",
+        "text": "Developer"
+      },
+      {
+        "kind": "heading",
+        "text": "Project Directors"
+      },
+      {
+        "kind": "item",
+        "text": "Juárez Martínez Genaro"
+      },
+      {
+        "kind": "item",
+        "text": "Maldonado Castillo Idalia"
+      },
+      {
+        "kind": "heading",
+        "text": "Institution"
+      },
+      {
+        "kind": "paragraph",
+        "text": "Instituto Politécnico Nacional (IPN)"
+      },
+      {
+        "kind": "paragraph",
+        "text": "Escuela Superior de Cómputo (ESCOM)"
+      },
+      {
+        "kind": "paragraph",
+        "text": "Artificial Life Robotics (ALIROB)"
+      }
+    ]
+  },
+  "guide": {
+    "title": "FLUVI Traffic Simulator Guide",
+    "blocks": [
+      {
+        "kind": "heading",
+        "text": "Basic Controls"
+      },
+      {
+        "kind": "item",
+        "text": "Zoom: Mouse wheel"
+      },
+      {
+        "kind": "item",
+        "text": "Pan view: Drag with the mouse"
+      },
+      {
+        "kind": "item",
+        "text": "Add/remove vehicles: Click on cells"
+      },
+      {
+        "kind": "item",
+        "text": "Minimap: Click to teleport"
+      },
+      {
+        "kind": "heading",
+        "text": "Control Panel"
+      },
+      {
+        "kind": "item",
+        "text": "Quick selection: Ctrl+Click streets or buildings on the canvas"
+      },
+      {
+        "kind": "item",
+        "text": "Dropdown menu: Select objects manually"
+      },
+      {
+        "kind": "item",
+        "text": "Probabilities: Adjust generation and lane changes"
+      },
+      {
+        "kind": "item",
+        "text": "Apply changes: Blue button at the bottom"
+      },
+      {
+        "kind": "heading",
+        "text": "Edit Mode"
+      },
+      {
+        "kind": "item",
+        "text": "1. Select a street or building"
+      },
+      {
+        "kind": "item",
+        "text": "2. Enable \"Edit Mode\""
+      },
+      {
+        "kind": "item",
+        "text": "3. Drag the blue handle to move"
+      },
+      {
+        "kind": "item",
+        "text": "4. Drag the green handle to rotate"
+      },
+      {
+        "kind": "item",
+        "text": "5. Save or cancel the changes"
+      },
+      {
+        "kind": "heading",
+        "text": "Curved Streets"
+      },
+      {
+        "kind": "item",
+        "text": "1. Select a street"
+      },
+      {
+        "kind": "item",
+        "text": "2. Enable \"Edit Mode\""
+      },
+      {
+        "kind": "item",
+        "text": "3. Click \"Edit Vertices\""
+      },
+      {
+        "kind": "item",
+        "text": "4. Press Z to enable vertex editing"
+      },
+      {
+        "kind": "item",
+        "text": "5. Drag vertices to create curves"
+      },
+      {
+        "kind": "item",
+        "text": "6. Press Z again to disable"
+      },
+      {
+        "kind": "item",
+        "text": "7. Maximum angle: ±40° per cell"
+      },
+      {
+        "kind": "item",
+        "text": "8. Use \"Reset Vertices\" to restore"
+      },
+      {
+        "kind": "heading",
+        "text": "Simulation Control"
+      },
+      {
+        "kind": "item",
+        "text": "Pause/Resume: Stop/continue the simulation"
+      },
+      {
+        "kind": "item",
+        "text": "Step by Step: Advance frame by frame"
+      },
+      {
+        "kind": "item",
+        "text": "Speed: Adjust frames per second"
+      },
+      {
+        "kind": "item",
+        "text": "Generation: % of vehicle appearance"
+      },
+      {
+        "kind": "heading",
+        "text": "⏰ Virtual Time"
+      },
+      {
+        "kind": "item",
+        "text": "Change Date and Time: Set the weekday (Mon-Sun) and starting hour (0-23)"
+      },
+      {
+        "kind": "item",
+        "text": "Time advances automatically: 2 virtual seconds per simulation step"
+      },
+      {
+        "kind": "item",
+        "text": "Dynamic profiles: Traffic varies by day and hour"
+      },
+      {
+        "kind": "heading",
+        "text": "Generation Multipliers"
+      },
+      {
+        "kind": "item",
+        "text": "Per-day settings: Adjust multipliers for each day of the week"
+      },
+      {
+        "kind": "item",
+        "text": "Per-hour settings: 24 values (one for each hour of the day)"
+      },
+      {
+        "kind": "item",
+        "text": "Range: 0.0 (no traffic) to 3.0 (very heavy traffic)"
+      },
+      {
+        "kind": "item",
+        "text": "Presets: Weekday, Weekend, Constant, Night"
+      },
+      {
+        "kind": "item",
+        "text": "Each hour is independent: 08:00 controls from 08:00 to 08:59"
+      },
+      {
+        "kind": "heading",
+        "text": "Connections"
+      },
+      {
+        "kind": "paragraph",
+        "text": "Types of connections between streets:"
+      },
+      {
+        "kind": "item",
+        "text": "Green (Linear): 1 to 1 between lanes"
+      },
+      {
+        "kind": "item",
+        "text": "Orange (Incorporation): Several to one"
+      },
+      {
+        "kind": "item",
+        "text": "Purple (Probabilistic): With probability"
+      },
+      {
+        "kind": "item",
+        "text": "Red: Blocked connection"
+      },
+      {
+        "kind": "heading",
+        "text": "Map Constructor"
+      },
+      {
+        "kind": "item",
+        "text": "Ctrl+Click: Select streets and buildings directly on the canvas"
+      },
+      {
+        "kind": "item",
+        "text": "Add objects: Use the buttons to create streets and buildings"
+      },
+      {
+        "kind": "item",
+        "text": "Edit mode: Drag and rotate objects visually"
+      },
+      {
+        "kind": "item",
+        "text": "Connections: Connect streets to create traffic flow"
+      },
+      {
+        "kind": "item",
+        "text": "Reference image: Load a local image or link a URL; you can replace or remove it. Local images are embedded in the JSON; linked images store the URL and depend on the source remaining available."
+      },
+      {
+        "kind": "item",
+        "text": "Save/Load: Export and import simulations as JSON"
+      },
+      {
+        "kind": "heading",
+        "text": "Parking"
+      },
+      {
+        "kind": "item",
+        "text": "Configuration: Mark a building as parking"
+      },
+      {
+        "kind": "item",
+        "text": "Capacity: Set the maximum number of vehicles"
+      },
+      {
+        "kind": "item",
+        "text": "Connections: Entry/exit pairs on streets"
+      },
+      {
+        "kind": "item",
+        "text": "Probabilities: Adjust entry/exit per hour (0-100%)"
+      },
+      {
+        "kind": "item",
+        "text": "Profiles: Normal, Office, Shopping Center"
+      },
+      {
+        "kind": "item",
+        "text": "Validation: Prevents invalid configurations"
+      },
+      {
+        "kind": "heading",
+        "text": "Scenario Management"
+      },
+      {
+        "kind": "item",
+        "text": "Save: Export the complete configuration as JSON"
+      },
+      {
+        "kind": "item",
+        "text": "Load: Import previously saved scenarios"
+      },
+      {
+        "kind": "item",
+        "text": "Includes: Streets, buildings, parking"
+      },
+      {
+        "kind": "item",
+        "text": "Connections: Keeps all street connections"
+      },
+      {
+        "kind": "item",
+        "text": "Probabilities: Preserves hourly settings"
+      },
+      {
+        "kind": "heading",
+        "text": "Simulator Metrics"
+      },
+      {
+        "kind": "heading",
+        "text": "Main Metrics"
+      },
+      {
+        "kind": "item",
+        "text": "Density: % of street occupancy (0-100%)"
+      },
+      {
+        "kind": "item",
+        "text": "Vehicular Flow: Vehicles/second according to Q=k×v"
+      },
+      {
+        "kind": "item",
+        "text": "Rate of Change: Net population growth (veh/s)"
+      },
+      {
+        "kind": "item",
+        "text": "Average Speed: % of vehicles in motion"
+      },
+      {
+        "kind": "item",
+        "text": "Shannon Entropy: Diversity of the CA's 8 transitions (bits)"
+      },
+      {
+        "kind": "heading",
+        "text": "Smart Interpretation"
+      },
+      {
+        "kind": "item",
+        "text": "Optimal: Maximum system efficiency"
+      },
+      {
+        "kind": "item",
+        "text": "Moderate: Acceptable conditions"
+      },
+      {
+        "kind": "item",
+        "text": "Congested: High density with slow movement"
+      },
+      {
+        "kind": "item",
+        "text": "Collapse: Streets at a standstill"
+      },
+      {
+        "kind": "item",
+        "text": "Underused: Low occupancy"
+      },
+      {
+        "kind": "heading",
+        "text": "Available Tools"
+      },
+      {
+        "kind": "item",
+        "text": "5 Real-Time Charts: View all metrics with Chart.js"
+      },
+      {
+        "kind": "item",
+        "text": "Status Panel: Automatic traffic interpretation with recommendations"
+      },
+      {
+        "kind": "item",
+        "text": "Export CSV: Download the full history with statistics"
+      },
+      {
+        "kind": "item",
+        "text": "Export JSON: Structured format with metadata"
+      },
+      {
+        "kind": "item",
+        "text": "Clear Metrics: Reset the measurement history"
+      },
+      {
+        "kind": "item",
+        "text": "Heatmap: View density by geographic area"
+      },
+      {
+        "kind": "paragraph",
+        "text": "Tips: Metrics update every 5 frames to optimize performance. The chart history shows the last 50 points, but the CSV exports ALL measurements since the start."
+      },
+      {
+        "kind": "heading",
+        "text": "Advanced Metrics Analyzer"
+      },
+      {
+        "kind": "paragraph",
+        "text": "Generate professional visualizations from your exported metrics directly in the browser"
+      },
+      {
+        "kind": "heading",
+        "text": "1 Temporal Analysis"
+      },
+      {
+        "kind": "item",
+        "text": "• Density vs Time"
+      },
+      {
+        "kind": "item",
+        "text": "• Flow vs Time"
+      },
+      {
+        "kind": "item",
+        "text": "• Speed vs Time"
+      },
+      {
+        "kind": "item",
+        "text": "• Classified traffic states"
+      },
+      {
+        "kind": "heading",
+        "text": "2 Fundamental Diagram"
+      },
+      {
+        "kind": "item",
+        "text": "• Entropy vs Density"
+      },
+      {
+        "kind": "item",
+        "text": "• Colored by Flow"
+      },
+      {
+        "kind": "item",
+        "text": "• Heatmap (Day/Hour)"
+      },
+      {
+        "kind": "heading",
+        "text": "3 Distributions"
+      },
+      {
+        "kind": "item",
+        "text": "• Histograms (Density/Flow)"
+      },
+      {
+        "kind": "item",
+        "text": "• Comparative boxplots"
+      },
+      {
+        "kind": "item",
+        "text": "• Descriptive statistics"
+      },
+      {
+        "kind": "heading",
+        "text": "How to Use"
+      },
+      {
+        "kind": "item",
+        "text": "Run a simulation in FLUVI"
+      },
+      {
+        "kind": "item",
+        "text": "Export metrics: \"Download CSV\""
+      },
+      {
+        "kind": "item",
+        "text": "Click \"Analyze Metrics\""
+      },
+      {
+        "kind": "item",
+        "text": "Upload the exported CSV file"
+      },
+      {
+        "kind": "item",
+        "text": "Wait for processing (~30-60 sec)"
+      },
+      {
+        "kind": "item",
+        "text": "Navigate between the 3 tabs"
+      },
+      {
+        "kind": "item",
+        "text": "Download charts (individually or as a ZIP)"
+      },
+      {
+        "kind": "heading",
+        "text": "Calculated Metrics"
+      },
+      {
+        "kind": "item",
+        "text": "• System state classification"
+      },
+      {
+        "kind": "item",
+        "text": "• Statistics by day of the week"
+      },
+      {
+        "kind": "item",
+        "text": "• Critical system capacity"
+      },
+      {
+        "kind": "item",
+        "text": "• Correlations between variables"
+      },
+      {
+        "kind": "item",
+        "text": "• Anomalous event detection"
+      },
+      {
+        "kind": "item",
+        "text": "• Temporal analysis with trends"
+      },
+      {
+        "kind": "heading",
+        "text": "Heatmap"
+      },
+      {
+        "kind": "paragraph",
+        "text": "Visualization that organizes the average density into a matrix of: Days of the week (rows) Hours of the day 0-23 (columns)"
+      },
+      {
+        "kind": "paragraph",
+        "text": "Yellow → Low vehicle density Red → High vehicle density"
+      },
+      {
+        "kind": "item",
+        "text": "• Peak hours: Intense red columns"
+      },
+      {
+        "kind": "item",
+        "text": "• Weekly patterns: Differences between days"
+      },
+      {
+        "kind": "item",
+        "text": "• Comparison: Weekday vs weekend"
+      },
+      {
+        "kind": "item",
+        "text": "• Valley: Early morning (lighter tones)"
+      },
+      {
+        "kind": "paragraph",
+        "text": "Processing time: First load ~60-90 seconds (library initialization), subsequent loads ~5-12 seconds (cached data)."
+      }
+    ]
+  }
+}

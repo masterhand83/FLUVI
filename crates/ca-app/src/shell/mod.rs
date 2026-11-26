@@ -1,7 +1,11 @@
+mod fonts;
+mod help;
 mod i18n;
 mod preferences;
+mod themes;
 mod ui;
 
+pub use fonts::label_font;
 pub use i18n::{Language, Translator};
 pub use preferences::Preferences;
 pub use preferences::config_path;
@@ -49,14 +53,26 @@ pub struct Shell {
     confirmations: VecDeque<Confirmation>,
     help: Option<bool>,
     advanced_settings: bool,
+    themes: Vec<crate::themes::Theme>,
+    theme_job: Option<Receiver<io::Result<Option<crate::themes::Theme>>>>,
+    fonts: fonts::Fonts,
 }
 
 impl Shell {
     pub fn load(path: Option<PathBuf>) -> Self {
-        let (preferences, warning) = path
+        let (mut preferences, warning) = path
             .as_ref()
             .map(|path| Preferences::load(path))
             .unwrap_or((Preferences::default(), true));
+        let (themes, mut theme_warning) = path
+            .as_ref()
+            .and_then(|path| path.parent())
+            .map(|parent| crate::themes::load_directory(&parent.join("themes")))
+            .unwrap_or_else(|| (crate::themes::builtins(), false));
+        if !themes.iter().any(|theme| theme.id == preferences.theme) {
+            preferences.theme = "default".into();
+            theme_warning = true;
+        }
         let mut shell = Self {
             translator: Translator::new(preferences.language),
             preferences,
@@ -65,9 +81,15 @@ impl Shell {
             confirmations: VecDeque::new(),
             help: None,
             advanced_settings: false,
+            themes,
+            theme_job: None,
+            fonts: Default::default(),
         };
         if warning {
             shell.notify(Severity::Warning, shell.tr("shell.preferencesWarning", &[]));
+        }
+        if theme_warning {
+            shell.notify(Severity::Warning, shell.tr("theme.loadWarning", &[]));
         }
         shell
     }
@@ -85,6 +107,16 @@ impl Shell {
     }
 
     pub fn set_preferences(&mut self, preferences: Preferences) -> io::Result<()> {
+        if !self
+            .themes
+            .iter()
+            .any(|theme| theme.id == preferences.theme)
+        {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "Unknown UI theme",
+            ));
+        }
         let result = self
             .path
             .as_ref()
@@ -160,6 +192,79 @@ impl Shell {
 mod tests {
     use super::*;
 
+    #[test]
+    fn sidebar_and_help_do_not_render_missing_glyphs() {
+        fn check(
+            ctx: &eframe::egui::Context,
+            shape: &eframe::egui::Shape,
+            missing: &mut std::collections::BTreeSet<char>,
+        ) {
+            match shape {
+                eframe::egui::Shape::Text(text) => {
+                    for section in &text.galley.job.sections {
+                        let content = &text.galley.job.text[section.byte_range.clone()];
+                        for character in content.chars().filter(|c| !c.is_whitespace()) {
+                            if !ctx.fonts_mut(|fonts| {
+                                fonts.has_glyph(&section.format.font_id, character)
+                            }) {
+                                missing.insert(character);
+                            }
+                        }
+                    }
+                }
+                eframe::egui::Shape::Vec(shapes) => {
+                    for shape in shapes {
+                        check(ctx, shape, missing);
+                    }
+                }
+                _ => {}
+            }
+        }
+        let mut missing = std::collections::BTreeSet::new();
+        for language in [Language::English, Language::Spanish] {
+            let mut shell = Shell::load(None);
+            shell.translator = Translator::new(language);
+            let ctx = eframe::egui::Context::default();
+            frame(&mut shell, &ctx, vec![]);
+            for help in [None, Some(false), Some(true)] {
+                shell.help = help;
+                let output = frame(&mut shell, &ctx, vec![]);
+                for shape in output.shapes {
+                    check(&ctx, &shape.shape, &mut missing);
+                }
+            }
+        }
+        assert!(missing.is_empty(), "Missing UI glyphs: {missing:?}");
+    }
+
+    #[test]
+    fn customization_dropdown_switches_and_saves_the_ui_theme() {
+        let path =
+            std::env::temp_dir().join(format!("fluvi-theme-dropdown-{}.json", std::process::id()));
+        Preferences {
+            language: Language::English,
+            panels_open: [false, false, false, false, false, false, true],
+            ..Default::default()
+        }
+        .save(&path)
+        .unwrap();
+        let mut shell = Shell::load(Some(path.clone()));
+        let ctx = eframe::egui::Context::default();
+        frame(&mut shell, &ctx, vec![]);
+        let output = frame(&mut shell, &ctx, vec![]);
+        assert!(text_rect(&output, "Theme").is_some());
+        click(&mut shell, &ctx, text_rect(&output, "Default").unwrap());
+        let output = frame(&mut shell, &ctx, vec![]);
+        click(&mut shell, &ctx, text_rect(&output, "Nord").unwrap());
+        assert_eq!(shell.preferences().theme, "nord");
+        assert_eq!(
+            ctx.style().visuals.panel_fill,
+            eframe::egui::Color32::from_rgb(46, 52, 64)
+        );
+        assert_eq!(Shell::load(Some(path.clone())).preferences().theme, "nord");
+        std::fs::remove_file(path).unwrap();
+    }
+
     fn frame(
         shell: &mut Shell,
         ctx: &eframe::egui::Context,
@@ -217,6 +322,42 @@ mod tests {
                     },
                 ],
             );
+        }
+    }
+
+    #[test]
+    fn full_help_buttons_open_their_documents_and_close_without_changing_preferences() {
+        for language in [Language::English, Language::Spanish] {
+            for guide in [false, true] {
+                let mut shell = Shell::load(None);
+                shell.translator = Translator::new(language);
+                let original = shell.preferences().clone();
+                let ctx = eframe::egui::Context::default();
+                frame(&mut shell, &ctx, vec![]);
+                let output = frame(&mut shell, &ctx, vec![]);
+                let key = if guide {
+                    "about.guideButton"
+                } else {
+                    "about.aboutButton"
+                };
+                let button = text_rect(&output, &shell.tr(key, &[])).unwrap();
+                click(&mut shell, &ctx, button);
+                assert_eq!(shell.help, Some(guide));
+                frame(&mut shell, &ctx, vec![]);
+                let output = frame(&mut shell, &ctx, vec![]);
+                let expected = match (language, guide) {
+                    (Language::English, false) => "Introduction",
+                    (Language::Spanish, false) => "Introducción",
+                    (Language::English, true) => "Basic Controls",
+                    (Language::Spanish, true) => "Controles Básicos",
+                };
+                assert!(text_rect(&output, expected).is_some(), "{expected}");
+                let close = text_rect(&output, &shell.tr("common.close", &[])).unwrap();
+                assert!(close.bottom() <= 850.0);
+                click(&mut shell, &ctx, close);
+                assert_eq!(shell.help, None);
+                assert_eq!(shell.preferences(), &original);
+            }
         }
     }
 

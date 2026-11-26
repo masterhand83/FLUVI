@@ -552,7 +552,9 @@ fn transfer(streets: &mut [Calle], row: &Mapping) {
     if destination.cells[destination_cell] != 0 {
         streets[row.source_street].waiting[source_cell] = true;
     } else if !source.waiting[source_cell] {
+        let appearance = source.appearances[source_cell];
         streets[row.source_street].cells[source_cell] = 0;
         streets[row.destination_street].cells[destination_cell] = value;
+        streets[row.destination_street].appearances[destination_cell] = appearance;
     }
 }

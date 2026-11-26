@@ -1,0 +1,10 @@
+{
+  "version": 1, "id": "gruvbox", "name": "Gruvbox", "base": "dark",
+  "colors": {
+    "background": "#282828", "surface": "#32302F", "input": "#1D2021",
+    "text": "#EBDBB2", "muted": "#BDAE93", "border": "#7C6F64",
+    "widget": "#3C3836", "hover": "#504945", "active": "#665C54",
+    "accent": "#B8BB26", "selection": "#504945", "selection-text": "#FBF1C7",
+    "warning": "#FABD2F", "error": "#FB4934"
+  }
+}

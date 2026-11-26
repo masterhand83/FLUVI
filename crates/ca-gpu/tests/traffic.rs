@@ -293,7 +293,9 @@ fn bezier_display_uses_the_v1_curve_not_the_straight_footprint() {
     );
     let bytes = render_display(&device, &queue, &display);
     assert!(
-        pixel(&bytes, expected[0], expected[1])[0] > 230,
+        pixel(&bytes, expected[0], expected[1])[..3]
+            .iter()
+            .any(|&v| v > 90),
         "vehicle is on the curve"
     );
     assert!(
@@ -327,7 +329,7 @@ fn roundabout_display_uses_circular_centers_and_publishes_wrapped_traffic() {
         true,
     );
     scene.tick();
-    assert_eq!(scene.cells(), [1, 0, 0, 0, 0, 0, 0, 0, 0]);
+    assert_eq!(traffic_values(&scene), [1, 0, 0, 0, 0, 0, 0, 0, 0]);
     let shift = scene.shift();
     let center = scene.geometry()[0].centers[0][0];
     assert!((center[0] - shift[0] - 1.5).abs() < 0.00001);
@@ -345,7 +347,7 @@ fn roundabout_display_uses_circular_centers_and_publishes_wrapped_traffic() {
     );
     let bytes = render_display(&device, &queue, &display);
     assert!(
-        pixel(&bytes, 11.5, 7.0)[0] > 230,
+        pixel(&bytes, 11.5, 7.0)[..3].iter().any(|&v| v > 90),
         "wrapped vehicle at sector zero"
     );
     assert!(
@@ -359,7 +361,7 @@ fn roundabout_display_uses_circular_centers_and_publishes_wrapped_traffic() {
     assert!(scene.edit_streets(StreetEdit::Update(0, StreetChange::Radius(2.0))));
     assert_eq!(scene.shift(), shift);
     assert_eq!(
-        scene.cells(),
+        traffic_values(&scene),
         [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     );
 }
@@ -436,14 +438,14 @@ fn cell_edits_publish_immediately_when_paused_and_at_next_tick_when_running() {
     };
     let mut scene = TrafficScene::demo();
     assert!(scene.toggle_vehicle(cell, true));
-    assert_eq!(scene.cells()[72], 1);
+    assert_eq!(scene.cells()[72] & 255, 1);
     assert!(scene.toggle_vehicle(cell, true));
     assert_eq!(scene.cells()[72], 0);
     assert!(scene.toggle_vehicle(cell, false));
     assert_eq!(scene.cells()[72], 0, "running edit waits for the next tick");
     scene.tick();
     assert_eq!(
-        scene.cells()[73],
+        scene.cells()[73] & 255,
         1,
         "edited car participates in the next tick"
     );
@@ -512,7 +514,7 @@ fn pausing_before_next_tick_publishes_pending_edits_without_advancing_traffic() 
     );
     assert_eq!(scene.cells()[72], 0);
     assert!(scene.publish_edits());
-    assert_eq!(scene.cells()[72], 1);
+    assert_eq!(scene.cells()[72] & 255, 1);
     assert!(
         !scene.publish_edits(),
         "unchanged paused frames need no upload"
@@ -533,7 +535,7 @@ fn demo_has_physical_lane_positions_and_both_directions() {
     assert_eq!(lanes[2].length, 32);
     assert_eq!(scene.extent(), [36, 14]);
     for value in 1..=7 {
-        assert!(scene.cells().contains(&value));
+        assert!(traffic_values(&scene).contains(&value));
     }
     assert_eq!(scene.population(), 18);
 }
@@ -555,7 +557,7 @@ fn completed_ticks_pack_the_cpu_model_without_changing_physical_indices() {
             .iter()
             .flat_map(|s| s.cells().iter().map(|&v| u32::from(v)))
             .collect();
-        assert_eq!(scene.cells(), expected);
+        assert_eq!(traffic_values(&scene), expected);
         assert_eq!(
             scene.population(),
             expected.iter().filter(|&&v| (1..=6).contains(&v)).count() as u32
@@ -592,7 +594,9 @@ fn curved_tiles_render_at_v1_centers_and_geometry_edits_preserve_live_traffic() 
     let bytes = render_display(&device, &queue, &display);
     // Independent worked integration: step 1 at -45°, step 2 at -90°.
     assert!(
-        pixel(&bytes, 2.707107, 2.792893)[0] > 230,
+        pixel(&bytes, 2.707107, 2.792893)[..3]
+            .iter()
+            .any(|&v| v > 90),
         "vehicle at curved cell 2"
     );
     assert!(
@@ -606,7 +610,7 @@ fn curved_tiles_render_at_v1_centers_and_geometry_edits_preserve_live_traffic() 
     assert!(map.set_vertex_offset(0, 1, 0.0));
     assert!(scene.set_vertex_offset(0, 1, 0.0));
     display.upload_street(&queue, &scene, 0);
-    assert_eq!(scene.cells(), [0, 0, 1]);
+    assert_eq!(traffic_values(&scene), [0, 0, 1]);
     assert_eq!(
         scene.shift(),
         shift,
@@ -614,7 +618,7 @@ fn curved_tiles_render_at_v1_centers_and_geometry_edits_preserve_live_traffic() 
     );
     let bytes = render_display(&device, &queue, &display);
     assert!(
-        pixel(&bytes, 4.5, 5.0)[0] > 230,
+        pixel(&bytes, 4.5, 5.0)[..3].iter().any(|&v| v > 90),
         "same car follows the edited curve"
     );
 }
@@ -634,14 +638,14 @@ fn storage_buffer_display_matches_known_vehicle_colours_and_lane_arrows() {
     let display = ca_gpu::TrafficDisplay::new(&device, &scene, wgpu::TextureFormat::Rgba8Unorm);
     let bytes = render_display(&device, &queue, &display);
     let pixel = |x, y| pixel(&bytes, x, y);
-    // Known initial positions and palette, independent of the packing algorithm.
+    // Fixed seed: car roofs are shaded; motorcycle tanks use the full tint.
     for (x, y, expected) in [
-        (7.5, 2.5, [242, 46, 43, 255]),
-        (16.5, 2.5, [255, 166, 20, 255]),
-        (25.5, 2.5, [242, 230, 38, 255]),
-        (7.5, 3.5, [31, 217, 89, 255]),
-        (16.5, 3.5, [26, 153, 255, 255]),
-        (25.5, 3.5, [204, 64, 242, 255]),
+        (7.5, 2.5, [19, 115, 191, 255]),
+        (16.5, 2.5, [26, 153, 255, 255]),
+        (25.5, 2.5, [182, 34, 33, 255]),
+        (7.5, 3.5, [182, 172, 29, 255]),
+        (16.5, 3.5, [255, 166, 20, 255]),
+        (25.5, 3.5, [182, 34, 33, 255]),
     ] {
         let actual = pixel(x, y);
         for channel in 0..4 {
@@ -683,7 +687,7 @@ fn transformed_display_shows_paused_edits_in_the_first_paint_and_running_edits_a
     );
     // World (7.5, 2.5) maps to screen (3, 3) in the test's 36 x 14 units.
     let bytes = render_display(&device, &queue, &display);
-    assert!(pixel(&bytes, 3.0, 3.0)[0] > 230);
+    assert!(pixel(&bytes, 3.0, 3.0)[..3].iter().any(|&v| v > 90));
     let cell = CellRef {
         street: 0,
         lane: 0,
@@ -707,9 +711,13 @@ fn transformed_display_shows_paused_edits_in_the_first_paint_and_running_edits_a
     display.upload(&queue, &scene);
     let bytes = render_display(&device, &queue, &display);
     assert!(
-        pixel(&bytes, 5.0, 3.0)[0] > 230,
+        pixel(&bytes, 5.0, 3.0)[..3].iter().any(|&v| v > 90),
         "car advances to physical cell 6"
     );
+}
+
+fn traffic_values(scene: &TrafficScene) -> Vec<u32> {
+    scene.cells().iter().map(|v| v & 255).collect()
 }
 
 fn pixel(bytes: &[u8], x: f32, y: f32) -> [u8; 4] {
