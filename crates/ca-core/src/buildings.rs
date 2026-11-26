@@ -18,7 +18,11 @@ pub struct BuildingError(pub &'static str);
 
 impl BuildingError {
     pub fn translation_key(self) -> String {
-        format!("buildings.{}", self.0)
+        if self.0.starts_with("parking.") {
+            self.0.into()
+        } else {
+            format!("buildings.{}", self.0)
+        }
     }
 }
 
@@ -124,6 +128,33 @@ pub fn rotate(p: [f64; 2], center: [f64; 2], degrees: f64) -> [f64; 2] {
 }
 
 impl Building {
+    pub(crate) fn parking_fields(&self) -> Value {
+        const KEYS: [&str; 6] = [
+            "esEstacionamiento",
+            "capacidadMaxima",
+            "vehiculosActuales",
+            "conexiones",
+            "probabilidadesEntrada",
+            "probabilidadesSalida",
+        ];
+        Value::Object(
+            KEYS.into_iter()
+                .filter_map(|key| {
+                    self.saved
+                        .get(key)
+                        .map(|value| (key.to_owned(), value.clone()))
+                })
+                .collect(),
+        )
+    }
+
+    pub(crate) fn set_parking_fields(&mut self, fields: &Value) {
+        self.saved
+            .as_object_mut()
+            .expect("building object")
+            .extend(fields.as_object().expect("parking object").clone());
+    }
+
     pub fn rectangle(center: [f64; 2], size: [f64; 2]) -> Self {
         Self {
             label: String::new(),

@@ -78,6 +78,7 @@ impl CallbackTrait for BackgroundCallback {
 
 /// Only view/control state is coalesced. Cell edits retain FIFO order.
 pub struct Commands {
+    parking: Receiver<(usize, usize)>,
     buildings: Sender<Vec<ca_core::map_json::BackgroundZone>>,
     stale_buildings: Receiver<Vec<ca_core::map_json::BackgroundZone>>,
     state: Sender<Paint>,
@@ -87,6 +88,7 @@ pub struct Commands {
 }
 
 pub struct Requests {
+    parking: Sender<(usize, usize)>,
     buildings: Receiver<Vec<ca_core::map_json::BackgroundZone>>,
     state: Receiver<Paint>,
     edits: Receiver<Edit>,
@@ -94,12 +96,14 @@ pub struct Requests {
 }
 
 pub fn command_channel() -> (Commands, Requests) {
+    let (parking_tx, parking) = bounded(1024);
     let (building_tx, buildings) = bounded(1);
     let (state_tx, state) = bounded(1);
     let (edits_tx, edits) = bounded(32);
     let (replacement_tx, replacement) = bounded(1);
     (
         Commands {
+            parking,
             buildings: building_tx,
             stale_buildings: buildings.clone(),
             state: state_tx,
@@ -108,6 +112,7 @@ pub fn command_channel() -> (Commands, Requests) {
             replacement: replacement_tx,
         },
         Requests {
+            parking: parking_tx,
             buildings,
             state,
             edits,
@@ -117,6 +122,9 @@ pub fn command_channel() -> (Commands, Requests) {
 }
 
 impl Commands {
+    pub fn parking_updates(&self) -> impl Iterator<Item = (usize, usize)> + '_ {
+        self.parking.try_iter()
+    }
     pub fn buildings(&self, zones: Vec<ca_core::map_json::BackgroundZone>) {
         if let Err(TrySendError::Full(zones)) = self.buildings.try_send(zones) {
             let _ = self.stale_buildings.try_recv();
@@ -325,6 +333,22 @@ impl Resources {
             self.frame_window = now;
         }
         let _ = self.events.try_send(Event::Progress(self.progress));
+        // Bounded, non-blocking display telemetry; retry on the next frame.
+        // Rotate the first item so even large maps cannot starve later buildings.
+        let count = self.scene.parking_occupancies().count();
+        if count > 0 {
+            let first = self.progress.frames as usize % count;
+            for update in self
+                .scene
+                .parking_occupancies()
+                .skip(first)
+                .chain(self.scene.parking_occupancies().take(first))
+            {
+                if self.requests.parking.try_send(update).is_err() {
+                    break;
+                }
+            }
+        }
     }
 }
 
@@ -362,6 +386,82 @@ impl CallbackTrait for PaintCallback {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn parking_counter_uses_render_owned_occupancy_and_scenario_reset() {
+        use ca_core::{
+            buildings::Building,
+            map_json::MapDocument,
+            parking::{ParkingConfig, ParkingPair},
+            virtual_time::Clock,
+        };
+        let mut document = MapDocument::demo();
+        document.model_mut().clear_vehicles();
+        let building = document
+            .add_building(Building::rectangle([0.; 2], [10.; 2]))
+            .unwrap();
+        let entrance = CellRef {
+            street: 0,
+            lane: 0,
+            index: 1,
+        };
+        let mut parking = ParkingConfig::new(
+            2,
+            vec![ParkingPair {
+                entrance,
+                exit: CellRef {
+                    index: 5,
+                    ..entrance
+                },
+            }],
+        );
+        parking.entry_probabilities = [1.; 24];
+        parking.exit_probabilities = [0.; 24];
+        document.configure_parking(building, Some(parking)).unwrap();
+        document.model_mut().toggle_vehicle(entrance);
+        let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor::from_env_or_default());
+        let adapter = pollster::block_on(instance.request_adapter(&Default::default())).unwrap();
+        let (device, queue) =
+            pollster::block_on(adapter.request_device(&Default::default())).unwrap();
+        let scene = TrafficScene::from_document(&document);
+        let format = wgpu::TextureFormat::Rgba8Unorm;
+        let display = TrafficDisplay::new(&device, &scene, format);
+        let (commands, requests) = command_channel();
+        let (events, _) = bounded(2);
+        let mut resources = Resources::new(scene, display, events, requests, format);
+        assert!(commands.send(
+            Paint {
+                playing: false,
+                rate: 10.,
+                step_ticket: 1,
+                generation_override: Some(0.),
+                excluded_street: None,
+                view: WorldView {
+                    origin: [0.; 2],
+                    span: [20.; 2]
+                },
+            },
+            None
+        ));
+        resources.prepare(&device, &queue);
+        assert_eq!(
+            commands.parking_updates().collect::<Vec<_>>(),
+            vec![(building, 1)]
+        );
+        assert!(commands.edit(Edit::ScenarioTime(Clock::default())));
+        resources.prepare(&device, &queue);
+        assert_eq!(
+            commands.parking_updates().collect::<Vec<_>>(),
+            vec![(building, 0)]
+        );
+        assert!(
+            commands.edit(Edit::Building(ca_core::buildings::BuildingEdit::Delete(
+                building
+            )))
+        );
+        resources.prepare(&device, &queue);
+        assert!(commands.parking_updates().next().is_none());
+    }
 
     #[test]
     fn scenario_time_command_preserves_map_blockers_and_pause_without_a_tick() {

@@ -12,6 +12,7 @@ type ResetStep<S> = (ResetPhase, fn(&mut S));
 type StreetListener = fn(crate::streets::StreetEvent, &MapDocument);
 
 pub struct MapSession<S> {
+    revision: u64,
     document: MapDocument,
     resets: Vec<ResetStep<S>>,
     street_listeners: Vec<StreetListener>,
@@ -23,10 +24,13 @@ impl<S> MapSession<S> {
         &mut self,
         edit: ca_core::buildings::BuildingEdit,
     ) -> Result<Option<usize>, ca_core::buildings::BuildingError> {
-        self.document.edit_buildings(edit)
+        let result = self.document.edit_buildings(edit)?;
+        self.revision = self.revision.wrapping_add(1);
+        Ok(result)
     }
     pub fn new(document: MapDocument) -> Self {
         Self {
+            revision: 0,
             document,
             resets: Vec::new(),
             street_listeners: Vec::new(),
@@ -42,6 +46,11 @@ impl<S> MapSession<S> {
 
     pub fn document(&self) -> &MapDocument {
         &self.document
+    }
+
+    /// Geometry/configuration revision for retained feature overlays.
+    pub fn revision(&self) -> u64 {
+        self.revision
     }
 
     pub fn set_time(&mut self, time: ca_core::virtual_time::VirtualTime) {
@@ -88,6 +97,7 @@ impl<S> MapSession<S> {
         edit: ca_core::streets::StreetEdit,
     ) -> Result<crate::streets::StreetEvent, ca_core::streets::StreetError> {
         let event = self.document.edit_streets(edit)?;
+        self.revision = self.revision.wrapping_add(1);
         for listener in &self.street_listeners {
             listener(event, &self.document);
         }
@@ -95,7 +105,11 @@ impl<S> MapSession<S> {
     }
 
     pub fn set_vertex_offset(&mut self, street: usize, vertex: usize, offset: f64) -> bool {
-        self.document.set_vertex_offset(street, vertex, offset)
+        let changed = self.document.set_vertex_offset(street, vertex, offset);
+        if changed {
+            self.revision = self.revision.wrapping_add(1);
+        }
+        changed
     }
 
     pub fn replace(&mut self, accepted: bool, candidate: MapDocument, state: &mut S) -> bool {
@@ -106,6 +120,7 @@ impl<S> MapSession<S> {
             reset(state);
         }
         self.document = candidate;
+        self.revision = self.revision.wrapping_add(1);
         true
     }
 

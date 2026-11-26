@@ -7,6 +7,7 @@ use crate::connections::{Connection, Mapping, MergeRow, WeightedRow};
 use crate::geometry::{Vertex, initialize_vertices};
 use crate::streets::{StreetChange, StreetError};
 use crate::traffic::{Calle, CalleConfig, CalleType, LaneDirection, TrafficModel};
+mod parking_document;
 
 #[derive(Debug, thiserror::Error)]
 #[error("invalid map JSON")]
@@ -24,7 +25,7 @@ pub struct MapDocument {
     time: Box<crate::virtual_time::VirtualTime>,
     edit_session: Option<Box<StreetSnapshot>>,
     data: Value,
-    model: TrafficModel,
+    model: Box<TrafficModel>,
     layout: Vec<StreetPlacement>,
     zones: Vec<BackgroundZone>,
 }
@@ -86,10 +87,24 @@ impl MapDocument {
     ) -> Result<(), crate::buildings::BuildingError> {
         use crate::buildings::{BuildingEdit, BuildingError};
         match edit {
-            BuildingEdit::Create(building) => building.validate(),
+            BuildingEdit::Create(building) => {
+                building.validate()?;
+                if let Some(config) = self.read_parking(&building.to_json())? {
+                    self.model
+                        .validate_parking(self.buildings.len(), &config)
+                        .map_err(|e| BuildingError(e.0))?;
+                }
+                Ok(())
+            }
             BuildingEdit::Update(index, building) => {
                 self.buildings.get(*index).ok_or(BuildingError("missing"))?;
-                building.validate()
+                building.validate()?;
+                if let Some(config) = self.read_parking(&building.to_json())? {
+                    self.model
+                        .validate_parking(*index, &config)
+                        .map_err(|e| BuildingError(e.0))?;
+                }
+                Ok(())
             }
             BuildingEdit::Delete(index) => self
                 .buildings
@@ -127,6 +142,10 @@ impl MapDocument {
     ) -> Result<usize, crate::buildings::BuildingError> {
         building.validate()?;
         let index = self.buildings.len();
+        let parking = self.read_parking(&building.to_json())?;
+        self.model
+            .configure_parking(index, parking)
+            .map_err(|e| crate::buildings::BuildingError(e.0))?;
         if !self.data["edificios"].is_array() {
             self.data["edificios"] = json!([]);
         }
@@ -144,6 +163,13 @@ impl MapDocument {
         building: crate::buildings::Building,
     ) -> Result<(), crate::buildings::BuildingError> {
         building.validate()?;
+        self.buildings
+            .get(index)
+            .ok_or(crate::buildings::BuildingError("missing"))?;
+        let parking = self.read_parking(&building.to_json())?;
+        self.model
+            .configure_parking(index, parking)
+            .map_err(|e| crate::buildings::BuildingError(e.0))?;
         let target = self
             .buildings
             .get_mut(index)
@@ -153,12 +179,13 @@ impl MapDocument {
         Ok(())
     }
 
-    /// Shared cleanup boundary. Parking release is added here by ticket 21.
+    /// Shared cleanup boundary, including owned parking endpoints and occupancy.
     pub fn delete_building(&mut self, index: usize) -> bool {
         if index >= self.buildings.len() {
             return false;
         }
         self.buildings.remove(index);
+        self.model.delete_parking_building(index);
         self.data["edificios"]
             .as_array_mut()
             .expect("buildings")
@@ -179,6 +206,7 @@ impl MapDocument {
             .as_array_mut()
             .expect("validated roads")
             .remove(street);
+        self.sync_parking_buildings();
         let links = self.data["conexiones"]
             .as_array_mut()
             .expect("validated links");
@@ -313,6 +341,7 @@ impl MapDocument {
                     StreetChange::Name(name) => {
                         self.data["calles"][street]["nombre"] = json!(name);
                         self.layout[street].name = name;
+                        self.sync_parking_buildings();
                     }
                     StreetChange::Origin(origin) => {
                         if let Some(ring) = &mut self.layout[street].roundabout {
@@ -597,6 +626,7 @@ impl MapDocument {
             }
         }
         self.model.resize_street(street, lanes, length);
+        self.sync_parking_buildings();
         let road = &mut self.data["calles"][street];
         road["carriles"] = json!(lanes);
         road["tamano"] = json!(length);
@@ -790,7 +820,7 @@ impl MapDocument {
         })).collect();
         let mut document = Self::parse(&json!({"version": "1.0", "nombre": "Demo", "calles": roads, "conexiones": links, "edificios": []}).to_string()).expect("demo map");
         // The demo alone starts with seeded traffic. Map files omit vehicles.
-        document.model = model;
+        document.model = Box::new(model);
         document
     }
 
@@ -1052,15 +1082,25 @@ impl MapDocument {
         };
         let time = crate::virtual_time::VirtualTime::from_json(&data["configuracionTiempo"])
             .ok_or(MapError)?;
-        Ok(Self {
+        let mut document = Self {
             buildings,
             time: Box::new(time),
             edit_session: None,
             data,
-            model,
+            model: Box::new(model),
             layout,
             zones,
-        })
+        };
+        for index in 0..document.buildings.len() {
+            let config = document
+                .read_parking(&document.buildings[index].to_json())
+                .map_err(|_| MapError)?;
+            document
+                .model
+                .configure_parking(index, config)
+                .map_err(|_| MapError)?;
+        }
+        Ok(document)
     }
 
     pub fn model(&self) -> &TrafficModel {
@@ -1076,6 +1116,8 @@ impl MapDocument {
         self.model
             .set_hourly_multiplier(self.time.multiplier())
             .expect("validated profiles");
+        self.model
+            .set_parking_hour(self.time.clock.parts()[1] as usize);
         self.model.tick();
         self.time.advance();
     }
@@ -1087,6 +1129,7 @@ impl MapDocument {
     /// Scenario reset is not map replacement and does not execute a traffic tick.
     pub fn reset_scenario_time(&mut self, clock: crate::virtual_time::Clock) {
         self.model.clear_vehicles();
+        self.model.reset_parking_occupancy();
         self.time.clock = clock;
     }
 
@@ -1271,6 +1314,13 @@ impl MapDocument {
     }
     pub fn to_json(&self) -> String {
         let mut data = self.data.clone();
+        data["edificios"] = Value::Array(
+            self.buildings
+                .iter()
+                .enumerate()
+                .map(|(i, b)| self.parking_json(i, b.to_json()))
+                .collect(),
+        );
         if !data["configuracionTiempo"].is_object() {
             data["configuracionTiempo"] = serde_json::json!({});
         }

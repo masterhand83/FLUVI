@@ -90,8 +90,15 @@ impl App {
             );
             return;
         }
+        let deleted = match &edit {
+            ca_core::buildings::BuildingEdit::Delete(index) => Some(*index),
+            _ => None,
+        };
         match self.session.as_mut().expect("session").edit_buildings(edit) {
             Ok(index) => {
+                if let Some(deleted) = deleted {
+                    self.buildings.parking_building_deleted(deleted);
+                }
                 self.buildings.select(index);
                 self.buildings.refresh_render();
                 self.map.as_mut().expect("map").configure(
@@ -147,6 +154,7 @@ impl App {
             };
         });
         session.register_scenario_reset(|app| {
+            app.buildings.reset_parking_occupancy();
             app.progress.generation = 0;
             app.progress.population = 0;
             app.progress.fps = 0.0;
@@ -199,6 +207,9 @@ impl App {
     }
 
     fn handle_messages(&mut self) {
+        for (building, occupied) in self.commands.parking_updates() {
+            self.buildings.set_parking_occupancy(building, occupied);
+        }
         while let Ok(event) = self.events.try_recv() {
             match event {
                 Event::Progress(progress) => self.progress = progress,
@@ -1061,6 +1072,9 @@ impl eframe::App for App {
                 },
             );
             ui.painter().add(callback);
+            let session = self.session.as_ref().expect("session");
+            self.buildings
+                .sync_parking(session.document(), session.revision(), self.map_shift);
             self.buildings.paint_controls(
                 ui.painter(),
                 self.session.as_ref().expect("session").document(),

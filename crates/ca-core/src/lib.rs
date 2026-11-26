@@ -11,4 +11,5 @@ pub mod streets;
 pub mod traffic;
 pub mod virtual_time;
 pub use traffic::connections;
+pub use traffic::parking;
 mod traffic_rules;

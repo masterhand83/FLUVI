@@ -50,6 +50,13 @@ pub struct TrafficScene {
 }
 
 impl TrafficScene {
+    pub fn parking_occupancies(&self) -> impl Iterator<Item = (usize, usize)> + '_ {
+        self.document
+            .buildings()
+            .iter()
+            .enumerate()
+            .filter_map(|(i, _)| self.document.model().parking(i).map(|p| (i, p.occupied())))
+    }
     pub fn edit_buildings(&mut self, edit: ca_core::buildings::BuildingEdit) {
         self.document
             .edit_buildings(edit)

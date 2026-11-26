@@ -2,6 +2,8 @@
 
 #[path = "connections.rs"]
 pub mod connections;
+#[path = "parking.rs"]
+pub mod parking;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum CalleType {
@@ -74,6 +76,10 @@ pub struct Calle {
     destinations: Vec<usize>,
     reserved: Vec<bool>,
     outgoing: Vec<bool>,
+    consumed: Vec<bool>,
+    spawned: Vec<u8>,
+    parking_endpoints: Vec<Option<(usize, bool)>>,
+    has_parking: bool,
 }
 
 impl Calle {
@@ -108,6 +114,10 @@ impl Calle {
             destinations: vec![usize::MAX; size],
             reserved: vec![false; size],
             outgoing: vec![false; size],
+            consumed: vec![false; size],
+            spawned: vec![0; size],
+            parking_endpoints: vec![None; size],
+            has_parking: false,
             cells,
         })
     }
@@ -312,6 +322,13 @@ impl Calle {
     pub fn update(&mut self) {
         let size = self.config.tamano;
         self.next.copy_from_slice(&self.cells);
+        for i in 0..self.cells.len() {
+            if self.consumed[i] {
+                self.next[i] = 0;
+            } else if self.spawned[i] != 0 {
+                self.next[i] = self.spawned[i];
+            }
+        }
         if self.config.periodic {
             for lane in 0..self.config.carriles {
                 let start = lane * size;
@@ -323,6 +340,9 @@ impl Calle {
                     };
                     let destination = start + next;
                     if (1..=6).contains(&self.cells[source])
+                        && !self.consumed[source]
+                        && self.spawned[source] == 0
+                        && self.spawned[destination] == 0
                         && !self.outgoing[source]
                         && !self.waiting[source]
                         && !self.waiting[destination]
@@ -334,6 +354,8 @@ impl Calle {
                 }
             }
             self.waiting.fill(false);
+            self.consumed.fill(false);
+            self.spawned.fill(0);
             std::mem::swap(&mut self.cells, &mut self.next);
             return;
         }
@@ -342,7 +364,10 @@ impl Calle {
                 let reverse = self.lane_direction(lane) == LaneDirection::Reverse;
                 let start = lane * size;
                 for i in 0..size {
-                    if self.waiting[start + i] {
+                    if self.waiting[start + i]
+                        || self.consumed[start + i]
+                        || self.spawned[start + i] != 0
+                    {
                         continue;
                     }
                     let left = i.checked_sub(1).map(|p| self.cells[start + p]).unwrap_or(0);
@@ -362,7 +387,8 @@ impl Calle {
                     } else {
                         i.checked_sub(1)
                     };
-                    if previous.is_some_and(|p| self.waiting[start + p]) {
+                    if previous.is_some_and(|p| self.waiting[start + p] || self.consumed[start + p])
+                    {
                         upstream = 0;
                     }
                     self.next[start + i] = match rule(upstream, center, downstream) {
@@ -380,6 +406,8 @@ impl Calle {
             }
         }
         self.waiting.fill(false);
+        self.consumed.fill(false);
+        self.spawned.fill(0);
         std::mem::swap(&mut self.cells, &mut self.next);
     }
 }
@@ -407,6 +435,8 @@ pub enum TickPhase {
 
 #[derive(Clone, Debug)]
 pub struct TrafficModel {
+    parking: Vec<Option<parking::Parking>>,
+    parking_hour: usize,
     streets: Vec<Calle>,
     connections: Vec<connections::Connection>,
     random_state: u64,
@@ -423,6 +453,7 @@ impl TrafficModel {
             }
         }
         self.streets[street].resize(lanes, length);
+        self.prune_parking(None);
         self.connections.retain_mut(|connection| {
             connection.retain_mappings(|m| m.fits_resized_street(street, lanes, length))
         });
@@ -489,6 +520,8 @@ impl TrafficModel {
     pub fn new(streets: Vec<Calle>, seed: u64) -> Self {
         Self {
             streets,
+            parking: Vec::new(),
+            parking_hour: 0,
             connections: Vec::new(),
             random_state: seed,
             generation_override: None,
@@ -517,6 +550,7 @@ impl TrafficModel {
             connection.remap_after_deletion(street);
         }
         self.streets.remove(street);
+        self.prune_parking(Some(street));
         self.refresh_outgoing();
         // Waiting marks belong to the old topology.
         for street in &mut self.streets {
@@ -614,7 +648,10 @@ impl TrafficModel {
                         );
                     }
                 }
-                TickPhase::StreetUpdate => self.streets.iter_mut().for_each(Calle::update),
+                TickPhase::StreetUpdate => {
+                    self.resolve_parking();
+                    self.streets.iter_mut().for_each(Calle::update);
+                }
                 TickPhase::ConnectionTransfers => self.transfer_connections(),
                 TickPhase::LaneChanges => {
                     for street in &mut self.streets {

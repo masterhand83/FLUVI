@@ -32,6 +32,8 @@ struct Drag {
 
 #[derive(Default)]
 pub struct BuildingEditor {
+    parking: crate::parking::ParkingOverlays,
+    parking_revision: Option<(u64, [f32; 2])>,
     render_dirty: bool,
     selected: Option<usize>,
     tool: Option<Tool>,
@@ -52,6 +54,24 @@ pub struct BuildingEditor {
 }
 
 impl BuildingEditor {
+    pub fn set_parking_occupancy(&mut self, building: usize, occupied: usize) {
+        self.parking.set_occupancy(building, occupied);
+    }
+
+    pub fn parking_building_deleted(&mut self, building: usize) {
+        self.parking.delete_building(building);
+    }
+
+    pub fn reset_parking_occupancy(&mut self) {
+        self.parking.reset_occupancy();
+    }
+
+    pub fn sync_parking(&mut self, document: &MapDocument, revision: u64, shift: [f32; 2]) {
+        if self.parking_revision != Some((revision, shift)) {
+            self.parking.refresh(document, shift);
+            self.parking_revision = Some((revision, shift));
+        }
+    }
     pub fn selected(&self) -> Option<usize> {
         self.selected
     }

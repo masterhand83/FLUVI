@@ -407,6 +407,7 @@ impl BuildingEditor {
         shift: [f32; 2],
     ) {
         let painter = painter.with_clip_rect(rect);
+        self.parking.paint(&painter, rect, view);
         if let Some(building) = self
             .preview
             .as_ref()

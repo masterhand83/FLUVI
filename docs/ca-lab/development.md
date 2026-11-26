@@ -353,14 +353,39 @@ remove a building; Cancel retains all saved fields.
 Keep geometry in v1 pixel coordinates in `ca-core::buildings`; convert by five
 pixels per map unit at the display boundary. Reuse the v1 polygon validation
 order, boundary-inclusive hit test, and error reasons. Apply a validated preview
-only at gesture completion. Extend `MapDocument::delete_building` when adding
-parking release in ticket 21.
+only at gesture completion. `MapDocument::delete_building` also releases parking
+endpoints and clears that building's occupancy.
 
 Keep unknown JSON fields and custom colors when editing imported buildings.
 Use the GPU zone path to retain building triangles until geometry changes.
 Draw building fills below roads and their controls above roads.
 
 Focused checks: `cargo test -p ca-core -p ca-app -p ca-gpu --test buildings`.
+
+### Functional parking
+
+`ca-core::parking` owns paired physical endpoints, capacity, hourly probabilities,
+and live occupancy. `MapDocument::configure_parking` validates the complete
+candidate before replacing owned endpoints. Disable and building deletion release
+endpoints and occupancy. Street deletion remaps surviving streets; dimension
+reconciliation removes complete pairs with an out-of-range endpoint.
+
+Parking resolves inside the street-update phase, before CA rules. Retained
+endpoint tables keep lookups independent of the number of buildings. Consumed
+sources and spawned destinations use preallocated per-cell buffers. All decisions
+read the same street snapshot, including downstream occupancy and waiting flags.
+The virtual hour selects the entry/exit probabilities; missing curves default to
+0.3 entry and 0.2 exit. Scenario-time reset clears occupancy without changing
+configuration. Save/load retains configuration, not live parked vehicles.
+
+`ca-app::parking::ParkingOverlays` retains world-space outlines and directed links
+until `MapSession::revision` changes, including street vertex edits. Names and
+artwork alone do not produce a functional outline. A bounded non-blocking channel
+publishes render-owned occupancy to cached `(occupied/capacity)` labels.
+Parking controls and hourly-curve editing remain ticket 22.
+
+Focused checks: `cargo test -p ca-core -p ca-app --test parking` and
+`cargo test -p ca-app --bin ca-app parking_counter`.
 
 ### Image buildings
 
