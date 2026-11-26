@@ -33,6 +33,7 @@ struct TrafficTile {
 const _: () = assert!(size_of::<TrafficTile>() == 32);
 
 pub struct TrafficScene {
+    metrics: ca_core::metrics::Metrics,
     lanes: Vec<TrafficLane>,
     cells: Vec<u32>,
     edited: bool,
@@ -192,6 +193,7 @@ impl TrafficScene {
             lane_start += street.centers.len();
         }
         let mut scene = Self {
+            metrics: ca_core::metrics::Metrics::new(model.streets()),
             lanes,
             names,
             extent: std::array::from_fn(|i| (maximum[i] - minimum[i] + 4.0).ceil() as u32),
@@ -231,7 +233,18 @@ impl TrafficScene {
 
     pub fn tick(&mut self) {
         self.document.tick();
+        self.metrics
+            .update(self.document.model().streets(), self.document.time().clock);
         self.pack();
+    }
+
+    pub fn metrics(&self) -> &ca_core::metrics::Metrics {
+        &self.metrics
+    }
+
+    pub fn set_metric_streets(&mut self, included: Vec<bool>) {
+        self.metrics
+            .set_included(self.document.model().streets(), included);
     }
 
     pub fn set_rain(&mut self, active: bool, probability: f64) -> Result<(), TrafficError> {
@@ -282,11 +295,17 @@ impl TrafficScene {
 
     pub fn reset_scenario_time(&mut self, clock: ca_core::virtual_time::Clock) {
         self.document.reset_scenario_time(clock);
+        self.metrics.reset();
         self.pack();
     }
 
     /// Rebuild topology storage only on edits; keep live traffic and display shift.
     pub fn edit_streets(&mut self, edit: ca_core::streets::StreetEdit) -> bool {
+        let deleted = if let ca_core::streets::StreetEdit::Delete(id) = &edit {
+            Some(*id)
+        } else {
+            None
+        };
         let mut document = self.document.clone();
         if document.edit_streets(edit).is_err() {
             return false;
@@ -317,6 +336,10 @@ impl TrafficScene {
         scene.extent = std::array::from_fn(|i| {
             self.extent[i].max((scene.extent[i] as f32 + delta[i]).max(1.0).ceil() as u32)
         });
+        scene.metrics = std::mem::take(&mut self.metrics);
+        scene
+            .metrics
+            .reconcile(scene.document.model().streets(), deleted);
         *self = scene;
         true
     }

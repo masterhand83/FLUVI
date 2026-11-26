@@ -10,6 +10,7 @@ use eframe::egui;
 pub enum CellPickMode {
     Connection,
     Parking,
+    Metrics,
 }
 
 pub struct MapFrame {
@@ -500,7 +501,10 @@ impl MapInteraction {
         let pointer = ui.input(|i| i.pointer.clone());
         let bulk_started = !self.painting
             && !self.building_input
-            && self.cell_picking != Some(CellPickMode::Parking)
+            && !matches!(
+                self.cell_picking,
+                Some(CellPickMode::Parking | CellPickMode::Metrics)
+            )
             && response.contains_pointer()
             && pointer.primary_pressed()
             && ui.input(|i| i.modifiers.shift);

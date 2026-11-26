@@ -7,6 +7,7 @@ pub mod cell_index;
 pub use traffic::disruptions;
 pub mod geometry;
 pub mod map_json;
+pub mod metrics;
 mod random;
 pub mod scenario_json;
 pub mod streets;

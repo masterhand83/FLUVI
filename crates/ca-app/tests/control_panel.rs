@@ -26,6 +26,7 @@ fn map_files_are_inside_the_constructor_section_not_a_top_toolbar() {
             },
             |ctx| {
                 ControlPanel {
+                    metrics: &mut Default::default(),
                     document: &document,
                     map: None,
                     connections: None,

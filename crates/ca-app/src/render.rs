@@ -41,6 +41,7 @@ pub struct Paint {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Edit {
+    MetricStreets(Vec<bool>),
     CaptureScenario(String, String),
     LoadScenario(Box<ca_core::scenario_json::Scenario>),
     Scenario(ca_core::disruptions::ScenarioAction),
@@ -88,6 +89,7 @@ impl CallbackTrait for BackgroundCallback {
 
 /// Only view/control state is coalesced. Cell edits retain FIFO order.
 pub struct Commands {
+    metrics: Receiver<ca_app::metrics::Packet>,
     scenario_results: Receiver<ScenarioResult>,
     parking_results: Receiver<(usize, Result<(), ca_core::parking::ParkingError>)>,
     parking: Receiver<(usize, usize)>,
@@ -100,6 +102,7 @@ pub struct Commands {
 }
 
 pub struct Requests {
+    metrics: Sender<ca_app::metrics::Packet>,
     scenario_results: Sender<ScenarioResult>,
     parking_results: Sender<(usize, Result<(), ca_core::parking::ParkingError>)>,
     parking: Sender<(usize, usize)>,
@@ -110,6 +113,7 @@ pub struct Requests {
 }
 
 pub fn command_channel() -> (Commands, Requests) {
+    let (metrics_tx, metrics) = bounded(128);
     let (scenario_results_tx, scenario_results) = bounded(32);
     let (parking_results_tx, parking_results) = bounded(32);
     let (parking_tx, parking) = bounded(1024);
@@ -119,6 +123,7 @@ pub fn command_channel() -> (Commands, Requests) {
     let (replacement_tx, replacement) = bounded(1);
     (
         Commands {
+            metrics,
             scenario_results,
             parking_results,
             parking,
@@ -130,6 +135,7 @@ pub fn command_channel() -> (Commands, Requests) {
             replacement: replacement_tx,
         },
         Requests {
+            metrics: metrics_tx,
             scenario_results: scenario_results_tx,
             parking_results: parking_results_tx,
             parking: parking_tx,
@@ -142,6 +148,9 @@ pub fn command_channel() -> (Commands, Requests) {
 }
 
 impl Commands {
+    pub fn metric_updates(&self) -> impl Iterator<Item = ca_app::metrics::Packet> + '_ {
+        self.metrics.try_iter()
+    }
     pub fn scenario_results(&self) -> impl Iterator<Item = ScenarioResult> + '_ {
         self.scenario_results.try_iter()
     }
@@ -178,6 +187,7 @@ impl Commands {
 }
 
 pub struct Resources {
+    metric_delivery: ca_app::metrics::Delivery,
     scene: TrafficScene,
     display: TrafficDisplay,
     events: Sender<Event>,
@@ -202,6 +212,7 @@ impl Resources {
         let population = scene.population();
         let span = scene.extent().map(|v| v as f32);
         Self {
+            metric_delivery: Default::default(),
             scene,
             format,
             frame_window: Instant::now(),
@@ -240,6 +251,7 @@ impl Resources {
             while self.requests.buildings.try_recv().is_ok() {}
             self.display = TrafficDisplay::new(device, &scene, self.format);
             self.scene = scene;
+            self.metric_delivery.reset();
             self.ticks = TickControl::default();
             self.last_tick = Instant::now();
             self.progress = Progress {
@@ -257,6 +269,10 @@ impl Resources {
         let mut scenario_edited = false;
         while let Ok(edit) = self.requests.edits.try_recv() {
             edited |= match edit {
+                Edit::MetricStreets(included) => {
+                    self.scene.set_metric_streets(included);
+                    false
+                }
                 Edit::CaptureScenario(name, id) => {
                     let result = self.scene.capture_scenario(&name, &id);
                     let _ = self
@@ -311,6 +327,7 @@ impl Resources {
                 }
                 Edit::ScenarioTime(clock) => {
                     self.scene.reset_scenario_time(clock);
+                    self.metric_delivery.reset();
                     self.progress.generation = 0;
                     self.ticks.reset(request.step_ticket, request.playing);
                     reset_time = true;
@@ -405,6 +422,8 @@ impl Resources {
             self.frame_window = now;
         }
         let _ = self.events.try_send(Event::Progress(self.progress));
+        self.metric_delivery
+            .publish(self.scene.metrics(), &self.requests.metrics);
         // Bounded, non-blocking display telemetry; retry on the next frame.
         // Rotate the first item so even large maps cannot starve later buildings.
         let count = self.scene.parking_occupancies().count();
@@ -612,6 +631,10 @@ mod tests {
         let Event::Progress(first) = results.try_recv().unwrap();
         assert_eq!(first.generation, 1);
         assert_eq!(first.clock.parts(), [1, 7, 0, 2]);
+        let points: Vec<_> = commands.metric_updates().collect();
+        assert!(
+            matches!(points.as_slice(), [ca_app::metrics::Packet::Point(point)] if point.elapsed_seconds == 2)
+        );
         let clock = Clock::new(6, 23, 59, 58).unwrap();
         assert!(commands.edit(Edit::ScenarioTime(clock)));
         resources.prepare(&device, &queue);
@@ -619,6 +642,10 @@ mod tests {
         assert_eq!(reset.generation, 0);
         assert_eq!(reset.population, 0);
         assert_eq!(reset.clock, clock);
+        assert!(matches!(
+            commands.metric_updates().collect::<Vec<_>>().as_slice(),
+            [ca_app::metrics::Packet::Reset]
+        ));
         assert_eq!(resources.scene.geometry(), geometry);
         for street in 0..3 {
             assert_eq!(
@@ -634,6 +661,12 @@ mod tests {
             "an old manual ticket must not replay"
         );
         assert_eq!(still_paused.clock, clock);
+        assert_eq!(
+            commands.metric_updates().count(),
+            0,
+            "painting while paused must not measure traffic"
+        );
+        assert!(commands.edit(Edit::MetricStreets(vec![false; 3])));
         assert!(commands.send(
             Paint {
                 step_ticket: 2,
@@ -645,6 +678,10 @@ mod tests {
         let Event::Progress(next) = results.try_recv().unwrap();
         assert_eq!(next.generation, 1);
         assert_eq!(next.clock.parts(), [0, 0, 0, 0]);
+        assert!(
+            matches!(commands.metric_updates().collect::<Vec<_>>().as_slice(), [ca_app::metrics::Packet::Point(point)]
+            if point.elapsed_seconds == 2 && point.population == 0 && point.net_change == 0.)
+        );
     }
 
     #[test]

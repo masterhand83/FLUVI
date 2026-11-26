@@ -7,6 +7,7 @@ use ca_core::map_json::MapDocument;
 use eframe::egui;
 
 pub enum PanelAction {
+    Metrics(crate::metrics::Action),
     Scenario(crate::scenarios::ScenarioCommand),
     BuildingTool(crate::buildings::Tool),
     NewBuilding,
@@ -23,6 +24,7 @@ pub enum PanelAction {
 }
 
 pub struct ControlPanel<'a> {
+    pub metrics: &'a mut crate::metrics::MetricsPanel,
     pub document: &'a MapDocument,
     pub map: Option<&'a mut MapInteraction>,
     pub connections: Option<&'a mut ConnectionOverlays>,
@@ -41,6 +43,11 @@ impl ControlPanel<'_> {
                 self.enabled
                     && (section == "scenarios" || self.document.editing_street().is_none()),
                 |ui| match section {
+                    "metrics" => {
+                        if let Some(value) = self.metrics.show(ui, shell) {
+                            action = Some(PanelAction::Metrics(value));
+                        }
+                    }
                     "scenarios" => {
                         if let Some(command) = self.scenarios.show(ui, shell) {
                             action = Some(PanelAction::Scenario(command));

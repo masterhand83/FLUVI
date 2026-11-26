@@ -27,6 +27,7 @@ struct Startup {
 }
 
 pub struct App {
+    metrics: ca_app::metrics::MetricsPanel,
     scenario_exchange: ca_app::scenario_library::ScenarioExchange,
     scenarios: ca_app::scenarios::ScenarioControls,
     parking_pending: Option<ca_app::parking_form::ParkingRequest>,
@@ -67,6 +68,17 @@ pub struct App {
 }
 
 impl App {
+    fn select_metric_streets(&mut self, included: Vec<bool>) {
+        if self.commands.edit(Edit::MetricStreets(included.clone())) {
+            self.metrics.accept_selection(included);
+        } else {
+            self.shell.notify(
+                ca_app::shell::Severity::Warning,
+                self.shell.tr("shell.cellEditBusy", &[]),
+            );
+        }
+    }
+
     fn scenario_library(&mut self, ctx: &egui::Context) {
         use crate::render::ScenarioResult;
         use ca_app::scenario_library::{LibraryAction, LibraryResult};
@@ -300,6 +312,7 @@ impl App {
             }
         });
         session.register_reset(ResetPhase::Features, |app| {
+            app.metrics = Default::default();
             app.scenarios = Default::default();
             app.transport = TransportControls::default();
             app.step_ticket = 0;
@@ -309,6 +322,7 @@ impl App {
             };
         });
         session.register_scenario_reset(|app| {
+            app.metrics.receive(ca_app::metrics::Packet::Reset);
             app.buildings.reset_parking_occupancy();
             app.progress.generation = 0;
             app.progress.population = 0;
@@ -316,6 +330,7 @@ impl App {
         });
         let time = session.document().time().clone();
         Ok(Self {
+            metrics: Default::default(),
             scenario_exchange: Default::default(),
             scenarios: Default::default(),
             parking_pending: None,
@@ -365,6 +380,9 @@ impl App {
     }
 
     fn handle_messages(&mut self) {
+        for packet in self.commands.metric_updates() {
+            self.metrics.receive(packet);
+        }
         for (building, result) in self.commands.parking_results() {
             let Some((target, config)) = self.parking_pending.take() else {
                 continue;
@@ -410,6 +428,7 @@ impl App {
                     ));
                     self.map_shift = scene.shift();
                     let document = self.session.as_ref().expect("session").document();
+                    self.metrics.configure(document, None);
                     self.map
                         .as_mut()
                         .expect("map")
@@ -560,6 +579,7 @@ impl App {
             self.scenarios.rain_probability,
         );
         let action = ControlPanel {
+            metrics: &mut self.metrics,
             document: self.session.as_ref().expect("session").document(),
             map: self.map.as_mut(),
             connections: self.connections.as_mut(),
@@ -572,6 +592,13 @@ impl App {
                 && !self.scenario_exchange.busy(),
         }
         .show(ctx, &mut self.shell);
+        if action
+            .as_ref()
+            .is_some_and(|a| !matches!(a, PanelAction::Metrics(_)))
+            || self.map.as_ref().is_some_and(|map| map.drawing())
+        {
+            self.metrics.picking = false;
+        }
         if matches!(
             &action,
             Some(
@@ -585,6 +612,33 @@ impl App {
             self.buildings.select(None);
         }
         match action {
+            Some(PanelAction::Metrics(action)) => match action {
+                ca_app::metrics::Action::Checklist => self.metrics.open_checklist(),
+                ca_app::metrics::Action::Map => {
+                    if !self.metrics.picking {
+                        if self
+                            .session
+                            .as_ref()
+                            .expect("session")
+                            .document()
+                            .editing_street()
+                            .is_some()
+                        {
+                            self.edit_streets(ca_core::streets::StreetEdit::CancelSession);
+                        }
+                        self.buildings.cancel();
+                        self.buildings.select(None);
+                        self.connection_draft.cancel();
+                        self.scenarios.mode = None;
+                        let map = self.map.as_mut().expect("map");
+                        map.set_painting(false);
+                        map.finish_edits();
+                        map.clear_bulk();
+                        map.select(None);
+                    }
+                    self.metrics.picking = !self.metrics.picking;
+                }
+            },
             Some(PanelAction::Scenario(command)) => {
                 if !self.scenario_command(command) {
                     (
@@ -785,6 +839,8 @@ impl App {
         let mut session = self.session.take().expect("session");
         session.replace(true, document, self);
         self.session = Some(session);
+        self.metrics
+            .configure(self.session.as_ref().expect("session").document(), None);
         self.scenarios.rain_probability = rain_probability;
         self.scenario_exchange.capturing = false;
         self.scenario_exchange.open = false;
@@ -896,6 +952,14 @@ impl App {
         }
         let session = self.session.as_mut().expect("session");
         let event = session.edit_streets(edit).expect("validated street edit");
+        self.metrics.configure(
+            session.document(),
+            if let ca_app::streets::StreetEvent::Deleted(id) = event {
+                Some(id)
+            } else {
+                None
+            },
+        );
         // Resizing or deletion can remove/reindex saved links while a draft is open.
         self.connection_draft.cancel();
         let map = self.map.as_mut().expect("map");
@@ -1096,6 +1160,13 @@ impl eframe::App for App {
         self.controls(ctx);
         self.control_panel(ctx);
         self.time_dialogs(ctx);
+        if let Some(included) = self.metrics.dialog(
+            ctx,
+            self.session.as_ref().expect("session").document(),
+            &self.shell,
+        ) {
+            self.select_metric_streets(included);
+        }
         egui::TopBottomPanel::bottom("status").show(ctx, |ui| {
             ui.label(format!(
                 "{} {}  |  {}  |  {} {:.1}  |  {}",
@@ -1126,10 +1197,12 @@ impl eframe::App for App {
                 &mut self.shell,
             );
             if ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
+                self.metrics.picking = false;
                 self.connection_draft.cancel();
             }
             let parking_picking = self.buildings.parking_picking();
-            let building_input = !parking_picking
+            let building_input = !self.metrics.picking
+                && !parking_picking
                 && !self.connection_draft.active()
                 && !self.map.as_ref().expect("map").drawing()
                 && self
@@ -1152,7 +1225,9 @@ impl eframe::App for App {
             self.map
                 .as_mut()
                 .expect("map")
-                .set_cell_picking(if parking_picking {
+                .set_cell_picking(if self.metrics.picking {
+                    Some(CellPickMode::Metrics)
+                } else if parking_picking {
                     Some(CellPickMode::Parking)
                 } else {
                     self.connection_draft
@@ -1169,7 +1244,9 @@ impl eframe::App for App {
                 &map,
                 self.session.as_ref().expect("session").document(),
             );
-            let building_edit = if map.bulk_started {
+            let building_edit = if self.metrics.picking {
+                None
+            } else if map.bulk_started {
                 self.buildings.cancel();
                 self.buildings.select(None);
                 None
@@ -1230,8 +1307,14 @@ impl eframe::App for App {
                 }
             }
             if let Some(cell) = map.picked_cell.filter(|_| !parking_input) {
-                self.connection_draft
-                    .pick_cell(cell, self.session.as_ref().expect("session").document());
+                if self.metrics.picking {
+                    let mut included = self.metrics.included().to_vec();
+                    included[cell.street] = !included[cell.street];
+                    self.select_metric_streets(included);
+                } else {
+                    self.connection_draft
+                        .pick_cell(cell, self.session.as_ref().expect("session").document());
+                }
             }
             if let Some(edit) = map.street_edit.clone() {
                 self.edit_streets(edit);
@@ -1246,6 +1329,7 @@ impl eframe::App for App {
                         .as_mut()
                         .expect("map")
                         .configure(document, self.map_shift);
+                    self.metrics.configure(document, None);
                     let arrows = document.model().connection_arrows(&geometry.streets);
                     if let Some(connections) = &mut self.connections {
                         connections.set_arrows(arrows);
@@ -1334,6 +1418,8 @@ impl eframe::App for App {
                 },
             );
             ui.painter().add(callback);
+            self.metrics
+                .paint(ui.painter(), map.view, map.rect, self.map_shift);
             self.scenarios.paint_rain(ui.painter(), map.rect);
             let session = self.session.as_ref().expect("session");
             self.buildings

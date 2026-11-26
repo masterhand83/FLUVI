@@ -2,6 +2,53 @@ use ca_app::map::MapInteraction;
 use eframe::egui;
 
 #[test]
+fn metric_map_selection_captures_clicks_without_cell_edits_or_bulk_selection() {
+    use ca_app::map::CellPickMode;
+    use ca_core::cell_index::CellRef;
+    let document = ca_core::map_json::MapDocument::parse(
+        r#"{"calles":[{"nombre":"A","tipo":"conexion","tamano":12,"x":25,"y":25}]}"#,
+    )
+    .unwrap();
+    let geometry = document.geometry();
+    let ctx = egui::Context::default();
+    let mut map = MapInteraction::new([30., 20.], &geometry, vec!["A".into()]);
+    map.configure(&document, [0.; 2]);
+    map.set_cell_picking(Some(CellPickMode::Metrics));
+    frame(&ctx, &mut map, vec![], false);
+    let target = screen_position(&map, geometry[0].centers[0][3]);
+    for modifiers in [egui::Modifiers::NONE, egui::Modifiers::SHIFT] {
+        let button = |pressed| egui::Event::PointerButton {
+            pos: target,
+            pressed,
+            button: egui::PointerButton::Primary,
+            modifiers,
+        };
+        let picked = frame(
+            &ctx,
+            &mut map,
+            vec![
+                egui::Event::PointerMoved(target),
+                button(true),
+                button(false),
+            ],
+            false,
+        );
+        assert_eq!(
+            picked.picked_cell,
+            Some(CellRef {
+                street: 0,
+                lane: 0,
+                index: 3
+            })
+        );
+        assert!(picked.clicked.is_none());
+        assert!(picked.street_edit.is_none());
+        assert!(!picked.bulk_started);
+        assert_eq!(map.selected(), None);
+    }
+}
+
+#[test]
 fn paint_accepts_a_complete_click_in_one_frame_and_ignores_drags_started_outside_map() {
     use ca_core::cell_index::CellRef;
     let document = ca_core::map_json::MapDocument::parse(

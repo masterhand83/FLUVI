@@ -7,12 +7,11 @@ and vehicle buffers through `ca-gpu`. `ca-app` owns the UI, tick timing, logging
 and F12 profiler toggle. The smoke run checks completed frames, completed traffic
 ticks, a non-zero vehicle count, and app errors with a real native window.
 
-`ca-analysis` remains a workspace crate reserved for traffic metrics (ticket 25)
-and file analysis (ticket 29). The initial population-statistics worker and its
-Polars dependency have been removed. No analysis worker runs in this version.
-When these features add a worker, use bounded input/output channels, non-blocking
-result delivery, and shutdown when input closes. A slow or closed result consumer
-must not block shutdown. Analysis must remain off the UI/render thread.
+Use `ca-core::metrics` for tick-based traffic estimates on the simulation side.
+Keep `ca-analysis` reserved for file analysis (ticket 29); no separate analysis
+worker runs in this version. When adding a worker, use bounded input/output
+channels, non-blocking result delivery, and shutdown when input closes. Never
+wait for a slow or closed result consumer during shutdown.
 
 ## Fast edit loop
 
@@ -452,9 +451,10 @@ Focused checks: `cargo test -p ca-core -p ca-app --test building_images` and
 Tools → Set Scenario Date and Time opens a weekday/time draft with a localized
 preview. Apply uses the ordered render edit queue, clears vehicles and waiting
 flags, resets generation and FPS, and installs the clock without a tick. It keeps
-the map, blockers, generation settings, and pause state. Later metrics and parking
-features register their UI resets with `MapSession::register_scenario_reset` and
-extend `MapDocument::reset_scenario_time` for render-owned model state.
+the map, blockers, generation settings, and pause state. Register UI feature
+resets with `MapSession::register_scenario_reset`. Reset render-owned metrics in
+`TrafficScene::reset_scenario_time`, and model state in
+`MapDocument::reset_scenario_time`.
 
 `ca-core::virtual_time` owns Sunday-based weekdays, the v1 default profiles, and
 the fixed two seconds per completed tick. `MapDocument::tick` samples the current
@@ -478,6 +478,40 @@ always returns the Spanish day and numeric 24-hour time.
 
 Focused checks: `cargo test -p ca-core --test virtual_time --test map_json`,
 `cargo test -p ca-app --test time_dialogs --test map_session`, and
+`cargo test -p ca-app --bin ca-app scenario_time_command`.
+
+### Traffic metrics and road selection
+
+Open Metrics for five live charts and translated traffic observations. Use
+Select Metric Roads for the alphabetical checklist; Apply commits the draft,
+and Cancel retains the current selection. Use Select Metric Roads on Map to
+toggle streets without editing vehicles or geometry. Check solid green lines
+for included streets and broken red lines for excluded streets; Escape ends
+map selection.
+
+Use `ca-core::metrics::Metrics` through `TrafficScene::tick`, once after each
+completed traffic and clock update. Keep the rate interval separate from the
+editable calendar: two metric seconds per tick. Reset the rate baseline when
+the included street identities change. Count only values 1–6 as vehicles, and
+include all physical cells in density. Retain v1's wrapped directional neighbour
+check for estimated speed and its fixed throughput scale of 10.
+
+Sample Shannon neighbourhood entropy every 60 ticks and reuse the value between
+samples. Preserve v1's binary nonzero occupancy rule for entropy, including
+obstructions; this rule does not add obstructions to vehicle counts. Publish
+density, speed, throughput, and rate at two decimal places, and entropy at three.
+Keep the complete numeric history in the simulation for exports.
+
+Use `ca-app::metrics::Delivery` to send points through the bounded chart channel
+without waiting. Retry unsent points from complete history on later frames.
+Render only the latest 50 points in `MetricsPanel`; tooltips contain the metric
+name, localized timestamp, value, and short status. Reset histories on scenario
+time and map replacement, with an ordered reset packet before new chart points.
+Keep street selections on scenario-time reset; select all streets on a new map.
+
+Run `node scripts/generate-metrics-fixtures.mjs` to regenerate the independent
+v1 oracle. Focused checks: `cargo test -p ca-core -p ca-app -p ca-gpu --test metrics`,
+`cargo test -p ca-app --test map_interaction --test control_panel`, and
 `cargo test -p ca-app --bin ca-app scenario_time_command`.
 
 ### Disruptions, rain, and instant flood

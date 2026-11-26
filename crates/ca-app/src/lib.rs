@@ -12,6 +12,7 @@ pub mod inspector;
 pub mod map;
 pub mod map_files;
 pub mod map_session;
+pub mod metrics;
 pub mod parking;
 pub mod parking_form;
 mod preview;
