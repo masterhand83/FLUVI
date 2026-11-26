@@ -5,7 +5,9 @@ use ca_core::{
 };
 use serde_json::{Value, json};
 mod images;
-pub use images::build_image_zip;
+pub use images::{build_image_zip, build_image_zip_with_options};
+mod dialog;
+pub use dialog::{ExportDialog, ImageOptions};
 mod worker;
 pub use worker::{Kind, SaveJob, start_save};
 

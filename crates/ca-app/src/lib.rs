@@ -8,6 +8,7 @@ pub mod capture;
 pub mod connection_draft;
 pub mod connections;
 pub mod control_panel;
+pub mod graphics;
 mod handles;
 pub mod heatmap;
 pub mod inspector;

@@ -527,7 +527,7 @@ Use Metrics → Density Heatmap for a live view of every street, independent of
 the metric road selection. Vehicle colors show the vehicle count divided by
 physical cells in a centered five-cell window in the same lane. Ordinary ends
 clip the window. Roundabouts wrap without counting any physical cell twice.
-Empty cells stay dark and obstacles stay neutral grey; both count only in the
+Empty cells stay pale grey and obstacles stay a darker neutral grey; both count only in the
 denominator.
 
 `ca-core::heatmap` owns density and physical-cell snapshots.
@@ -543,6 +543,20 @@ Map replacement closes the dialog and releases its texture.
 within both requested size limits, capped at 4096 pixels per axis. A zero limit
 returns an empty image. `HeatmapDialog::render_offscreen` uses the same renderer
 without changing the dialog, its snapshot, or its texture.
+
+The dialog and exported heatmap use softer green/yellow/red colors and display
+lanes at 1.6 times their physical width. The density samples, physical cells,
+and main-map GPU display do not change. Neutral cells draw first, occupied heat
+cells draw next, and obstacles draw last so overlapping display margins cannot
+hide heat behind empty lanes. Balance and higher presets blend edge
+coverage and use linear texture filtering. The dialog uses a larger backing
+image as quality increases. `render_on_white_with_quality` allows a worker-only
+8192-pixel axis limit for export supersampling; the dialog limit stays 4096.
+
+On the recorded Ryzen 7 5700U laptop (2026-11-26), five CPU raster draws of the
+8425-tile campus snapshot took 4.8–7.1 ms at Balance and 11.4–16.7 ms at
+Ultraquality. This measures `render_offscreen_with_quality` only; it excludes
+texture upload and the rest of the UI frame.
 
 Focused checks: `cargo test -p ca-core -p ca-app --test heatmap`.
 
@@ -570,6 +584,11 @@ See [campus-performance.md](campus-performance.md) for results and measurement l
 ### Metric exports
 
 Metrics has CSV, JSON (latest 50), and seven-PNG ZIP download buttons.
+Before a PNG export starts, the image-language modal asks for Spanish or English.
+Confirm starts the snapshot request; Cancel, Escape, and backdrop clicks discard
+the draft. Map and scenario-time resets close unconfirmed drafts. The language
+choice changes report text and image timestamps, not the seven legacy file names
+or the Spanish CSV/JSON format.
 Only one metric export runs at a time. A bounded request takes one coherent
 render-owned document and complete metric history after ordered edits and ticks.
 This explicit user request may clone the history and map in the render callback.
@@ -596,17 +615,32 @@ Number spelling; such differences are formatting only.
 Offscreen drawing choice: SVG chart paths rasterized on the CPU with the existing
 `resvg` dependency and system fonts. It needs no window, display server, GPU,
 or mutable live chart. Plots use complete history and the live chart's numeric
-axis rules and colors, but not its drawing state. Reports use stable Spanish
-text in both UI languages. Every image is 1600 pixels wide, opaque, and has a
-white background. A fresh all-street heatmap uses the export document, not the
+axis rules and colors, but not its drawing state. Live traces are one UI pixel
+wide and add time labels as space permits. Export traces are 1.5 pixels wide
+at the 1600-pixel reference size, with up to six labeled time ticks. Every image
+is opaque and has a white background. A fresh all-street heatmap uses the export document, not the
 dialog's cached snapshot. PNGs are added one at a time to a stored ZIP (PNGs
 already contain compressed pixels), with exactly these v1 names:
 
 `densidad.png`, `flujo_vehicular.png`, `velocidad.png`, `tasa_de_cambio.png`,
 `entropia.png`, `resumen.png`, and `mapa_de_calor.png`.
 
+Use Advanced settings → Graphics → Export quality to select the saved preset:
+
+| Preset | PNG width | Export sampling | Heatmap preview bounds |
+| --- | --- | --- | --- |
+| Performance | 1600 px | Native | 960 × 640 |
+| Balance (default) | 1600 px | 2×, then downsample | 1440 × 960 |
+| Quality | 2400 px | 2×, then downsample | 1920 × 1280 |
+| Ultraquality | 3200 px | 2×, then downsample | 2400 × 1600 |
+
+The setting controls metric PNGs and the separate heatmap view. It does not change
+whole-map capture, CSV/JSON, simulation geometry, or main-map rendering.
+`build_image_zip_with_options` accepts the selected language and quality for
+Complete Export reuse; `build_image_zip` uses Spanish and Balance.
+
 Focused checks: `cargo test -p ca-app --test metric_exports --test metrics
---test heatmap` and `cargo test -p ca-app --test control_panel`.
+--test heatmap --test graphics --test metric_export_dialog --test control_panel`.
 
 ### Whole-map PNG and viewport capture
 

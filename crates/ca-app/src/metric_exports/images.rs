@@ -1,9 +1,7 @@
 //! CPU-only report rendering: SVG plots rasterized by the existing resvg backend.
 //! No window, egui context, GPU device, or mutable live chart is used.
-use crate::{
-    metrics::Metric,
-    shell::{Language, Translator},
-};
+use super::ImageOptions;
+use crate::{metrics::Metric, shell::Translator};
 use ca_core::{heatmap::Snapshot, map_json::MapDocument, metrics::Point};
 use image::ImageEncoder;
 use resvg::{tiny_skia, usvg};
@@ -37,30 +35,53 @@ fn report(height: u32) -> String {
     )
 }
 
-fn rasterize(mut svg: String, options: &usvg::Options<'_>) -> Result<tiny_skia::Pixmap, String> {
+fn rasterize(
+    mut svg: String,
+    options: &usvg::Options<'_>,
+    scale: f32,
+) -> Result<tiny_skia::Pixmap, String> {
     svg.push_str("</svg>");
     let tree = usvg::Tree::from_str(&svg, options).map_err(|e| e.to_string())?;
-    let size = tree.size().to_int_size();
-    let mut pixmap = tiny_skia::Pixmap::new(size.width(), size.height())
-        .ok_or("Cannot allocate metric image")?;
+    let size = tree.size();
+    let mut pixmap = tiny_skia::Pixmap::new(
+        (size.width() * scale).round() as u32,
+        (size.height() * scale).round() as u32,
+    )
+    .ok_or("Cannot allocate metric image")?;
     resvg::render(
         &tree,
-        tiny_skia::Transform::identity(),
+        tiny_skia::Transform::from_scale(scale, scale),
         &mut pixmap.as_mut(),
     );
     Ok(pixmap)
 }
 
-fn png(pixmap: &tiny_skia::Pixmap) -> Result<Vec<u8>, String> {
+fn png(pixmap: &tiny_skia::Pixmap, samples: u32) -> Result<Vec<u8>, String> {
     // All report pixels are opaque, so premultiplied and straight RGBA are equal.
-    let mut bytes = Vec::new();
-    image::codecs::png::PngEncoder::new(&mut bytes)
-        .write_image(
-            pixmap.data(),
+    let reduced = if samples > 1 {
+        let view = image::ImageBuffer::<image::Rgba<u8>, _>::from_raw(
             pixmap.width(),
             pixmap.height(),
-            image::ExtendedColorType::Rgba8,
+            pixmap.data(),
         )
+        .ok_or("Invalid metric raster")?;
+        Some(image::imageops::resize(
+            &view,
+            pixmap.width() / samples,
+            pixmap.height() / samples,
+            image::imageops::FilterType::CatmullRom,
+        ))
+    } else {
+        None
+    };
+    let (data, width, height) = reduced
+        .as_ref()
+        .map_or((pixmap.data(), pixmap.width(), pixmap.height()), |image| {
+            (image.as_raw().as_slice(), image.width(), image.height())
+        });
+    let mut bytes = Vec::new();
+    image::codecs::png::PngEncoder::new(&mut bytes)
+        .write_image(data, width, height, image::ExtendedColorType::Rgba8)
         .map_err(|e| e.to_string())?;
     Ok(bytes)
 }
@@ -99,6 +120,31 @@ fn chart(history: &[Point], metric: Metric, tr: &Translator) -> String {
         "<path d='M180 {} H1480 M180 140 V620' fill='none' stroke='#64748b' stroke-width='2'/>",
         y(0.)
     ));
+    if !history.is_empty() {
+        let ticks = history.len().min(6);
+        for tick in 0..ticks {
+            let i = if ticks == 1 {
+                0
+            } else {
+                tick * (history.len() - 1) / (ticks - 1)
+            };
+            let x = x(i);
+            svg.push_str(&format!("<path d='M{x} 140 V620' stroke='#e2e8f0'/><path d='M{x} 620 V628' stroke='#64748b'/>"));
+            text(
+                &mut svg,
+                x,
+                660.,
+                21,
+                "middle",
+                &format!(
+                    "{} {}",
+                    tr.tr(history[i].clock.day_key(), &[]),
+                    history[i].clock.numeric()
+                ),
+            );
+        }
+    }
+    // Draw thin traces after the grid so grid lines cannot hide the data.
     let color = metric.colour(false);
     let rgb = format!("#{:02x}{:02x}{:02x}", color.r(), color.g(), color.b());
     let mut path = String::new();
@@ -111,7 +157,7 @@ fn chart(history: &[Point], metric: Metric, tr: &Translator) -> String {
         ));
     }
     svg.push_str(&format!(
-        "<path d='{path}' fill='none' stroke='{rgb}' stroke-width='3' stroke-linejoin='round'/>"
+        "<path d='{path}' fill='none' stroke='{rgb}' stroke-width='1.5' stroke-linejoin='round'/>"
     ));
     if history.len() == 1 {
         svg.push_str(&format!(
@@ -119,18 +165,6 @@ fn chart(history: &[Point], metric: Metric, tr: &Translator) -> String {
             x(0),
             y(metric.value(history[0]))
         ));
-    }
-    if !history.is_empty() {
-        for i in [0, history.len() / 2, history.len() - 1] {
-            text(
-                &mut svg,
-                x(i),
-                660.,
-                21,
-                "middle",
-                &history[i].clock.export_timestamp(),
-            );
-        }
     }
     text(
         &mut svg,
@@ -151,7 +185,7 @@ fn summary(history: &[Point], document: &MapDocument, included: usize, tr: &Tran
         70.,
         34,
         "start",
-        "FLUVI — Resumen de métricas",
+        &tr.tr("metrics.report.summary", &[]),
     );
     if let Some(&point) = history.last() {
         text(
@@ -190,16 +224,19 @@ fn summary(history: &[Point], document: &MapDocument, included: usize, tr: &Tran
         );
     }
     for (i, note) in [
-        format!(
-            "Gráficas: historial completo ({} mediciones).",
-            history.len()
+        tr.tr(
+            "metrics.report.history",
+            &[("count", &history.len().to_string())],
         ),
-        "Resumen: último estado registrado.".into(),
-        format!(
-            "Calles incluidas: {included} de {}.",
-            document.layout().len()
+        tr.tr("metrics.report.latest", &[]),
+        tr.tr(
+            "metrics.report.roads",
+            &[
+                ("included", &included.to_string()),
+                ("total", &document.layout().len().to_string()),
+            ],
         ),
-        "Mapa de calor: captura nueva de todas las calles.".into(),
+        tr.tr("metrics.report.heatmapNote", &[]),
     ]
     .iter()
     .enumerate()
@@ -212,11 +249,21 @@ fn summary(history: &[Point], document: &MapDocument, included: usize, tr: &Tran
 fn heatmap(
     document: &MapDocument,
     options: &usvg::Options<'_>,
+    scale: f32,
+    export: ImageOptions,
+    tr: &Translator,
 ) -> Result<tiny_skia::Pixmap, String> {
     // Never use a cached dialog frame: compute from this export's live snapshot.
     let frame = Snapshot::from_document(document);
-    let image = crate::heatmap::render_on_white(&frame, [1504, 1000]);
-    let height = image.size[1] as u32 + 240;
+    let image = crate::heatmap::render_on_white_with_quality(
+        &frame,
+        [
+            (1504. * scale).round() as usize,
+            (1000. * scale).round() as usize,
+        ],
+        export.quality,
+    );
+    let height = (image.size[1] as f32 / scale).ceil() as u32 + 240;
     let mut svg = report(height);
     text(
         &mut svg,
@@ -224,19 +271,27 @@ fn heatmap(
         60.,
         32,
         "start",
-        "Mapa de calor de densidad — Todas las calles",
+        &tr.tr("metrics.report.heatmapTitle", &[]),
     );
-    svg.push_str(&format!(
-        "<defs><linearGradient id='heat'><stop stop-color='#00dc28'/><stop offset='.5' stop-color='#ffdc28'/><stop offset='1' stop-color='#ff0028'/></linearGradient></defs><rect x='48' y='{}' width='1504' height='22' fill='url(#heat)'/>",
-        height - 100
-    ));
+    let stops = [0., 0.5, 1.]
+        .map(|density| {
+            let color = crate::heatmap::density_color(density);
+            format!(
+                "<stop offset='{density}' stop-color='#{:02x}{:02x}{:02x}'/>",
+                color.r(),
+                color.g(),
+                color.b()
+            )
+        })
+        .join("");
+    svg.push_str(&format!("<defs><linearGradient id='heat'>{stops}</linearGradient></defs><rect x='48' y='{}' width='1504' height='22' fill='url(#heat)'/>", height - 100));
     text(
         &mut svg,
         48.,
         (height - 38) as f64,
         24,
         "start",
-        "Densidad baja: 0% · Gris: obstáculos",
+        &tr.tr("metrics.report.lowDensity", &[]),
     );
     text(
         &mut svg,
@@ -244,13 +299,14 @@ fn heatmap(
         (height - 38) as f64,
         24,
         "end",
-        "Densidad alta: 100%",
+        &tr.tr("metrics.report.highDensity", &[]),
     );
-    let mut pixmap = rasterize(svg, options)?;
-    let left = (WIDTH as usize - image.size[0]) / 2;
+    let mut pixmap = rasterize(svg, options, scale)?;
+    let width = pixmap.width() as usize;
+    let left = (width - image.size[0]) / 2;
     for y in 0..image.size[1] {
         for x in 0..image.size[0] {
-            let offset = ((y + 95) * WIDTH as usize + left + x) * 4;
+            let offset = ((y + (95. * scale).round() as usize) * width + left + x) * 4;
             pixmap.data_mut()[offset..offset + 4]
                 .copy_from_slice(&image.pixels[y * image.size[0] + x].to_array());
         }
@@ -259,30 +315,47 @@ fn heatmap(
 }
 
 /// Seven legacy names, complete chart history, and a freshly calculated heatmap.
-/// Spanish report text is stable across UI languages, as are CSV and JSON.
+/// Default report settings for callers that do not have an export-language draft.
 pub fn build_image_zip(
     history: &[Point],
     document: &MapDocument,
     included: usize,
 ) -> Result<Vec<u8>, String> {
+    build_image_zip_with_options(history, document, included, ImageOptions::default())
+}
+
+pub fn build_image_zip_with_options(
+    history: &[Point],
+    document: &MapDocument,
+    included: usize,
+    export: ImageOptions,
+) -> Result<Vec<u8>, String> {
     let mut options = usvg::Options::default();
     options.fontdb_mut().load_system_fonts();
-    let tr = Translator::new(Language::Spanish);
+    let tr = Translator::new(export.language);
+    let scale = export.quality.width() as f32 / WIDTH as f32 * export.quality.samples() as f32;
     let mut zip = zip::ZipWriter::new(Cursor::new(Vec::new()));
     let options_zip =
         zip::write::SimpleFileOptions::default().compression_method(zip::CompressionMethod::Stored);
     let mut add = |name, image: tiny_skia::Pixmap| -> Result<(), String> {
         zip.start_file(name, options_zip)
             .map_err(|e| e.to_string())?;
-        zip.write_all(&png(&image)?).map_err(|e| e.to_string())
+        zip.write_all(&png(&image, export.quality.samples())?)
+            .map_err(|e| e.to_string())
     };
     for (name, metric) in CHARTS {
-        add(name, rasterize(chart(history, metric, &tr), &options)?)?;
+        add(
+            name,
+            rasterize(chart(history, metric, &tr), &options, scale)?,
+        )?;
     }
     add(
         "resumen.png",
-        rasterize(summary(history, document, included, &tr), &options)?,
+        rasterize(summary(history, document, included, &tr), &options, scale)?,
     )?;
-    add("mapa_de_calor.png", heatmap(document, &options)?)?;
+    add(
+        "mapa_de_calor.png",
+        heatmap(document, &options, scale, export, &tr)?,
+    )?;
     Ok(zip.finish().map_err(|e| e.to_string())?.into_inner())
 }

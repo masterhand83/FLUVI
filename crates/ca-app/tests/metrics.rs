@@ -269,6 +269,54 @@ fn graph_hover_immediately_shows_sample_value_time_and_marker() {
 }
 
 #[test]
+fn narrow_live_charts_have_thin_lines_and_intermediate_time_labels() {
+    use eframe::egui;
+    let mut panel = chart_points();
+    for second in [6, 8, 10] {
+        let mut point = panel.history()[0];
+        point.clock = Clock::new(1, 7, 0, second).unwrap();
+        point.elapsed_seconds = u64::from(second);
+        panel.receive(Packet::Point(point));
+    }
+    let ctx = egui::Context::default();
+    let output = ctx.run(
+        egui::RawInput {
+            screen_rect: Some(egui::Rect::from_min_size(
+                egui::Pos2::ZERO,
+                egui::vec2(270., 1800.),
+            )),
+            ..Default::default()
+        },
+        |ctx| {
+            egui::CentralPanel::default().show(ctx, |ui| {
+                panel.show(ui, &ca_app::shell::Shell::load(None));
+            });
+        },
+    );
+    let labels: Vec<_> = output
+        .shapes
+        .iter()
+        .filter_map(|s| match &s.shape {
+            egui::Shape::Text(text) => Some(text.galley.job.text.as_str()),
+            _ => None,
+        })
+        .collect();
+    for label in ["07:00:02", "07:00:06", "07:00:10"] {
+        assert!(labels.contains(&label), "{label}");
+    }
+    let lines: Vec<_> = output
+        .shapes
+        .iter()
+        .filter_map(|s| match &s.shape {
+            egui::Shape::Path(path) => Some(path),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(lines.len(), 5);
+    assert!(lines.iter().all(|line| line.stroke.width <= 1.25));
+}
+
+#[test]
 fn full_or_closed_chart_channel_never_blocks_or_loses_export_history() {
     let document = MapDocument::demo();
     let mut metrics = Metrics::new(document.model().streets());

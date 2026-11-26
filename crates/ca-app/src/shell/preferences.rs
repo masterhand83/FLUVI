@@ -1,4 +1,5 @@
 use super::Language;
+use crate::graphics::ExportQuality;
 use serde_json::{Value, json};
 use std::{
     io,
@@ -12,6 +13,7 @@ pub struct Preferences {
     pub panels_open: [bool; 7],
     pub cell_detection: bool,
     pub dark_mode: bool,
+    pub export_quality: ExportQuality,
 }
 
 impl Default for Preferences {
@@ -22,6 +24,7 @@ impl Default for Preferences {
             panels_open: [true, false, false, false, false, false, false],
             cell_detection: false,
             dark_mode: false,
+            export_quality: ExportQuality::Balance,
         }
     }
 }
@@ -39,6 +42,13 @@ impl Preferences {
         };
         let mut prefs = defaults;
         let mut warning = false;
+        if let Some(value) = object.get("export_quality") {
+            if let Some(quality) = value.as_str().and_then(ExportQuality::from_code) {
+                prefs.export_quality = quality;
+            } else {
+                warning = true;
+            }
+        }
         if let Some(value) = object.get("language") {
             match value.as_str() {
                 Some("es") => prefs.language = Language::Spanish,
@@ -85,6 +95,7 @@ impl Preferences {
             "panels_open": self.panels_open,
             "cell_detection": self.cell_detection,
             "dark_mode": self.dark_mode,
+            "export_quality": self.export_quality.code(),
         });
         // Write beside the destination, then replace it. A partial write never
         // destroys the last valid preferences file.

@@ -168,3 +168,119 @@ fn heatmap_is_fresh_even_with_no_selected_metric_roads_or_open_dialog() {
         );
     }
 }
+
+#[test]
+fn image_language_and_quality_change_reports_but_keep_names_and_text_exports_stable() {
+    use ca_app::{
+        graphics::ExportQuality,
+        metric_exports::{ImageOptions, build_image_zip_with_options},
+        shell::Language,
+    };
+    let history = history();
+    let document = ca_core::map_json::MapDocument::demo();
+    let options = ImageOptions {
+        language: Language::English,
+        quality: ExportQuality::Performance,
+    };
+    let english =
+        archive_files(build_image_zip_with_options(&history, &document, 1, options).unwrap());
+    let spanish = archive_files(
+        build_image_zip_with_options(
+            &history,
+            &document,
+            1,
+            ImageOptions {
+                language: Language::Spanish,
+                ..options
+            },
+        )
+        .unwrap(),
+    );
+    assert_eq!(
+        english.keys().collect::<Vec<_>>(),
+        spanish.keys().collect::<Vec<_>>()
+    );
+    for name in english.keys() {
+        assert_ne!(
+            english[name], spanish[name],
+            "{name} must use the selected language"
+        );
+    }
+    for (quality, width) in [
+        (ExportQuality::Balance, 1600),
+        (ExportQuality::Quality, 2400),
+        (ExportQuality::Ultraquality, 3200),
+    ] {
+        let files = archive_files(
+            build_image_zip_with_options(
+                &history,
+                &document,
+                1,
+                ImageOptions { quality, ..options },
+            )
+            .unwrap(),
+        );
+        for bytes in files.values() {
+            let image = image::load_from_memory(bytes).unwrap();
+            assert_eq!(image.width(), width);
+        }
+        assert_ne!(files["densidad.png"], english["densidad.png"]);
+    }
+    assert_eq!(
+        build_csv(&history, &context()).content,
+        include_str!("fixtures/metric-exports/all.csv")
+    );
+    assert_eq!(
+        standalone_json(&history, &context()).content,
+        include_str!("fixtures/metric-exports/live.json")
+    );
+}
+
+#[test]
+fn exported_charts_have_thin_traces_and_six_time_ticks() {
+    use ca_app::{
+        graphics::ExportQuality,
+        metric_exports::{ImageOptions, build_image_zip_with_options},
+        shell::Language,
+    };
+    let points: Vec<_> = history()
+        .into_iter()
+        .take(6)
+        .map(|mut p| {
+            p.density = 20.;
+            p
+        })
+        .collect();
+    let files = archive_files(
+        build_image_zip_with_options(
+            &points,
+            &ca_core::map_json::MapDocument::demo(),
+            1,
+            ImageOptions {
+                language: Language::English,
+                quality: ExportQuality::Performance,
+            },
+        )
+        .unwrap(),
+    );
+    let image = image::load_from_memory(&files["densidad.png"])
+        .unwrap()
+        .to_rgb8();
+    // Six evenly spaced time positions over this six-sample chart, with visible tick marks.
+    for x in [440, 700, 960, 1220] {
+        assert!(
+            image.get_pixel(x, 625).0.iter().all(|v| *v < 240),
+            "time tick at {x}"
+        );
+    }
+    let colored = (170..200)
+        .filter(|y| {
+            let p = image.get_pixel(800, *y);
+            i16::from(p[2]) - i16::from(p[0]) > 80
+        })
+        .count();
+    assert!(
+        (1..=2).contains(&colored),
+        "thin density trace covers {colored} pixels"
+    );
+}

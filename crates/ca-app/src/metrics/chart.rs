@@ -160,13 +160,10 @@ pub(super) fn show(ui: &mut egui::Ui, points: &[Point], metric: Metric, shell: &
     if points.is_empty() {
         return;
     }
-    let ticks = if points.len() == 1 {
-        1
-    } else if plot.width() < 220. {
-        2
-    } else {
-        3
-    };
+    // Leave room for full HH:MM:SS labels, including the edge-aligned labels.
+    let ticks = ((plot.width() / 90.).floor() as usize + 1)
+        .clamp(2, 6)
+        .min(points.len());
     for tick in 0..ticks {
         let index = if ticks == 1 {
             0
@@ -206,7 +203,7 @@ pub(super) fn show(ui: &mut egui::Ui, points: &[Point], metric: Metric, shell: &
     if path.len() == 1 {
         painter.circle_filled(path[0], 3., colour);
     } else {
-        painter.add(egui::Shape::line(path, egui::Stroke::new(2_f32, colour)));
+        painter.add(egui::Shape::line(path, egui::Stroke::new(1_f32, colour)));
     }
     if let Some(pointer) = response.hover_pos() {
         let index = (((pointer.x - plot.left()) / plot.width()).clamp(0., 1.)

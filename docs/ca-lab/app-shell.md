@@ -32,9 +32,10 @@ The JSON file is `fluvi/preferences.json` below:
 - Windows: `%APPDATA%`.
 
 Fields are `language` (`es` or `en`), `sidebar_visible`, `panels_open`
-(seven booleans in sidebar order), `cell_detection`, and `dark_mode`.
+(seven booleans in sidebar order), `cell_detection`, `dark_mode`, and
+`export_quality` (`performance`, `balance`, `quality`, or `ultraquality`).
 Defaults are Spanish, visible sidebar, only About open, cell detection off,
-and light mode. Missing values use defaults. Invalid fields use defaults
+light mode, and Balance export quality. Missing values use defaults. Invalid fields use defaults
 independently and produce a warning. Invalid JSON uses all defaults and warns.
 A missing file is a normal first start. Saves write a neighboring temporary
 file before replacing the old file.
@@ -43,6 +44,9 @@ The translator is fixed when the shell starts. Changing the language saves
 the next-start preference and shows a notice in the current language. It does
 not change active text, play/pause, speed, step requests, or traffic state.
 Cell detection controls map-cell hover text. It does not disable cell clicks.
+Advanced settings opens a modal with a Graphics section. Export quality saves
+immediately and controls metric PNG resolution/sampling and the separate heatmap
+preview. It does not change the main simulation map.
 
 ## Startup and verification
 

@@ -1,4 +1,6 @@
-use super::{Context, Snapshot, build_csv, build_image_zip, standalone_json};
+use super::{
+    Context, ImageOptions, Snapshot, build_csv, build_image_zip_with_options, standalone_json,
+};
 use crate::capture::SaveResult;
 use crossbeam_channel::{Receiver, Sender, bounded};
 use eframe::egui;
@@ -42,6 +44,7 @@ fn timestamp() -> String {
 /// Dropping a cancelled request therefore wakes the waiting worker.
 pub fn start_save(
     kind: Kind,
+    options: ImageOptions,
     title: String,
     repaint: egui::Context,
 ) -> std::io::Result<(Sender<Snapshot>, SaveJob)> {
@@ -78,7 +81,12 @@ pub fn start_save(
                         )
                     }
                     Kind::Images => (
-                        build_image_zip(&snapshot.history, &snapshot.document, snapshot.included)?,
+                        build_image_zip_with_options(
+                            &snapshot.history,
+                            &snapshot.document,
+                            snapshot.included,
+                            options,
+                        )?,
                         format!(
                             "metricas_imagenes_{}.zip",
                             context.export_date.replace([':', '.'], "-")

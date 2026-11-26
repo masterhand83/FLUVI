@@ -48,6 +48,7 @@ pub struct Shell {
     notices: VecDeque<Notice>,
     confirmations: VecDeque<Confirmation>,
     help: Option<bool>,
+    advanced_settings: bool,
 }
 
 impl Shell {
@@ -63,6 +64,7 @@ impl Shell {
             notices: VecDeque::new(),
             confirmations: VecDeque::new(),
             help: None,
+            advanced_settings: false,
         };
         if warning {
             shell.notify(Severity::Warning, shell.tr("shell.preferencesWarning", &[]));

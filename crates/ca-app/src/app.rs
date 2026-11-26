@@ -29,6 +29,7 @@ struct Startup {
 pub struct App {
     capture_job: Option<ca_app::capture::SaveJob>,
     metric_export_job: Option<ca_app::metric_exports::SaveJob>,
+    metric_export_dialog: ca_app::metric_exports::ExportDialog,
     vehicle_heat: bool,
     heatmap: ca_app::heatmap::HeatmapDialog,
     next_heatmap: std::time::Instant,
@@ -73,6 +74,33 @@ pub struct App {
 }
 
 impl App {
+    fn start_metric_export(
+        &mut self,
+        ctx: &egui::Context,
+        kind: ca_app::metric_exports::Kind,
+        options: ca_app::metric_exports::ImageOptions,
+    ) {
+        if self.metric_export_job.is_some() {
+            return;
+        }
+        let job = ca_app::metric_exports::start_save(
+            kind,
+            options,
+            self.shell.tr(kind.key(), &[]),
+            ctx.clone(),
+        )
+        .ok()
+        .and_then(|(snapshot, job)| self.commands.export_metrics(snapshot).then_some(job));
+        if let Some(job) = job {
+            self.metric_export_job = Some(job);
+        } else {
+            self.shell.notify(
+                ca_app::shell::Severity::Error,
+                self.shell.tr("metrics.export.failed", &[]),
+            );
+        }
+    }
+
     fn select_metric_streets(&mut self, included: Vec<bool>) {
         if self.commands.edit(Edit::MetricStreets(included.clone())) {
             self.metrics.accept_selection(included);
@@ -319,6 +347,7 @@ impl App {
         session.register_reset(ResetPhase::Features, |app| {
             app.heatmap = Default::default();
             app.metrics = Default::default();
+            app.metric_export_dialog = Default::default();
             app.scenarios = Default::default();
             app.transport = TransportControls::default();
             app.step_ticket = 0;
@@ -329,6 +358,7 @@ impl App {
         });
         session.register_scenario_reset(|app| {
             app.metrics.receive(ca_app::metrics::Packet::Reset);
+            app.metric_export_dialog = Default::default();
             app.buildings.reset_parking_occupancy();
             app.progress.generation = 0;
             app.progress.population = 0;
@@ -338,6 +368,7 @@ impl App {
         Ok(Self {
             capture_job: None,
             metric_export_job: None,
+            metric_export_dialog: Default::default(),
             vehicle_heat: false,
             heatmap: Default::default(),
             next_heatmap: std::time::Instant::now(),
@@ -649,22 +680,14 @@ impl App {
             Some(PanelAction::Metrics(action)) => match action {
                 ca_app::metrics::Action::Export(kind) => {
                     if self.metric_export_job.is_none() {
-                        let job = ca_app::metric_exports::start_save(
-                            kind,
-                            self.shell.tr(kind.key(), &[]),
-                            ctx.clone(),
-                        )
-                        .ok()
-                        .and_then(|(snapshot, job)| {
-                            self.commands.export_metrics(snapshot).then_some(job)
-                        });
-                        if let Some(job) = job {
-                            self.metric_export_job = Some(job);
+                        let options = ca_app::metric_exports::ImageOptions {
+                            language: self.shell.preferences().language,
+                            quality: self.shell.preferences().export_quality,
+                        };
+                        if matches!(kind, ca_app::metric_exports::Kind::Images) {
+                            self.metric_export_dialog.open(options);
                         } else {
-                            self.shell.notify(
-                                ca_app::shell::Severity::Error,
-                                self.shell.tr("metrics.export.failed", &[]),
-                            );
+                            self.start_metric_export(ctx, kind, options);
                         }
                     }
                 }
@@ -1236,7 +1259,8 @@ impl eframe::App for App {
                 self.shell.notify(severity, self.shell.tr(key, &[]));
             }
         }
-        self.metrics.exporting = self.metric_export_job.is_some();
+        self.metrics.exporting =
+            self.metric_export_job.is_some() || self.metric_export_dialog.is_open();
         if let Some(job) = &self.capture_job {
             match job.result.try_recv() {
                 Ok(result) => {
@@ -1291,6 +1315,9 @@ impl eframe::App for App {
         }
         self.controls(ctx);
         self.control_panel(ctx);
+        if let Some(options) = self.metric_export_dialog.show(ctx, &self.shell) {
+            self.start_metric_export(ctx, ca_app::metric_exports::Kind::Images, options);
+        }
         self.time_dialogs(ctx);
         if self.heatmap.is_open() && std::time::Instant::now() >= self.next_heatmap {
             self.commands.request_heatmap();

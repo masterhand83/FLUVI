@@ -36,7 +36,7 @@ impl Shell {
                     ];
                     egui::ScrollArea::vertical()
                         .auto_shrink([false, false])
-                        .max_height((ui.available_height() - 230.0).max(60.0))
+                        .max_height((ui.available_height() - 260.0).max(60.0))
                         .show(ui, |ui| {
                             for (index, section) in sections.iter().enumerate() {
                                 let arrow = if prefs.panels_open[index] {
@@ -80,6 +80,9 @@ impl Shell {
                         self.tr("settings.cellDetection.label", &[]),
                     );
                     ui.checkbox(&mut prefs.dark_mode, self.tr("settings.darkMode.dark", &[]));
+                    if ui.button(self.tr("graphics.advanced", &[])).clicked() {
+                        self.advanced_settings = true;
+                    }
                 });
         } else {
             egui::TopBottomPanel::top("shell-show-sidebar").show(ctx, |ui| {
@@ -154,6 +157,33 @@ impl Shell {
             }
             if let Some(answer) = answer {
                 self.resolve_confirmation(answer);
+            }
+        } else if self.advanced_settings {
+            let mut prefs = self.preferences().clone();
+            let mut close = false;
+            let modal = egui::Modal::new("advanced-settings".into()).show(ctx, |ui| {
+                ui.set_width(420.);
+                ui.heading(self.tr("graphics.advanced", &[]));
+                egui::CollapsingHeader::new(self.tr("graphics.section", &[]))
+                    .default_open(true)
+                    .show(ui, |ui| {
+                        ui.strong(self.tr("graphics.exportQuality", &[]));
+                        for quality in crate::graphics::ExportQuality::ALL {
+                            ui.radio_value(
+                                &mut prefs.export_quality,
+                                quality,
+                                self.tr(quality.key(), &[]),
+                            );
+                        }
+                        ui.small(self.tr("graphics.description", &[]));
+                    });
+                close = ui.button(self.tr("common.close", &[])).clicked();
+            });
+            if prefs != *self.preferences() {
+                let _ = self.set_preferences(prefs);
+            }
+            if close || modal.should_close() {
+                self.advanced_settings = false;
             }
         } else if let Some(instructions) = self.help {
             let mut close = false;
