@@ -7,6 +7,11 @@ and vehicle buffers through `ca-gpu`. `ca-app` owns the UI, tick timing, logging
 and F12 profiler toggle. The smoke run checks completed frames, completed traffic
 ticks, a non-zero vehicle count, and app errors with a real native window.
 
+The optional GPU street-update trial showed no full-tick speedup on the
+development laptop and was not merged. CPU remains the only simulation mode.
+See [street-update-performance.md](street-update-performance.md) for the CPU,
+windowed, and GPU comparison measurements and repeat commands.
+
 Use `ca-core::metrics` for tick-based traffic estimates on the simulation side.
 Keep `ca-analysis` for native metric-file analysis. Use bounded input/output
 channels, non-blocking result delivery, and shutdown when input closes. Never

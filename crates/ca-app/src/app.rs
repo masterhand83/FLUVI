@@ -364,6 +364,24 @@ impl App {
         smoke_frames: Option<u64>,
         report_tx: Sender<Report>,
     ) -> anyhow::Result<Self> {
+        Self::with_document(
+            cc,
+            smoke_frames,
+            report_tx,
+            MapDocument::campus(),
+            10.0,
+            true,
+        )
+    }
+
+    pub fn with_document(
+        cc: &eframe::CreationContext<'_>,
+        smoke_frames: Option<u64>,
+        report_tx: Sender<Report>,
+        document: MapDocument,
+        rate: f64,
+        playing: bool,
+    ) -> anyhow::Result<Self> {
         let render = cc
             .wgpu_render_state
             .as_ref()
@@ -373,7 +391,7 @@ impl App {
         let adapter = format!("{} ({:?})", info.name, info.backend);
         let (tx, events) = bounded(2);
         let (commands, requests) = command_channel();
-        let mut session = MapSession::new(MapDocument::campus());
+        let mut session = MapSession::new(document);
         session.register_reset(ResetPhase::Pause, |app: &mut Self| app.playing = false);
         session.register_reset(ResetPhase::Tools, |app| {
             app.reference = Default::default();
@@ -446,8 +464,8 @@ impl App {
             progress: Progress::default(),
             adapter,
             error: None,
-            playing: true,
-            rate: 10.0,
+            playing,
+            rate,
             step_ticket: 0,
             profiler: false,
             smoke_frames,
@@ -564,10 +582,11 @@ impl App {
             let device = startup.render.device.clone();
             let format = startup.render.target_format;
             let repaint = ctx.clone();
+            let document = self.session.as_ref().expect("session").document().clone();
             std::thread::Builder::new()
                 .name("fluvi-gpu-startup".into())
                 .spawn(move || {
-                    let scene = TrafficScene::from_document(&MapDocument::campus());
+                    let scene = TrafficScene::from_document(&document);
                     let display = TrafficDisplay::new(&device, &scene, format);
                     let _ = sender.try_send((scene, display));
                     repaint.request_repaint();
