@@ -7,6 +7,29 @@ use ca_gpu::{Capture, CaptureImage, CapturePlan, CapturedImage, TrafficScene, Ve
 use crossbeam_channel::{Receiver, Sender, bounded};
 use eframe::{egui, wgpu};
 use image::ImageEncoder;
+use std::sync::atomic::{AtomicBool, Ordering};
+
+static CAPTURE_ACTIVE: AtomicBool = AtomicBool::new(false);
+
+/// One shared job limit for native whole-map and Complete Export captures.
+pub(crate) struct CapturePermit;
+
+impl CapturePermit {
+    pub(crate) fn acquire() -> std::io::Result<Self> {
+        CAPTURE_ACTIVE
+            .compare_exchange(false, true, Ordering::Acquire, Ordering::Relaxed)
+            .map(|_| Self)
+            .map_err(|_| {
+                std::io::Error::new(std::io::ErrorKind::WouldBlock, "capture already running")
+            })
+    }
+}
+
+impl Drop for CapturePermit {
+    fn drop(&mut self) {
+        CAPTURE_ACTIVE.store(false, Ordering::Release);
+    }
+}
 
 pub struct Snapshot {
     pub document: MapDocument,
@@ -171,6 +194,7 @@ fn artwork(document: &MapDocument, shift: [f32; 2]) -> Result<Vec<CaptureImage>,
 }
 
 pub fn start_save(title: String, repaint: egui::Context) -> std::io::Result<SaveJob> {
+    let permit = CapturePermit::acquire()?;
     let (snapshot, snapshots) = bounded(1);
     let (result_tx, result) = bounded(1);
     std::thread::Builder::new()
@@ -198,6 +222,7 @@ pub fn start_save(title: String, repaint: egui::Context) -> std::io::Result<Save
                 Ok(SaveResult::Saved)
             })()
             .unwrap_or_else(SaveResult::Failed);
+            drop(permit);
             let _ = result_tx.try_send(result);
             repaint.request_repaint();
         })?;

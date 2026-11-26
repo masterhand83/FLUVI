@@ -340,26 +340,40 @@ pub(super) fn build_image_zip_reporting(
     export: ImageOptions,
     mut completed: impl FnMut(usize),
 ) -> Result<Vec<u8>, String> {
-    let mut options = usvg::Options::default();
-    options.fontdb_mut().load_system_fonts();
-    let tr = Translator::new(export.language);
-    let scale = export.quality.width() as f32 / WIDTH as f32 * export.quality.samples() as f32;
     let mut zip = zip::ZipWriter::new(Cursor::new(Vec::new()));
     let options_zip =
         zip::write::SimpleFileOptions::default().compression_method(zip::CompressionMethod::Stored);
     let mut done = 0;
-    let mut add = |name, image: tiny_skia::Pixmap| -> Result<(), String> {
+    write_images(history, document, included, export, "", |name, bytes| {
         zip.start_file(name, options_zip)
             .map_err(|e| e.to_string())?;
-        zip.write_all(&png(&image, export.quality.samples())?)
-            .map_err(|e| e.to_string())?;
+        zip.write_all(bytes).map_err(|e| e.to_string())?;
         done += 1;
         completed(done);
         Ok(())
+    })?;
+    Ok(zip.finish().map_err(|e| e.to_string())?.into_inner())
+}
+
+/// Stream each encoded artifact once. Only the chart directory differs between archives.
+pub(super) fn write_images(
+    history: &[Point],
+    document: &MapDocument,
+    included: usize,
+    export: ImageOptions,
+    chart_prefix: &str,
+    mut write: impl FnMut(&str, &[u8]) -> Result<(), String>,
+) -> Result<(), String> {
+    let mut options = usvg::Options::default();
+    options.fontdb_mut().load_system_fonts();
+    let tr = Translator::new(export.language);
+    let scale = export.quality.width() as f32 / WIDTH as f32 * export.quality.samples() as f32;
+    let mut add = |name: &str, image: tiny_skia::Pixmap| -> Result<(), String> {
+        write(name, &png(&image, export.quality.samples())?)
     };
     for (name, metric) in CHARTS {
         add(
-            name,
+            &format!("{chart_prefix}{name}"),
             rasterize(chart(history, metric, &tr), &options, scale)?,
         )?;
     }
@@ -371,5 +385,5 @@ pub(super) fn build_image_zip_reporting(
         "mapa_de_calor.png",
         heatmap(document, &options, scale, export, &tr)?,
     )?;
-    Ok(zip.finish().map_err(|e| e.to_string())?.into_inner())
+    Ok(())
 }

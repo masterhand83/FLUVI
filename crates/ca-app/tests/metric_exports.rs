@@ -7,9 +7,8 @@ use ca_core::{
 #[test]
 fn export_progress_stays_incomplete_when_the_snapshot_is_cancelled() {
     use ca_app::{
-        capture::SaveResult,
         job_progress::Stage,
-        metric_exports::{ImageOptions, Kind, start_save},
+        metric_exports::{ImageOptions, Kind, SaveResult, start_save},
     };
     let (snapshot, job) = start_save(
         Kind::Csv,

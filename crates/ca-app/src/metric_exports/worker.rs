@@ -1,8 +1,8 @@
 use super::{
     Context, ImageOptions, Snapshot, build_csv, images::build_image_zip_reporting, standalone_json,
 };
-use crate::capture::SaveResult;
 use crate::job_progress::{Progress, Stage};
+use crate::shell::Severity;
 use crossbeam_channel::{Receiver, Sender, bounded};
 use eframe::egui;
 
@@ -11,6 +11,7 @@ pub enum Kind {
     Csv,
     Json,
     Images,
+    Complete,
 }
 
 impl Kind {
@@ -19,6 +20,7 @@ impl Kind {
             Self::Csv => "metrics.export.csv",
             Self::Json => "metrics.export.json",
             Self::Images => "metrics.export.images",
+            Self::Complete => "metrics.export.complete",
         }
     }
 }
@@ -26,6 +28,52 @@ impl Kind {
 pub struct SaveJob {
     pub result: Receiver<SaveResult>,
     pub progress: Progress,
+}
+
+pub enum SaveResult {
+    Saved,
+    SavedWithoutAnalysis(String),
+    Cancelled,
+    Failed(String),
+}
+
+impl SaveResult {
+    pub fn notice(&self) -> (Severity, &'static str) {
+        match self {
+            Self::Saved => (Severity::Success, "metrics.export.saved"),
+            Self::SavedWithoutAnalysis(error) => {
+                tracing::warn!(%error, "metric export saved without analysis");
+                (Severity::Warning, "metrics.export.analysisFailed")
+            }
+            Self::Cancelled => (Severity::Info, "metrics.export.cancelled"),
+            Self::Failed(error) => {
+                tracing::warn!(%error, "metric export failed");
+                (
+                    Severity::Error,
+                    if error == "metrics.export.empty" {
+                        "metrics.export.empty"
+                    } else {
+                        "metrics.export.failed"
+                    },
+                )
+            }
+        }
+    }
+}
+
+/// Worker-only final save boundary. Analysis warnings require a successful write.
+pub fn save_file(
+    path: &std::path::Path,
+    bytes: &[u8],
+    analysis_error: Option<String>,
+) -> SaveResult {
+    match std::fs::write(path, bytes) {
+        Err(error) => SaveResult::Failed(error.to_string()),
+        Ok(()) => match analysis_error {
+            Some(error) => SaveResult::SavedWithoutAnalysis(error),
+            None => SaveResult::Saved,
+        },
+    }
 }
 
 fn timestamp() -> String {
@@ -50,6 +98,11 @@ pub fn start_save(
     title: String,
     repaint: egui::Context,
 ) -> std::io::Result<(Sender<Snapshot>, SaveJob)> {
+    let capture_permit = if matches!(kind, Kind::Complete) {
+        Some(crate::capture::CapturePermit::acquire()?)
+    } else {
+        None
+    };
     let (snapshot, snapshots) = bounded::<Snapshot>(1);
     let (result_tx, result) = bounded(1);
     let progress = Progress::default();
@@ -68,6 +121,7 @@ pub fn start_save(
                     time: snapshot.document.time().clone(),
                     export_date: timestamp(),
                 };
+                let mut analysis_error = None;
                 let (bytes, name, extension) = match kind {
                     Kind::Csv | Kind::Json => {
                         let file = if matches!(kind, Kind::Csv) {
@@ -99,6 +153,29 @@ pub fn start_save(
                         ),
                         "zip",
                     ),
+                    Kind::Complete => {
+                        worker_progress.set(15, Stage::Images);
+                        let viewport = snapshot
+                            .viewport
+                            .as_ref()
+                            .ok_or("Missing export viewport")?
+                            .capture(&snapshot.document)?;
+                        let prepared = super::CompleteExport::prepare(
+                            &snapshot, &context, &viewport, options,
+                        )?;
+                        worker_progress.set(65, Stage::Analyzing);
+                        let archive = prepared.finish()?;
+                        analysis_error = archive.analysis_error;
+                        worker_progress.set(85, Stage::Packing);
+                        (
+                            archive.bytes,
+                            format!(
+                                "exportacion_completa_{}.zip",
+                                context.export_date.replace([':', '.'], "-")
+                            ),
+                            "zip",
+                        )
+                    }
                 };
                 worker_progress.set(90, Stage::ChooseFile);
                 let Some(path) = rfd::FileDialog::new()
@@ -110,11 +187,17 @@ pub fn start_save(
                     return Ok(SaveResult::Cancelled);
                 };
                 worker_progress.set(95, Stage::Writing);
-                std::fs::write(path, bytes).map_err(|e| e.to_string())?;
-                worker_progress.set(100, Stage::Ready);
-                Ok(SaveResult::Saved)
+                let saved = save_file(&path, &bytes, analysis_error);
+                if matches!(
+                    saved,
+                    SaveResult::Saved | SaveResult::SavedWithoutAnalysis(_)
+                ) {
+                    worker_progress.set(100, Stage::Ready);
+                }
+                Ok(saved)
             })()
             .unwrap_or_else(SaveResult::Failed);
+            drop(capture_permit);
             let _ = result_tx.try_send(result);
             repaint.request_repaint();
         })?;

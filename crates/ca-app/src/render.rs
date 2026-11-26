@@ -89,8 +89,13 @@ impl CallbackTrait for BackgroundCallback {
 }
 
 /// Only view/control state is coalesced. Cell edits retain FIFO order.
+struct MetricExportRequest {
+    sender: Sender<ca_app::metric_exports::Snapshot>,
+    viewport: Option<(WorldView, [u32; 2])>,
+}
+
 pub struct Commands {
-    metric_exports: Sender<Sender<ca_app::metric_exports::Snapshot>>,
+    metric_exports: Sender<MetricExportRequest>,
     captures: Sender<Sender<ca_app::capture::Snapshot>>,
     heatmap_request: Sender<()>,
     heatmaps: Receiver<std::sync::Arc<ca_core::heatmap::Snapshot>>,
@@ -107,7 +112,7 @@ pub struct Commands {
 }
 
 pub struct Requests {
-    metric_exports: Receiver<Sender<ca_app::metric_exports::Snapshot>>,
+    metric_exports: Receiver<MetricExportRequest>,
     captures: Receiver<Sender<ca_app::capture::Snapshot>>,
     heatmap_request: Receiver<()>,
     heatmaps: Sender<std::sync::Arc<ca_core::heatmap::Snapshot>>,
@@ -169,8 +174,14 @@ pub fn command_channel() -> (Commands, Requests) {
 }
 
 impl Commands {
-    pub fn export_metrics(&self, snapshot: Sender<ca_app::metric_exports::Snapshot>) -> bool {
-        self.metric_exports.try_send(snapshot).is_ok()
+    pub fn export_metrics(
+        &self,
+        sender: Sender<ca_app::metric_exports::Snapshot>,
+        viewport: Option<(WorldView, [u32; 2])>,
+    ) -> bool {
+        self.metric_exports
+            .try_send(MetricExportRequest { sender, viewport })
+            .is_ok()
     }
     pub fn capture(&self, snapshot: Sender<ca_app::capture::Snapshot>) -> bool {
         self.captures.try_send(snapshot).is_ok()
@@ -431,6 +442,16 @@ impl Resources {
         }
         let published = (!request.playing || scenario_edited) && self.scene.publish_edits();
         self.display.set_view(queue, request.view);
+        // Complete Export freezes the last completed tick, not the next batch.
+        // Standalone metric exports retain their existing post-tick boundary.
+        let export_after_tick = match self.requests.metric_exports.try_recv() {
+            Ok(export) if export.viewport.is_some() => {
+                self.export_metrics(export, device, queue);
+                None
+            }
+            Ok(export) => Some(export),
+            Err(_) => None,
+        };
         let now = Instant::now();
         let elapsed = now.duration_since(self.last_tick);
         self.last_tick = now;
@@ -475,20 +496,8 @@ impl Resources {
                 queue: queue.clone(),
             });
         }
-        if let Ok(sender) = self.requests.metric_exports.try_recv() {
-            // Explicit user export: one coherent snapshot after ordered edits/ticks.
-            // Geometry, image encoding, and file dialogs stay on the worker.
-            let _ = sender.try_send(ca_app::metric_exports::Snapshot {
-                document: self.scene.document().clone(),
-                history: self.scene.metrics().history().to_vec(),
-                included: self
-                    .scene
-                    .metrics()
-                    .included()
-                    .iter()
-                    .filter(|&&v| v)
-                    .count(),
-            });
+        if let Some(export) = export_after_tick {
+            self.export_metrics(export, device, queue);
         }
         self.metric_delivery
             .publish(self.scene.metrics(), &self.requests.metrics);
@@ -515,6 +524,38 @@ impl Resources {
                 }
             }
         }
+    }
+}
+
+impl Resources {
+    fn export_metrics(
+        &self,
+        export: MetricExportRequest,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+    ) {
+        // Only explicit exports clone these buffers. All rendering stays on the worker.
+        let _ = export.sender.try_send(ca_app::metric_exports::Snapshot {
+            document: self.scene.document().clone(),
+            history: self.scene.metrics().history().to_vec(),
+            included: self
+                .scene
+                .metrics()
+                .included()
+                .iter()
+                .filter(|&&v| v)
+                .count(),
+            viewport: export
+                .viewport
+                .map(|(view, pixels)| ca_app::metric_exports::Viewport {
+                    view,
+                    pixels,
+                    shift: self.scene.shift(),
+                    style: self.request.vehicle_style,
+                    device: device.clone(),
+                    queue: queue.clone(),
+                }),
+        });
     }
 }
 
@@ -554,6 +595,68 @@ impl CallbackTrait for PaintCallback {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn complete_export_snapshot_keeps_history_map_and_viewport_after_later_ticks() {
+        let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor::from_env_or_default());
+        let adapter = pollster::block_on(instance.request_adapter(&Default::default())).unwrap();
+        let (device, queue) =
+            pollster::block_on(adapter.request_device(&Default::default())).unwrap();
+        let scene = TrafficScene::from_document(&ca_core::map_json::MapDocument::demo());
+        let format = wgpu::TextureFormat::Rgba8Unorm;
+        let display = TrafficDisplay::new(&device, &scene, format);
+        let (commands, requests) = command_channel();
+        let (events, _) = bounded(2);
+        let mut resources = Resources::new(scene, display, events, requests, format);
+        let view = WorldView {
+            origin: [3., 4.],
+            span: [20., 10.],
+        };
+        assert!(commands.send(
+            Paint {
+                playing: false,
+                step_ticket: 1,
+                ..resources.request
+            },
+            None
+        ));
+        resources.prepare(&device, &queue);
+        let (tx, rx) = bounded(1);
+        assert!(commands.export_metrics(tx, Some((view, [80, 40]))));
+        assert!(commands.send(
+            Paint {
+                playing: false,
+                step_ticket: 2,
+                ..resources.request
+            },
+            None
+        ));
+        resources.prepare(&device, &queue);
+        let snapshot = rx.try_recv().unwrap();
+        assert_eq!(snapshot.history.len(), 1);
+        let viewport = snapshot.viewport.as_ref().unwrap();
+        assert_eq!(viewport.view, view);
+        assert_eq!(viewport.pixels, [80, 40]);
+        let image = viewport.capture(&snapshot.document).unwrap();
+        let json = snapshot.document.to_json();
+        assert!(commands.send(
+            Paint {
+                playing: false,
+                step_ticket: 3,
+                view: WorldView {
+                    origin: [0.; 2],
+                    span: [100.; 2]
+                },
+                ..resources.request
+            },
+            None
+        ));
+        resources.prepare(&device, &queue);
+        assert_eq!(resources.scene.metrics().history().len(), 3);
+        assert_eq!(snapshot.history.len(), 1);
+        assert_eq!(snapshot.document.to_json(), json);
+        assert_eq!(viewport.capture(&snapshot.document).unwrap(), image);
+    }
 
     #[test]
     fn capture_snapshot_keeps_frames_and_edits_running_with_a_slow_worker() {

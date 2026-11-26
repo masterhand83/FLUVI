@@ -181,6 +181,7 @@ impl MetricsPanel {
             crate::metric_exports::Kind::Csv,
             crate::metric_exports::Kind::Json,
             crate::metric_exports::Kind::Images,
+            crate::metric_exports::Kind::Complete,
         ] {
             if ui
                 .add_enabled(

@@ -9,12 +9,42 @@ pub use images::{build_image_zip, build_image_zip_with_options};
 mod dialog;
 pub use dialog::{ExportDialog, ImageOptions};
 mod worker;
-pub use worker::{Kind, SaveJob, start_save};
+pub use worker::{Kind, SaveJob, SaveResult, save_file, start_save};
+mod complete;
+pub use complete::{CompleteArchive, CompleteExport};
 
 pub struct Snapshot {
     pub document: ca_core::map_json::MapDocument,
     pub history: Vec<Point>,
     pub included: usize,
+    pub viewport: Option<Viewport>,
+}
+
+/// Frozen camera and shared GPU handles. Only the export worker uses the handles.
+pub struct Viewport {
+    pub view: ca_core::camera::WorldView,
+    pub pixels: [u32; 2],
+    pub shift: [f32; 2],
+    pub style: ca_gpu::VehicleStyle,
+    pub device: eframe::wgpu::Device,
+    pub queue: eframe::wgpu::Queue,
+}
+
+impl Viewport {
+    pub fn capture(&self, document: &ca_core::map_json::MapDocument) -> Result<Vec<u8>, String> {
+        let image = crate::capture::capture_viewport(
+            crate::capture::Snapshot {
+                document: document.clone(),
+                shift: self.shift,
+                style: self.style,
+                device: self.device.clone(),
+                queue: self.queue.clone(),
+            },
+            self.view,
+            self.pixels,
+        )?;
+        crate::capture::encode_png(&image)
+    }
 }
 
 pub struct Context {

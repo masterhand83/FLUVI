@@ -68,6 +68,8 @@
   "metrics.export.csv": "Download metrics CSV",
   "metrics.export.json": "Download metrics JSON (latest 50)",
   "metrics.export.images": "Download seven PNG images (ZIP)",
+  "metrics.export.complete": "Complete Export (ZIP)",
+  "metrics.export.analysisFailed": "ZIP saved without analysis. See analisis_python_error.txt.",
   "metrics.export.busy": "Preparing export…",
   "metrics.export.saved": "Metrics saved.",
   "metrics.export.cancelled": "Export cancelled.",

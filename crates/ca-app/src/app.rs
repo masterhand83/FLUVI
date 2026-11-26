@@ -84,6 +84,21 @@ impl App {
         if self.metric_export_job.is_some() {
             return;
         }
+        let viewport = if matches!(kind, ca_app::metric_exports::Kind::Complete) {
+            self.map
+                .as_ref()
+                .and_then(|map| map.camera())
+                .map(|camera| {
+                    let view = camera.view();
+                    let end = std::array::from_fn(|i| view.origin[i] + view.span[i]);
+                    let pixels = camera
+                        .world_to_screen(end)
+                        .map(|size| (size * ctx.pixels_per_point()).round().max(1.) as u32);
+                    (view, pixels)
+                })
+        } else {
+            None
+        };
         let job = ca_app::metric_exports::start_save(
             kind,
             options,
@@ -91,7 +106,11 @@ impl App {
             ctx.clone(),
         )
         .ok()
-        .and_then(|(snapshot, job)| self.commands.export_metrics(snapshot).then_some(job));
+        .and_then(|(snapshot, job)| {
+            self.commands
+                .export_metrics(snapshot, viewport)
+                .then_some(job)
+        });
         if let Some(job) = job {
             self.metric_export_job = Some(job);
         } else {
@@ -1233,32 +1252,14 @@ impl eframe::App for App {
         if let Some(job) = &self.metric_export_job {
             let result = match job.result.try_recv() {
                 Ok(result) => Some(result),
-                Err(TryRecvError::Disconnected) => {
-                    Some(ca_app::capture::SaveResult::Failed("worker closed".into()))
-                }
+                Err(TryRecvError::Disconnected) => Some(
+                    ca_app::metric_exports::SaveResult::Failed("worker closed".into()),
+                ),
                 Err(TryRecvError::Empty) => None,
             };
             if let Some(result) = result {
                 self.metric_export_job = None;
-                let (severity, key) = match result {
-                    ca_app::capture::SaveResult::Saved => {
-                        (ca_app::shell::Severity::Success, "metrics.export.saved")
-                    }
-                    ca_app::capture::SaveResult::Cancelled => {
-                        (ca_app::shell::Severity::Info, "metrics.export.cancelled")
-                    }
-                    ca_app::capture::SaveResult::Failed(error) => {
-                        tracing::warn!(%error, "metric export failed");
-                        (
-                            ca_app::shell::Severity::Error,
-                            if error == "metrics.export.empty" {
-                                "metrics.export.empty"
-                            } else {
-                                "metrics.export.failed"
-                            },
-                        )
-                    }
-                };
+                let (severity, key) = result.notice();
                 self.shell.notify(severity, self.shell.tr(key, &[]));
             }
         }

@@ -644,6 +644,29 @@ Complete Export reuse; `build_image_zip` uses Spanish and Balance.
 Focused checks: `cargo test -p ca-app --test metric_exports --test metrics
 --test heatmap --test graphics --test metric_export_dialog --test control_panel`.
 
+### Complete Export ZIP
+
+Use Metrics → Complete Export (ZIP) to save the complete metric history, five
+charts under `graficas/`, summary, current map viewport, fresh heatmap, and native
+analysis in one archive. It uses the current UI language and saved export quality.
+File names and CSV/JSON data retain v1's Spanish format. In this archive, the
+fundamental plot keeps v1's `diagrama_fundamental.png` name; the separate analyzer
+dialog retains `diagramas_fundamentales.png`.
+
+One bounded render request copies the document and complete history after ordered
+edits, before the next tick batch. The request freezes the camera rectangle and
+physical pixel size.
+`metric_exports::CompleteExport::prepare` encodes all base artifacts on the export
+worker before `finish` starts analysis. Later ticks, camera moves, and map replacement
+cannot change those artifacts. No live chart or heatmap dialog state is used.
+Analyzer failure adds `analisis_python_error.txt` instead of the analysis JSON and
+three plots. A successful save then gives a translated warning, not a save error.
+Cancelled or failed writes do not report a saved ZIP.
+Whole-map capture and Complete Export share one capture-job limit.
+
+Focused checks: `cargo test -p ca-app --test complete_export` and
+`cargo test -p ca-app --bin ca-app complete_export_snapshot`.
+
 ### Native metrics analyzer
 
 Use Metrics → Metrics Analyzer to load a metrics CSV or JSON export. The dialog
