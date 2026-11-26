@@ -111,6 +111,9 @@ impl MapFrame {
 }
 
 pub struct MapInteraction {
+    painting: bool,
+    paint_gesture: bool,
+    last_painted: Option<CellRef>,
     building_input: bool,
     cell_picking: Option<CellPickMode>,
     editing_street: Option<usize>,
@@ -141,6 +144,9 @@ impl MapInteraction {
         index.sync(streets);
         let sorted = (0..names.len()).collect();
         Self {
+            painting: false,
+            paint_gesture: false,
+            last_painted: None,
             building_input: false,
             cell_picking: None,
             editing_street: None,
@@ -173,12 +179,26 @@ impl MapInteraction {
         self.camera.as_ref()
     }
 
+    pub fn set_painting(&mut self, active: bool) {
+        if active && !self.painting {
+            self.finish_edits();
+            self.clear_bulk();
+            self.select(None);
+        }
+        if active != self.painting {
+            self.last_painted = None;
+            self.paint_gesture = false;
+        }
+        self.painting = active;
+    }
+
     pub fn set_building_input(&mut self, active: bool) {
         self.building_input = active;
     }
 
     pub fn set_cell_picking(&mut self, mode: Option<CellPickMode>) {
         if mode.is_some() && mode != self.cell_picking {
+            self.painting = false;
             self.finish_edits();
             self.clear_bulk();
             self.select(None);
@@ -188,6 +208,7 @@ impl MapInteraction {
 
     pub fn set_drawing(&mut self, drawing: bool) {
         if drawing {
+            self.painting = false;
             self.clear_bulk();
         }
         self.drawing = drawing;
@@ -475,7 +496,8 @@ impl MapInteraction {
         let rect = ui.available_rect_before_wrap();
         let response = ui.allocate_rect(rect, egui::Sense::click_and_drag());
         let pointer = ui.input(|i| i.pointer.clone());
-        let bulk_started = !self.building_input
+        let bulk_started = !self.painting
+            && !self.building_input
             && self.cell_picking != Some(CellPickMode::Parking)
             && response.contains_pointer()
             && pointer.primary_pressed()
@@ -570,7 +592,7 @@ impl MapInteraction {
                     .hit_test(camera.screen_to_world((p - rect.min).into()))
             })
             .map(|c| c.street);
-        if self.cell_picking.is_some() || self.building_input {
+        if self.cell_picking.is_some() || self.building_input || self.painting {
             let hit = (!self.building_input && response.contains_pointer())
                 .then(|| pointer.hover_pos())
                 .flatten()
@@ -589,16 +611,62 @@ impl MapInteraction {
                     corners,
                 })
             });
-            if self.cell_picking.is_some() {
+            if self.cell_picking.is_some() || self.painting {
                 ui.ctx().set_cursor_icon(egui::CursorIcon::Crosshair);
             }
+            if pointer.primary_pressed() {
+                let pressed_in_map = ui.input(|i| {
+                    i.events
+                        .iter()
+                        .rev()
+                        .find_map(|event| {
+                            if let egui::Event::PointerButton {
+                                pos,
+                                button: egui::PointerButton::Primary,
+                                pressed: true,
+                                ..
+                            } = event
+                            {
+                                Some(rect.contains(*pos))
+                            } else {
+                                None
+                            }
+                        })
+                        .unwrap_or(false)
+                });
+                self.paint_gesture = self.painting
+                    && pressed_in_map
+                    && (response.is_pointer_button_down_on() || response.clicked());
+                self.last_painted = None;
+            }
+            if ui.input(|i| !i.focused || i.key_pressed(egui::Key::Escape)) {
+                self.paint_gesture = false;
+            }
+            let painted = if self.painting
+                && self.paint_gesture
+                && (pointer.primary_down() || response.clicked())
+            {
+                hit.filter(|cell| Some(*cell) != self.last_painted)
+            } else {
+                self.last_painted = None;
+                None
+            };
+            if painted.is_some() {
+                self.last_painted = painted;
+            }
+            if !pointer.primary_down() {
+                self.paint_gesture = false;
+                self.last_painted = None;
+            }
             return MapFrame {
-                picked_cell: response.clicked().then_some(hit).flatten(),
+                picked_cell: (!self.painting && response.clicked())
+                    .then_some(hit)
+                    .flatten(),
                 bulk_started: false,
                 bulk_rect: None,
                 rect,
                 view: camera.view(),
-                clicked: None,
+                clicked: painted,
                 tooltip: None,
                 preview,
                 vertex_edit: None,

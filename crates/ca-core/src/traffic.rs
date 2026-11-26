@@ -2,6 +2,8 @@
 
 #[path = "connections.rs"]
 pub mod connections;
+#[path = "disruptions.rs"]
+pub mod disruptions;
 #[path = "parking.rs"]
 pub mod parking;
 
@@ -80,6 +82,7 @@ pub struct Calle {
     spawned: Vec<u8>,
     parking_endpoints: Vec<Option<(usize, bool)>>,
     has_parking: bool,
+    marks: Vec<Option<disruptions::Disruption>>,
 }
 
 impl Calle {
@@ -118,6 +121,7 @@ impl Calle {
             spawned: vec![0; size],
             parking_endpoints: vec![None; size],
             has_parking: false,
+            marks: vec![None; size],
             cells,
         })
     }
@@ -144,6 +148,7 @@ impl Calle {
                         + crate::streets::angular_index(index, self.config.tamano, length);
                     if self.cells[old] != 0 {
                         resized.cells[new] = self.cells[old];
+                        resized.marks[new] = self.marks[old];
                     }
                     if self.waiting[old] {
                         resized.waiting[new] = true;
@@ -155,6 +160,7 @@ impl Calle {
             let old = lane * self.config.tamano;
             let new = lane * length;
             resized.cells[new..new + count].copy_from_slice(&self.cells[old..old + count]);
+            resized.marks[new..new + count].copy_from_slice(&self.marks[old..old + count]);
             resized.waiting[new..new + count].copy_from_slice(&self.waiting[old..old + count]);
         }
         *self = resized;
@@ -162,6 +168,10 @@ impl Calle {
 
     pub fn cells(&self) -> &[u8] {
         &self.cells
+    }
+
+    pub fn disruptions(&self) -> &[Option<disruptions::Disruption>] {
+        &self.marks
     }
 
     /// Panics if `lane` is out of bounds.
@@ -442,6 +452,8 @@ pub struct TrafficModel {
     random_state: u64,
     generation_override: Option<f64>,
     hourly_multiplier: f64,
+    rain: bool,
+    rain_probability: f64,
 }
 
 impl TrafficModel {
@@ -526,6 +538,8 @@ impl TrafficModel {
             random_state: seed,
             generation_override: None,
             hourly_multiplier: 1.0,
+            rain: false,
+            rain_probability: 0.1,
         }
     }
 
@@ -627,7 +641,7 @@ impl TrafficModel {
     }
 
     /// Observe phase completion without changing the snapshot or RNG sequence.
-    /// Rain, clock and metrics are not yet ported.
+    /// Clock advancement belongs to MapDocument; metrics are not yet ported.
     pub fn tick_with_hook(&mut self, mut hook: impl FnMut(TickPhase, &[Calle])) {
         for phase in [
             TickPhase::Generation,
@@ -658,6 +672,7 @@ impl TrafficModel {
                         street.change_lanes(&mut self.random_state);
                     }
                 }
+                TickPhase::Rain => self.apply_rain(),
                 _ => {}
             }
             hook(phase, &self.streets);

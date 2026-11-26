@@ -480,6 +480,44 @@ Focused checks: `cargo test -p ca-core --test virtual_time --test map_json`,
 `cargo test -p ca-app --test time_dialogs --test map_session`, and
 `cargo test -p ca-app --bin ca-app scenario_time_command`.
 
+### Disruptions, rain, and instant flood
+
+The Scenarios section owns lane-block, flood, and obstacle paint modes. Select
+pothole, worker, tree, cone, or flood in the texture selector. Press or drag over
+road cells to paint. Painting cancels the street-local edit session and other
+map tools. It does not move the camera or change occupied cells or parking
+endpoints. Clear Disruptions requires confirmation and keeps vehicles.
+
+`ca-core::disruptions` owns scenario actions and cell metadata. Metadata belongs
+to each street's physical cells, so dimension reconciliation and deletion retain
+only surviving marks (roundabouts use the existing angular remapping).
+Mass Flood replaces disruptions and floods empty cells outside lane 0; vehicles
+and parking endpoints stay. Random Potholes replaces disruptions with independent
+5% trials on eligible cells.
+
+Random rain starts off with a 10% probability. Each completed tick runs one trial
+after street updates and before the clock advances. Selection is uniform over
+eligible streets, then over that street's empty, non-parking cells. Rain uses
+no per-tick allocation. Stopping rain keeps existing floods.
+
+Instant flood is an additive one-shot action. Its session-only percentage starts
+at 10% and ranges from 1 to 100%. It uses partial Fisher-Yates selection and adds
+`min(round(total_cells * percent / 100), eligible_empty_cells)` floods. Positive
+half values round up, as in v1. The ticket's explicit count rule takes priority
+over v1's minimum-one exception when the rounded target is zero.
+
+Scenario edits use the ordered render queue and publish immediately, paused or
+running, without an extra tick. The packed GPU cell keeps the traffic value in
+the low byte and the texture ID in the next byte. Procedural textures distinguish
+all six marks. Screen-space rain particles run while random rain or flood paint
+is active; they do not change cells. Map replacement resets the scenario controls,
+rain switch, and instant-flood percentage.
+
+Focused checks: `cargo test -p ca-core --test disruptions`,
+`cargo test -p ca-app --test scenarios --test map_interaction --test control_panel`,
+`cargo test -p ca-app --bin ca-app disruption_commands`, and
+`cargo test -p ca-gpu --test traffic scenario_`.
+
 ### Map files and session replacement
 
 Use `ca-core::map_json::MapDocument` to validate map JSON before replacing

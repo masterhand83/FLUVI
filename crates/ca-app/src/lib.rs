@@ -15,6 +15,7 @@ pub mod map_session;
 pub mod parking;
 pub mod parking_form;
 mod preview;
+pub mod scenarios;
 pub mod shell;
 pub mod street_dialog;
 pub mod streets;

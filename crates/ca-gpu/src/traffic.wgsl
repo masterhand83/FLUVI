@@ -38,6 +38,47 @@ fn vehicle_colour(value: u32) -> vec3<f32> {
         default: { return vec3<f32>(0.95); }
     }
 }
+// Procedural obstacle textures stay sharp at every map zoom.
+// Mark IDs match Disruption's stable repr(u8), packed above the cell value.
+fn disruption_colour(mark: u32, uv: vec2<f32>) -> vec3<f32> {
+    let x = uv.x;
+    let y = uv.y;
+    switch mark {
+        case 2u: { // flood: blue water with light wave crests
+            let wave = sin(x * 24.0 + sin(y * 19.0) * 2.0);
+            return select(vec3<f32>(0.07,0.4,0.78),vec3<f32>(0.4,0.8,1.0),wave > 0.83);
+        }
+        case 3u: { // pothole: irregular dark center and stone rim
+            let radius = length((uv-vec2<f32>(0.5))*vec2<f32>(1.0,1.4));
+            return select(vec3<f32>(0.36,0.30,0.24),vec3<f32>(0.06,0.045,0.035),
+                radius < 0.32 + 0.03*sin(x*50.0));
+        }
+        case 4u: { // worker: helmet, high-visibility vest, and boots
+            if length(uv-vec2<f32>(0.5,0.29)) < 0.14 { return vec3<f32>(1.0,0.85,0.1); }
+            if abs(x-0.5)<0.18 && y>0.40 && y<0.68 { return vec3<f32>(1.0,0.5,0.05); }
+            if y>0.68 && y<0.9 && (abs(x-0.4)<0.07 || abs(x-0.6)<0.07) {
+                return vec3<f32>(0.15,0.25,0.4);
+            }
+            return vec3<f32>(0.11,0.12,0.14);
+        }
+        case 5u: { // tree: green crown and brown trunk
+            if length((uv-vec2<f32>(0.5,0.4))*vec2<f32>(1.0,0.9))<0.30 {
+                return vec3<f32>(0.1,0.65,0.22);
+            }
+            if abs(x-0.5)<0.07 && y>0.4 { return vec3<f32>(0.45,0.25,0.09); }
+            return vec3<f32>(0.11,0.12,0.14);
+        }
+        case 6u: { // cone: orange triangle, reflective band, and base
+            if (y>0.18 && abs(x-0.5)<(y-0.15)*0.40) || (y>0.80 && y<0.9 && abs(x-0.5)<0.35) {
+                return select(vec3<f32>(1.0,0.38,0.03),vec3<f32>(0.95),y>0.43 && y<0.55);
+            }
+            return vec3<f32>(0.11,0.12,0.14);
+        }
+        default: { // lane barrier
+            return select(vec3<f32>(0.06),vec3<f32>(1.0,0.8,0.1),fract((x+y)*4.0)<0.5);
+        }
+    }
+}
 @fragment
 fn fs_main(in: Vertex) -> @location(0) vec4<f32> {
     let tile = tiles[in.instance];
@@ -55,10 +96,14 @@ fn fs_main(in: Vertex) -> @location(0) vec4<f32> {
         colour = select(vec3<f32>(0.35,0.55,0.7),vec3<f32>(0.25,0.7,0.45),tile.street_type==0u);
         if tile.street_type==2u { colour = vec3<f32>(0.8,0.4,0.3); }
     }
-    let value = cells[tile.offset];
+    let packed = cells[tile.offset];
+    let value = packed & 255u;
     if value!=0u && x>0.1 && x<0.9 && y>0.16 && y<0.84 {
         colour = vehicle_colour(value);
-        if value==7u && abs(x-y)<0.12 { colour=vec3<f32>(0.05); }
+        if value==7u {
+            if packed >> 8u != 0u { colour=disruption_colour(packed >> 8u, in.uv); }
+            else if abs(x-y)<0.12 { colour=vec3<f32>(0.05); }
+        }
     }
     return vec4<f32>(colour,1);
 }

@@ -27,6 +27,7 @@ struct Startup {
 }
 
 pub struct App {
+    scenarios: ca_app::scenarios::ScenarioControls,
     parking_pending: Option<ca_app::parking_form::ParkingRequest>,
     buildings: ca_app::buildings::BuildingEditor,
     time: ca_core::virtual_time::VirtualTime,
@@ -65,6 +66,54 @@ pub struct App {
 }
 
 impl App {
+    fn scenario_command(&mut self, command: ca_app::scenarios::ScenarioCommand) -> bool {
+        use ca_app::scenarios::ScenarioCommand;
+        if !matches!(
+            command,
+            ScenarioCommand::Rain(..) | ScenarioCommand::Mode(None)
+        ) {
+            if self
+                .session
+                .as_ref()
+                .expect("session")
+                .document()
+                .editing_street()
+                .is_some()
+                && !self.edit_streets(ca_core::streets::StreetEdit::CancelSession)
+            {
+                self.scenarios.mode = None;
+                return false;
+            }
+            self.buildings.cancel();
+            self.buildings.select(None);
+            self.connection_draft.cancel();
+            self.street_dialog.close();
+            self.inspector = Default::default();
+            let map = self.map.as_mut().expect("map");
+            map.finish_edits();
+            map.clear_bulk();
+            map.select(None);
+            map.set_cell_picking(None);
+        }
+        let accepted = match command {
+            ScenarioCommand::Mode(mode) => {
+                self.map.as_mut().expect("map").set_painting(mode.is_some());
+                true
+            }
+            ScenarioCommand::Rain(active, probability) => {
+                self.commands.edit(Edit::Rain(active, probability))
+            }
+            ScenarioCommand::Action(action) => self.commands.edit(Edit::Scenario(action)),
+        };
+        if !accepted {
+            self.shell.notify(
+                ca_app::shell::Severity::Warning,
+                self.shell.tr("shell.cellEditBusy", &[]),
+            );
+        }
+        accepted
+    }
+
     fn edit_buildings(&mut self, mut edit: ca_core::buildings::BuildingEdit) {
         if let ca_core::buildings::BuildingEdit::Create(building) = &mut edit
             && building.label.trim().is_empty()
@@ -147,6 +196,7 @@ impl App {
             }
         });
         session.register_reset(ResetPhase::Features, |app| {
+            app.scenarios = Default::default();
             app.transport = TransportControls::default();
             app.step_ticket = 0;
             app.progress = Progress {
@@ -162,6 +212,7 @@ impl App {
         });
         let time = session.document().time().clone();
         Ok(Self {
+            scenarios: Default::default(),
             parking_pending: None,
             buildings: Default::default(),
             time,
@@ -398,20 +449,19 @@ impl App {
 
     fn control_panel(&mut self, ctx: &egui::Context) {
         use ca_app::control_panel::{ControlPanel, PanelAction};
+        let scenario_settings = (
+            self.scenarios.mode,
+            self.scenarios.rain_active,
+            self.scenarios.rain_probability,
+        );
         let action = ControlPanel {
             document: self.session.as_ref().expect("session").document(),
             map: self.map.as_mut(),
             connections: self.connections.as_mut(),
             saved_connections: &mut self.saved_connections,
             transport: &mut self.transport,
-            enabled: self.smoke_frames.is_none()
-                && self
-                    .session
-                    .as_ref()
-                    .expect("session")
-                    .document()
-                    .editing_street()
-                    .is_none(),
+            scenarios: &mut self.scenarios,
+            enabled: self.smoke_frames.is_none(),
             files_ready: self.file_job.is_none() && self.new_confirmation.is_none(),
         }
         .show(ctx, &mut self.shell);
@@ -428,6 +478,15 @@ impl App {
             self.buildings.select(None);
         }
         match action {
+            Some(PanelAction::Scenario(command)) => {
+                if !self.scenario_command(command) {
+                    (
+                        self.scenarios.mode,
+                        self.scenarios.rain_active,
+                        self.scenarios.rain_probability,
+                    ) = scenario_settings;
+                }
+            }
             Some(PanelAction::UploadBuildingImage) => {
                 self.prepare_connection_edit();
                 self.connection_draft.cancel();
@@ -486,6 +545,10 @@ impl App {
                 }
             }
             Some(PanelAction::Connection) => {
+                self.scenarios.mode = None;
+                if let Some(map) = &mut self.map {
+                    map.set_painting(false);
+                }
                 if self.connection_draft.active() {
                     self.connection_draft.cancel();
                 } else {
@@ -498,6 +561,10 @@ impl App {
                 }
             }
             Some(PanelAction::NewStreet) => {
+                self.scenarios.mode = None;
+                if let Some(map) = &mut self.map {
+                    map.set_painting(false);
+                }
                 self.connection_draft.cancel();
                 if let Some(map) = &mut self.map {
                     map.finish_edits();
@@ -518,6 +585,7 @@ impl App {
             None => {}
         }
         if self.map.as_ref().is_some_and(|map| map.drawing()) {
+            self.scenarios.mode = None;
             self.buildings.cancel();
             self.buildings.select(None);
             self.connection_draft.cancel();
@@ -525,6 +593,10 @@ impl App {
     }
 
     fn prepare_connection_edit(&mut self) {
+        self.scenarios.mode = None;
+        if let Some(map) = &mut self.map {
+            map.set_painting(false);
+        }
         self.buildings.cancel();
         self.buildings.select(None);
         self.inspector = Default::default();
@@ -665,6 +737,8 @@ impl App {
         if matches!(edit, StreetEdit::BeginSession(_))
             && let Some(map) = &mut self.map
         {
+            self.scenarios.mode = None;
+            map.set_painting(false);
             map.finish_edits();
             map.clear_bulk();
         }
@@ -982,6 +1056,7 @@ impl eframe::App for App {
                 self.buildings.select(None);
                 None
             } else if !parking_input
+                && self.scenarios.mode.is_none()
                 && !self.connection_draft.active()
                 && !self.map.as_ref().expect("map").drawing()
             {
@@ -1080,7 +1155,17 @@ impl eframe::App for App {
             {
                 self.commands.buildings(zones);
             }
-            if !self.commands.send(request, map.clicked) {
+            let accepted = if let Some(mode) = self.scenarios.mode {
+                self.commands.send(request, None)
+                    && map.clicked.is_none_or(|cell| {
+                        self.commands.edit(Edit::Scenario(
+                            ca_core::disruptions::ScenarioAction::Paint(cell, mode),
+                        ))
+                    })
+            } else {
+                self.commands.send(request, map.clicked)
+            };
+            if !accepted {
                 self.shell.notify(
                     ca_app::shell::Severity::Warning,
                     self.shell.tr("shell.cellEditBusy", &[]),
@@ -1123,6 +1208,7 @@ impl eframe::App for App {
                 },
             );
             ui.painter().add(callback);
+            self.scenarios.paint_rain(ui.painter(), map.rect);
             let session = self.session.as_ref().expect("session");
             self.buildings
                 .sync_parking(session.document(), session.revision(), self.map_shift);

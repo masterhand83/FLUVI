@@ -1,6 +1,124 @@
 use ca_gpu::TrafficScene;
 
 #[test]
+fn scenario_commands_publish_while_paused_and_keep_floods_when_rain_stops() {
+    use ca_core::{
+        cell_index::CellRef,
+        disruptions::{Disruption, ScenarioAction},
+        map_json::MapDocument,
+    };
+    let mut scene = TrafficScene::from_document(
+        &MapDocument::parse(r#"{"calles":[{"nombre":"A","tipo":"conexion","tamano":10}]}"#)
+            .unwrap(),
+    );
+    scene.toggle_vehicle(
+        CellRef {
+            street: 0,
+            lane: 0,
+            index: 0,
+        },
+        true,
+    );
+    assert_eq!(scene.disrupt(ScenarioAction::InstantFlood(20)).unwrap(), 2);
+    assert!(scene.publish_edits());
+    assert_eq!(scene.population(), 1);
+    assert_eq!(scene.cells().iter().filter(|&&v| v & 255 == 7).count(), 2);
+    assert!(
+        scene
+            .cells()
+            .contains(&(7 | ((Disruption::Flood as u32) << 8)))
+    );
+    scene.set_rain(true, 1.).unwrap();
+    scene.tick();
+    assert_eq!(scene.cells().iter().filter(|&&v| v & 255 == 7).count(), 3);
+    scene.set_rain(false, 1.).unwrap();
+    scene.tick();
+    assert_eq!(scene.cells().iter().filter(|&&v| v & 255 == 7).count(), 3);
+    scene.disrupt(ScenarioAction::Clear).unwrap();
+    assert!(scene.publish_edits());
+    assert_eq!(scene.population(), 1);
+    assert_eq!(scene.cells().iter().filter(|&&v| v & 255 == 7).count(), 0);
+    assert_eq!(
+        scene
+            .disrupt(ScenarioAction::Paint(
+                CellRef {
+                    street: 0,
+                    lane: 0,
+                    index: 99
+                },
+                Disruption::Flood,
+            ))
+            .unwrap(),
+        0
+    );
+    assert!(
+        !scene.publish_edits(),
+        "a rejected paint must not repack the map"
+    );
+}
+
+#[test]
+fn scenario_textures_are_visible_and_different_from_vehicle_colours() {
+    use ca_core::{
+        camera::WorldView,
+        cell_index::CellRef,
+        disruptions::{Disruption, ScenarioAction},
+        map_json::MapDocument,
+    };
+    let mut scene = TrafficScene::from_document(
+        &MapDocument::parse(r#"{"calles":[{"nombre":"A","tipo":"conexion","tamano":6}]}"#).unwrap(),
+    );
+    for (index, mark) in [
+        Disruption::LaneBlock,
+        Disruption::Flood,
+        Disruption::Pothole,
+        Disruption::Worker,
+        Disruption::Tree,
+        Disruption::Cone,
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        scene
+            .disrupt(ScenarioAction::Paint(
+                CellRef {
+                    street: 0,
+                    lane: 0,
+                    index,
+                },
+                mark,
+            ))
+            .unwrap();
+    }
+    assert!(scene.publish_edits());
+    let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor::from_env_or_default());
+    let adapter = pollster::block_on(instance.request_adapter(&Default::default())).unwrap();
+    let (device, queue) = pollster::block_on(adapter.request_device(&Default::default())).unwrap();
+    let display = ca_gpu::TrafficDisplay::new(&device, &scene, wgpu::TextureFormat::Rgba8Unorm);
+    display.set_view(
+        &queue,
+        WorldView {
+            origin: scene.shift(),
+            span: [36., 14.],
+        },
+    );
+    let bytes = render_display(&device, &queue, &display);
+    let flood = pixel(&bytes, 1.5, 0.5);
+    assert!(flood[2] > 150 && flood[0] < 100, "{flood:?}");
+    let pothole = pixel(&bytes, 2.5, 0.5);
+    assert!(pothole[..3].iter().all(|&c| c < 70), "{pothole:?}");
+    let worker = pixel(&bytes, 3.5, 0.55);
+    assert!(
+        worker[0] > 200 && worker[1] > 80 && worker[2] < 80,
+        "{worker:?}"
+    );
+    let tree = pixel(&bytes, 4.5, 0.4);
+    assert!(tree[1] > 100 && tree[0] < 80, "{tree:?}");
+    let cone = pixel(&bytes, 5.5, 0.65);
+    assert!(cone[0] > 200 && cone[1] < 180 && cone[2] < 80, "{cone:?}");
+}
+
+#[test]
 fn retained_building_ranges_draw_only_the_requested_shape() {
     use ca_core::{buildings::Building, camera::WorldView, map_json::MapDocument};
     let mut map = MapDocument::empty();

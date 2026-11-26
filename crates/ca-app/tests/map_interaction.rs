@@ -2,6 +2,132 @@ use ca_app::map::MapInteraction;
 use eframe::egui;
 
 #[test]
+fn paint_accepts_a_complete_click_in_one_frame_and_ignores_drags_started_outside_map() {
+    use ca_core::cell_index::CellRef;
+    let document = ca_core::map_json::MapDocument::parse(
+        r#"{"calles":[{"nombre":"A","tipo":"conexion","tamano":12,"x":25,"y":25}]}"#,
+    )
+    .unwrap();
+    let ctx = egui::Context::default();
+    let geometry = document.geometry();
+    let mut map = MapInteraction::new([30., 20.], &geometry, vec!["A".into()]);
+    map.configure(&document, [0.; 2]);
+    map.set_painting(true);
+    frame(&ctx, &mut map, vec![], false);
+    let target = screen_position(&map, geometry[0].centers[0][3]);
+    let button = |pos, pressed| egui::Event::PointerButton {
+        pos,
+        pressed,
+        button: egui::PointerButton::Primary,
+        modifiers: egui::Modifiers::NONE,
+    };
+    let outside = egui::pos2(-10., -10.);
+    frame(
+        &ctx,
+        &mut map,
+        vec![egui::Event::PointerMoved(outside), button(outside, true)],
+        false,
+    );
+    let dragged = frame(
+        &ctx,
+        &mut map,
+        vec![egui::Event::PointerMoved(target)],
+        false,
+    );
+    assert!(
+        dragged.clicked.is_none(),
+        "only map-owned gestures can paint"
+    );
+    frame(&ctx, &mut map, vec![button(target, false)], false);
+    let batched_drag = frame(
+        &ctx,
+        &mut map,
+        vec![
+            egui::Event::PointerMoved(outside),
+            button(outside, true),
+            egui::Event::PointerMoved(target),
+        ],
+        false,
+    );
+    assert!(
+        batched_drag.clicked.is_none(),
+        "the press position must own the gesture"
+    );
+    frame(&ctx, &mut map, vec![button(target, false)], false);
+    let clicked = frame(
+        &ctx,
+        &mut map,
+        vec![
+            egui::Event::PointerMoved(target),
+            button(target, true),
+            button(target, false),
+        ],
+        false,
+    );
+    assert_eq!(
+        clicked.clicked,
+        Some(CellRef {
+            street: 0,
+            lane: 0,
+            index: 3
+        })
+    );
+}
+
+#[test]
+fn disruption_painting_emits_cells_during_drag_without_panning_or_geometry_edits() {
+    use ca_core::cell_index::CellRef;
+    let document = ca_core::map_json::MapDocument::parse(
+        r#"{"calles":[{"nombre":"A","tipo":"conexion","tamano":12,"carriles":2,"x":25,"y":25}]}"#,
+    )
+    .unwrap();
+    let ctx = egui::Context::default();
+    let geometry = document.geometry();
+    let mut map = MapInteraction::new([30., 20.], &geometry, vec!["A".into()]);
+    map.configure(&document, [0.; 2]);
+    map.select(Some(0));
+    map.set_painting(true);
+    frame(&ctx, &mut map, vec![], false);
+    let view = map.camera().unwrap().view();
+    let start = screen_position(&map, geometry[0].centers[1][2]);
+    let end = screen_position(&map, geometry[0].centers[1][5]);
+    let button = |pos, pressed| egui::Event::PointerButton {
+        pos,
+        pressed,
+        button: egui::PointerButton::Primary,
+        modifiers: egui::Modifiers::NONE,
+    };
+    let down = frame(
+        &ctx,
+        &mut map,
+        vec![egui::Event::PointerMoved(start), button(start, true)],
+        false,
+    );
+    assert_eq!(
+        down.clicked,
+        Some(CellRef {
+            street: 0,
+            lane: 1,
+            index: 2
+        })
+    );
+    let moving = frame(&ctx, &mut map, vec![egui::Event::PointerMoved(end)], false);
+    assert_eq!(
+        moving.clicked,
+        Some(CellRef {
+            street: 0,
+            lane: 1,
+            index: 5
+        })
+    );
+    assert!(moving.street_edit.is_none() && !moving.structural_edit);
+    assert_eq!(map.camera().unwrap().view(), view);
+    frame(&ctx, &mut map, vec![button(end, false)], false);
+    let idle = frame(&ctx, &mut map, vec![], false);
+    assert!(idle.clicked.is_none());
+}
+
+#[test]
 fn endpoint_picking_highlights_the_exact_lane_cell_and_does_not_edit_vehicles() {
     use ca_core::cell_index::CellRef;
     let document = ca_core::map_json::MapDocument::parse(

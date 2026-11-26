@@ -31,6 +31,7 @@ fn map_files_are_inside_the_constructor_section_not_a_top_toolbar() {
                     connections: None,
                     saved_connections: &mut Default::default(),
                     transport: &mut transport,
+                    scenarios: &mut Default::default(),
                     enabled: true,
                     files_ready: true,
                 }

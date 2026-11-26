@@ -36,6 +36,8 @@ pub struct Paint {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Edit {
+    Scenario(ca_core::disruptions::ScenarioAction),
+    Rain(bool, f64),
     Parking(usize, Option<Box<ca_core::parking::ParkingConfig>>),
     Building(ca_core::buildings::BuildingEdit),
     ScenarioTime(ca_core::virtual_time::Clock),
@@ -237,8 +239,28 @@ impl Resources {
         let mut edited = false;
         let mut buildings_edited = false;
         let mut reset_time = false;
+        let mut scenario_edited = false;
         while let Ok(edit) = self.requests.edits.try_recv() {
             edited |= match edit {
+                Edit::Rain(active, probability) => {
+                    self.scene
+                        .set_rain(active, probability)
+                        .expect("validated rain probability");
+                    false
+                }
+                Edit::Scenario(action) => {
+                    let count = self
+                        .scene
+                        .disrupt(action)
+                        .expect("validated scenario action");
+                    scenario_edited |= count > 0
+                        || matches!(
+                            action,
+                            ca_core::disruptions::ScenarioAction::MassFlood
+                                | ca_core::disruptions::ScenarioAction::RandomPotholes
+                        );
+                    scenario_edited
+                }
                 Edit::Parking(building, config) => {
                     let result = self.scene.configure_parking(building, config.map(|c| *c));
                     // At most one UI parking request can be in flight.
@@ -315,7 +337,7 @@ impl Resources {
                 self.scene.shift(),
             );
         }
-        let published = !request.playing && self.scene.publish_edits();
+        let published = (!request.playing || scenario_edited) && self.scene.publish_edits();
         self.display.set_view(queue, request.view);
         let now = Instant::now();
         let elapsed = now.duration_since(self.last_tick);
@@ -335,7 +357,7 @@ impl Resources {
                 self.ticks.completed(1);
             }
         }
-        if steps > 0 || published || reset_time || (edited && !request.playing) {
+        if steps > 0 || published || reset_time || scenario_edited || (edited && !request.playing) {
             self.display.upload(queue, &self.scene);
             self.progress.population = self.scene.population();
         }
@@ -1207,5 +1229,88 @@ mod tests {
                 Edit::Parking(building, None)
             );
         }
+    }
+    #[test]
+    fn disruption_commands_follow_session_cancel_and_publish_without_a_tick() {
+        use ca_core::{
+            disruptions::{Disruption, ScenarioAction},
+            map_json::MapDocument,
+            streets::StreetEdit,
+        };
+        let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor::from_env_or_default());
+        let adapter = pollster::block_on(instance.request_adapter(&Default::default())).unwrap();
+        let (device, queue) =
+            pollster::block_on(adapter.request_device(&Default::default())).unwrap();
+        let document =
+            MapDocument::parse(r#"{"calles":[{"nombre":"A","tipo":"conexion","tamano":10}]}"#)
+                .unwrap();
+        let scene = TrafficScene::from_document(&document);
+        let format = wgpu::TextureFormat::Rgba8Unorm;
+        let display = TrafficDisplay::new(&device, &scene, format);
+        let (commands, requests) = command_channel();
+        let (events, _) = bounded(2);
+        let mut resources = Resources::new(scene, display, events, requests, format);
+        let state = Paint {
+            playing: false,
+            rate: 10.,
+            step_ticket: 0,
+            generation_override: None,
+            excluded_street: None,
+            view: WorldView {
+                origin: [0.; 2],
+                span: [20.; 2],
+            },
+        };
+        assert!(commands.send(state, None));
+        assert!(commands.edit(Edit::Toggle(CellRef {
+            street: 0,
+            lane: 0,
+            index: 0
+        })));
+        assert!(commands.edit(Edit::Street(StreetEdit::BeginSession(0))));
+        assert!(commands.edit(Edit::Street(StreetEdit::CancelSession)));
+        assert!(commands.edit(Edit::Scenario(ScenarioAction::Paint(
+            CellRef {
+                street: 0,
+                lane: 0,
+                index: 1
+            },
+            Disruption::Tree,
+        ))));
+        assert!(commands.edit(Edit::Scenario(ScenarioAction::InstantFlood(20))));
+        resources.prepare(&device, &queue);
+        assert_eq!(
+            resources
+                .scene
+                .cells()
+                .iter()
+                .filter(|&&v| v & 255 == 7)
+                .count(),
+            3
+        );
+        assert_eq!(resources.progress.population, 1);
+        assert_eq!(resources.progress.generation, 0);
+        // Immediate publication also applies while running, before the next tick.
+        assert!(commands.send(
+            Paint {
+                playing: true,
+                rate: 0.1,
+                ..state
+            },
+            None
+        ));
+        assert!(commands.edit(Edit::Scenario(ScenarioAction::Clear)));
+        resources.prepare(&device, &queue);
+        assert_eq!(
+            resources
+                .scene
+                .cells()
+                .iter()
+                .filter(|&&v| v & 255 == 7)
+                .count(),
+            0
+        );
+        assert_eq!(resources.progress.population, 1);
+        assert_eq!(resources.progress.generation, 0);
     }
 }

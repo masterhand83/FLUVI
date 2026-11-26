@@ -7,6 +7,7 @@ use ca_core::map_json::MapDocument;
 use eframe::egui;
 
 pub enum PanelAction {
+    Scenario(crate::scenarios::ScenarioCommand),
     BuildingTool(crate::buildings::Tool),
     NewBuilding,
     UploadBuildingImage,
@@ -27,6 +28,7 @@ pub struct ControlPanel<'a> {
     pub connections: Option<&'a mut ConnectionOverlays>,
     pub saved_connections: &'a mut crate::connections::SavedConnections,
     pub transport: &'a mut TransportControls,
+    pub scenarios: &'a mut crate::scenarios::ScenarioControls,
     pub enabled: bool,
     pub files_ready: bool,
 }
@@ -35,77 +37,86 @@ impl ControlPanel<'_> {
     pub fn show(mut self, ctx: &egui::Context, shell: &mut Shell) -> Option<PanelAction> {
         let mut action = None;
         shell.sidebar_with(ctx, |section, ui, shell| {
-            ui.add_enabled_ui(self.enabled, |ui| match section {
-                "tools" => {
-                    if ui.button(shell.tr("buildings.upload", &[])).clicked() {
-                        action = Some(PanelAction::UploadBuildingImage);
-                    }
-                    for (tool, key) in [
-                        (crate::buildings::Tool::Rectangle, "buildings.rectangle"),
-                        (crate::buildings::Tool::Polygon, "buildings.polygon"),
-                    ] {
-                        if ui.button(shell.tr(key, &[])).clicked() {
-                            action = Some(PanelAction::BuildingTool(tool));
+            ui.add_enabled_ui(
+                self.enabled
+                    && (section == "scenarios" || self.document.editing_street().is_none()),
+                |ui| match section {
+                    "scenarios" => {
+                        if let Some(command) = self.scenarios.show(ui, shell) {
+                            action = Some(PanelAction::Scenario(command));
                         }
                     }
-                    if ui.button(shell.tr("clock.setTime", &[])).clicked() {
-                        action = Some(PanelAction::ScenarioTime);
-                    }
-                    if ui.button(shell.tr("clock.profiles", &[])).clicked() {
-                        action = Some(PanelAction::Profiles);
-                    }
-                    if ui.button(shell.tr("connectionDraft.button", &[])).clicked() {
-                        action = Some(PanelAction::Connection);
-                    }
-                    if let Some(map) = &mut self.map {
-                        map.show_tools(ui, shell);
-                    }
-                    if let Some(connections) = &mut self.connections {
-                        connections.show_toggle(ui, shell);
-                    }
-                    ui.label(shell.tr("shell.profiler", &[]));
-                }
-                "constructor" => {
-                    if ui.button(shell.tr("buildings.new", &[])).clicked() {
-                        action = Some(PanelAction::NewBuilding);
-                    }
-                    if ui.button(shell.tr("streetDialog.title", &[])).clicked() {
-                        action = Some(PanelAction::NewStreet);
-                    }
-                    if ui
-                        .button(shell.tr("savedConnections.newTitle", &[]))
-                        .clicked()
-                    {
-                        action = Some(PanelAction::NewConnection);
-                    }
-                    ui.label(if self.document.name().is_empty() {
-                        shell.tr("mapFiles.untitled", &[])
-                    } else {
-                        self.document.name().to_owned()
-                    });
-                    ui.add_enabled_ui(self.files_ready, |ui| {
-                        for (key, value) in [
-                            ("mapFiles.open", PanelAction::Open),
-                            ("mapFiles.save", PanelAction::Save),
-                            ("mapFiles.new", PanelAction::New),
+                    "tools" => {
+                        if ui.button(shell.tr("buildings.upload", &[])).clicked() {
+                            action = Some(PanelAction::UploadBuildingImage);
+                        }
+                        for (tool, key) in [
+                            (crate::buildings::Tool::Rectangle, "buildings.rectangle"),
+                            (crate::buildings::Tool::Polygon, "buildings.polygon"),
                         ] {
                             if ui.button(shell.tr(key, &[])).clicked() {
-                                action = Some(value);
+                                action = Some(PanelAction::BuildingTool(tool));
                             }
                         }
-                    });
-                    if let Some(value) = self.saved_connections.show(ui, self.document, shell) {
-                        action = Some(PanelAction::SavedConnection(value));
+                        if ui.button(shell.tr("clock.setTime", &[])).clicked() {
+                            action = Some(PanelAction::ScenarioTime);
+                        }
+                        if ui.button(shell.tr("clock.profiles", &[])).clicked() {
+                            action = Some(PanelAction::Profiles);
+                        }
+                        if ui.button(shell.tr("connectionDraft.button", &[])).clicked() {
+                            action = Some(PanelAction::Connection);
+                        }
+                        if let Some(map) = &mut self.map {
+                            map.show_tools(ui, shell);
+                        }
+                        if let Some(connections) = &mut self.connections {
+                            connections.show_toggle(ui, shell);
+                        }
+                        ui.label(shell.tr("shell.profiler", &[]));
                     }
-                }
-                "streetSettings" => {
-                    if let Some(map) = &mut self.map {
-                        map.show_selector(ui, shell);
+                    "constructor" => {
+                        if ui.button(shell.tr("buildings.new", &[])).clicked() {
+                            action = Some(PanelAction::NewBuilding);
+                        }
+                        if ui.button(shell.tr("streetDialog.title", &[])).clicked() {
+                            action = Some(PanelAction::NewStreet);
+                        }
+                        if ui
+                            .button(shell.tr("savedConnections.newTitle", &[]))
+                            .clicked()
+                        {
+                            action = Some(PanelAction::NewConnection);
+                        }
+                        ui.label(if self.document.name().is_empty() {
+                            shell.tr("mapFiles.untitled", &[])
+                        } else {
+                            self.document.name().to_owned()
+                        });
+                        ui.add_enabled_ui(self.files_ready, |ui| {
+                            for (key, value) in [
+                                ("mapFiles.open", PanelAction::Open),
+                                ("mapFiles.save", PanelAction::Save),
+                                ("mapFiles.new", PanelAction::New),
+                            ] {
+                                if ui.button(shell.tr(key, &[])).clicked() {
+                                    action = Some(value);
+                                }
+                            }
+                        });
+                        if let Some(value) = self.saved_connections.show(ui, self.document, shell) {
+                            action = Some(PanelAction::SavedConnection(value));
+                        }
                     }
-                    self.transport.show_generation(ui, shell);
-                }
-                _ => {}
-            });
+                    "streetSettings" => {
+                        if let Some(map) = &mut self.map {
+                            map.show_selector(ui, shell);
+                        }
+                        self.transport.show_generation(ui, shell);
+                    }
+                    _ => {}
+                },
+            );
         });
         action
     }

@@ -212,14 +212,19 @@ impl TrafficScene {
     }
 
     fn pack(&mut self) {
-        for (target, value) in self.cells.iter_mut().zip(
+        for (target, (value, mark)) in self.cells.iter_mut().zip(
             self.document
                 .model()
                 .streets()
                 .iter()
-                .flat_map(|street| street.cells()),
+                .flat_map(|street| street.cells().iter().zip(street.disruptions())),
         ) {
-            *target = u32::from(*value);
+            *target = u32::from(*value)
+                | if *value == 7 {
+                    mark.map_or(0, |m| (m as u32) << 8)
+                } else {
+                    0
+                };
         }
         self.edited = false;
     }
@@ -227,6 +232,25 @@ impl TrafficScene {
     pub fn tick(&mut self) {
         self.document.tick();
         self.pack();
+    }
+
+    pub fn set_rain(&mut self, active: bool, probability: f64) -> Result<(), TrafficError> {
+        self.document.model_mut().set_rain(active, probability)
+    }
+
+    /// Apply ordered actions, then publish once at the frame boundary or next tick.
+    pub fn disrupt(
+        &mut self,
+        action: ca_core::disruptions::ScenarioAction,
+    ) -> Result<usize, TrafficError> {
+        let count = self.document.model_mut().disrupt(action)?;
+        self.edited |= count > 0
+            || matches!(
+                action,
+                ca_core::disruptions::ScenarioAction::MassFlood
+                    | ca_core::disruptions::ScenarioAction::RandomPotholes
+            );
+        Ok(count)
     }
 
     pub fn time(&self) -> &ca_core::virtual_time::VirtualTime {
