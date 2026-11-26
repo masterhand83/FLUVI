@@ -2,9 +2,9 @@
 use ca_gpu::CapturedImage;
 use std::io::Cursor;
 
-pub(super) const MAX_BYTES: u64 = 16 * 1024 * 1024;
+pub const MAX_BYTES: u64 = 16 * 1024 * 1024;
 
-pub(super) fn from_data(data: &str) -> Result<CapturedImage, String> {
+pub fn from_data(data: &str) -> Result<CapturedImage, String> {
     if data.len() as u64 > MAX_BYTES * 4 + 1024 {
         return Err("Reference image data URL is too large".into());
     }
@@ -13,7 +13,7 @@ pub(super) fn from_data(data: &str) -> Result<CapturedImage, String> {
     decode(&bytes)
 }
 
-pub(super) fn decode(bytes: &[u8]) -> Result<CapturedImage, String> {
+pub fn decode(bytes: &[u8]) -> Result<CapturedImage, String> {
     if bytes.len() as u64 > MAX_BYTES {
         return Err("Reference image exceeds 16 MiB".into());
     }

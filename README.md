@@ -1,6 +1,6 @@
 # FLUVI - Vehicular Traffic Flow Simulator
 
-## FLUVI v2 — offline native Rust application
+## FLUVI v2 — native Rust application
 
 The root Cargo workspace contains the FLUVI v2 native traffic application.
 It does not change the v1 web application described below. It uses stable Rust
@@ -21,7 +21,10 @@ cargo dev status
 
 Install the development tools with `cargo install --locked cargo-nextest` and
 `cargo install --locked bacon`. Linux needs a graphics driver and the normal
-X11/Wayland development libraries. The built app needs no network connection.
+X11/Wayland development libraries. The built app works offline except for linked
+reference images. These are its only network feature. Local reference images
+are embedded in map JSON. Linked images use HTTP/HTTPS, a 15-second timeout,
+at most three redirects, and a 16 MiB download limit.
 The first build downloads crates; use `cargo fetch` before an offline build.
 Builds use one job to limit RAM use. Development builds use optimization level 1
 for both workspace crates and dependencies, with debug symbols disabled.

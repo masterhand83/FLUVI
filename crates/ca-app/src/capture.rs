@@ -1,6 +1,6 @@
 //! Capture adapters. Decode, GPU setup/readback, PNG encoding, dialogs and file I/O
 //! run on a worker. The render callback supplies only an owned model snapshot.
-mod reference;
+use crate::reference_images::codec as reference;
 
 use ca_core::{camera::WorldView, map_json::MapDocument};
 use ca_gpu::{Capture, CaptureImage, CapturePlan, CapturedImage, TrafficScene, VehicleStyle};
@@ -140,25 +140,7 @@ fn artwork(document: &MapDocument, shift: [f32; 2]) -> Result<Vec<CaptureImage>,
         } else {
             let fetch = || -> Result<CapturedImage, String> {
                 let url = reference.url.ok_or("Missing reference URL")?;
-                if !url.starts_with("https://") && !url.starts_with("http://") {
-                    return Err("Invalid reference URL scheme".into());
-                }
-                let agent = ureq::Agent::new_with_config(
-                    ureq::Agent::config_builder()
-                        .timeout_global(Some(std::time::Duration::from_secs(15)))
-                        .max_redirects(3)
-                        .build(),
-                );
-                let bytes = agent
-                    .get(url)
-                    .call()
-                    .map_err(|e| e.to_string())?
-                    .body_mut()
-                    .with_config()
-                    .limit(reference::MAX_BYTES)
-                    .read_to_vec()
-                    .map_err(|e| e.to_string())?;
-                reference::decode(&bytes)
+                crate::reference_images::download(url, std::time::Duration::from_secs(15))
             };
             fetch().map_err(|error| {
                 tracing::warn!(%error, "reference image capture failed");

@@ -8,10 +8,10 @@ license.workspace = true
 ca-core.workspace = true
 wgpu.workspace = true
 bytemuck.workspace = true
+serde_json.workspace = true
 
 [dev-dependencies]
 pollster.workspace = true
-serde_json.workspace = true
 
 [lints]
 workspace = true

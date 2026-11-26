@@ -495,6 +495,17 @@ impl MapInteraction {
         self.names = names;
     }
 
+    /// Prepare the shared transform before overlay hit tests, including the first frame.
+    pub fn prepare_view(&mut self, viewport: [f32; 2]) -> WorldView {
+        let viewport = viewport.map(|n| n.max(1.));
+        let camera = self
+            .camera
+            .get_or_insert_with(|| Camera::fit(self.extent, viewport));
+        camera.set_bounds(self.bounds.0, self.bounds.1);
+        camera.resize(viewport);
+        camera.view()
+    }
+
     pub fn show(&mut self, ui: &mut egui::Ui, detect: bool) -> MapFrame {
         let rect = ui.available_rect_before_wrap();
         let response = ui.allocate_rect(rect, egui::Sense::click_and_drag());

@@ -78,6 +78,11 @@ pub struct TrafficScene {
 }
 
 impl TrafficScene {
+    pub fn set_reference_image(&mut self, image: Option<serde_json::Value>) {
+        self.document
+            .set_reference_image(image)
+            .expect("validated reference edit");
+    }
     /// A capture worker takes a snapshot, never the live model or its GPU view.
     pub fn document(&self) -> &ca_core::map_json::MapDocument {
         &self.document

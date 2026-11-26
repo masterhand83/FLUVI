@@ -710,6 +710,27 @@ Regenerate the independent Python oracle with
 Run `cargo test -p ca-analysis --test analyzer` and
 `cargo test -p ca-app --test analyzer` for focused checks.
 
+### Reference images
+
+Map Constructor → Reference Image opens the local-file and HTTP/HTTPS URL controls.
+Drag the image to move it, drag any yellow corner to resize it in proportion, or
+drag the green handle to rotate it. The floating controls also set lock, visibility,
+and opacity, and remove the image. Locked images do not capture gestures.
+World geometry remains in v1 pixels; only display and input convert to cell units.
+The textured quad draws after background zones and before buildings and traffic.
+
+`ca-app::reference_images` owns bounded worker replies, the shared capture decoder,
+textures, cancellable gesture previews, and the translated broken-link marker.
+Linked reads have a 15-second timeout, at most three redirects, and a 16 MiB limit.
+Local files are embedded as data URLs; links remain links. A failed link retains
+all saved placement and display settings. Source replacement drops stale replies.
+New/Open resets the editor, textures, and receivers through `MapSession`.
+Reference edits use the ordered render queue so saves and captures see the edits.
+The codec preserves the v1 `imagenReferencia` object and its unknown fields.
+
+Focused checks: `cargo test -p ca-core -p ca-app --test reference_images` and
+`cargo test -p ca-app -p ca-gpu --test capture`.
+
 ### Whole-map PNG and viewport capture
 
 Use Tools → Save Whole Map PNG. Capture runs while traffic and camera input

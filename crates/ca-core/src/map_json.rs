@@ -51,6 +51,7 @@ pub struct BackgroundZone {
 /// Read-only v1 reference placement and sources. Decoding belongs to the app.
 pub struct ReferenceImage<'a> {
     pub corners: [[f64; 2]; 4],
+    pub locked: bool,
     pub visible: bool,
     pub opacity: f32,
     pub data_url: Option<&'a str>,
@@ -90,6 +91,46 @@ pub struct StreetPlacement {
 }
 
 impl MapDocument {
+    pub fn reference_image_json(&self) -> Option<&Value> {
+        self.data
+            .get("imagenReferencia")
+            .filter(|value| value.is_object())
+    }
+
+    /// Replace only the reference layer; traffic and all other map fields stay intact.
+    pub fn set_reference_image(&mut self, image: Option<Value>) -> Result<(), MapError> {
+        Self::validate_reference_image(image.as_ref())?;
+        self.data["imagenReferencia"] = image.unwrap_or(Value::Null);
+        Ok(())
+    }
+
+    pub fn validate_reference_image(image: Option<&Value>) -> Result<(), MapError> {
+        if let Some(image) = image {
+            for key in ["x", "y", "width", "height", "rotation", "opacity"] {
+                let number = match image.get(key) {
+                    Some(value) => value.as_f64().filter(|n| n.is_finite()).ok_or(MapError)?,
+                    None if key == "opacity" => 1.,
+                    None if matches!(key, "x" | "y" | "rotation") => 0.,
+                    None => return Err(MapError),
+                };
+                if matches!(key, "width" | "height") && number <= 0. {
+                    return Err(MapError);
+                }
+            }
+            if image["dataUrl"].as_str().is_none() && image["url"].as_str().is_none() {
+                return Err(MapError);
+            }
+            for (origin, size) in [("x", "width"), ("y", "height")] {
+                let extent = image[origin].as_f64().unwrap_or(0.).abs()
+                    + image[size].as_f64().ok_or(MapError)?;
+                if !extent.is_finite() {
+                    return Err(MapError);
+                }
+            }
+        }
+        Ok(())
+    }
+
     pub fn reference_image(&self) -> Option<ReferenceImage<'_>> {
         let reference = self.data.get("imagenReferencia")?;
         let width = reference["width"].as_f64()?;
@@ -113,6 +154,7 @@ impl MapDocument {
         }
         Some(ReferenceImage {
             corners,
+            locked: reference["locked"] == true,
             visible: reference["visible"] != false,
             opacity: reference["opacity"].as_f64().unwrap_or(1.).clamp(0., 1.) as f32,
             data_url: reference["dataUrl"].as_str(),

@@ -22,6 +22,7 @@ pub mod metrics;
 pub mod parking;
 pub mod parking_form;
 mod preview;
+pub mod reference_images;
 pub mod scenario_library;
 pub mod scenarios;
 pub mod shell;

@@ -42,6 +42,7 @@ pub struct Paint {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Edit {
+    Reference(Option<serde_json::Value>),
     MetricStreets(Vec<bool>),
     CaptureScenario(String, String),
     LoadScenario(Box<ca_core::scenario_json::Scenario>),
@@ -367,6 +368,10 @@ impl Resources {
                     let result = self.scene.configure_parking(building, config.map(|c| *c));
                     // At most one UI parking request can be in flight.
                     let _ = self.requests.parking_results.try_send((building, result));
+                    false
+                }
+                Edit::Reference(image) => {
+                    self.scene.set_reference_image(image);
                     false
                 }
                 Edit::Building(edit) => {

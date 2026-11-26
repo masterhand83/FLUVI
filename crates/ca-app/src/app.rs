@@ -27,6 +27,7 @@ struct Startup {
 }
 
 pub struct App {
+    reference: ca_app::reference_images::Editor,
     capture_job: Option<ca_app::capture::SaveJob>,
     metric_export_job: Option<ca_app::metric_exports::SaveJob>,
     metric_export_dialog: ca_app::metric_exports::ExportDialog,
@@ -75,6 +76,29 @@ pub struct App {
 }
 
 impl App {
+    fn apply_reference_edit(&mut self) {
+        let Some(image) = self.reference.pending() else {
+            return;
+        };
+        if MapDocument::validate_reference_image(image.as_ref()).is_err() {
+            self.reference.committed();
+            self.shell.notify(
+                ca_app::shell::Severity::Error,
+                self.shell.tr("reference.invalidPlacement", &[]),
+            );
+            return;
+        }
+        let image = image.clone();
+        if self.commands.edit(Edit::Reference(image.clone())) {
+            self.session
+                .as_mut()
+                .expect("session")
+                .set_reference_image(image)
+                .expect("validated reference edit");
+            self.reference.committed();
+        }
+    }
+
     fn start_metric_export(
         &mut self,
         ctx: &egui::Context,
@@ -350,6 +374,7 @@ impl App {
         let mut session = MapSession::new(MapDocument::campus());
         session.register_reset(ResetPhase::Pause, |app: &mut Self| app.playing = false);
         session.register_reset(ResetPhase::Tools, |app| {
+            app.reference = Default::default();
             app.buildings = Default::default();
             app.building_callbacks.clear();
             app.time_dialogs = Default::default();
@@ -386,6 +411,7 @@ impl App {
         });
         let time = session.document().time().clone();
         Ok(Self {
+            reference: Default::default(),
             capture_job: None,
             metric_export_job: None,
             metric_export_dialog: Default::default(),
@@ -682,6 +708,11 @@ impl App {
             self.buildings.select(None);
         }
         match action {
+            Some(PanelAction::ReferenceImage) => {
+                self.prepare_connection_edit();
+                self.connection_draft.cancel();
+                self.reference.open();
+            }
             Some(PanelAction::Screenshot) => {
                 if self.capture_job.is_none() {
                     match ca_app::capture::start_save(
@@ -1364,6 +1395,26 @@ impl eframe::App for App {
             });
         });
         egui::CentralPanel::default().show(ctx, |ui| {
+            let rect = ui.available_rect_before_wrap();
+            let view = self
+                .map
+                .as_mut()
+                .expect("map")
+                .prepare_view([rect.width(), rect.height()]);
+            self.reference.update(
+                ctx,
+                self.session.as_ref().expect("session").document(),
+                view,
+                self.map_shift,
+            );
+            self.reference.show(
+                ctx,
+                &self.shell,
+                self.session.as_ref().expect("session").document(),
+                view,
+                self.map_shift,
+            );
+            self.apply_reference_edit();
             self.buildings.delete_shortcut(
                 ctx,
                 self.session.as_ref().expect("session").document(),
@@ -1391,10 +1442,32 @@ impl eframe::App for App {
                             self.map_shift,
                         )
                     });
+            let reference_enabled = !building_input
+                && !self.buildings.active()
+                && !self.metrics.picking
+                && !parking_picking
+                && self.scenarios.mode.is_none()
+                && !self.connection_draft.active()
+                && !self.map.as_ref().expect("map").drawing()
+                && self
+                    .session
+                    .as_ref()
+                    .expect("session")
+                    .document()
+                    .editing_street()
+                    .is_none();
+            let reference_input = reference_enabled
+                && self.reference.captures(
+                    ctx,
+                    self.session.as_ref().expect("session").document(),
+                    rect,
+                    view,
+                    self.map_shift,
+                );
             self.map
                 .as_mut()
                 .expect("map")
-                .set_building_input(building_input);
+                .set_building_input(building_input || reference_input);
             self.map
                 .as_mut()
                 .expect("map")
@@ -1412,6 +1485,15 @@ impl eframe::App for App {
                 .as_mut()
                 .expect("map installed with render resources")
                 .show(ui, self.shell.preferences().cell_detection);
+            self.reference.input(
+                ui,
+                self.session.as_ref().expect("session").document(),
+                map.rect,
+                map.view,
+                self.map_shift,
+                reference_enabled,
+            );
+            self.apply_reference_edit();
             let parking_input = self.buildings.parking_input(
                 ctx,
                 &map,
@@ -1423,7 +1505,8 @@ impl eframe::App for App {
                 self.buildings.cancel();
                 self.buildings.select(None);
                 None
-            } else if !parking_input
+            } else if !reference_input
+                && !parking_input
                 && self.scenarios.mode.is_none()
                 && !self.connection_draft.active()
                 && !self.map.as_ref().expect("map").drawing()
@@ -1567,6 +1650,13 @@ impl eframe::App for App {
             background_callback.rect = map.rect;
             ui.painter().add(background_callback);
             self.background.paint(ui.painter(), map.view, map.rect);
+            self.reference.paint(
+                ui.painter(),
+                self.session.as_ref().expect("session").document(),
+                map.rect,
+                map.view,
+                self.map_shift,
+            );
             // Keep callback allocations at map/structure changes, not in each paint.
             let count = self
                 .session
@@ -1596,6 +1686,14 @@ impl eframe::App for App {
                 },
             );
             ui.painter().add(callback);
+            self.reference.paint_controls(
+                ui.painter(),
+                &self.shell,
+                self.session.as_ref().expect("session").document(),
+                map.rect,
+                map.view,
+                self.map_shift,
+            );
             self.metrics
                 .paint(ui.painter(), map.view, map.rect, self.map_shift);
             self.scenarios.paint_rain(ui.painter(), map.rect);

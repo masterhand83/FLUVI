@@ -7,6 +7,7 @@ use ca_core::map_json::MapDocument;
 use eframe::egui;
 
 pub enum PanelAction {
+    ReferenceImage,
     Screenshot,
     Metrics(crate::metrics::Action),
     Scenario(crate::scenarios::ScenarioCommand),
@@ -106,6 +107,9 @@ impl ControlPanel<'_> {
                         ui.label(shell.tr("shell.profiler", &[]));
                     }
                     "constructor" => {
+                        if ui.button(shell.tr("reference.title", &[])).clicked() {
+                            action = Some(PanelAction::ReferenceImage);
+                        }
                         if ui.button(shell.tr("buildings.new", &[])).clicked() {
                             action = Some(PanelAction::NewBuilding);
                         }

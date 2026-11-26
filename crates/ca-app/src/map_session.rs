@@ -20,6 +20,14 @@ pub struct MapSession<S> {
 }
 
 impl<S> MapSession<S> {
+    pub fn set_reference_image(
+        &mut self,
+        image: Option<serde_json::Value>,
+    ) -> Result<(), MapError> {
+        self.document.set_reference_image(image)?;
+        self.revision = self.revision.wrapping_add(1);
+        Ok(())
+    }
     pub fn configure_parking(
         &mut self,
         building: usize,
