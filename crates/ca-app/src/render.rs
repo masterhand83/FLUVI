@@ -42,6 +42,7 @@ pub struct Paint {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Edit {
+    Background(ca_core::map_background::MapBackground),
     Reference(Option<serde_json::Value>),
     MetricStreets(Vec<bool>),
     CaptureScenario(String, String),
@@ -372,6 +373,10 @@ impl Resources {
                 }
                 Edit::Reference(image) => {
                     self.scene.set_reference_image(image);
+                    false
+                }
+                Edit::Background(background) => {
+                    self.scene.set_map_background(background);
                     false
                 }
                 Edit::Building(edit) => {

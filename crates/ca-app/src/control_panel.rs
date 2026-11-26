@@ -7,6 +7,7 @@ use ca_core::map_json::MapDocument;
 use eframe::egui;
 
 pub enum PanelAction {
+    Background(ca_core::map_background::MapBackground),
     ReferenceImage,
     Screenshot,
     Metrics(crate::metrics::Action),
@@ -40,13 +41,62 @@ pub struct ControlPanel<'a> {
 }
 
 impl ControlPanel<'_> {
-    pub fn show(mut self, ctx: &egui::Context, shell: &mut Shell) -> Option<PanelAction> {
+    pub fn show(self, ctx: &egui::Context, shell: &mut Shell) -> Option<PanelAction> {
+        let clock = self.document.time().clock;
+        self.show_at(ctx, shell, clock)
+    }
+
+    pub fn show_at(
+        mut self,
+        ctx: &egui::Context,
+        shell: &mut Shell,
+        clock: ca_core::virtual_time::Clock,
+    ) -> Option<PanelAction> {
         let mut action = None;
         shell.sidebar_with(ctx, |section, ui, shell| {
             ui.add_enabled_ui(
                 self.enabled
                     && (section == "scenarios" || self.document.editing_street().is_none()),
                 |ui| match section {
+                    "customization" => {
+                        let background = self.document.map_background();
+                        let mut next = background;
+                        use ca_core::map_background::MapBackground;
+                        ui.label(shell.tr("mapBackground.label", &[]));
+                        for preset in MapBackground::PRESETS {
+                            ui.radio_value(
+                                &mut next,
+                                preset,
+                                shell.tr(&format!("mapBackground.{}", preset.code()), &[]),
+                            );
+                        }
+                        let mut color = background.base();
+                        ui.horizontal(|ui| {
+                            if ui
+                                .radio(
+                                    matches!(background, MapBackground::Custom(_)),
+                                    shell.tr("mapBackground.custom", &[]),
+                                )
+                                .clicked()
+                            {
+                                next = MapBackground::Custom(color);
+                            }
+                            if ui.color_edit_button_srgb(&mut color).changed() {
+                                next = MapBackground::Custom(color);
+                            }
+                        });
+                        ui.label(shell.tr("mapBackground.preview", &[]));
+                        let [r, g, b] = next.rgb(clock);
+                        let (rect, _) = ui.allocate_exact_size(
+                            egui::vec2(ui.available_width(), 28.),
+                            egui::Sense::hover(),
+                        );
+                        ui.painter()
+                            .rect_filled(rect, 4., egui::Color32::from_rgb(r, g, b));
+                        if next != background {
+                            action = Some(PanelAction::Background(next));
+                        }
+                    }
                     "metrics" => {
                         let mut heat = self.vehicle_heat;
                         if ui

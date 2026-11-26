@@ -20,6 +20,9 @@ pub struct MapSession<S> {
 }
 
 impl<S> MapSession<S> {
+    pub fn set_map_background(&mut self, background: ca_core::map_background::MapBackground) {
+        self.document.set_map_background(background);
+    }
     pub fn set_reference_image(
         &mut self,
         image: Option<serde_json::Value>,

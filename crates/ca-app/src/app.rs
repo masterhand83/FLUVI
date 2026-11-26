@@ -694,7 +694,7 @@ impl App {
                 && self.new_confirmation.is_none()
                 && !self.scenario_exchange.busy(),
         }
-        .show(ctx, &mut self.shell);
+        .show_at(ctx, &mut self.shell, self.progress.clock);
         if action
             .as_ref()
             .is_some_and(|a| !matches!(a, PanelAction::Metrics(_) | PanelAction::Screenshot))
@@ -715,6 +715,14 @@ impl App {
             self.buildings.select(None);
         }
         match action {
+            Some(PanelAction::Background(background)) => {
+                if self.commands.edit(Edit::Background(background)) {
+                    self.session
+                        .as_mut()
+                        .expect("session")
+                        .set_map_background(background);
+                }
+            }
             Some(PanelAction::ReferenceImage) => {
                 self.prepare_connection_edit();
                 self.connection_draft.cancel();
@@ -1272,6 +1280,7 @@ impl App {
 
 impl eframe::App for App {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        self.shell.apply_theme(ctx);
         if let Some(startup) = self.startup.take() {
             if let Err(error) = self.initialize(ctx, startup) {
                 self.error = Some(error.to_string());
@@ -1672,8 +1681,15 @@ impl eframe::App for App {
             }
             let mut callback = self.callback.clone();
             callback.rect = map.rect;
+            let [r, g, b] = self
+                .session
+                .as_ref()
+                .expect("session")
+                .document()
+                .map_background()
+                .rgb(self.progress.clock);
             ui.painter()
-                .rect_filled(map.rect, 0.0, egui::Color32::from_rgb(5, 6, 10));
+                .rect_filled(map.rect, 0.0, egui::Color32::from_rgb(r, g, b));
             let mut background_callback = self.background_callback.clone();
             background_callback.rect = map.rect;
             ui.painter().add(background_callback);

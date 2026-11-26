@@ -2,6 +2,40 @@ use ca_app::capture::{encode_png, file_name};
 use ca_gpu::CapturedImage;
 
 #[test]
+fn capture_uses_v1_custom_background_at_snapshot_time() {
+    use ca_app::capture::{Snapshot, capture_viewport};
+    use ca_core::{camera::WorldView, map_json::MapDocument};
+    use eframe::wgpu;
+    let document = MapDocument::parse(r##"{"calles":[],"personalizacion":{"fondoMapa":{"preset":"custom","color":"#39a57c"}},"configuracionTiempo":{"horaActual":0,"minutoActual":0,"segundoActual":0}}"##).unwrap();
+    let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor::from_env_or_default());
+    let adapter = pollster::block_on(instance.request_adapter(&Default::default())).unwrap();
+    let (device, queue) = pollster::block_on(adapter.request_device(&Default::default())).unwrap();
+    let image = capture_viewport(
+        Snapshot {
+            document,
+            shift: [0.; 2],
+            style: Default::default(),
+            device,
+            queue,
+        },
+        WorldView {
+            origin: [0.; 2],
+            span: [10.; 2],
+        },
+        [8; 2],
+    )
+    .unwrap();
+    assert!(
+        image
+            .rgba
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .all(|p| *p == [26, 74, 56, 255])
+    );
+}
+
+#[test]
 fn png_has_expected_pixels_and_v1_utc_file_name() {
     assert_eq!(
         file_name(0).unwrap(),

@@ -1,4 +1,12 @@
 {
+  "mapBackground.label": "Map background",
+  "mapBackground.sky": "Sky",
+  "mapBackground.blue": "Blue",
+  "mapBackground.guinda": "Maroon",
+  "mapBackground.grey": "Grey",
+  "mapBackground.white": "White",
+  "mapBackground.custom": "Custom colour",
+  "mapBackground.preview": "Preview at virtual time",
   "labels.title": "Map labels",
   "labels.off": "Labels off",
   "labels.streets": "Street labels",

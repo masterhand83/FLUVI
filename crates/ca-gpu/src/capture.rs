@@ -46,6 +46,10 @@ impl Capture {
             return Err("Invalid capture dimensions".into());
         }
         let display = crate::TrafficDisplay::new(device, scene, wgpu::TextureFormat::Rgba8Unorm);
+        let background = scene
+            .document()
+            .map_background()
+            .rgb(scene.document().time().clock);
         display.set_view(queue, plan.view);
         let images = ImageLayer::new(device, queue, plan.view, images)?;
         let size = wgpu::Extent3d {
@@ -84,9 +88,9 @@ impl Capture {
                     resolve_target: None,
                     ops: wgpu::Operations {
                         load: wgpu::LoadOp::Clear(wgpu::Color {
-                            r: 5. / 255.,
-                            g: 6. / 255.,
-                            b: 10. / 255.,
+                            r: f64::from(background[0]) / 255.,
+                            g: f64::from(background[1]) / 255.,
+                            b: f64::from(background[2]) / 255.,
                             a: 1.,
                         }),
                         store: wgpu::StoreOp::Store,

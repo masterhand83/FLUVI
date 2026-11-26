@@ -1,4 +1,12 @@
 {
+  "mapBackground.label": "Fondo del mapa",
+  "mapBackground.sky": "Cielo",
+  "mapBackground.blue": "Azul",
+  "mapBackground.guinda": "Guinda",
+  "mapBackground.grey": "Gris",
+  "mapBackground.white": "Blanco",
+  "mapBackground.custom": "Color personalizado",
+  "mapBackground.preview": "Vista previa a la hora virtual",
   "labels.title": "Etiquetas del mapa",
   "labels.off": "Sin etiquetas",
   "labels.streets": "Etiquetas de calles",

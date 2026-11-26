@@ -12,6 +12,7 @@ impl Shell {
         ctx: &egui::Context,
         mut section_ui: impl FnMut(&str, &mut egui::Ui, &Shell),
     ) {
+        self.apply_theme(ctx);
         let mut prefs = self.preferences().clone();
         if prefs.sidebar_visible {
             egui::SidePanel::left("shell-sidebar")
@@ -101,7 +102,8 @@ impl Shell {
         self.apply_theme(ctx);
     }
 
-    fn apply_theme(&self, ctx: &egui::Context) {
+    /// Apply saved visuals before the first widget of a frame.
+    pub fn apply_theme(&self, ctx: &egui::Context) {
         ctx.set_visuals(if self.preferences().dark_mode {
             egui::Visuals::dark()
         } else {

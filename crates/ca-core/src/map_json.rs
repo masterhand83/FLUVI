@@ -91,6 +91,17 @@ pub struct StreetPlacement {
 }
 
 impl MapDocument {
+    pub fn map_background(&self) -> crate::map_background::MapBackground {
+        crate::map_background::MapBackground::from_json(&self.data["personalizacion"]["fondoMapa"])
+    }
+
+    pub fn set_map_background(&mut self, background: crate::map_background::MapBackground) {
+        if !self.data["personalizacion"].is_object() {
+            self.data["personalizacion"] = json!({});
+        }
+        self.data["personalizacion"]["fondoMapa"] = background.to_json();
+    }
+
     pub fn reference_image_json(&self) -> Option<&Value> {
         self.data
             .get("imagenReferencia")
@@ -1406,6 +1417,10 @@ impl MapDocument {
     }
     pub fn to_json(&self) -> String {
         let mut data = self.data.clone();
+        if !data["personalizacion"].is_object() {
+            data["personalizacion"] = json!({});
+        }
+        data["personalizacion"]["fondoMapa"] = self.map_background().to_json();
         data["lluviaAleatoria"] = json!({"probabilidad": self.model.rain().1 * 100.});
         data["edificios"] = Value::Array(
             self.buildings

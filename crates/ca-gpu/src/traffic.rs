@@ -78,6 +78,9 @@ pub struct TrafficScene {
 }
 
 impl TrafficScene {
+    pub fn set_map_background(&mut self, background: ca_core::map_background::MapBackground) {
+        self.document.set_map_background(background);
+    }
     pub fn set_reference_image(&mut self, image: Option<serde_json::Value>) {
         self.document
             .set_reference_image(image)

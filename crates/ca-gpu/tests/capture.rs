@@ -131,7 +131,7 @@ fn capture_is_opaque_camera_independent_and_does_not_change_live_display() {
             .as_chunks::<4>()
             .0
             .iter()
-            .any(|p| *p != [5, 6, 10, 255])
+            .any(|p| *p != [144, 184, 244, 255])
     );
     assert_ne!(capture(live).pixels, whole_a.pixels);
 }
@@ -257,7 +257,11 @@ fn viewport_crop_has_known_building_pixels_and_artwork_blends_over_opaque_backgr
     .unwrap()
     .read_on_worker(&device)
     .unwrap();
-    for (actual, expected) in image.rgba[center..center + 4].iter().zip([4u8, 68, 7, 255]) {
+    // Default 07:00 sky is #90b8f4. Green artwork has effective alpha 128/255 * 0.5.
+    for (actual, expected) in image.rgba[center..center + 4]
+        .iter()
+        .zip([108u8, 202, 183, 255])
+    {
         assert!(actual.abs_diff(expected) <= 1);
     }
 }

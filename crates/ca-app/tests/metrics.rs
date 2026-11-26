@@ -43,6 +43,25 @@ fn chart_points() -> MetricsPanel {
 }
 
 #[test]
+fn live_chart_lines_change_with_the_ui_theme() {
+    use eframe::egui;
+    let ctx = egui::Context::default();
+    let mut panel = chart_points();
+    for (visuals, expected) in [
+        (egui::Visuals::light(), [0, 114, 178]),
+        (egui::Visuals::dark(), [86, 180, 233]),
+    ] {
+        ctx.set_visuals(visuals);
+        let output = chart_frame(&ctx, &mut panel, None);
+        let expected = egui::Color32::from_rgb(expected[0], expected[1], expected[2]);
+        assert!(output.shapes.iter().any(|s| matches!(&s.shape,
+            egui::Shape::Path(path) if matches!(path.stroke.color,
+                egui::epaint::ColorMode::Solid(colour) if colour == expected))));
+    }
+    assert_eq!(panel.history().last().unwrap().density, 40.);
+}
+
+#[test]
 fn export_progress_is_compact_translated_and_removed_when_idle() {
     use ca_app::job_progress::{Snapshot, Stage};
     use eframe::egui;

@@ -16,6 +16,22 @@ wait for a slow or closed result consumer during shutdown.
 
 The native [app shell](app-shell.md) owns localization and saved UI preferences.
 
+### Theme and map background
+
+Apply the saved theme before drawing the first widget of each frame. Charts
+use the current UI visuals. The theme stays in the native preferences file,
+not the map file.
+
+`ca-core::map_background::MapBackground` owns the v1 sky palette and luminance
+shading. The live map, customization preview, and GPU capture use this model
+at their virtual clock time. Customization edits use the ordered edit queue;
+the UI document changes only after the queue accepts the edit.
+Map JSON stores the preference at `personalizacion.fondoMapa`. Missing or invalid
+preferences use `sky`; New Map also uses `sky`.
+
+Focused checks: `cargo test -p ca-core --test map_background` and
+`cargo test -p ca-app --test theme --test control_panel --test metrics --test capture`.
+
 ### Camera and cell interaction
 
 `ca-core::camera::Camera` owns the world/local-screen transform, cursor-anchored
