@@ -105,14 +105,25 @@ impl Scenario {
     fn cells(&self, map: &MapDocument) -> Result<Vec<(CellRef, Disruption)>, ScenarioError> {
         let mismatch = || ScenarioError("scenarios.layoutMismatch");
         let find = |id: &Value, name: &Value| {
-            map.layout()
+            let mut ids =
+                (0..map.layout().len()).filter(|&i| id.as_str() == Some(map.street_id(i)));
+            if let Some(street) = ids.next() {
+                return if ids.next().is_none() {
+                    Ok(street)
+                } else {
+                    Err(mismatch())
+                };
+            }
+            let mut names = map
+                .layout()
                 .iter()
                 .enumerate()
-                .position(|(i, road)| {
-                    id.as_str().is_some_and(|id| id == map.street_id(i))
-                        || name.as_str() == Some(road.name.as_str())
-                })
-                .ok_or_else(mismatch)
+                .filter(|(_, road)| name.as_str() == Some(road.name.as_str()));
+            let (street, _) = names.next().ok_or_else(mismatch)?;
+            if names.next().is_some() {
+                return Err(mismatch());
+            }
+            Ok(street)
         };
         let mut roads = HashSet::new();
         if self.0["callesConfig"]

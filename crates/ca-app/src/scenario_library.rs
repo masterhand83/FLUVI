@@ -95,6 +95,7 @@ pub fn data_path() -> Option<PathBuf> {
 }
 
 pub enum LibraryAction {
+    Retry,
     Save(String),
     Load(Scenario),
     Import,
@@ -185,6 +186,10 @@ impl ScenarioExchange {
     pub fn file_action(&mut self, action: LibraryAction, ctx: &egui::Context, shell: &Shell) {
         let title = shell.tr("scenarios.library", &[]);
         match action {
+            LibraryAction::Retry => {
+                self.started = false;
+                ctx.request_repaint();
+            }
             LibraryAction::Import => self.worker(ctx, move || {
                 let Some(path) = rfd::FileDialog::new()
                     .set_title(title)
@@ -234,9 +239,16 @@ impl ScenarioExchange {
     ) -> Option<LibraryAction> {
         let mut action = None;
         let ready = enabled && !self.busy() && self.library.is_some();
+        let retry = enabled && !self.busy() && self.library.is_none();
         egui::Window::new(shell.tr("scenarios.library", &[]))
             .open(&mut self.open)
             .show(ctx, |ui| {
+                if retry {
+                    ui.label(shell.tr("scenarios.fileError", &[]));
+                    if ui.button(shell.tr("scenarios.retry", &[])).clicked() {
+                        action = Some(LibraryAction::Retry);
+                    }
+                }
                 ui.add_enabled_ui(ready, |ui| {
                     ui.label(shell.tr("scenarios.name", &[]));
                     ui.text_edit_singleline(&mut self.name);
@@ -260,23 +272,23 @@ impl ScenarioExchange {
                                     ui.push_id(entry.id(), |ui| {
                                         ui.label(entry.name());
                                         ui.horizontal(|ui| {
-                                            for (key, value) in [
-                                                (
-                                                    "scenarios.load",
-                                                    LibraryAction::Load(entry.clone()),
-                                                ),
-                                                (
-                                                    "scenarios.export",
-                                                    LibraryAction::Export(entry.clone()),
-                                                ),
-                                                (
-                                                    "scenarios.delete",
-                                                    LibraryAction::Delete(entry.id().to_owned()),
-                                                ),
-                                            ] {
-                                                if ui.button(shell.tr(key, &[])).clicked() {
-                                                    action = Some(value);
-                                                }
+                                            if ui.button(shell.tr("scenarios.load", &[])).clicked()
+                                            {
+                                                action = Some(LibraryAction::Load(entry.clone()));
+                                            }
+                                            if ui
+                                                .button(shell.tr("scenarios.export", &[]))
+                                                .clicked()
+                                            {
+                                                action = Some(LibraryAction::Export(entry.clone()));
+                                            }
+                                            if ui
+                                                .button(shell.tr("scenarios.delete", &[]))
+                                                .clicked()
+                                            {
+                                                action = Some(LibraryAction::Delete(
+                                                    entry.id().to_owned(),
+                                                ));
                                             }
                                         });
                                     });

@@ -1,5 +1,6 @@
 {
   "scenarios.library": "Scenario Library",
+  "scenarios.retry": "Retry Library Read",
   "scenarios.active": "Active scenario: {{name}}",
   "scenarios.name": "Scenario name",
   "scenarios.save": "Save Current Scenario",

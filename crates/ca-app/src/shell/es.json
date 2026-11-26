@@ -1,5 +1,6 @@
 {
   "scenarios.library": "Biblioteca de escenarios",
+  "scenarios.retry": "Volver a leer la biblioteca",
   "scenarios.active": "Escenario activo: {{name}}",
   "scenarios.name": "Nombre del escenario",
   "scenarios.save": "Guardar escenario actual",

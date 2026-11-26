@@ -132,3 +132,42 @@ fn map_and_rain_only_scenario_save_probability_and_load_rain_off() {
         .unwrap();
     assert_eq!(map.model().rain(), (false, 0.1));
 }
+
+#[test]
+fn exact_street_ids_take_priority_over_names() {
+    let mut input: serde_json::Value =
+        serde_json::from_str(include_str!("fixtures/map-v1.json")).unwrap();
+    input["calles"][0]["id"] = "Salida".into();
+    input["calles"][1]["id"] = "Entrada".into();
+    input["calles"][0]["nombre"] = "Road".into();
+    input["calles"][1]["nombre"] = "Road".into();
+    let mut map = MapDocument::parse(&input.to_string()).unwrap();
+    map.model_mut()
+        .disrupt(ca_core::disruptions::ScenarioAction::Paint(
+            CellRef {
+                street: 1,
+                lane: 0,
+                index: 3,
+            },
+            Disruption::Cone,
+        ))
+        .unwrap();
+    let scenario = map.capture_scenario("IDs", "ids").unwrap();
+    map.load_scenario(&scenario).unwrap();
+    assert_eq!(
+        map.model().disruption(CellRef {
+            street: 1,
+            lane: 0,
+            index: 3
+        }),
+        Some(Disruption::Cone)
+    );
+    assert_eq!(
+        map.model().disruption(CellRef {
+            street: 0,
+            lane: 0,
+            index: 3
+        }),
+        None
+    );
+}
