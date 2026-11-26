@@ -350,6 +350,7 @@ impl BuildingEditor {
                             }
                         }
                     } else {
+                        self.parking_form.inspector(ui, document, shell);
                         if candidate.is_image()
                             && ui
                                 .add_enabled(
@@ -388,6 +389,7 @@ impl BuildingEditor {
             }
         }
         self.delete_shortcut(ctx, document, shell);
+        self.parking_form.show_dialog(ctx, document, shell);
         edit
     }
 

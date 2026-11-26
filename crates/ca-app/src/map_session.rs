@@ -20,6 +20,16 @@ pub struct MapSession<S> {
 }
 
 impl<S> MapSession<S> {
+    pub fn configure_parking(
+        &mut self,
+        building: usize,
+        config: Option<ca_core::parking::ParkingConfig>,
+    ) -> Result<(), ca_core::parking::ParkingError> {
+        self.document.configure_parking(building, config)?;
+        self.revision = self.revision.wrapping_add(1);
+        Ok(())
+    }
+
     pub fn edit_buildings(
         &mut self,
         edit: ca_core::buildings::BuildingEdit,

@@ -382,10 +382,22 @@ configuration. Save/load retains configuration, not live parked vehicles.
 until `MapSession::revision` changes, including street vertex edits. Names and
 artwork alone do not produce a functional outline. A bounded non-blocking channel
 publishes render-owned occupancy to cached `(occupied/capacity)` labels.
-Parking controls and hourly-curve editing remain ticket 22.
+`ca-app::parking_form::ParkingDraft` owns capacity, 1-based lane/cell text rows,
+and 24-hour entrance/exit percentages. The building inspector and its Parking
+Configuration dialog use the same fields, candidate conversion, and core
+validator. Normal, Office, and Shopping Centre presets retain all v1 values.
+Apply saves the complete valid draft; Cancel, Close, and Escape discard it.
+Topology or selection changes discard stale draft addresses. Disabled parking
+releases endpoints and occupancy when applied.
+
+Parking edits use the ordered render queue. The render-owned model checks live
+occupancy before acknowledging a capacity change; only an accepted change updates
+the UI document and retained overlays. A full queue or rejected change keeps the
+draft. While a change is in flight, other edits wait without a blocking read.
 
 Focused checks: `cargo test -p ca-core -p ca-app --test parking` and
-`cargo test -p ca-app --bin ca-app parking_counter`.
+`cargo test -p ca-app --test parking_form`; render-queue checks:
+`cargo test -p ca-app --bin ca-app parking`.
 
 ### Image buildings
 

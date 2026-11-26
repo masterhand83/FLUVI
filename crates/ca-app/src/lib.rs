@@ -13,6 +13,7 @@ pub mod map;
 pub mod map_files;
 pub mod map_session;
 pub mod parking;
+pub mod parking_form;
 mod preview;
 pub mod shell;
 pub mod street_dialog;

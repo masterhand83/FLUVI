@@ -27,6 +27,7 @@ struct Startup {
 }
 
 pub struct App {
+    parking_pending: Option<ca_app::parking_form::ParkingRequest>,
     buildings: ca_app::buildings::BuildingEditor,
     time: ca_core::virtual_time::VirtualTime,
     time_dialogs: ca_app::time::TimeDialogs,
@@ -161,6 +162,7 @@ impl App {
         });
         let time = session.document().time().clone();
         Ok(Self {
+            parking_pending: None,
             buildings: Default::default(),
             time,
             time_dialogs: Default::default(),
@@ -207,6 +209,26 @@ impl App {
     }
 
     fn handle_messages(&mut self) {
+        for (building, result) in self.commands.parking_results() {
+            let Some((target, config)) = self.parking_pending.take() else {
+                continue;
+            };
+            assert_eq!(building, target);
+            match result {
+                Ok(()) => {
+                    self.session
+                        .as_mut()
+                        .expect("session")
+                        .configure_parking(building, config)
+                        .expect("render-validated parking configuration");
+                    self.buildings.parking_applied();
+                }
+                Err(error) => self.shell.notify(
+                    ca_app::shell::Severity::Warning,
+                    self.shell.tr(error.translation_key(), &[]),
+                ),
+            }
+        }
         for (building, occupied) in self.commands.parking_updates() {
             self.buildings.set_parking_occupancy(building, occupied);
         }
@@ -865,6 +887,15 @@ impl eframe::App for App {
             puffin::GlobalProfiler::lock().new_frame();
         }
         self.handle_messages();
+        // Wait for the render-owned occupancy check before accepting another
+        // structural edit or map replacement. No blocking channel read is used.
+        if self.parking_pending.is_some() {
+            egui::CentralPanel::default().show(ctx, |ui| {
+                ui.label(self.shell.tr("parking.ui.applying", &[]));
+            });
+            ctx.request_repaint();
+            return;
+        }
         self.map_files(ctx);
         if self.error.is_some() || self.smoke_frames.is_some_and(|n| self.progress.frames >= n) {
             ctx.send_viewport_cmd(egui::ViewportCommand::Close);
@@ -957,6 +988,11 @@ impl eframe::App for App {
             }
             if let Some(edit) = building_edit {
                 self.edit_buildings(edit);
+            }
+            {
+                let session = self.session.as_ref().expect("session");
+                self.buildings
+                    .sync_parking_form(session.document(), session.revision());
             }
             if let Some(edit) = self.buildings.forms(
                 ctx,
@@ -1119,6 +1155,25 @@ impl eframe::App for App {
                 );
             }
         });
+        let session = self.session.as_ref().expect("session");
+        if self.parking_pending.is_none()
+            && let Some((building, config)) = self
+                .buildings
+                .take_parking_request(session.document(), session.revision())
+        {
+            if self
+                .commands
+                .edit(Edit::Parking(building, config.clone().map(Box::new)))
+            {
+                self.parking_pending = Some((building, config));
+                self.edit_pause.begin(&mut self.playing);
+            } else {
+                self.shell.notify(
+                    ca_app::shell::Severity::Warning,
+                    self.shell.tr("shell.cellEditBusy", &[]),
+                );
+            }
+        }
         self.shell.overlays(ctx);
         if self.profiler {
             self.profiler = puffin_egui::profiler_window(ctx);

@@ -36,6 +36,7 @@ pub struct Paint {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Edit {
+    Parking(usize, Option<Box<ca_core::parking::ParkingConfig>>),
     Building(ca_core::buildings::BuildingEdit),
     ScenarioTime(ca_core::virtual_time::Clock),
     Profiles(Box<ca_core::virtual_time::VirtualTime>),
@@ -78,6 +79,7 @@ impl CallbackTrait for BackgroundCallback {
 
 /// Only view/control state is coalesced. Cell edits retain FIFO order.
 pub struct Commands {
+    parking_results: Receiver<(usize, Result<(), ca_core::parking::ParkingError>)>,
     parking: Receiver<(usize, usize)>,
     buildings: Sender<Vec<ca_core::map_json::BackgroundZone>>,
     stale_buildings: Receiver<Vec<ca_core::map_json::BackgroundZone>>,
@@ -88,6 +90,7 @@ pub struct Commands {
 }
 
 pub struct Requests {
+    parking_results: Sender<(usize, Result<(), ca_core::parking::ParkingError>)>,
     parking: Sender<(usize, usize)>,
     buildings: Receiver<Vec<ca_core::map_json::BackgroundZone>>,
     state: Receiver<Paint>,
@@ -96,6 +99,7 @@ pub struct Requests {
 }
 
 pub fn command_channel() -> (Commands, Requests) {
+    let (parking_results_tx, parking_results) = bounded(32);
     let (parking_tx, parking) = bounded(1024);
     let (building_tx, buildings) = bounded(1);
     let (state_tx, state) = bounded(1);
@@ -103,6 +107,7 @@ pub fn command_channel() -> (Commands, Requests) {
     let (replacement_tx, replacement) = bounded(1);
     (
         Commands {
+            parking_results,
             parking,
             buildings: building_tx,
             stale_buildings: buildings.clone(),
@@ -112,6 +117,7 @@ pub fn command_channel() -> (Commands, Requests) {
             replacement: replacement_tx,
         },
         Requests {
+            parking_results: parking_results_tx,
             parking: parking_tx,
             buildings,
             state,
@@ -122,6 +128,11 @@ pub fn command_channel() -> (Commands, Requests) {
 }
 
 impl Commands {
+    pub fn parking_results(
+        &self,
+    ) -> impl Iterator<Item = (usize, Result<(), ca_core::parking::ParkingError>)> + '_ {
+        self.parking_results.try_iter()
+    }
     pub fn parking_updates(&self) -> impl Iterator<Item = (usize, usize)> + '_ {
         self.parking.try_iter()
     }
@@ -228,6 +239,12 @@ impl Resources {
         let mut reset_time = false;
         while let Ok(edit) = self.requests.edits.try_recv() {
             edited |= match edit {
+                Edit::Parking(building, config) => {
+                    let result = self.scene.configure_parking(building, config.map(|c| *c));
+                    // At most one UI parking request can be in flight.
+                    let _ = self.requests.parking_results.try_send((building, result));
+                    false
+                }
                 Edit::Building(edit) => {
                     self.scene.edit_buildings(edit);
                     buildings_edited = true;
@@ -448,6 +465,52 @@ mod tests {
             commands.parking_updates().collect::<Vec<_>>(),
             vec![(building, 1)]
         );
+        assert!(commands.edit(Edit::Toggle(entrance)));
+        assert!(commands.send(
+            Paint {
+                playing: false,
+                rate: 10.,
+                step_ticket: 2,
+                generation_override: Some(0.),
+                excluded_street: None,
+                view: WorldView {
+                    origin: [0.; 2],
+                    span: [20.; 2]
+                },
+            },
+            None
+        ));
+        resources.prepare(&device, &queue);
+        assert_eq!(
+            commands.parking_updates().collect::<Vec<_>>(),
+            vec![(building, 2)]
+        );
+        let mut changed = document.model().parking(building).unwrap().config.clone();
+        changed.capacity = 6;
+        assert!(commands.edit(Edit::Parking(building, Some(Box::new(changed)))));
+        resources.prepare(&device, &queue);
+        assert_eq!(
+            commands.parking_results().collect::<Vec<_>>(),
+            vec![(building, Ok(()))]
+        );
+        assert_eq!(
+            resources.scene.parking_occupancies().collect::<Vec<_>>(),
+            vec![(building, 2)]
+        );
+        let mut too_small = document.model().parking(building).unwrap().config.clone();
+        too_small.capacity = 1;
+        assert!(commands.edit(Edit::Parking(building, Some(Box::new(too_small)))));
+        resources.prepare(&device, &queue);
+        assert_eq!(
+            commands.parking_results().collect::<Vec<_>>(),
+            vec![(
+                building,
+                Err(ca_core::parking::ParkingError(
+                    "parking.validation.capacityBelowOccupancy"
+                ))
+            )]
+        );
+        commands.parking_updates().for_each(drop);
         assert!(commands.edit(Edit::ScenarioTime(Clock::default())));
         resources.prepare(&device, &queue);
         assert_eq!(
@@ -1128,6 +1191,20 @@ mod tests {
             assert!(
                 outline[..3].iter().all(|&v| v > 180),
                 "preview outline must be visible over GPU map at scale {pixels_per_point}: {outline:?}"
+            );
+        }
+    }
+    #[test]
+    fn parking_queue_full_is_non_blocking_and_keeps_accepted_edits_in_order() {
+        let (commands, requests) = command_channel();
+        for building in 0..32 {
+            assert!(commands.edit(Edit::Parking(building, None)));
+        }
+        assert!(!commands.edit(Edit::Parking(32, None)));
+        for building in 0..32 {
+            assert_eq!(
+                requests.edits.try_recv().unwrap(),
+                Edit::Parking(building, None)
             );
         }
     }

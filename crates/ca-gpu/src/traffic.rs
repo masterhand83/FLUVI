@@ -50,6 +50,14 @@ pub struct TrafficScene {
 }
 
 impl TrafficScene {
+    pub fn configure_parking(
+        &mut self,
+        building: usize,
+        config: Option<ca_core::parking::ParkingConfig>,
+    ) -> Result<(), ca_core::parking::ParkingError> {
+        self.document.configure_parking(building, config)
+    }
+
     pub fn parking_occupancies(&self) -> impl Iterator<Item = (usize, usize)> + '_ {
         self.document
             .buildings()

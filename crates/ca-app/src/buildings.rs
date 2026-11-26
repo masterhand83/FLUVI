@@ -32,6 +32,7 @@ struct Drag {
 
 #[derive(Default)]
 pub struct BuildingEditor {
+    parking_form: crate::parking_form::ParkingForms,
     parking: crate::parking::ParkingOverlays,
     parking_revision: Option<(u64, [f32; 2])>,
     render_dirty: bool,
@@ -54,6 +55,23 @@ pub struct BuildingEditor {
 }
 
 impl BuildingEditor {
+    pub fn sync_parking_form(&mut self, document: &MapDocument, revision: u64) {
+        self.parking_form.select(document, self.selected, revision);
+    }
+
+    pub fn take_parking_request(
+        &mut self,
+        document: &MapDocument,
+        revision: u64,
+    ) -> Option<crate::parking_form::ParkingRequest> {
+        self.sync_parking_form(document, revision);
+        self.parking_form.take_request()
+    }
+
+    pub fn parking_applied(&mut self) {
+        self.parking_form.cancel();
+    }
+
     pub fn set_parking_occupancy(&mut self, building: usize, occupied: usize) {
         self.parking.set_occupancy(building, occupied);
     }
@@ -97,6 +115,7 @@ impl BuildingEditor {
     }
 
     pub fn cancel(&mut self) {
+        self.parking_form.cancel();
         self.render_dirty |= self.preview.is_some();
         self.form = None;
         self.tool = None;
