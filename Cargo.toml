@@ -10,6 +10,9 @@ license = "MIT"
 [workspace.dependencies]
 ca-core = { path = "crates/ca-core" }
 ca-gpu = { path = "crates/ca-gpu" }
+ca-analysis = { path = "crates/ca-analysis" }
+polars-core = { version = "=0.55.2", default-features = false }
+csv = "=1.4.0"
 eframe = { version = "=0.33.3", default-features = false, features = ["wgpu", "default_fonts", "x11", "wayland"] }
 egui = "=0.33.3"
 egui-wgpu = "=0.33.3"

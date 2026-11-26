@@ -1,0 +1,239 @@
+use super::{Analysis, analyze_with_images};
+use crate::shell::Language;
+use ca_analysis::{Format, MAX_BYTES};
+use crossbeam_channel::{Receiver, Sender, TryRecvError, TrySendError, bounded};
+use std::{
+    io::Read,
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    },
+};
+
+enum Input {
+    Content(String, Format),
+    Pick(String),
+    Replot(Box<ca_analysis::Report>),
+}
+type Outcome = Result<Option<Analysis>, String>;
+struct Job {
+    input: Input,
+    language: Language,
+    active: Arc<AtomicBool>,
+    result: Sender<Outcome>,
+}
+
+/// A single worker with one queued request. Each request has its own bounded
+/// reply channel. Dropping that receiver makes old replies unobservable.
+pub struct Session {
+    worker: Option<Sender<Job>>,
+    pending: Option<Job>,
+    receiving: Option<Receiver<Outcome>>,
+    active: Option<Arc<AtomicBool>>,
+    analysis: Option<Analysis>,
+    error: Option<String>,
+    opened: bool,
+    revision: u64,
+}
+
+impl Default for Session {
+    fn default() -> Self {
+        Self::with_processor(analyze_with_images).unwrap_or_else(|_| Self {
+            worker: None,
+            pending: None,
+            receiving: None,
+            active: None,
+            analysis: None,
+            error: Some("analyzer.error.worker".into()),
+            opened: false,
+            revision: 0,
+        })
+    }
+}
+
+fn file(title: String) -> Result<Option<(String, Format)>, String> {
+    let Some(path) = rfd::FileDialog::new()
+        .set_title(title)
+        .add_filter("CSV / JSON", &["csv", "json"])
+        .pick_file()
+    else {
+        return Ok(None);
+    };
+    let format = match path
+        .extension()
+        .and_then(|s| s.to_str())
+        .map(str::to_ascii_lowercase)
+        .as_deref()
+    {
+        Some("csv") => Format::Csv,
+        Some("json") => Format::Json,
+        _ => return Err("analyzer.error.invalid".into()),
+    };
+    let file = std::fs::File::open(path).map_err(|_| "analyzer.error.io")?;
+    let mut bytes = Vec::new();
+    file.take(MAX_BYTES as u64 + 1)
+        .read_to_end(&mut bytes)
+        .map_err(|_| "analyzer.error.io")?;
+    if bytes.len() > MAX_BYTES {
+        return Err("analyzer.error.limit".into());
+    }
+    let content = String::from_utf8(bytes).map_err(|_| "analyzer.error.invalid")?;
+    Ok(Some((content, format)))
+}
+
+impl Session {
+    /// Processor injection supports native hosts and deterministic delayed-worker
+    /// tests through the same public session boundary.
+    pub fn with_processor(
+        processor: impl Fn(&str, Format, Language) -> Result<Analysis, String> + Send + 'static,
+    ) -> std::io::Result<Self> {
+        let (sender, jobs) = bounded::<Job>(1);
+        std::thread::Builder::new()
+            .name("fluvi-analyzer".into())
+            .spawn(move || {
+                while let Ok(job) = jobs.recv() {
+                    if !job.active.load(Ordering::Acquire) {
+                        continue;
+                    }
+                    let outcome = (|| {
+                        let source = match job.input {
+                            Input::Content(content, format) => Some((content, format)),
+                            Input::Pick(title) => file(title)?,
+                            Input::Replot(report) => {
+                                let plots = super::plots::render(
+                                    &report,
+                                    &crate::shell::Translator::new(job.language),
+                                )?;
+                                return Ok(Some(Analysis {
+                                    report: *report,
+                                    plots,
+                                    language: job.language,
+                                }));
+                            }
+                        };
+                        if !job.active.load(Ordering::Acquire) {
+                            return Ok(None);
+                        }
+                        let Some((content, format)) = source else {
+                            return Ok(None);
+                        };
+                        processor(&content, format, job.language).map(Some)
+                    })();
+                    if job.active.load(Ordering::Acquire) {
+                        let _ = job.result.try_send(outcome);
+                    }
+                }
+            })?;
+        Ok(Self {
+            worker: Some(sender),
+            pending: None,
+            receiving: None,
+            active: None,
+            analysis: None,
+            error: None,
+            opened: false,
+            revision: 0,
+        })
+    }
+    pub fn open(&mut self) {
+        self.opened = true;
+    }
+    pub fn is_open(&self) -> bool {
+        self.opened
+    }
+    pub fn close(&mut self) {
+        self.opened = false;
+        self.invalidate();
+    }
+    fn invalidate(&mut self) {
+        self.revision = self.revision.wrapping_add(1);
+        if let Some(active) = self.active.take() {
+            active.store(false, Ordering::Release);
+        }
+        self.pending = None;
+        self.receiving = None;
+        self.analysis = None;
+        self.error = None;
+    }
+    fn request(&mut self, input: Input, language: Language) {
+        self.invalidate();
+        if !self.opened {
+            return;
+        }
+        let active = Arc::new(AtomicBool::new(true));
+        let (result, receiving) = bounded(1);
+        self.pending = Some(Job {
+            input,
+            language,
+            active: active.clone(),
+            result,
+        });
+        self.active = Some(active);
+        self.receiving = Some(receiving);
+    }
+    pub fn load(&mut self, content: String, format: Format, language: Language) {
+        self.request(Input::Content(content, format), language);
+    }
+    pub fn pick_file(&mut self, title: String, language: Language) {
+        self.request(Input::Pick(title), language);
+    }
+    pub fn is_busy(&self) -> bool {
+        self.pending.is_some() || self.receiving.is_some()
+    }
+    pub fn analysis(&self) -> Option<&Analysis> {
+        self.analysis.as_ref()
+    }
+    pub fn error_key(&self) -> Option<&str> {
+        self.error.as_deref()
+    }
+    pub fn revision(&self) -> u64 {
+        self.revision
+    }
+    pub fn set_language(&mut self, language: Language) {
+        if self
+            .analysis
+            .as_ref()
+            .is_some_and(|a| a.language != language)
+        {
+            let analysis = self.analysis.take().unwrap();
+            self.request(Input::Replot(Box::new(analysis.report)), language);
+        }
+    }
+    pub fn poll(&mut self) {
+        if !self.opened {
+            return;
+        }
+        if let Some(job) = self.pending.take() {
+            match self.worker.as_ref().map(|w| w.try_send(job)) {
+                Some(Ok(())) => {}
+                Some(Err(TrySendError::Full(job))) => self.pending = Some(job),
+                _ => {
+                    self.error = Some("analyzer.error.worker".into());
+                    self.receiving = None;
+                }
+            }
+        }
+        if let Some(receiving) = &self.receiving {
+            match receiving.try_recv() {
+                Ok(outcome) => {
+                    self.receiving = None;
+                    match outcome {
+                        Ok(analysis) => self.analysis = analysis,
+                        Err(error) => self.error = Some(error),
+                    }
+                }
+                Err(TryRecvError::Disconnected) => {
+                    self.receiving = None;
+                    self.error = Some("analyzer.error.worker".into());
+                }
+                Err(TryRecvError::Empty) => {}
+            }
+        }
+    }
+}
+
+impl Drop for Session {
+    fn drop(&mut self) {
+        self.invalidate();
+    }
+}

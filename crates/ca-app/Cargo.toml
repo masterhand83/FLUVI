@@ -8,6 +8,7 @@ license.workspace = true
 [dependencies]
 ca-core.workspace = true
 ca-gpu.workspace = true
+ca-analysis.workspace = true
 eframe.workspace = true
 egui.workspace = true
 egui-wgpu.workspace = true

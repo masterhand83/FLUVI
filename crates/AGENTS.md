@@ -3,10 +3,11 @@
 Current dependency direction: `ca-app → ca-gpu → ca-core`.
 Core owns the traffic model, rules, and CPU reference. GPU owns traffic packing
 and rendering. App owns UI, timing, and message routing.
-`ca-analysis` is reserved and has no dependencies or active worker. Future metrics
-and file analysis may add `ca-app → ca-analysis → ca-core`; use bounded channels
-and non-blocking result delivery. See the worker requirements in the development
-guide below. Core must remain independent of GPU, UI, and analysis libraries.
+`ca-analysis` owns native metric-file parsing and numeric analysis with Polars.
+`ca-app → ca-analysis` is permitted. Keep plot text and dialogs in the app.
+Use bounded channels and non-blocking result delivery for file analysis. See the
+worker requirements in the development guide below. Core must remain independent
+of GPU, UI, and analysis libraries.
 
 Verify APIs against the pinned registry source, not memory. Use `eframe::wgpu`
 in the app and the exact matching wgpu version in the standalone GPU crate.

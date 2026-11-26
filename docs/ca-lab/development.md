@@ -8,8 +8,7 @@ and F12 profiler toggle. The smoke run checks completed frames, completed traffi
 ticks, a non-zero vehicle count, and app errors with a real native window.
 
 Use `ca-core::metrics` for tick-based traffic estimates on the simulation side.
-Keep `ca-analysis` reserved for file analysis (ticket 29); no separate analysis
-worker runs in this version. When adding a worker, use bounded input/output
+Keep `ca-analysis` for native metric-file analysis. Use bounded input/output
 channels, non-blocking result delivery, and shutdown when input closes. Never
 wait for a slow or closed result consumer during shutdown.
 
@@ -641,6 +640,45 @@ Complete Export reuse; `build_image_zip` uses Spanish and Balance.
 
 Focused checks: `cargo test -p ca-app --test metric_exports --test metrics
 --test heatmap --test graphics --test metric_export_dialog --test control_panel`.
+
+### Native metrics analyzer
+
+Use Metrics → Metrics Analyzer to load a metrics CSV or JSON export. The dialog
+has numeric results and three plot tabs: temporal, fundamental, and distributions.
+Save the current PNG or all three PNGs in a ZIP. File names, table columns,
+weekday identifiers, and traffic-state identifiers keep their legacy Spanish
+values. Only visible plot text and messages change with the UI language.
+
+`ca-analysis::analyze` parses and normalizes the input and returns numeric tables
+plus named histogram, box-plot, and hourly heatmap data. It uses Polars columns
+and aggregates. Unprefixed times retain v1's Monday start
+and midnight detection. Spanish weekday prefixes from current v1/v2 exports
+identify the first weekday and subsequent weekday changes. Invalid numeric rows
+are dropped, as in v1; bad timestamps and inconsistent JSON arrays give errors.
+Input limits are 16 MiB and 100,000 samples.
+
+`ca-app::analyzer::analyze_with_images` is the worker-only headless entry point.
+It returns the numeric report and three opaque PNG images without a dialog,
+window, GPU, simulation, or Python runtime. The example writes the complete
+result for use by other tools:
+
+```sh
+cargo run -p ca-app --example analyze_metrics -- metrics.csv output-directory en
+```
+
+`analyzer::Session` owns a single analysis worker with a one-slot input queue.
+Each request has a one-slot reply channel and a cancellation flag. New files,
+Close, and Escape drop the old reply channel before any result is displayed.
+The newest unsent request replaces the pending request. Workers skip cancelled
+queued requests, never wait to deliver replies, and exit when input closes.
+Changing language redraws plots on the worker without changing numeric tables.
+Native open/save dialogs and file access also run off the UI thread.
+
+Regenerate the independent Python oracle with
+`scripts/generate-analyzer-fixtures.py`; its module docstring gives the pinned
+`uv` command. Numeric comparison uses a relative/absolute tolerance of `1e-9`.
+Run `cargo test -p ca-analysis --test analyzer` and
+`cargo test -p ca-app --test analyzer` for focused checks.
 
 ### Whole-map PNG and viewport capture
 

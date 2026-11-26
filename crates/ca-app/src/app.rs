@@ -30,6 +30,7 @@ pub struct App {
     capture_job: Option<ca_app::capture::SaveJob>,
     metric_export_job: Option<ca_app::metric_exports::SaveJob>,
     metric_export_dialog: ca_app::metric_exports::ExportDialog,
+    analyzer: ca_app::analyzer::AnalyzerDialog,
     vehicle_heat: bool,
     heatmap: ca_app::heatmap::HeatmapDialog,
     next_heatmap: std::time::Instant,
@@ -369,6 +370,7 @@ impl App {
             capture_job: None,
             metric_export_job: None,
             metric_export_dialog: Default::default(),
+            analyzer: Default::default(),
             vehicle_heat: false,
             heatmap: Default::default(),
             next_heatmap: std::time::Instant::now(),
@@ -678,6 +680,7 @@ impl App {
                 }
             }
             Some(PanelAction::Metrics(action)) => match action {
+                ca_app::metrics::Action::Analyzer => self.analyzer.open(),
                 ca_app::metrics::Action::Export(kind) => {
                     if self.metric_export_job.is_none() {
                         let options = ca_app::metric_exports::ImageOptions {
@@ -1324,6 +1327,7 @@ impl eframe::App for App {
             self.next_heatmap = std::time::Instant::now() + std::time::Duration::from_millis(200);
         }
         self.heatmap.show(ctx, &self.shell);
+        self.analyzer.show(ctx, &self.shell);
         if let Some(included) = self.metrics.dialog(
             ctx,
             self.session.as_ref().expect("session").document(),

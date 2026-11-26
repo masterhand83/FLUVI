@@ -108,6 +108,7 @@ impl Metric {
 }
 
 pub enum Action {
+    Analyzer,
     Export(crate::metric_exports::Kind),
     Heatmap,
     VehicleHeat(bool),
@@ -195,6 +196,9 @@ impl MetricsPanel {
         }
         if ui.button(shell.tr("heatmap.title", &[])).clicked() {
             action = Some(Action::Heatmap);
+        }
+        if ui.button(shell.tr("analyzer.title", &[])).clicked() {
+            action = Some(Action::Analyzer);
         }
         if ui.button(shell.tr("metrics.selectRoads", &[])).clicked() {
             action = Some(Action::Checklist);
