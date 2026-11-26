@@ -8,6 +8,7 @@ use crossbeam_channel::Sender;
 use eframe::egui;
 
 use crate::shell::{Shell, Translator};
+mod chart;
 
 #[derive(Clone, Copy, Debug)]
 pub enum Packet {
@@ -88,7 +89,8 @@ impl Metric {
             Self::NetChange | Self::Throughput => " veh/s",
             Self::Entropy => " bits",
         };
-        format!("{:.3}{unit}", self.value(point))
+        let precision = if matches!(self, Self::Entropy) { 3 } else { 2 };
+        format!("{:.*}{unit}", precision, self.value(point))
     }
 
     pub fn tooltip(self, point: Point, translator: &Translator) -> [String; 4] {
@@ -188,7 +190,7 @@ impl MetricsPanel {
             ui.label(shell.tr("metrics.noData", &[]));
         }
         for metric in Metric::ALL {
-            self.chart(ui, metric, shell);
+            chart::show(ui, self.live(), metric, shell);
         }
         action
     }
@@ -279,58 +281,6 @@ impl MetricsPanel {
                     }
                 }
             }
-        }
-    }
-
-    fn chart(&self, ui: &mut egui::Ui, metric: Metric, shell: &Shell) {
-        ui.label(shell.tr(metric.key(), &[]));
-        let (rect, response) =
-            ui.allocate_exact_size(egui::vec2(ui.available_width(), 90.), egui::Sense::hover());
-        let plot = rect.shrink(5.);
-        ui.painter().rect_stroke(
-            plot,
-            0.,
-            egui::Stroke::new(1_f32, egui::Color32::GRAY),
-            egui::StrokeKind::Inside,
-        );
-        let points = self.live();
-        if points.is_empty() {
-            return;
-        }
-        let minimum = points.iter().map(|&p| metric.value(p)).fold(0., f64::min);
-        let maximum = points.iter().map(|&p| metric.value(p)).fold(1., f64::max);
-        let position = |i: usize, point: Point| {
-            egui::pos2(
-                plot.left()
-                    + i as f32 / (points.len().saturating_sub(1).max(1)) as f32 * plot.width(),
-                plot.bottom()
-                    - ((metric.value(point) - minimum) / (maximum - minimum)) as f32
-                        * plot.height(),
-            )
-        };
-        let path: Vec<_> = points
-            .iter()
-            .enumerate()
-            .map(|(i, &p)| position(i, p))
-            .collect();
-        if path.len() == 1 {
-            ui.painter()
-                .circle_filled(path[0], 2., egui::Color32::LIGHT_BLUE);
-        } else {
-            ui.painter().add(egui::Shape::line(
-                path,
-                egui::Stroke::new(1.5_f32, egui::Color32::LIGHT_BLUE),
-            ));
-        }
-        if let Some(pos) = response.hover_pos() {
-            let index = (((pos.x - plot.left()) / plot.width()).clamp(0., 1.)
-                * points.len().saturating_sub(1) as f32)
-                .round() as usize;
-            response.on_hover_ui(|ui| {
-                for line in metric.tooltip(points[index], shell.translator()) {
-                    ui.label(line);
-                }
-            });
         }
     }
 }

@@ -1,4 +1,10 @@
 {
+  "metrics.axis.time": "Tiempo simulado",
+  "metrics.axis.percentage": "Porcentaje (%)",
+  "metrics.axis.rate": "Vehículos por segundo (veh/s)",
+  "metrics.axis.entropy": "Entropía (bits)",
+  "metrics.latestValue": "Actual: {{value}}",
+  "metrics.hoverHint": "Pase el cursor para ver un valor",
   "metrics.density": "Densidad",
   "metrics.netChange": "Tasa de cambio neto de población",
   "metrics.speed": "Velocidad estimada",

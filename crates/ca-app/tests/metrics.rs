@@ -2,6 +2,141 @@ use ca_app::metrics::{Delivery, Metric, MetricsPanel, Packet};
 use ca_core::{map_json::MapDocument, metrics::Metrics, virtual_time::Clock};
 use crossbeam_channel::bounded;
 
+fn chart_frame(
+    ctx: &eframe::egui::Context,
+    panel: &mut MetricsPanel,
+    pointer: Option<eframe::egui::Pos2>,
+) -> eframe::egui::FullOutput {
+    use eframe::egui;
+    ctx.run(
+        egui::RawInput {
+            screen_rect: Some(egui::Rect::from_min_size(
+                egui::Pos2::ZERO,
+                egui::vec2(300., 1800.),
+            )),
+            events: pointer.map(egui::Event::PointerMoved).into_iter().collect(),
+            ..Default::default()
+        },
+        |ctx| {
+            egui::CentralPanel::default().show(ctx, |ui| {
+                panel.show(ui, &ca_app::shell::Shell::load(None));
+            });
+        },
+    )
+}
+
+fn chart_points() -> MetricsPanel {
+    let mut panel = MetricsPanel::default();
+    for (second, density) in [(2, 10.), (4, 40.)] {
+        panel.receive(Packet::Point(ca_core::metrics::Point {
+            clock: Clock::new(1, 7, 0, second).unwrap(),
+            elapsed_seconds: u64::from(second),
+            density,
+            net_change: -0.5,
+            speed: 60.,
+            throughput: 2.4,
+            entropy: 1.25,
+            population: 4,
+        }));
+    }
+    panel
+}
+
+#[test]
+fn charts_show_titles_latest_values_labelled_axes_and_five_line_colours() {
+    use eframe::egui;
+    let ctx = egui::Context::default();
+    let output = chart_frame(&ctx, &mut chart_points(), None);
+    let labels: Vec<_> = output
+        .shapes
+        .iter()
+        .filter_map(|shape| match &shape.shape {
+            egui::Shape::Text(text) => Some(text.galley.job.text.as_str()),
+            _ => None,
+        })
+        .collect();
+    for label in [
+        "Densidad",
+        "Velocidad estimada",
+        "Flujo vehicular estimado",
+        "Tasa de cambio neto de población",
+        "Entropía de Shannon de transiciones",
+        "Actual: 40.00%",
+        "Actual: -0.50 veh/s",
+        "Actual: 1.250 bits",
+        "100.0",
+        "07:00:02",
+        "07:00:04",
+    ] {
+        assert!(labels.contains(&label), "missing chart label: {label}");
+    }
+    assert_eq!(
+        labels.iter().filter(|&&s| s == "Tiempo simulado").count(),
+        5
+    );
+    let colours: std::collections::HashSet<_> = output
+        .shapes
+        .iter()
+        .filter_map(|s| {
+            if let egui::Shape::Path(path) = &s.shape
+                && let egui::epaint::ColorMode::Solid(colour) = path.stroke.color
+            {
+                Some(colour)
+            } else {
+                None
+            }
+        })
+        .collect();
+    assert_eq!(colours.len(), 5, "each metric needs its own line colour");
+}
+
+#[test]
+fn graph_hover_immediately_shows_sample_value_time_and_marker() {
+    use eframe::egui;
+    let ctx = egui::Context::default();
+    let mut panel = chart_points();
+    chart_frame(&ctx, &mut panel, None);
+    let output = chart_frame(&ctx, &mut panel, None);
+    let path = output
+        .shapes
+        .iter()
+        .find_map(|shape| match &shape.shape {
+            egui::Shape::Path(path) if path.points.len() == 2 => Some(path),
+            _ => None,
+        })
+        .expect("density line");
+    let point = path.points[0];
+    let output = chart_frame(&ctx, &mut panel, Some(point));
+    assert!(
+        output
+            .shapes
+            .iter()
+            .any(|shape| matches!(&shape.shape, egui::Shape::Text(text)
+        if text.galley.job.text == "07:00:02 · 10.00%"))
+    );
+    assert!(
+        output
+            .shapes
+            .iter()
+            .any(|shape| matches!(&shape.shape, egui::Shape::Circle(circle)
+        if circle.center.distance(point) < 0.1 && circle.radius >= 4.))
+    );
+    // Hover also works with a single point and with no history after a reset.
+    panel.receive(Packet::Reset);
+    let _ = chart_frame(&ctx, &mut panel, Some(point));
+    panel.receive(Packet::Point(ca_core::metrics::Point {
+        clock: Clock::default(),
+        elapsed_seconds: 2,
+        density: 0.,
+        net_change: 0.,
+        speed: 0.,
+        throughput: 0.,
+        entropy: 0.,
+        population: 0,
+    }));
+    let _ = chart_frame(&ctx, &mut panel, Some(point));
+}
+
 #[test]
 fn full_or_closed_chart_channel_never_blocks_or_loses_export_history() {
     let document = MapDocument::demo();
