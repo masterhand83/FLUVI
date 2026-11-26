@@ -5,7 +5,9 @@ mod background;
 mod buildings;
 pub use background::triangulate as triangulate_polygon;
 pub use buildings::building_zone;
+mod capture;
 mod traffic;
+pub use capture::{Capture, CaptureImage, CapturePlan, CapturedImage};
 pub use traffic::{TrafficDisplay, TrafficLane, TrafficScene, VehicleStyle};
 
 #[repr(C)]

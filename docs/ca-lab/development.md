@@ -567,6 +567,38 @@ For the manual timestamp benchmark, run
 `cargo test -p ca-gpu --test vehicle_heat benchmark_vehicle_styles -- --ignored --nocapture`.
 See [campus-performance.md](campus-performance.md) for results and measurement limits.
 
+### Whole-map PNG and viewport capture
+
+Use Tools → Save Whole Map PNG. Capture runs while traffic and camera input
+continue. One request copies the render-owned document after ordered edits and
+the current tick batch. A bounded channel transfers it to a worker. GPU setup,
+image decoding, readback, PNG encoding, and the native save dialog run there.
+The worker owns a separate `TrafficDisplay`; it does not change the live view
+uniform. This user-triggered snapshot is the exception to hot-path allocation
+and GPU-readback restrictions.
+
+`ca-gpu::CapturePlan::whole_map` fits street-cell footprints, roundabout outer
+edges, rotated/polygonal buildings, and the visible reference image. Background
+zones draw but do not expand the crop. Padding is 12 saved v1 pixels per side;
+output is at most 2400 pixels per axis and eight output pixels per saved pixel.
+Captures use the same opaque background as the map panel. Image buildings draw
+in saved order below roads. Reference images draw below buildings.
+Reference decoding is separate from the 5 MiB building-upload rules. PNG, JPEG,
+WebP, GIF, BMP, ICO, and SVG references are supported. Animated references use
+their first frame. Linked reads have a 15-second timeout, at most three redirects,
+and a 16 MiB input limit. Raster decoding has a 64 MiB allocation limit and an
+8192-pixel axis limit. SVG output is capped at 2400 pixels per axis; SVG artwork
+cannot read local files through image links. GPU polling is non-waiting, including
+on the worker, so it does not hold a GPU fence lock while live frames submit.
+
+`ca-app::capture::capture_viewport` is the worker-only export seam for F11.4.
+Pass the physical pixel dimensions and the original shifted `WorldView` with
+the snapshot. It retains that rectangle even if rebuilding the capture scene
+chooses a different display shift. Captures contain map content, not editor
+handles, dialogs, or other UI controls.
+
+Focused checks: `cargo test -p ca-app -p ca-gpu --test capture`.
+
 ### Disruptions, rain, and instant flood
 
 The Scenarios section owns lane-block, flood, and obstacle paint modes. Select

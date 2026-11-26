@@ -90,6 +90,7 @@ impl CallbackTrait for BackgroundCallback {
 
 /// Only view/control state is coalesced. Cell edits retain FIFO order.
 pub struct Commands {
+    captures: Sender<Sender<ca_app::capture::Snapshot>>,
     heatmap_request: Sender<()>,
     heatmaps: Receiver<std::sync::Arc<ca_core::heatmap::Snapshot>>,
     metrics: Receiver<ca_app::metrics::Packet>,
@@ -105,6 +106,7 @@ pub struct Commands {
 }
 
 pub struct Requests {
+    captures: Receiver<Sender<ca_app::capture::Snapshot>>,
     heatmap_request: Receiver<()>,
     heatmaps: Sender<std::sync::Arc<ca_core::heatmap::Snapshot>>,
     metrics: Sender<ca_app::metrics::Packet>,
@@ -118,6 +120,7 @@ pub struct Requests {
 }
 
 pub fn command_channel() -> (Commands, Requests) {
+    let (captures_tx, captures) = bounded(1);
     let (heatmap_request_tx, heatmap_request) = bounded(1);
     let (heatmap_tx, heatmaps) = bounded(1);
     let (metrics_tx, metrics) = bounded(128);
@@ -130,6 +133,7 @@ pub fn command_channel() -> (Commands, Requests) {
     let (replacement_tx, replacement) = bounded(1);
     (
         Commands {
+            captures: captures_tx,
             heatmap_request: heatmap_request_tx,
             heatmaps,
             metrics,
@@ -144,6 +148,7 @@ pub fn command_channel() -> (Commands, Requests) {
             replacement: replacement_tx,
         },
         Requests {
+            captures,
             heatmap_request,
             heatmaps: heatmap_tx,
             metrics: metrics_tx,
@@ -159,6 +164,10 @@ pub fn command_channel() -> (Commands, Requests) {
 }
 
 impl Commands {
+    pub fn capture(&self, snapshot: Sender<ca_app::capture::Snapshot>) -> bool {
+        self.captures.try_send(snapshot).is_ok()
+    }
+
     pub fn request_heatmap(&self) {
         let _ = self.heatmap_request.try_send(());
     }
@@ -272,6 +281,7 @@ impl Resources {
             // All old edits are obsolete. UI and render reset in this same frame.
             while self.requests.edits.try_recv().is_ok() {}
             while self.requests.buildings.try_recv().is_ok() {}
+            while self.requests.captures.try_recv().is_ok() {}
             self.display = TrafficDisplay::new(device, &scene, self.format);
             self.scene = scene;
             self.metric_delivery.reset();
@@ -445,6 +455,17 @@ impl Resources {
             self.frame_window = now;
         }
         let _ = self.events.try_send(Event::Progress(self.progress));
+        if let Ok(sender) = self.requests.captures.try_recv() {
+            // The worker owns all capture allocations and GPU waits. Clone only on
+            // a user request; never change the simulation or the display uniform.
+            let _ = sender.try_send(ca_app::capture::Snapshot {
+                document: self.scene.document().clone(),
+                shift: self.scene.shift(),
+                style: request.vehicle_style,
+                device: device.clone(),
+                queue: queue.clone(),
+            });
+        }
         self.metric_delivery
             .publish(self.scene.metrics(), &self.requests.metrics);
         // Transfer a reusable snapshot only on request. A slow UI skips a sample.
@@ -509,6 +530,61 @@ impl CallbackTrait for PaintCallback {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn capture_snapshot_keeps_frames_and_edits_running_with_a_slow_worker() {
+        let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor::from_env_or_default());
+        let adapter = pollster::block_on(instance.request_adapter(&Default::default())).unwrap();
+        let (device, queue) =
+            pollster::block_on(adapter.request_device(&Default::default())).unwrap();
+        let mut document = ca_core::map_json::MapDocument::demo();
+        document.model_mut().clear_vehicles();
+        let scene = TrafficScene::from_document(&document);
+        let format = wgpu::TextureFormat::Rgba8Unorm;
+        let display = TrafficDisplay::new(&device, &scene, format);
+        let (commands, requests) = command_channel();
+        let (events, _) = bounded(2);
+        let mut resources = Resources::new(scene, display, events, requests, format);
+        let view = WorldView {
+            origin: [3., 4.],
+            span: [20., 10.],
+        };
+        let paint = Paint {
+            view,
+            playing: false,
+            ..resources.request
+        };
+        assert!(commands.send(paint, None));
+        let cell = CellRef {
+            street: 0,
+            lane: 0,
+            index: 2,
+        };
+        assert!(commands.edit(Edit::Toggle(cell)));
+        let (tx, rx) = bounded(1);
+        assert!(commands.capture(tx.clone()));
+        resources.prepare(&device, &queue);
+        // Leave the first snapshot unread: a second send must not wait for space.
+        assert!(commands.capture(tx));
+        assert!(commands.edit(Edit::Toggle(CellRef { index: 3, ..cell })));
+        resources.prepare(&device, &queue);
+        assert_eq!(resources.progress.frames, 2);
+        assert_eq!(resources.progress.generation, 0);
+        assert_eq!(resources.progress.population, 2);
+        assert_eq!(resources.request.view, view);
+        let snapshot = rx.try_recv().unwrap();
+        assert_eq!(
+            TrafficScene::from_document(&snapshot.document).population(),
+            1
+        );
+        // A closed worker also cannot block the next frame.
+        let (tx, rx) = bounded(1);
+        drop(rx);
+        assert!(commands.capture(tx));
+        resources.prepare(&device, &queue);
+        assert_eq!(resources.progress.frames, 3);
+        assert_eq!(resources.progress.population, 2);
+    }
 
     #[test]
     fn parking_counter_uses_render_owned_occupancy_and_scenario_reset() {

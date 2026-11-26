@@ -23,6 +23,10 @@ icu_collator.workspace = true
 icu_locale_core.workspace = true
 image.workspace = true
 base64.workspace = true
+time.workspace = true
+ureq.workspace = true
+resvg.workspace = true
+data-url.workspace = true
 
 [dev-dependencies]
 pollster.workspace = true

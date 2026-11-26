@@ -27,6 +27,7 @@ struct Startup {
 }
 
 pub struct App {
+    capture_job: Option<ca_app::capture::SaveJob>,
     vehicle_heat: bool,
     heatmap: ca_app::heatmap::HeatmapDialog,
     next_heatmap: std::time::Instant,
@@ -334,6 +335,7 @@ impl App {
         });
         let time = session.document().time().clone();
         Ok(Self {
+            capture_job: None,
             vehicle_heat: false,
             heatmap: Default::default(),
             next_heatmap: std::time::Instant::now(),
@@ -601,13 +603,14 @@ impl App {
             scenarios: &mut self.scenarios,
             enabled: self.smoke_frames.is_none(),
             files_ready: self.file_job.is_none()
+                && self.capture_job.is_none()
                 && self.new_confirmation.is_none()
                 && !self.scenario_exchange.busy(),
         }
         .show(ctx, &mut self.shell);
         if action
             .as_ref()
-            .is_some_and(|a| !matches!(a, PanelAction::Metrics(_)))
+            .is_some_and(|a| !matches!(a, PanelAction::Metrics(_) | PanelAction::Screenshot))
             || self.map.as_ref().is_some_and(|map| map.drawing())
         {
             self.metrics.picking = false;
@@ -625,6 +628,22 @@ impl App {
             self.buildings.select(None);
         }
         match action {
+            Some(PanelAction::Screenshot) => {
+                if self.capture_job.is_none() {
+                    match ca_app::capture::start_save(
+                        self.shell.tr("capture.button", &[]),
+                        ctx.clone(),
+                    ) {
+                        Ok(job) if self.commands.capture(job.snapshot.clone()) => {
+                            self.capture_job = Some(job)
+                        }
+                        _ => self.shell.notify(
+                            ca_app::shell::Severity::Error,
+                            self.shell.tr("capture.failed", &[]),
+                        ),
+                    }
+                }
+            }
             Some(PanelAction::Metrics(action)) => match action {
                 ca_app::metrics::Action::Heatmap => {
                     self.heatmap.open();
@@ -1162,6 +1181,43 @@ impl eframe::App for App {
             puffin::GlobalProfiler::lock().new_frame();
         }
         self.handle_messages();
+        if let Some(job) = &self.capture_job {
+            match job.result.try_recv() {
+                Ok(result) => {
+                    self.capture_job = None;
+                    let (severity, key) = match result {
+                        ca_app::capture::SaveResult::Saved => {
+                            (ca_app::shell::Severity::Success, "capture.saved")
+                        }
+                        ca_app::capture::SaveResult::Cancelled => {
+                            (ca_app::shell::Severity::Info, "capture.cancelled")
+                        }
+                        ca_app::capture::SaveResult::Failed(error) => {
+                            tracing::warn!(%error, "map capture failed");
+                            (
+                                ca_app::shell::Severity::Error,
+                                if error == "capture.empty" {
+                                    "capture.empty"
+                                } else if error == "capture.referenceUnavailable" {
+                                    "capture.referenceUnavailable"
+                                } else {
+                                    "capture.failed"
+                                },
+                            )
+                        }
+                    };
+                    self.shell.notify(severity, self.shell.tr(key, &[]));
+                }
+                Err(TryRecvError::Disconnected) => {
+                    self.capture_job = None;
+                    self.shell.notify(
+                        ca_app::shell::Severity::Error,
+                        self.shell.tr("capture.failed", &[]),
+                    );
+                }
+                Err(TryRecvError::Empty) => {}
+            }
+        }
         // Wait for the render-owned occupancy check before accepting another
         // structural edit or map replacement. No blocking channel read is used.
         if self.parking_pending.is_some() {

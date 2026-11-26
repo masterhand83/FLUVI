@@ -7,6 +7,7 @@ use ca_core::map_json::MapDocument;
 use eframe::egui;
 
 pub enum PanelAction {
+    Screenshot,
     Metrics(crate::metrics::Action),
     Scenario(crate::scenarios::ScenarioCommand),
     BuildingTool(crate::buildings::Tool),
@@ -67,6 +68,15 @@ impl ControlPanel<'_> {
                         }
                     }
                     "tools" => {
+                        if ui
+                            .add_enabled(
+                                self.files_ready,
+                                egui::Button::new(shell.tr("capture.button", &[])),
+                            )
+                            .clicked()
+                        {
+                            action = Some(PanelAction::Screenshot);
+                        }
                         if ui.button(shell.tr("buildings.upload", &[])).clicked() {
                             action = Some(PanelAction::UploadBuildingImage);
                         }

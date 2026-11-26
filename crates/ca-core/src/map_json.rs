@@ -48,6 +48,15 @@ pub struct BackgroundZone {
     pub show_border: bool,
 }
 
+/// Read-only v1 reference placement and sources. Decoding belongs to the app.
+pub struct ReferenceImage<'a> {
+    pub corners: [[f64; 2]; 4],
+    pub visible: bool,
+    pub opacity: f32,
+    pub data_url: Option<&'a str>,
+    pub url: Option<&'a str>,
+}
+
 pub struct MapGeometry {
     pub streets: Vec<StreetGeometry>,
     pub axes: Vec<Vec<Vec<[f32; 2]>>>,
@@ -81,6 +90,36 @@ pub struct StreetPlacement {
 }
 
 impl MapDocument {
+    pub fn reference_image(&self) -> Option<ReferenceImage<'_>> {
+        let reference = self.data.get("imagenReferencia")?;
+        let width = reference["width"].as_f64()?;
+        let height = reference["height"].as_f64()?;
+        let x = reference["x"].as_f64().unwrap_or(0.);
+        let y = reference["y"].as_f64().unwrap_or(0.);
+        let angle = reference["rotation"].as_f64().unwrap_or(0.);
+        if width <= 0. || height <= 0. {
+            return None;
+        }
+        let center = [x + width / 2., y + height / 2.];
+        let corners = [
+            [x, y],
+            [x + width, y],
+            [x + width, y + height],
+            [x, y + height],
+        ]
+        .map(|point| crate::buildings::rotate(point, center, angle));
+        if !corners.iter().flatten().all(|n| n.is_finite()) {
+            return None;
+        }
+        Some(ReferenceImage {
+            corners,
+            visible: reference["visible"] != false,
+            opacity: reference["opacity"].as_f64().unwrap_or(1.).clamp(0., 1.) as f32,
+            data_url: reference["dataUrl"].as_str(),
+            url: reference["url"].as_str(),
+        })
+    }
+
     pub fn validate_building_edit(
         &self,
         edit: &crate::buildings::BuildingEdit,

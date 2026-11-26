@@ -1,4 +1,10 @@
 {
+  "capture.button": "Save Whole Map PNG",
+  "capture.saved": "Map screenshot saved.",
+  "capture.cancelled": "Screenshot cancelled.",
+  "capture.empty": "Add streets, buildings, or a reference image before capture.",
+  "capture.failed": "Cannot save the map screenshot.",
+  "capture.referenceUnavailable": "Cannot load the linked reference image for capture. Check the link and try again.",
   "heatmap.title": "Density heatmap",
   "heatmap.vehicleMode": "Vehicle heat on main map",
   "heatmap.legend": "All streets · Local density: green 0%, yellow 50%, red 100% · Grey: obstacles",

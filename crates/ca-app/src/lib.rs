@@ -4,6 +4,7 @@ mod bezier;
 pub mod building_images;
 pub mod buildings;
 pub mod bulk_editor;
+pub mod capture;
 pub mod connection_draft;
 pub mod connections;
 pub mod control_panel;

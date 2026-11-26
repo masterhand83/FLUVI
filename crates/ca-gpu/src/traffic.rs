@@ -78,6 +78,11 @@ pub struct TrafficScene {
 }
 
 impl TrafficScene {
+    /// A capture worker takes a snapshot, never the live model or its GPU view.
+    pub fn document(&self) -> &ca_core::map_json::MapDocument {
+        &self.document
+    }
+
     /// Reuse startup/topology storage. A slow UI skips a sample, never blocks or allocates.
     pub fn heatmap_snapshot(&mut self) -> Option<std::sync::Arc<ca_core::heatmap::Snapshot>> {
         for buffer in &mut self.heatmaps {

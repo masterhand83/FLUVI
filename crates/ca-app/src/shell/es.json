@@ -1,4 +1,10 @@
 {
+  "capture.button": "Guardar PNG del mapa completo",
+  "capture.saved": "Captura del mapa guardada.",
+  "capture.cancelled": "Captura cancelada.",
+  "capture.empty": "Añade calles, edificios o una imagen de referencia antes de capturar.",
+  "capture.failed": "No se pudo guardar la captura del mapa.",
+  "capture.referenceUnavailable": "No se pudo cargar la imagen de referencia enlazada para la captura. Comprueba el enlace e inténtalo de nuevo.",
   "heatmap.title": "Mapa de calor de densidad",
   "heatmap.vehicleMode": "Calor de vehículos en el mapa principal",
   "heatmap.legend": "Todas las calles · Densidad local: verde 0%, amarillo 50%, rojo 100% · Gris: obstáculos",

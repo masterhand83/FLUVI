@@ -16,7 +16,10 @@ Keep mutable frame state owned in callback resources. Use bounded, non-blocking
 channels between modules. Keep application locks and heap allocations out of
 the simulation/render hot path; framework/profiler internals have their own costs.
 Allocate GPU buffers, bind groups and pipelines at startup or reset.
-Display reads storage buffers directly; GPU readback is only for statistics/tests.
+Display reads storage buffers directly; GPU readback is only for statistics/tests,
+except user-triggered whole-map PNG and export viewport captures. These render
+once into a separate opaque offscreen texture and read it back once on a worker.
+One capture job may be active at a time; never modify live camera/view resources.
 Poll staging buffers without waiting on the UI thread. Label GPU objects.
 Shader-facing data needs repr(C), Pod/Zeroable and size assertions.
 Every new rule or kernel needs an independent CPU-oracle comparison.
