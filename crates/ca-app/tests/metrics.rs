@@ -64,7 +64,6 @@ fn charts_show_titles_latest_values_labelled_axes_and_five_line_colours() {
         "Actual: 40.00%",
         "Actual: -0.50 veh/s",
         "Actual: 1.250 bits",
-        "100.0",
         "07:00:02",
         "07:00:04",
     ] {
@@ -88,6 +87,92 @@ fn charts_show_titles_latest_values_labelled_axes_and_five_line_colours() {
         })
         .collect();
     assert_eq!(colours.len(), 5, "each metric needs its own line colour");
+}
+
+fn scaled_chart_output(values: &[f64]) -> eframe::egui::FullOutput {
+    let mut panel = MetricsPanel::default();
+    for (index, &value) in values.iter().enumerate() {
+        panel.receive(Packet::Point(ca_core::metrics::Point {
+            clock: Clock::default(),
+            elapsed_seconds: index as u64 * 2,
+            density: value,
+            net_change: value,
+            speed: value,
+            throughput: value,
+            entropy: value,
+            population: 0,
+        }));
+    }
+    chart_frame(&eframe::egui::Context::default(), &mut panel, None)
+}
+
+fn plotted_lines(
+    output: &eframe::egui::FullOutput,
+) -> Vec<(eframe::egui::Rect, Vec<eframe::egui::Pos2>)> {
+    use eframe::egui;
+    let mut plot = None;
+    let mut lines = Vec::new();
+    for shape in &output.shapes {
+        match &shape.shape {
+            egui::Shape::Rect(rect) => plot = Some(rect.rect),
+            egui::Shape::Path(path) => {
+                lines.push((plot.expect("plot background"), path.points.clone()))
+            }
+            _ => {}
+        }
+    }
+    lines
+}
+
+#[test]
+fn chart_extrema_have_space_above_and_below_including_negative_and_zero_values() {
+    for values in [vec![0., 100.], vec![-3., 3.], vec![0., 0.], vec![2.4, 2.4]] {
+        let output = scaled_chart_output(&values);
+        let lines = plotted_lines(&output);
+        assert_eq!(lines.len(), 5);
+        for (plot, line) in lines {
+            for point in line {
+                assert!(
+                    point.y > plot.top() + 4. && point.y < plot.bottom() - 4.,
+                    "sample must have room for the hover marker: {point:?} in {plot:?}"
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn charts_rescale_small_values_and_forget_extrema_outside_the_live_window() {
+    for values in [vec![0., 0.01, 0.02], {
+        let mut values = vec![100.];
+        values.extend((0..50).map(|i| if i % 2 == 0 { 0.01 } else { 0.02 }));
+        values
+    }] {
+        let output = scaled_chart_output(&values);
+        for (plot, line) in plotted_lines(&output) {
+            let top = line.iter().map(|p| p.y).fold(f32::INFINITY, f32::min);
+            let bottom = line.iter().map(|p| p.y).fold(f32::NEG_INFINITY, f32::max);
+            assert!(
+                bottom - top > plot.height() / 2.,
+                "small changes must remain visible"
+            );
+            assert!(line.iter().all(|p| p.y > plot.top() && p.y < plot.bottom()));
+        }
+    }
+    let output = scaled_chart_output(&[0.01, 0.01]);
+    let labels: Vec<_> = output
+        .shapes
+        .iter()
+        .filter_map(|s| match &s.shape {
+            eframe::egui::Shape::Text(t) => Some(t.galley.job.text.as_str()),
+            _ => None,
+        })
+        .collect();
+    assert!(
+        labels.contains(&"0.009"),
+        "axis must distinguish a small value from zero"
+    );
+    assert!(labels.contains(&"0.011"));
 }
 
 #[test]

@@ -28,18 +28,43 @@ impl Metric {
     }
 
     fn range(self, points: &[Point]) -> (f64, f64) {
-        match self {
-            Self::Density | Self::Speed => (0., 100.),
-            Self::Throughput => (0., 10.),
-            Self::Entropy => (0., 3.),
-            Self::NetChange => {
-                let extent = points
-                    .iter()
-                    .map(|&p| p.net_change.abs())
-                    .fold(1., f64::max)
-                    .ceil();
-                (-extent, extent)
-            }
+        let first = points.first().map_or(0., |&point| self.value(point));
+        let (minimum, maximum) =
+            points
+                .iter()
+                .fold((first, first), |(minimum, maximum), &point| {
+                    let value = self.value(point);
+                    (minimum.min(value), maximum.max(value))
+                });
+        // Use the visible data, not a fixed theoretical maximum or forced zero.
+        // Leave 10% on both sides, including flat and all-zero histories.
+        let resolution = if matches!(self, Self::Entropy) {
+            0.001
+        } else {
+            0.01
+        };
+        let padding = if maximum > minimum {
+            (maximum - minimum) * 0.1
+        } else {
+            (first.abs() * 0.1).max(resolution * 0.1)
+        };
+        (minimum - padding, maximum + padding)
+    }
+
+    fn tick_label(self, value: f64) -> String {
+        // Padding can add one decimal place beyond the recorded precision.
+        let precision = if matches!(self, Self::Entropy) { 4 } else { 3 };
+        let value = if value.abs() < 0.5 * 10_f64.powi(-(precision as i32)) {
+            0.
+        } else {
+            value
+        };
+        let label = format!("{value:.precision$}");
+        let trimmed = label.trim_end_matches('0');
+        if trimmed.ends_with('.') {
+            format!("{trimmed}0")
+        } else {
+            trimmed.to_owned()
         }
     }
 }
@@ -59,16 +84,27 @@ pub(super) fn show(ui: &mut egui::Ui, points: &[Point], metric: Metric, shell: &
     ui.small(shell.tr(metric.axis_key(), &[]));
     let (rect, response) =
         ui.allocate_exact_size(egui::vec2(ui.available_width(), 144.), egui::Sense::hover());
-    let plot = egui::Rect::from_min_max(
-        rect.min + egui::vec2(44., 8.),
-        rect.max - egui::vec2(8., 44.),
-    );
     let painter = ui.painter();
     let text = ui.visuals().text_color();
     let axis = egui::Stroke::new(1_f32, ui.visuals().weak_text_color());
     let grid = egui::Stroke::new(1_f32, ui.visuals().widgets.noninteractive.bg_stroke.color);
     let font = egui::FontId::proportional(10.);
     let (minimum, maximum) = metric.range(points);
+    let tick_labels =
+        [minimum, (minimum + maximum) * 0.5, maximum].map(|value| metric.tick_label(value));
+    let label_width = tick_labels
+        .iter()
+        .map(|label| {
+            painter
+                .layout_no_wrap(label.clone(), font.clone(), text)
+                .size()
+                .x
+        })
+        .fold(36_f32, f32::max);
+    let plot = egui::Rect::from_min_max(
+        rect.min + egui::vec2(label_width + 8., 8.),
+        rect.max - egui::vec2(8., 44.),
+    );
     let position = |index: usize, point: Point| {
         let fraction = if points.len() <= 1 {
             0.5
@@ -82,7 +118,7 @@ pub(super) fn show(ui: &mut egui::Ui, points: &[Point], metric: Metric, shell: &
         )
     };
     painter.rect_filled(plot, 0., ui.visuals().extreme_bg_color);
-    for fraction in [0., 0.5, 1.] {
+    for (fraction, label) in [0., 0.5, 1.].into_iter().zip(tick_labels) {
         let y = plot.bottom() - fraction as f32 * plot.height();
         painter.line_segment(
             [egui::pos2(plot.left(), y), egui::pos2(plot.right(), y)],
@@ -91,7 +127,7 @@ pub(super) fn show(ui: &mut egui::Ui, points: &[Point], metric: Metric, shell: &
         painter.text(
             egui::pos2(plot.left() - 6., y),
             egui::Align2::RIGHT_CENTER,
-            format!("{:.1}", minimum + fraction * (maximum - minimum)),
+            label,
             font.clone(),
             text,
         );

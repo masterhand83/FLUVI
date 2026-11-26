@@ -506,7 +506,10 @@ Use `ca-app::metrics::Delivery` to send points through the bounded chart channel
 without waiting. Retry unsent points from complete history on later frames.
 Render only the latest 50 points in `MetricsPanel`. Use `metrics/chart.rs` for
 distinct metric colours, latest-value titles, labelled time/value axes, and
-immediate hover readouts with sample markers. Keep tooltips limited to the metric
+immediate hover readouts with sample markers. Fit each value axis to its visible
+minimum and maximum with 10% padding above and below. Keep a nonzero range for
+flat or empty histories, and show enough axis decimals to distinguish small
+values from zero. Keep tooltips limited to the metric
 name, localized timestamp, value, and short status. Reset histories on scenario
 time and map replacement, with an ordered reset packet before new chart points.
 Keep street selections on scenario-time reset; select all streets on a new map.
