@@ -567,6 +567,47 @@ For the manual timestamp benchmark, run
 `cargo test -p ca-gpu --test vehicle_heat benchmark_vehicle_styles -- --ignored --nocapture`.
 See [campus-performance.md](campus-performance.md) for results and measurement limits.
 
+### Metric exports
+
+Metrics has CSV, JSON (latest 50), and seven-PNG ZIP download buttons.
+Only one metric export runs at a time. A bounded request takes one coherent
+render-owned document and complete metric history after ordered edits and ticks.
+This explicit user request may clone the history and map in the render callback.
+CPU image drawing, heatmap calculation, encoding, native dialogs, and file writes
+run on a worker. Map replacement drops requests still in the render queue.
+An export that already received its snapshot can finish with the original map,
+as with whole-map PNG capture. The single-job limit stays in effect until that
+export finishes. Cancel and failed saves do not change traffic, the camera,
+the heatmap dialog, or live charts.
+
+`ca-app::metric_exports::{build_csv, build_json}` take an explicit history and
+export context and return content, file name, and count for Complete Export.
+CSV gets the complete history; `standalone_json` chooses the latest 50 points.
+`build_json` does not apply a window. Context supplies the live virtual time,
+profile settings, and an explicit UTC export date with millisecond precision.
+Spanish headers, keys, timestamps, metadata, and statistics match v1 in either
+UI language. JSON object insertion order is preserved for byte compatibility.
+Run `node scripts/generate-metric-export-fixtures.mjs` to regenerate independent
+fixtures by evaluating the unchanged v1 builders in both UI languages.
+The current fixtures require no float-format exception. Values outside normal
+metric ranges can use Rust/serde decimal or exponent spelling rather than JS
+Number spelling; such differences are formatting only.
+
+Offscreen drawing choice: SVG chart paths rasterized on the CPU with the existing
+`resvg` dependency and system fonts. It needs no window, display server, GPU,
+or mutable live chart. Plots use complete history and the live chart's numeric
+axis rules and colors, but not its drawing state. Reports use stable Spanish
+text in both UI languages. Every image is 1600 pixels wide, opaque, and has a
+white background. A fresh all-street heatmap uses the export document, not the
+dialog's cached snapshot. PNGs are added one at a time to a stored ZIP (PNGs
+already contain compressed pixels), with exactly these v1 names:
+
+`densidad.png`, `flujo_vehicular.png`, `velocidad.png`, `tasa_de_cambio.png`,
+`entropia.png`, `resumen.png`, and `mapa_de_calor.png`.
+
+Focused checks: `cargo test -p ca-app --test metric_exports --test metrics
+--test heatmap` and `cargo test -p ca-app --test control_panel`.
+
 ### Whole-map PNG and viewport capture
 
 Use Tools → Save Whole Map PNG. Capture runs while traffic and camera input

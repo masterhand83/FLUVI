@@ -2,7 +2,7 @@
 use super::{Metric, Point, Shell, egui};
 
 impl Metric {
-    fn colour(self, dark: bool) -> egui::Color32 {
+    pub(crate) fn colour(self, dark: bool) -> egui::Color32 {
         // Separate hues, with lighter variants for the dark map-control theme.
         let rgb = match (self, dark) {
             (Self::Density, false) => [0, 114, 178],
@@ -19,7 +19,7 @@ impl Metric {
         egui::Color32::from_rgb(rgb[0], rgb[1], rgb[2])
     }
 
-    fn axis_key(self) -> &'static str {
+    pub(crate) fn axis_key(self) -> &'static str {
         match self {
             Self::Density | Self::Speed => "metrics.axis.percentage",
             Self::NetChange | Self::Throughput => "metrics.axis.rate",
@@ -27,7 +27,7 @@ impl Metric {
         }
     }
 
-    fn range(self, points: &[Point]) -> (f64, f64) {
+    pub(crate) fn range(self, points: &[Point]) -> (f64, f64) {
         let (minimum, maximum) =
             points
                 .iter()
@@ -52,7 +52,7 @@ impl Metric {
         )
     }
 
-    fn tick_label(self, value: f64) -> String {
+    pub(crate) fn tick_label(self, value: f64) -> String {
         // Padding can add one decimal place beyond the recorded precision.
         let precision = if matches!(self, Self::Entropy) { 4 } else { 3 };
         let value = if value.abs() < 0.5 * 10_f64.powi(-(precision as i32)) {

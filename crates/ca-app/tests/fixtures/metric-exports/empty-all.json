@@ -1,0 +1,61 @@
+{
+  "metadata": {
+    "version": "2.2",
+    "exportDate": "2026-11-26T12:34:56.789Z",
+    "simulationName": "FLUVI Traffic Simulation",
+    "totalDataPoints": 0,
+    "metricsDescription": {
+      "density": "Porcentaje de celdas ocupadas",
+      "throughput": "Flujo vehicular real (Q = Densidad × Velocidad) en veh/s",
+      "netGeneration": "Tasa de cambio neta de población vehicular en veh/s",
+      "speed": "Porcentaje de vehículos en movimiento",
+      "entropy": "Entropía de Shannon del autómata celular en bits (mide diversidad de las 8 transiciones basadas en vecindario de 3 celdas: 000, 001, 010, 011, 100, 101, 110, 111 con estado binario 0=vacío, 1=carro)"
+    },
+    "virtualTime": {
+      "currentTime": "Miércoles 23:59:48",
+      "day": "Miércoles",
+      "hour": 23,
+      "minute": 59,
+      "second": 48,
+      "profilesActive": true,
+      "secondsPerStep": 2,
+      "currentMultiplier": 0,
+      "trafficDescription": "Tráfico muy bajo"
+    }
+  },
+  "metrics": {
+    "timestamps": [],
+    "density": [],
+    "throughput": [],
+    "netGeneration": [],
+    "speed": [],
+    "entropy": []
+  },
+  "statistics": {
+    "density": {
+      "avg": 0,
+      "min": 0,
+      "max": 0
+    },
+    "throughput": {
+      "avg": 0,
+      "min": 0,
+      "max": 0
+    },
+    "netGeneration": {
+      "avg": 0,
+      "min": 0,
+      "max": 0
+    },
+    "speed": {
+      "avg": 0,
+      "min": 0,
+      "max": 0
+    },
+    "entropy": {
+      "avg": 0,
+      "min": 0,
+      "max": 0
+    }
+  }
+}

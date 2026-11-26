@@ -1,0 +1,442 @@
+[
+  {
+    "second": 0,
+    "density": 99.99,
+    "throughput": 0,
+    "netGeneration": -1,
+    "speed": 100,
+    "entropy": 0
+  },
+  {
+    "second": 2,
+    "density": 0.5,
+    "throughput": 0.25,
+    "netGeneration": -0.5,
+    "speed": 99,
+    "entropy": 0.001
+  },
+  {
+    "second": 4,
+    "density": 1,
+    "throughput": 0.5,
+    "netGeneration": 0,
+    "speed": 98,
+    "entropy": 0.002
+  },
+  {
+    "second": 6,
+    "density": 1.5,
+    "throughput": 0.75,
+    "netGeneration": 0.5,
+    "speed": 97,
+    "entropy": 0.003
+  },
+  {
+    "second": 8,
+    "density": 2,
+    "throughput": 1,
+    "netGeneration": 1,
+    "speed": 96,
+    "entropy": 0.004
+  },
+  {
+    "second": 10,
+    "density": 2.5,
+    "throughput": 1.25,
+    "netGeneration": -1,
+    "speed": 95,
+    "entropy": 0.005
+  },
+  {
+    "second": 12,
+    "density": 3,
+    "throughput": 1.5,
+    "netGeneration": -0.5,
+    "speed": 94,
+    "entropy": 0.006
+  },
+  {
+    "second": 14,
+    "density": 3.5,
+    "throughput": 1.75,
+    "netGeneration": 0,
+    "speed": 93,
+    "entropy": 0.007
+  },
+  {
+    "second": 16,
+    "density": 4,
+    "throughput": 2,
+    "netGeneration": 0.5,
+    "speed": 92,
+    "entropy": 0.008
+  },
+  {
+    "second": 18,
+    "density": 4.5,
+    "throughput": 2.25,
+    "netGeneration": 1,
+    "speed": 91,
+    "entropy": 0.009
+  },
+  {
+    "second": 20,
+    "density": 5,
+    "throughput": 2.5,
+    "netGeneration": -1,
+    "speed": 90,
+    "entropy": 0.01
+  },
+  {
+    "second": 22,
+    "density": 5.5,
+    "throughput": 2.75,
+    "netGeneration": -0.5,
+    "speed": 89,
+    "entropy": 0.011
+  },
+  {
+    "second": 24,
+    "density": 6,
+    "throughput": 3,
+    "netGeneration": 0,
+    "speed": 88,
+    "entropy": 0.012
+  },
+  {
+    "second": 26,
+    "density": 6.5,
+    "throughput": 3.25,
+    "netGeneration": 0.5,
+    "speed": 87,
+    "entropy": 0.013
+  },
+  {
+    "second": 28,
+    "density": 7,
+    "throughput": 3.5,
+    "netGeneration": 1,
+    "speed": 86,
+    "entropy": 0.014
+  },
+  {
+    "second": 30,
+    "density": 7.5,
+    "throughput": 3.75,
+    "netGeneration": -1,
+    "speed": 85,
+    "entropy": 0.015
+  },
+  {
+    "second": 32,
+    "density": 8,
+    "throughput": 4,
+    "netGeneration": -0.5,
+    "speed": 84,
+    "entropy": 0.016
+  },
+  {
+    "second": 34,
+    "density": 8.5,
+    "throughput": 4.25,
+    "netGeneration": 0,
+    "speed": 83,
+    "entropy": 0.017
+  },
+  {
+    "second": 36,
+    "density": 9,
+    "throughput": 4.5,
+    "netGeneration": 0.5,
+    "speed": 82,
+    "entropy": 0.018
+  },
+  {
+    "second": 38,
+    "density": 9.5,
+    "throughput": 4.75,
+    "netGeneration": 1,
+    "speed": 81,
+    "entropy": 0.019
+  },
+  {
+    "second": 40,
+    "density": 10,
+    "throughput": 5,
+    "netGeneration": -1,
+    "speed": 80,
+    "entropy": 0.02
+  },
+  {
+    "second": 42,
+    "density": 10.5,
+    "throughput": 5.25,
+    "netGeneration": -0.5,
+    "speed": 79,
+    "entropy": 0.021
+  },
+  {
+    "second": 44,
+    "density": 11,
+    "throughput": 5.5,
+    "netGeneration": 0,
+    "speed": 78,
+    "entropy": 0.022
+  },
+  {
+    "second": 46,
+    "density": 11.5,
+    "throughput": 5.75,
+    "netGeneration": 0.5,
+    "speed": 77,
+    "entropy": 0.023
+  },
+  {
+    "second": 48,
+    "density": 12,
+    "throughput": 6,
+    "netGeneration": 1,
+    "speed": 76,
+    "entropy": 0.024
+  },
+  {
+    "second": 50,
+    "density": 12.5,
+    "throughput": 6.25,
+    "netGeneration": -1,
+    "speed": 75,
+    "entropy": 0.025
+  },
+  {
+    "second": 52,
+    "density": 13,
+    "throughput": 6.5,
+    "netGeneration": -0.5,
+    "speed": 74,
+    "entropy": 0.026
+  },
+  {
+    "second": 54,
+    "density": 13.5,
+    "throughput": 6.75,
+    "netGeneration": 0,
+    "speed": 73,
+    "entropy": 0.027
+  },
+  {
+    "second": 56,
+    "density": 14,
+    "throughput": 7,
+    "netGeneration": 0.5,
+    "speed": 72,
+    "entropy": 0.028
+  },
+  {
+    "second": 58,
+    "density": 14.5,
+    "throughput": 7.25,
+    "netGeneration": 1,
+    "speed": 71,
+    "entropy": 0.029
+  },
+  {
+    "second": 60,
+    "density": 15,
+    "throughput": 7.5,
+    "netGeneration": -1,
+    "speed": 70,
+    "entropy": 0.03
+  },
+  {
+    "second": 62,
+    "density": 15.5,
+    "throughput": 7.75,
+    "netGeneration": -0.5,
+    "speed": 69,
+    "entropy": 0.031
+  },
+  {
+    "second": 64,
+    "density": 16,
+    "throughput": 8,
+    "netGeneration": 0,
+    "speed": 68,
+    "entropy": 0.032
+  },
+  {
+    "second": 66,
+    "density": 16.5,
+    "throughput": 8.25,
+    "netGeneration": 0.5,
+    "speed": 67,
+    "entropy": 0.033
+  },
+  {
+    "second": 68,
+    "density": 17,
+    "throughput": 8.5,
+    "netGeneration": 1,
+    "speed": 66,
+    "entropy": 0.034
+  },
+  {
+    "second": 70,
+    "density": 17.5,
+    "throughput": 8.75,
+    "netGeneration": -1,
+    "speed": 65,
+    "entropy": 0.035
+  },
+  {
+    "second": 72,
+    "density": 18,
+    "throughput": 9,
+    "netGeneration": -0.5,
+    "speed": 64,
+    "entropy": 0.036
+  },
+  {
+    "second": 74,
+    "density": 18.5,
+    "throughput": 9.25,
+    "netGeneration": 0,
+    "speed": 63,
+    "entropy": 0.037
+  },
+  {
+    "second": 76,
+    "density": 19,
+    "throughput": 9.5,
+    "netGeneration": 0.5,
+    "speed": 62,
+    "entropy": 0.038
+  },
+  {
+    "second": 78,
+    "density": 19.5,
+    "throughput": 9.75,
+    "netGeneration": 1,
+    "speed": 61,
+    "entropy": 0.039
+  },
+  {
+    "second": 80,
+    "density": 20,
+    "throughput": 10,
+    "netGeneration": -1,
+    "speed": 60,
+    "entropy": 0.04
+  },
+  {
+    "second": 82,
+    "density": 20.5,
+    "throughput": 10.25,
+    "netGeneration": -0.5,
+    "speed": 59,
+    "entropy": 0.041
+  },
+  {
+    "second": 84,
+    "density": 21,
+    "throughput": 10.5,
+    "netGeneration": 0,
+    "speed": 58,
+    "entropy": 0.042
+  },
+  {
+    "second": 86,
+    "density": 21.5,
+    "throughput": 10.75,
+    "netGeneration": 0.5,
+    "speed": 57,
+    "entropy": 0.043
+  },
+  {
+    "second": 88,
+    "density": 22,
+    "throughput": 11,
+    "netGeneration": 1,
+    "speed": 56,
+    "entropy": 0.044
+  },
+  {
+    "second": 90,
+    "density": 22.5,
+    "throughput": 11.25,
+    "netGeneration": -1,
+    "speed": 55,
+    "entropy": 0.045
+  },
+  {
+    "second": 92,
+    "density": 23,
+    "throughput": 11.5,
+    "netGeneration": -0.5,
+    "speed": 54,
+    "entropy": 0.046
+  },
+  {
+    "second": 94,
+    "density": 23.5,
+    "throughput": 11.75,
+    "netGeneration": 0,
+    "speed": 53,
+    "entropy": 0.047
+  },
+  {
+    "second": 96,
+    "density": 24,
+    "throughput": 12,
+    "netGeneration": 0.5,
+    "speed": 52,
+    "entropy": 0.048
+  },
+  {
+    "second": 98,
+    "density": 24.5,
+    "throughput": 12.25,
+    "netGeneration": 1,
+    "speed": 51,
+    "entropy": 0.049
+  },
+  {
+    "second": 100,
+    "density": 25,
+    "throughput": 12.5,
+    "netGeneration": -1,
+    "speed": 50,
+    "entropy": 0.05
+  },
+  {
+    "second": 102,
+    "density": 25.5,
+    "throughput": 12.75,
+    "netGeneration": -0.5,
+    "speed": 49,
+    "entropy": 0.051
+  },
+  {
+    "second": 104,
+    "density": 26,
+    "throughput": 13,
+    "netGeneration": 0,
+    "speed": 48,
+    "entropy": 0.052
+  },
+  {
+    "second": 106,
+    "density": 26.5,
+    "throughput": 13.25,
+    "netGeneration": 0.5,
+    "speed": 47,
+    "entropy": 0.053
+  },
+  {
+    "second": 108,
+    "density": 27,
+    "throughput": 13.5,
+    "netGeneration": 1,
+    "speed": 46,
+    "entropy": 0.054
+  }
+]

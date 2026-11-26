@@ -1,4 +1,12 @@
 {
+  "metrics.export.csv": "Descargar métricas CSV",
+  "metrics.export.json": "Descargar métricas JSON (últimas 50)",
+  "metrics.export.images": "Descargar siete imágenes PNG (ZIP)",
+  "metrics.export.busy": "Preparando exportación…",
+  "metrics.export.saved": "Métricas guardadas.",
+  "metrics.export.cancelled": "Exportación cancelada.",
+  "metrics.export.empty": "No hay métricas para exportar.",
+  "metrics.export.failed": "No se pudieron guardar las métricas.",
   "capture.button": "Guardar PNG del mapa completo",
   "capture.saved": "Captura del mapa guardada.",
   "capture.cancelled": "Captura cancelada.",

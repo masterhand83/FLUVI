@@ -28,6 +28,7 @@ struct Startup {
 
 pub struct App {
     capture_job: Option<ca_app::capture::SaveJob>,
+    metric_export_job: Option<ca_app::metric_exports::SaveJob>,
     vehicle_heat: bool,
     heatmap: ca_app::heatmap::HeatmapDialog,
     next_heatmap: std::time::Instant,
@@ -336,6 +337,7 @@ impl App {
         let time = session.document().time().clone();
         Ok(Self {
             capture_job: None,
+            metric_export_job: None,
             vehicle_heat: false,
             heatmap: Default::default(),
             next_heatmap: std::time::Instant::now(),
@@ -645,6 +647,27 @@ impl App {
                 }
             }
             Some(PanelAction::Metrics(action)) => match action {
+                ca_app::metrics::Action::Export(kind) => {
+                    if self.metric_export_job.is_none() {
+                        let job = ca_app::metric_exports::start_save(
+                            kind,
+                            self.shell.tr(kind.key(), &[]),
+                            ctx.clone(),
+                        )
+                        .ok()
+                        .and_then(|(snapshot, job)| {
+                            self.commands.export_metrics(snapshot).then_some(job)
+                        });
+                        if let Some(job) = job {
+                            self.metric_export_job = Some(job);
+                        } else {
+                            self.shell.notify(
+                                ca_app::shell::Severity::Error,
+                                self.shell.tr("metrics.export.failed", &[]),
+                            );
+                        }
+                    }
+                }
                 ca_app::metrics::Action::Heatmap => {
                     self.heatmap.open();
                     self.next_heatmap = std::time::Instant::now();
@@ -1181,6 +1204,39 @@ impl eframe::App for App {
             puffin::GlobalProfiler::lock().new_frame();
         }
         self.handle_messages();
+        if let Some(job) = &self.metric_export_job {
+            let result = match job.result.try_recv() {
+                Ok(result) => Some(result),
+                Err(TryRecvError::Disconnected) => {
+                    Some(ca_app::capture::SaveResult::Failed("worker closed".into()))
+                }
+                Err(TryRecvError::Empty) => None,
+            };
+            if let Some(result) = result {
+                self.metric_export_job = None;
+                let (severity, key) = match result {
+                    ca_app::capture::SaveResult::Saved => {
+                        (ca_app::shell::Severity::Success, "metrics.export.saved")
+                    }
+                    ca_app::capture::SaveResult::Cancelled => {
+                        (ca_app::shell::Severity::Info, "metrics.export.cancelled")
+                    }
+                    ca_app::capture::SaveResult::Failed(error) => {
+                        tracing::warn!(%error, "metric export failed");
+                        (
+                            ca_app::shell::Severity::Error,
+                            if error == "metrics.export.empty" {
+                                "metrics.export.empty"
+                            } else {
+                                "metrics.export.failed"
+                            },
+                        )
+                    }
+                };
+                self.shell.notify(severity, self.shell.tr(key, &[]));
+            }
+        }
+        self.metrics.exporting = self.metric_export_job.is_some();
         if let Some(job) = &self.capture_job {
             match job.result.try_recv() {
                 Ok(result) => {

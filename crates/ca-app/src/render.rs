@@ -90,6 +90,7 @@ impl CallbackTrait for BackgroundCallback {
 
 /// Only view/control state is coalesced. Cell edits retain FIFO order.
 pub struct Commands {
+    metric_exports: Sender<Sender<ca_app::metric_exports::Snapshot>>,
     captures: Sender<Sender<ca_app::capture::Snapshot>>,
     heatmap_request: Sender<()>,
     heatmaps: Receiver<std::sync::Arc<ca_core::heatmap::Snapshot>>,
@@ -106,6 +107,7 @@ pub struct Commands {
 }
 
 pub struct Requests {
+    metric_exports: Receiver<Sender<ca_app::metric_exports::Snapshot>>,
     captures: Receiver<Sender<ca_app::capture::Snapshot>>,
     heatmap_request: Receiver<()>,
     heatmaps: Sender<std::sync::Arc<ca_core::heatmap::Snapshot>>,
@@ -120,6 +122,7 @@ pub struct Requests {
 }
 
 pub fn command_channel() -> (Commands, Requests) {
+    let (metric_exports_tx, metric_exports) = bounded(1);
     let (captures_tx, captures) = bounded(1);
     let (heatmap_request_tx, heatmap_request) = bounded(1);
     let (heatmap_tx, heatmaps) = bounded(1);
@@ -133,6 +136,7 @@ pub fn command_channel() -> (Commands, Requests) {
     let (replacement_tx, replacement) = bounded(1);
     (
         Commands {
+            metric_exports: metric_exports_tx,
             captures: captures_tx,
             heatmap_request: heatmap_request_tx,
             heatmaps,
@@ -148,6 +152,7 @@ pub fn command_channel() -> (Commands, Requests) {
             replacement: replacement_tx,
         },
         Requests {
+            metric_exports,
             captures,
             heatmap_request,
             heatmaps: heatmap_tx,
@@ -164,6 +169,9 @@ pub fn command_channel() -> (Commands, Requests) {
 }
 
 impl Commands {
+    pub fn export_metrics(&self, snapshot: Sender<ca_app::metric_exports::Snapshot>) -> bool {
+        self.metric_exports.try_send(snapshot).is_ok()
+    }
     pub fn capture(&self, snapshot: Sender<ca_app::capture::Snapshot>) -> bool {
         self.captures.try_send(snapshot).is_ok()
     }
@@ -282,6 +290,7 @@ impl Resources {
             while self.requests.edits.try_recv().is_ok() {}
             while self.requests.buildings.try_recv().is_ok() {}
             while self.requests.captures.try_recv().is_ok() {}
+            while self.requests.metric_exports.try_recv().is_ok() {}
             self.display = TrafficDisplay::new(device, &scene, self.format);
             self.scene = scene;
             self.metric_delivery.reset();
@@ -464,6 +473,21 @@ impl Resources {
                 style: request.vehicle_style,
                 device: device.clone(),
                 queue: queue.clone(),
+            });
+        }
+        if let Ok(sender) = self.requests.metric_exports.try_recv() {
+            // Explicit user export: one coherent snapshot after ordered edits/ticks.
+            // Geometry, image encoding, and file dialogs stay on the worker.
+            let _ = sender.try_send(ca_app::metric_exports::Snapshot {
+                document: self.scene.document().clone(),
+                history: self.scene.metrics().history().to_vec(),
+                included: self
+                    .scene
+                    .metrics()
+                    .included()
+                    .iter()
+                    .filter(|&&v| v)
+                    .count(),
             });
         }
         self.metric_delivery

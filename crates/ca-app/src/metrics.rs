@@ -73,7 +73,7 @@ impl Metric {
         }
     }
 
-    fn value(self, point: Point) -> f64 {
+    pub(crate) fn value(self, point: Point) -> f64 {
         match self {
             Self::Density => point.density,
             Self::NetChange => point.net_change,
@@ -83,7 +83,7 @@ impl Metric {
         }
     }
 
-    fn formatted(self, point: Point) -> String {
+    pub(crate) fn formatted(self, point: Point) -> String {
         let unit = match self {
             Self::Density | Self::Speed => "%",
             Self::NetChange | Self::Throughput => " veh/s",
@@ -108,6 +108,7 @@ impl Metric {
 }
 
 pub enum Action {
+    Export(crate::metric_exports::Kind),
     Heatmap,
     VehicleHeat(bool),
     Checklist,
@@ -116,6 +117,7 @@ pub enum Action {
 
 #[derive(Default)]
 pub struct MetricsPanel {
+    pub exporting: bool,
     history: Vec<Point>,
     included: Vec<bool>,
     order: Vec<usize>,
@@ -173,6 +175,24 @@ impl MetricsPanel {
 
     pub fn show(&mut self, ui: &mut egui::Ui, shell: &Shell) -> Option<Action> {
         let mut action = None;
+        for kind in [
+            crate::metric_exports::Kind::Csv,
+            crate::metric_exports::Kind::Json,
+            crate::metric_exports::Kind::Images,
+        ] {
+            if ui
+                .add_enabled(
+                    !self.exporting && !self.history.is_empty(),
+                    egui::Button::new(shell.tr(kind.key(), &[])),
+                )
+                .clicked()
+            {
+                action = Some(Action::Export(kind));
+            }
+        }
+        if self.exporting {
+            ui.label(shell.tr("metrics.export.busy", &[]));
+        }
         if ui.button(shell.tr("heatmap.title", &[])).clicked() {
             action = Some(Action::Heatmap);
         }

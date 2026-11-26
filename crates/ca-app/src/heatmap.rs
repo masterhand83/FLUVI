@@ -8,8 +8,21 @@ const BACKGROUND: egui::Color32 = egui::Color32::from_rgb(18, 22, 28);
 /// Fit all oriented physical cells inside the requested bounds, with a small margin.
 /// Each axis is capped at 4096 pixels to bound image allocation. Zero gives an empty image.
 pub fn render_offscreen(frame: &HeatmapFrame, maximum: [usize; 2]) -> egui::ColorImage {
+    render(frame, maximum, BACKGROUND)
+}
+
+/// Print/export variant. Cell colors and geometry are identical to the live view.
+pub fn render_on_white(frame: &HeatmapFrame, maximum: [usize; 2]) -> egui::ColorImage {
+    render(frame, maximum, egui::Color32::WHITE)
+}
+
+fn render(
+    frame: &HeatmapFrame,
+    maximum: [usize; 2],
+    background: egui::Color32,
+) -> egui::ColorImage {
     if maximum.contains(&0) {
-        return egui::ColorImage::filled([0, 0], BACKGROUND);
+        return egui::ColorImage::filled([0, 0], background);
     }
     let maximum = maximum.map(|v| v.min(4096));
     let mut minimum = [f32::INFINITY; 2];
@@ -22,12 +35,12 @@ pub fn render_offscreen(frame: &HeatmapFrame, maximum: [usize; 2]) -> egui::Colo
         }
     }
     if frame.tiles.is_empty() {
-        return egui::ColorImage::filled([1, 1], BACKGROUND);
+        return egui::ColorImage::filled([1, 1], background);
     }
     let span: [f32; 2] = std::array::from_fn(|i| upper[i] - minimum[i]);
     let scale = (maximum[0] as f32 / span[0]).min(maximum[1] as f32 / span[1]);
     let size = std::array::from_fn(|i| ((span[i] * scale).ceil() as usize).clamp(1, maximum[i]));
-    let mut image = egui::ColorImage::filled(size, BACKGROUND);
+    let mut image = egui::ColorImage::filled(size, background);
     for tile in &frame.tiles {
         let center: [f32; 2] = std::array::from_fn(|i| (tile.center[i] - minimum[i]) * scale);
         let radius = (tile.axis[0].abs() + tile.axis[1].abs()) * scale * 0.5;

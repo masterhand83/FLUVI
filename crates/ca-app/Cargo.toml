@@ -27,6 +27,7 @@ time.workspace = true
 ureq.workspace = true
 resvg.workspace = true
 data-url.workspace = true
+zip.workspace = true
 
 [dev-dependencies]
 pollster.workspace = true
