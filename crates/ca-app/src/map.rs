@@ -182,6 +182,12 @@ impl MapInteraction {
         self.camera.as_ref()
     }
 
+    pub fn center_on(&mut self, world: [f32; 2]) {
+        if let Some(camera) = &mut self.camera {
+            camera.center_on(world);
+        }
+    }
+
     pub fn set_painting(&mut self, active: bool) {
         if active && !self.painting {
             self.finish_edits();

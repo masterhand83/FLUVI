@@ -26,6 +26,7 @@ pub enum PanelAction {
 }
 
 pub struct ControlPanel<'a> {
+    pub labels: &'a mut crate::labels::Labels,
     pub vehicle_heat: bool,
     pub metrics: &'a mut crate::metrics::MetricsPanel,
     pub document: &'a MapDocument,
@@ -69,6 +70,7 @@ impl ControlPanel<'_> {
                         }
                     }
                     "tools" => {
+                        self.labels.show_tools(ui, shell);
                         if ui
                             .add_enabled(
                                 self.files_ready,

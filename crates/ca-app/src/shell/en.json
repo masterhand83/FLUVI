@@ -1,4 +1,11 @@
 {
+  "labels.title": "Map labels",
+  "labels.off": "Labels off",
+  "labels.streets": "Street labels",
+  "labels.buildings": "Building labels",
+  "labels.both": "Street and building labels",
+  "labels.size": "Label font size (px)",
+  "labels.invalidSize": "Enter a positive whole number of pixels.",
   "reference.title": "Reference image",
   "reference.loadFailed": "Cannot load this image. Use a supported image of at most 16 MiB.",
   "reference.invalidUrl": "Enter an HTTP or HTTPS image URL.",

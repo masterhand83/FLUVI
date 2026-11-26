@@ -833,6 +833,30 @@ cargo run -p ca-core --example scenario_round_trip > /tmp/opencode/scenario-v2.j
 node scripts/check-scenario-json-compat.mjs /tmp/opencode/scenario-v2.json
 ```
 
+### Map labels and minimap
+
+Tools → Map labels selects Off, Streets, Buildings, or Both. Labels start off
+with a 14-pixel font. Font size must be a positive integer; invalid input keeps
+the last valid size and shows a translated error. These display settings remain
+unchanged on New/Open and are not part of map JSON or saved UI preferences.
+
+`ca-app::labels::Labels` retains world-space anchors until the map revision changes.
+Straight labels use the middle of the full road width and length. Bézier labels
+use half the sampled arc length, not half the curve parameter or cell count.
+Roundabout labels use the angle opposite the start at the middle lane radius.
+Street text follows an upright tangent. Building text uses the stored center.
+Text layout uses output pixels, independent of camera zoom, with a 12% dark
+rounded backdrop and a two-pixel dark halo.
+
+`ca-app::minimap::Minimap` retains street overview paths and fits them without
+changing their aspect ratio. Its foreground input layer blocks map tools.
+Drag the viewport rectangle to pan with the original pointer offset, or press
+outside it to center the camera at that overview point. Camera zoom stays fixed;
+normal pan limits still apply. New/Open clears overview geometry and gestures.
+
+Focused checks: `cargo test -p ca-app --test map_labels --test minimap
+--test control_panel` and `cargo test -p ca-core --test camera --test bezier`.
+
 ### Map files and session replacement
 
 Use `ca-core::map_json::MapDocument` to validate map JSON before replacing

@@ -666,6 +666,15 @@ impl BezierCurve {
         ))
     }
 
+    /// Centerline position and tangent at a fraction of the full sampled arc length.
+    pub fn centerline(&self, fraction: f64) -> ([f32; 2], [f32; 2]) {
+        let p = at_distance(&self.samples, fraction.clamp(0., 1.) * self.length());
+        (
+            p.point.map(|v| v as f32),
+            [p.angle.cos() as f32, p.angle.sin() as f32],
+        )
+    }
+
     pub fn cell(&self, lane: usize, lanes: usize, index: usize) -> ([f32; 2], [f32; 2]) {
         let p = at_distance(&self.samples, index as f64 + 0.5);
         let offset = lane as f64 - (lanes - 1) as f64 / 2.0;

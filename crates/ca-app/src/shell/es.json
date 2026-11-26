@@ -1,4 +1,11 @@
 {
+  "labels.title": "Etiquetas del mapa",
+  "labels.off": "Sin etiquetas",
+  "labels.streets": "Etiquetas de calles",
+  "labels.buildings": "Etiquetas de edificios",
+  "labels.both": "Etiquetas de calles y edificios",
+  "labels.size": "Tamaño de letra de etiquetas (px)",
+  "labels.invalidSize": "Introduce un número entero positivo de píxeles.",
   "reference.title": "Imagen de referencia",
   "reference.loadFailed": "No se puede cargar esta imagen. Use una imagen compatible de hasta 16 MiB.",
   "reference.invalidUrl": "Introduzca una URL de imagen HTTP o HTTPS.",

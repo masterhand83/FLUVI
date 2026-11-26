@@ -79,6 +79,16 @@ impl Camera {
         self.clamp();
     }
 
+    /// Move the viewport center without changing zoom. Uses the normal pan limits.
+    pub fn center_on(&mut self, world: [f32; 2]) {
+        if !world.into_iter().all(f32::is_finite) {
+            return;
+        }
+        let span = self.view().span;
+        self.origin = std::array::from_fn(|i| world[i] - span[i] / 2.);
+        self.clamp();
+    }
+
     pub fn resize(&mut self, viewport: [f32; 2]) {
         if viewport == self.viewport || !viewport.into_iter().all(|v| v.is_finite() && v > 0.0) {
             return;

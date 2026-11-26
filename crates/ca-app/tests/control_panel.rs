@@ -26,6 +26,7 @@ fn map_files_are_inside_the_constructor_section_not_a_top_toolbar() {
             },
             |ctx| {
                 ControlPanel {
+                    labels: &mut Default::default(),
                     vehicle_heat: false,
                     metrics: &mut Default::default(),
                     document: &document,

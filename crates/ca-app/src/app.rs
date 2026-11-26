@@ -27,6 +27,8 @@ struct Startup {
 }
 
 pub struct App {
+    labels: ca_app::labels::Labels,
+    minimap: ca_app::minimap::Minimap,
     reference: ca_app::reference_images::Editor,
     capture_job: Option<ca_app::capture::SaveJob>,
     metric_export_job: Option<ca_app::metric_exports::SaveJob>,
@@ -390,6 +392,8 @@ impl App {
             }
         });
         session.register_reset(ResetPhase::Features, |app| {
+            app.labels.invalidate_geometry();
+            app.minimap.invalidate_geometry();
             app.heatmap = Default::default();
             app.metrics = Default::default();
             app.metric_export_dialog = Default::default();
@@ -411,6 +415,8 @@ impl App {
         });
         let time = session.document().time().clone();
         Ok(Self {
+            labels: Default::default(),
+            minimap: Default::default(),
             reference: Default::default(),
             capture_job: None,
             metric_export_job: None,
@@ -673,6 +679,7 @@ impl App {
             self.scenarios.rain_probability,
         );
         let action = ControlPanel {
+            labels: &mut self.labels,
             vehicle_heat: self.vehicle_heat,
             metrics: &mut self.metrics,
             document: self.session.as_ref().expect("session").document(),
@@ -1396,11 +1403,29 @@ impl eframe::App for App {
         });
         egui::CentralPanel::default().show(ctx, |ui| {
             let rect = ui.available_rect_before_wrap();
-            let view = self
-                .map
+            self.map
                 .as_mut()
                 .expect("map")
                 .prepare_view([rect.width(), rect.height()]);
+            let session = self.session.as_ref().expect("session");
+            self.minimap
+                .sync(session.document(), session.revision(), self.map_shift);
+            let size = egui::vec2(
+                200_f32.min(rect.width() * 0.35),
+                130_f32.min(rect.height() * 0.3),
+            );
+            let minimap_rect =
+                egui::Rect::from_min_size(rect.right_bottom() - size - egui::vec2(8., 8.), size);
+            let minimap_input = self.minimap.captures(ctx, minimap_rect);
+            self.minimap
+                .show(ui, minimap_rect, self.map.as_mut().expect("map"));
+            let view = self
+                .map
+                .as_ref()
+                .expect("map")
+                .camera()
+                .expect("camera")
+                .view();
             self.reference.update(
                 ctx,
                 self.session.as_ref().expect("session").document(),
@@ -1425,7 +1450,8 @@ impl eframe::App for App {
                 self.connection_draft.cancel();
             }
             let parking_picking = self.buildings.parking_picking();
-            let building_input = !self.metrics.picking
+            let building_input = !minimap_input
+                && !self.metrics.picking
                 && !parking_picking
                 && !self.connection_draft.active()
                 && !self.map.as_ref().expect("map").drawing()
@@ -1442,7 +1468,8 @@ impl eframe::App for App {
                             self.map_shift,
                         )
                     });
-            let reference_enabled = !building_input
+            let reference_enabled = !minimap_input
+                && !building_input
                 && !self.buildings.active()
                 && !self.metrics.picking
                 && !parking_picking
@@ -1467,7 +1494,7 @@ impl eframe::App for App {
             self.map
                 .as_mut()
                 .expect("map")
-                .set_building_input(building_input || reference_input);
+                .set_building_input(minimap_input || building_input || reference_input);
             self.map
                 .as_mut()
                 .expect("map")
@@ -1494,12 +1521,13 @@ impl eframe::App for App {
                 reference_enabled,
             );
             self.apply_reference_edit();
-            let parking_input = self.buildings.parking_input(
-                ctx,
-                &map,
-                self.session.as_ref().expect("session").document(),
-            );
-            let building_edit = if self.metrics.picking {
+            let parking_input = !minimap_input
+                && self.buildings.parking_input(
+                    ctx,
+                    &map,
+                    self.session.as_ref().expect("session").document(),
+                );
+            let building_edit = if minimap_input || self.metrics.picking {
                 None
             } else if map.bulk_started {
                 self.buildings.cancel();
@@ -1698,6 +1726,9 @@ impl eframe::App for App {
                 .paint(ui.painter(), map.view, map.rect, self.map_shift);
             self.scenarios.paint_rain(ui.painter(), map.rect);
             let session = self.session.as_ref().expect("session");
+            self.labels
+                .sync(session.document(), session.revision(), self.map_shift);
+            self.labels.paint(ui.painter(), map.view, map.rect);
             self.buildings
                 .sync_parking(session.document(), session.revision(), self.map_shift);
             self.buildings.paint_controls(
