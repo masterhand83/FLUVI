@@ -28,27 +28,28 @@ impl Metric {
     }
 
     fn range(self, points: &[Point]) -> (f64, f64) {
-        let first = points.first().map_or(0., |&point| self.value(point));
         let (minimum, maximum) =
             points
                 .iter()
-                .fold((first, first), |(minimum, maximum), &point| {
+                .fold((0_f64, 0_f64), |(minimum, maximum), &point| {
                     let value = self.value(point);
                     (minimum.min(value), maximum.max(value))
                 });
-        // Use the visible data, not a fixed theoretical maximum or forced zero.
-        // Leave 10% on both sides, including flat and all-zero histories.
+        // Always include zero. Extend below it for negative samples and leave
+        // 10% beyond nonzero extremes without moving a zero-valued bound.
         let resolution = if matches!(self, Self::Entropy) {
             0.001
         } else {
             0.01
         };
-        let padding = if maximum > minimum {
-            (maximum - minimum) * 0.1
-        } else {
-            (first.abs() * 0.1).max(resolution * 0.1)
-        };
-        (minimum - padding, maximum + padding)
+        if minimum == maximum {
+            return (0., resolution);
+        }
+        let padding = (maximum - minimum) * 0.1;
+        (
+            if minimum < 0. { minimum - padding } else { 0. },
+            if maximum > 0. { maximum + padding } else { 0. },
+        )
     }
 
     fn tick_label(self, value: f64) -> String {
@@ -90,8 +91,13 @@ pub(super) fn show(ui: &mut egui::Ui, points: &[Point], metric: Metric, shell: &
     let grid = egui::Stroke::new(1_f32, ui.visuals().widgets.noninteractive.bg_stroke.color);
     let font = egui::FontId::proportional(10.);
     let (minimum, maximum) = metric.range(points);
-    let tick_labels =
-        [minimum, (minimum + maximum) * 0.5, maximum].map(|value| metric.tick_label(value));
+    let middle = if minimum < 0. && maximum > 0. {
+        0.
+    } else {
+        (minimum + maximum) * 0.5
+    };
+    let tick_values = [minimum, middle, maximum];
+    let tick_labels = tick_values.map(|value| metric.tick_label(value));
     let label_width = tick_labels
         .iter()
         .map(|label| {
@@ -105,6 +111,9 @@ pub(super) fn show(ui: &mut egui::Ui, points: &[Point], metric: Metric, shell: &
         rect.min + egui::vec2(label_width + 8., 8.),
         rect.max - egui::vec2(8., 44.),
     );
+    let value_y = |value: f64| {
+        plot.bottom() - ((value - minimum) / (maximum - minimum)) as f32 * plot.height()
+    };
     let position = |index: usize, point: Point| {
         let fraction = if points.len() <= 1 {
             0.5
@@ -113,17 +122,24 @@ pub(super) fn show(ui: &mut egui::Ui, points: &[Point], metric: Metric, shell: &
         };
         egui::pos2(
             plot.left() + fraction * plot.width(),
-            plot.bottom()
-                - ((metric.value(point) - minimum) / (maximum - minimum)) as f32 * plot.height(),
+            value_y(metric.value(point)),
         )
     };
     painter.rect_filled(plot, 0., ui.visuals().extreme_bg_color);
-    for (fraction, label) in [0., 0.5, 1.].into_iter().zip(tick_labels) {
-        let y = plot.bottom() - fraction as f32 * plot.height();
+    for (value, label) in tick_values.into_iter().zip(tick_labels) {
+        let y = value_y(value);
         painter.line_segment(
             [egui::pos2(plot.left(), y), egui::pos2(plot.right(), y)],
-            grid,
+            if value == 0. {
+                egui::Stroke::new(1.5_f32, axis.color)
+            } else {
+                grid
+            },
         );
+        // Keep the zero label readable when one sign has a much smaller range.
+        if value != 0. && (y - value_y(0.)).abs() < font.size + 2. {
+            continue;
+        }
         painter.text(
             egui::pos2(plot.left() - 6., y),
             egui::Align2::RIGHT_CENTER,

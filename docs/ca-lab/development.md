@@ -507,7 +507,9 @@ without waiting. Retry unsent points from complete history on later frames.
 Render only the latest 50 points in `MetricsPanel`. Use `metrics/chart.rs` for
 distinct metric colours, latest-value titles, labelled time/value axes, and
 immediate hover readouts with sample markers. Fit each value axis to its visible
-minimum and maximum with 10% padding above and below. Keep a nonzero range for
+minimum and maximum while always including a labelled zero baseline. Start
+positive-only graphs at zero; extend below zero for negative samples. Add 10%
+padding beyond nonzero extremes. Keep a nonzero range for
 flat or empty histories, and show enough axis decimals to distinguish small
 values from zero. Keep tooltips limited to the metric
 name, localized timestamp, value, and short status. Reset histories on scenario

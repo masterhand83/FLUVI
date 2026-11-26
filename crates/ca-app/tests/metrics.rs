@@ -125,13 +125,17 @@ fn plotted_lines(
 }
 
 #[test]
-fn chart_extrema_have_space_above_and_below_including_negative_and_zero_values() {
+fn nonzero_chart_extrema_have_padding_and_zero_stays_on_the_baseline() {
     for values in [vec![0., 100.], vec![-3., 3.], vec![0., 0.], vec![2.4, 2.4]] {
         let output = scaled_chart_output(&values);
         let lines = plotted_lines(&output);
         assert_eq!(lines.len(), 5);
         for (plot, line) in lines {
-            for point in line {
+            for (point, value) in line.into_iter().zip(&values) {
+                if *value == 0. {
+                    assert!((point.y - plot.bottom()).abs() < 0.1);
+                    continue;
+                }
                 assert!(
                     point.y > plot.top() + 4. && point.y < plot.bottom() - 4.,
                     "sample must have room for the hover marker: {point:?} in {plot:?}"
@@ -153,10 +157,13 @@ fn charts_rescale_small_values_and_forget_extrema_outside_the_live_window() {
             let top = line.iter().map(|p| p.y).fold(f32::INFINITY, f32::min);
             let bottom = line.iter().map(|p| p.y).fold(f32::NEG_INFINITY, f32::max);
             assert!(
-                bottom - top > plot.height() / 2.,
+                bottom - top > plot.height() / 3.,
                 "small changes must remain visible"
             );
-            assert!(line.iter().all(|p| p.y > plot.top() && p.y < plot.bottom()));
+            assert!(
+                line.iter()
+                    .all(|p| p.y > plot.top() && p.y <= plot.bottom())
+            );
         }
     }
     let output = scaled_chart_output(&[0.01, 0.01]);
@@ -169,10 +176,49 @@ fn charts_rescale_small_values_and_forget_extrema_outside_the_live_window() {
         })
         .collect();
     assert!(
-        labels.contains(&"0.009"),
-        "axis must distinguish a small value from zero"
+        labels.contains(&"0.0"),
+        "zero must remain visible on the axis"
     );
     assert!(labels.contains(&"0.011"));
+}
+
+#[test]
+fn zero_reference_is_labelled_and_negative_values_extend_below_it() {
+    use eframe::egui;
+    for values in [vec![0.01, 0.02], vec![-0.01, -0.02], vec![-0.01, 0.04]] {
+        let output = scaled_chart_output(&values);
+        for (plot, line) in plotted_lines(&output) {
+            let zero = output
+                .shapes
+                .iter()
+                .find_map(|shape| match &shape.shape {
+                    egui::Shape::LineSegment { points, stroke }
+                        if stroke.width == 1.5
+                            && (points[0].x - plot.left()).abs() < 0.1
+                            && (points[1].x - plot.right()).abs() < 0.1
+                            && (plot.top()..=plot.bottom()).contains(&points[0].y) =>
+                    {
+                        Some(points[0].y)
+                    }
+                    _ => None,
+                })
+                .expect("visible zero reference");
+            for (point, value) in line.iter().zip(&values) {
+                assert!(if *value < 0. {
+                    point.y > zero
+                } else {
+                    point.y < zero
+                });
+            }
+            if values.iter().all(|&v| v > 0.) {
+                assert!((zero - plot.bottom()).abs() < 0.1);
+            } else if values.iter().all(|&v| v < 0.) {
+                assert!((zero - plot.top()).abs() < 0.1);
+            }
+            assert!(output.shapes.iter().any(|shape| matches!(&shape.shape, egui::Shape::Text(text)
+                if text.galley.job.text == "0.0" && (text.pos.y + text.galley.size().y * 0.5 - zero).abs() < 1.)));
+        }
+    }
 }
 
 #[test]
