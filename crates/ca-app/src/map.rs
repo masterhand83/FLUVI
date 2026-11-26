@@ -13,6 +13,8 @@ pub enum CellPickMode {
 }
 
 pub struct MapFrame {
+    /// The initial paint press can erase; later drag samples only add marks.
+    pub paint_start: Option<CellRef>,
     pub picked_cell: Option<CellRef>,
     pub bulk_started: bool,
     pub bulk_rect: Option<egui::Rect>,
@@ -566,6 +568,7 @@ impl MapInteraction {
                 rect.min + egui::vec2(p[0], p[1])
             };
             return MapFrame {
+                paint_start: None,
                 picked_cell: None,
                 bulk_started,
                 bulk_rect: Some(egui::Rect::from_two_pos(screen(start), screen(end))),
@@ -614,33 +617,37 @@ impl MapInteraction {
             if self.cell_picking.is_some() || self.painting {
                 ui.ctx().set_cursor_icon(egui::CursorIcon::Crosshair);
             }
+            let mut paint_start = None;
             if pointer.primary_pressed() {
-                let pressed_in_map = ui.input(|i| {
-                    i.events
-                        .iter()
-                        .rev()
-                        .find_map(|event| {
-                            if let egui::Event::PointerButton {
-                                pos,
-                                button: egui::PointerButton::Primary,
-                                pressed: true,
-                                ..
-                            } = event
-                            {
-                                Some(rect.contains(*pos))
-                            } else {
-                                None
-                            }
-                        })
-                        .unwrap_or(false)
+                let press_position = ui.input(|i| {
+                    i.events.iter().rev().find_map(|event| {
+                        if let egui::Event::PointerButton {
+                            pos,
+                            button: egui::PointerButton::Primary,
+                            pressed: true,
+                            ..
+                        } = event
+                        {
+                            Some(*pos)
+                        } else {
+                            None
+                        }
+                    })
                 });
                 self.paint_gesture = self.painting
-                    && pressed_in_map
+                    && press_position.is_some_and(|pos| rect.contains(pos))
                     && (response.is_pointer_button_down_on() || response.clicked());
+                if self.paint_gesture {
+                    paint_start = press_position.and_then(|pos| {
+                        self.index
+                            .hit_test(camera.screen_to_world((pos - rect.min).into()))
+                    });
+                }
                 self.last_painted = None;
             }
             if ui.input(|i| !i.focused || i.key_pressed(egui::Key::Escape)) {
                 self.paint_gesture = false;
+                paint_start = None;
             }
             let painted = if self.painting
                 && self.paint_gesture
@@ -659,6 +666,7 @@ impl MapInteraction {
                 self.last_painted = None;
             }
             return MapFrame {
+                paint_start,
                 picked_cell: (!self.painting && response.clicked())
                     .then_some(hit)
                     .flatten(),
@@ -912,6 +920,7 @@ impl MapInteraction {
             self.rejected_geometry = geometry_error;
         }
         MapFrame {
+            paint_start: None,
             picked_cell: None,
             bulk_started: false,
             bulk_rect: None,

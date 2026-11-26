@@ -449,7 +449,7 @@ fn cell_edits_publish_immediately_when_paused_and_at_next_tick_when_running() {
     );
     assert!(!scene.toggle_vehicle(CellRef { street: 99, ..cell }, true));
     assert!(
-        !scene.toggle_vehicle(
+        scene.toggle_vehicle(
             CellRef {
                 street: 0,
                 lane: 0,
@@ -457,8 +457,46 @@ fn cell_edits_publish_immediately_when_paused_and_at_next_tick_when_running() {
             },
             true
         ),
-        "special cells are not vehicles"
+        "clicking a legacy blocker removes it"
     );
+    assert_eq!(scene.cells()[18], 0);
+}
+
+#[test]
+fn clicking_a_marked_disruption_publishes_an_empty_cell_without_spawning_a_vehicle() {
+    use ca_core::{
+        cell_index::CellRef,
+        disruptions::{Disruption, ScenarioAction},
+        map_json::MapDocument,
+    };
+    for painting in [false, true] {
+        let mut scene = TrafficScene::from_document(
+            &MapDocument::parse(r#"{"calles":[{"nombre":"A","tipo":"conexion","tamano":4}]}"#)
+                .unwrap(),
+        );
+        let cell = CellRef {
+            street: 0,
+            lane: 0,
+            index: 1,
+        };
+        scene
+            .disrupt(ScenarioAction::Paint(cell, Disruption::Tree))
+            .unwrap();
+        assert!(scene.publish_edits());
+        if painting {
+            assert_eq!(
+                scene
+                    .disrupt(ScenarioAction::Click(cell, Disruption::Flood))
+                    .unwrap(),
+                1
+            );
+            assert!(scene.publish_edits());
+        } else {
+            assert!(scene.toggle_vehicle(cell, true));
+        }
+        assert_eq!(scene.cells(), &[0, 0, 0, 0]);
+        assert_eq!(scene.population(), 0);
+    }
 }
 
 #[test]

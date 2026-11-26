@@ -1157,11 +1157,19 @@ impl eframe::App for App {
             }
             let accepted = if let Some(mode) = self.scenarios.mode {
                 self.commands.send(request, None)
-                    && map.clicked.is_none_or(|cell| {
-                        self.commands.edit(Edit::Scenario(
-                            ca_core::disruptions::ScenarioAction::Paint(cell, mode),
-                        ))
+                    && map.paint_start.is_none_or(|cell| {
+                        use ca_core::disruptions::ScenarioAction;
+                        self.commands
+                            .edit(Edit::Scenario(ScenarioAction::Click(cell, mode)))
                     })
+                    && map
+                        .clicked
+                        .filter(|cell| Some(*cell) != map.paint_start)
+                        .is_none_or(|cell| {
+                            use ca_core::disruptions::ScenarioAction;
+                            self.commands
+                                .edit(Edit::Scenario(ScenarioAction::Paint(cell, mode)))
+                        })
             } else {
                 self.commands.send(request, map.clicked)
             };

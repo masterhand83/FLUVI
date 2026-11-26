@@ -485,8 +485,12 @@ Focused checks: `cargo test -p ca-core --test virtual_time --test map_json`,
 The Scenarios section owns lane-block, flood, and obstacle paint modes. Select
 pothole, worker, tree, cone, or flood in the texture selector. Press or drag over
 road cells to paint. Painting cancels the street-local edit session and other
-map tools. It does not move the camera or change occupied cells or parking
-endpoints. Clear Disruptions requires confirmation and keeps vehicles.
+map tools. It does not move the camera or replace vehicles or parking endpoints.
+Click an existing obstacle, flood, or lane block to remove it, with or without
+a paint mode active. The initial paint press can erase; later drag samples only
+add disruptions. Removing a disruption clears its texture mark and leaves an
+empty cell, without adding a vehicle. Clear Disruptions requires confirmation
+and keeps vehicles.
 
 `ca-core::disruptions` owns scenario actions and cell metadata. Metadata belongs
 to each street's physical cells, so dimension reconciliation and deletion retain

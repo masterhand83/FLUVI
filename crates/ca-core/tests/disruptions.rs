@@ -44,6 +44,76 @@ fn instant_flood_is_additive_counts_all_cells_and_preserves_occupied_cells() {
 }
 
 #[test]
+fn ordinary_click_removes_every_disruption_type_and_its_mark() {
+    let mut traffic = model(vec![0; 7]);
+    let cell = |index| CellRef {
+        street: 0,
+        lane: 0,
+        index,
+    };
+    for (index, mark) in [
+        Disruption::LaneBlock,
+        Disruption::Flood,
+        Disruption::Pothole,
+        Disruption::Worker,
+        Disruption::Tree,
+        Disruption::Cone,
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        traffic
+            .disrupt(ScenarioAction::Paint(cell(index), mark))
+            .unwrap();
+        assert!(traffic.toggle_vehicle(cell(index)));
+        assert_eq!(traffic.streets()[0].cells()[index], 0);
+        assert_eq!(traffic.disruption(cell(index)), None);
+    }
+    let mut legacy = model(vec![7]);
+    assert!(legacy.toggle_vehicle(cell(0)));
+    assert_eq!(legacy.streets()[0].cells(), &[0]);
+}
+
+#[test]
+fn paint_click_removes_an_existing_disruption_but_drag_paint_is_additive() {
+    let mut traffic = model(vec![1, 0, 0]);
+    let cell = |index| CellRef {
+        street: 0,
+        lane: 0,
+        index,
+    };
+    assert_eq!(
+        traffic
+            .disrupt(ScenarioAction::Click(cell(1), Disruption::Flood))
+            .unwrap(),
+        1
+    );
+    assert_eq!(traffic.streets()[0].cells(), &[1, 7, 0]);
+    assert_eq!(
+        traffic
+            .disrupt(ScenarioAction::Paint(cell(1), Disruption::Tree))
+            .unwrap(),
+        0
+    );
+    assert_eq!(traffic.disruption(cell(1)), Some(Disruption::Flood));
+    assert_eq!(
+        traffic
+            .disrupt(ScenarioAction::Click(cell(1), Disruption::Tree))
+            .unwrap(),
+        1
+    );
+    assert_eq!(traffic.disruption(cell(1)), None);
+    assert_eq!(traffic.streets()[0].cells(), &[1, 0, 0]);
+    assert_eq!(
+        traffic
+            .disrupt(ScenarioAction::Click(cell(0), Disruption::LaneBlock))
+            .unwrap(),
+        0
+    );
+    assert_eq!(traffic.streets()[0].cells(), &[1, 0, 0]);
+}
+
+#[test]
 fn rain_runs_after_street_update_and_selects_streets_not_weighted_by_size() {
     use ca_core::traffic::TickPhase;
     let mut traffic = TrafficModel::new(

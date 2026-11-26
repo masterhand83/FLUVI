@@ -15,6 +15,8 @@ pub enum Disruption {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ScenarioAction {
+    /// Initial paint press: remove a blocker, or paint an empty cell.
+    Click(CellRef, Disruption),
     Paint(CellRef, Disruption),
     InstantFlood(u8),
     Clear,
@@ -105,7 +107,7 @@ impl TrafficModel {
                 }
                 Ok(count)
             }
-            ScenarioAction::Paint(cell, mark) => {
+            ScenarioAction::Paint(cell, mark) | ScenarioAction::Click(cell, mark) => {
                 let Some(street) = self.streets.get_mut(cell.street) else {
                     return Ok(0);
                 };
@@ -113,6 +115,11 @@ impl TrafficModel {
                     return Ok(0);
                 }
                 let offset = cell.lane * street.config.tamano + cell.index;
+                if matches!(action, ScenarioAction::Click(..)) && street.cells[offset] == 7 {
+                    street.cells[offset] = 0;
+                    street.marks[offset] = None;
+                    return Ok(1);
+                }
                 if street.cells[offset] != 0 || street.parking_endpoints[offset].is_some() {
                     return Ok(0);
                 }

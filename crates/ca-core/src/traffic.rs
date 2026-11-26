@@ -619,7 +619,7 @@ impl TrafficModel {
         Ok(())
     }
 
-    /// Toggle a physical cell without changing special cells or the RNG sequence.
+    /// Toggle a vehicle or remove a disruption without changing the RNG sequence.
     pub fn toggle_vehicle(&mut self, cell: crate::cell_index::CellRef) -> bool {
         let Some(street) = self.streets.get_mut(cell.street) else {
             return false;
@@ -631,6 +631,10 @@ impl TrafficModel {
         match *value {
             0 => *value = 1,
             1..=6 => *value = 0,
+            7 => {
+                *value = 0;
+                street.marks[cell.lane * street.config.tamano + cell.index] = None;
+            }
             _ => return false,
         }
         true

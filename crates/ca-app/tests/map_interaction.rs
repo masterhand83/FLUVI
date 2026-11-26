@@ -72,6 +72,34 @@ fn paint_accepts_a_complete_click_in_one_frame_and_ignores_drags_started_outside
             index: 3
         })
     );
+    assert_eq!(clicked.paint_start, clicked.clicked);
+    let next = screen_position(&map, geometry[0].centers[0][6]);
+    let batched_map_drag = frame(
+        &ctx,
+        &mut map,
+        vec![
+            egui::Event::PointerMoved(target),
+            button(target, true),
+            egui::Event::PointerMoved(next),
+        ],
+        false,
+    );
+    assert_eq!(
+        batched_map_drag.paint_start,
+        Some(CellRef {
+            street: 0,
+            lane: 0,
+            index: 3
+        })
+    );
+    assert_eq!(
+        batched_map_drag.clicked,
+        Some(CellRef {
+            street: 0,
+            lane: 0,
+            index: 6
+        })
+    );
 }
 
 #[test]
@@ -111,7 +139,9 @@ fn disruption_painting_emits_cells_during_drag_without_panning_or_geometry_edits
             index: 2
         })
     );
+    assert_eq!(down.paint_start, down.clicked);
     let moving = frame(&ctx, &mut map, vec![egui::Event::PointerMoved(end)], false);
+    assert_eq!(moving.paint_start, None);
     assert_eq!(
         moving.clicked,
         Some(CellRef {
